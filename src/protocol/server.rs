@@ -1,87 +1,215 @@
 use std::sync::Arc;
 
+use super::Client;
 use super::Protocol;
 use super::{Connection, ProtocolError};
-use crate::game::messages::{control::ControlMessage, client::ClientMessage, server::ServerMessage};
-use tokio::{net::TcpListener, sync::oneshot};
-
-impl From<oneshot::error::RecvError> for ProtocolError {
-    fn from(_: oneshot::error::RecvError) -> ProtocolError {
-        ProtocolError::IscError
-    }
-}
-
-impl From<crossbeam_channel::SendError<ClientMessage>> for ProtocolError {
-    fn from(_: crossbeam_channel::SendError<ClientMessage>) -> ProtocolError {
-        ProtocolError::IscError
-    }
-}
-
-impl From<crossbeam_channel::SendError<ControlMessage>> for ProtocolError {
-    fn from(_: crossbeam_channel::SendError<ControlMessage>) -> ProtocolError {
-        ProtocolError::IscError
-    }
-}
+use crate::game::messages::control::ControlMessage;
+use crate::game::messages::server::ServerMessage;
+use lazy_static::__Deref;
+use legion::Entity;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::oneshot;
 
 async fn run_connection(
-    connection: &mut Connection,
-    protocol: Arc<Protocol>,
+    stream: TcpStream,
+    protocol: &Protocol,
     control_message_tx: crossbeam_channel::Sender<ControlMessage>,
 ) -> Result<(), ProtocolError> {
-    let (recv_message_tx, recv_message_rx) = crossbeam_channel::unbounded();
-    let (send_message_tx, mut send_message_rx) =
+    let (client_message_tx, client_message_rx) = crossbeam_channel::unbounded();
+    let (server_message_tx, server_message_rx) =
         tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
-
     let (response_tx, response_rx) = oneshot::channel();
+
     control_message_tx.send(ControlMessage::AddClient {
         client_type: protocol.client_type,
-        send_message_tx: send_message_tx,
-        recv_message_rx: recv_message_rx,
-        response_tx: response_tx,
+        server_message_tx,
+        client_message_rx,
+        response_tx,
     })?;
 
     let entity = response_rx.await?;
+    let mut client = Client {
+        entity: entity,
+        connection: Connection::new(stream, &protocol.packet_codec),
+        client_message_tx: client_message_tx,
+        server_message_rx: server_message_rx,
+    };
+    (protocol.create_client)().run_client(&mut client).await?;
 
-    loop {
-        tokio::select! {
-            packet = connection.read_packet() => {
-                match packet {
-                    Ok(packet) => {
-                        recv_message_tx.send(protocol.packet_decoder.decode(&packet)?)?;
-                    },
-                    Err(error) => {
-                        return Err(error);
-                    }
-                }
-            },
-            Some(message) = send_message_rx.recv() => {
-                connection.write_packet(protocol.packet_encoder.encode(&message)).await?;
-            }
-        };
-    }
+    control_message_tx
+        .send(ControlMessage::RemoveClient {
+            entity: client.entity,
+        })
+        .ok();
+    client.connection.shutdown().await;
+    Ok(())
 }
 
-pub async fn run_server(
+pub struct LoginServer {
     listener: TcpListener,
     protocol: Arc<Protocol>,
     control_message_tx: crossbeam_channel::Sender<ControlMessage>,
-) {
-    loop {
-        tokio::select! {
-            _ = async {
-                loop {
-                    let (socket, _) = listener.accept().await.unwrap();
-                    let protocol = protocol.clone();
-                    let control_message_tx = control_message_tx.clone();
-                    tokio::spawn(async move {
-                        let mut connection = Connection::new(socket, protocol.clone());
-                        if let Err(err) = run_connection(&mut connection, protocol, control_message_tx).await {
-                            println!("Connection error: {:?}", err);
-                        }
-                        connection.shutdown().await;
-                    });
-                }
-            } => {},
-        };
+}
+
+impl LoginServer {
+    pub async fn new(
+        listener: TcpListener,
+        protocol: Arc<Protocol>,
+        control_message_tx: crossbeam_channel::Sender<ControlMessage>,
+    ) -> Result<LoginServer, ProtocolError> {
+        Ok(LoginServer {
+            listener,
+            protocol,
+            control_message_tx,
+        })
+    }
+
+    pub async fn run(&mut self) {
+        loop {
+            tokio::select! {
+                _ = async {
+                    loop {
+                        let (socket, _) = self.listener.accept().await.unwrap();
+                        let protocol = self.protocol.clone();
+                        let control_message_tx = self.control_message_tx.clone();
+                        tokio::spawn(async move {
+                            if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
+                                println!("Login server connection error: {:?}", err);
+                            }
+                        });
+                    }
+                } => {},
+            };
+        }
+    }
+}
+
+pub struct WorldServer {
+    name: String,
+    entity: Entity,
+
+    listener: TcpListener,
+    protocol: Arc<Protocol>,
+    control_message_tx: crossbeam_channel::Sender<ControlMessage>,
+}
+
+impl WorldServer {
+    pub async fn new(
+        name: String,
+        listener: TcpListener,
+        protocol: Arc<Protocol>,
+        control_message_tx: crossbeam_channel::Sender<ControlMessage>,
+    ) -> Result<WorldServer, ProtocolError> {
+        let (response_tx, response_rx) = oneshot::channel();
+        let local_addr = listener.local_addr().unwrap();
+        control_message_tx.send(ControlMessage::AddWorldServer {
+            name: name.clone(),
+            ip: local_addr.ip().to_string(),
+            port: local_addr.port(),
+            packet_codec_seed: 0x12345678,
+            response_tx,
+        })?;
+        let entity = response_rx.await?;
+
+        Ok(WorldServer {
+            name,
+            entity,
+            listener,
+            protocol,
+            control_message_tx,
+        })
+    }
+
+    pub fn get_entity(&self) -> Entity {
+        self.entity.clone()
+    }
+
+    pub async fn run(&mut self) {
+        loop {
+            tokio::select! {
+                _ = async {
+                    loop {
+                        let (socket, _) = self.listener.accept().await.unwrap();
+                        let protocol = self.protocol.clone();
+                        let control_message_tx = self.control_message_tx.clone();
+                        tokio::spawn(async move {
+                            if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
+                                println!("Login server connection error: {:?}", err);
+                            }
+                        });
+                    }
+                } => {},
+            };
+        }
+
+        self.control_message_tx
+            .send(ControlMessage::RemoveServer {
+                entity: self.entity,
+            })
+            .ok();
+    }
+}
+
+pub struct GameServer {
+    name: String,
+    entity: Entity,
+
+    listener: TcpListener,
+    protocol: Arc<Protocol>,
+    control_message_tx: crossbeam_channel::Sender<ControlMessage>,
+}
+
+impl GameServer {
+    pub async fn new(
+        name: String,
+        world_server: Entity,
+        listener: TcpListener,
+        protocol: Arc<Protocol>,
+        control_message_tx: crossbeam_channel::Sender<ControlMessage>,
+    ) -> Result<GameServer, ProtocolError> {
+        let (response_tx, response_rx) = oneshot::channel();
+        let local_addr = listener.local_addr().unwrap();
+        control_message_tx.send(ControlMessage::AddGameServer {
+            name: name.clone(),
+            world_server: world_server.clone(),
+            ip: local_addr.ip().to_string(),
+            port: local_addr.port(),
+            packet_codec_seed: 0x12345678,
+            response_tx,
+        })?;
+        let entity = response_rx.await?;
+
+        Ok(GameServer {
+            name,
+            entity,
+            listener,
+            protocol,
+            control_message_tx,
+        })
+    }
+
+    pub async fn run(&mut self) {
+        loop {
+            tokio::select! {
+                _ = async {
+                    loop {
+                        let (socket, _) = self.listener.accept().await.unwrap();
+                        let protocol = self.protocol.clone();
+                        let control_message_tx = self.control_message_tx.clone();
+                        tokio::spawn(async move {
+                            if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
+                                println!("Login server connection error: {:?}", err);
+                            }
+                        });
+                    }
+                } => {},
+            };
+        }
+
+        self.control_message_tx
+            .send(ControlMessage::RemoveServer {
+                entity: self.entity,
+            })
+            .ok();
     }
 }

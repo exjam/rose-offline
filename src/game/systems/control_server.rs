@@ -1,29 +1,91 @@
-use legion::*;
+use crate::game::messages::control::{ClientType, ControlMessage};
+use crate::game::resources::ControlChannel;
+use crate::game::{
+    components::{GameClient, LoginClient, WorldClient},
+    resources::{GameServer, ServerList, WorldServer},
+};
 use legion::systems::CommandBuffer;
-use crate::game::components::{ControlClient, LoginClient, WorldClient, GameClient};
-use crate::game::messages::control::{ControlMessage, ClientType};
+use legion::*;
+use std::sync::atomic::Ordering;
 
 #[system]
-pub fn control_server(cmd: &mut CommandBuffer, #[resource] client: &ControlClient) {
+pub fn control_server(
+    cmd: &mut CommandBuffer,
+    #[resource] channel: &mut ControlChannel,
+    #[resource] server_list: &mut ServerList,
+) {
     loop {
-        match client.control_rx.try_recv() {
+        match channel.control_rx.try_recv() {
             Ok(message) => match message {
                 ControlMessage::AddClient {
                     client_type,
-                    send_message_tx,
-                    recv_message_rx,
+                    client_message_rx,
+                    server_message_tx,
                     response_tx,
                 } => {
                     let entity = match client_type {
-                        ClientType::Login => cmd.push((LoginClient { send_message_tx, recv_message_rx },)),
-                        ClientType::World => cmd.push((WorldClient { send_message_tx, recv_message_rx },)),
-                        ClientType::Game => cmd.push((GameClient { send_message_tx, recv_message_rx },)),
+                        ClientType::Login => cmd.push((LoginClient {
+                            client_message_rx,
+                            server_message_tx,
+                        },)),
+                        ClientType::World => cmd.push((WorldClient {
+                            client_message_rx,
+                            server_message_tx,
+                        },)),
+                        ClientType::Game => cmd.push((GameClient {
+                            client_message_rx,
+                            server_message_tx,
+                        },)),
                     };
                     response_tx.send(entity).unwrap();
                 }
                 ControlMessage::RemoveClient { entity } => {
                     cmd.remove(entity);
-                },
+                }
+                ControlMessage::AddWorldServer {
+                    name,
+                    ip,
+                    port,
+                    packet_codec_seed,
+                    response_tx,
+                } => {
+                    let entity = cmd.push(());
+                    server_list.world_servers.push(WorldServer {
+                        entity: entity,
+                        name,
+                        ip,
+                        port,
+                        packet_codec_seed,
+                        channels: Vec::new(),
+                    });
+                    response_tx.send(entity).unwrap();
+                }
+                ControlMessage::AddGameServer {
+                    world_server,
+                    name,
+                    ip,
+                    port,
+                    packet_codec_seed,
+                    response_tx,
+                } => {
+                    let entity = cmd.push(());
+                    let world_server = server_list
+                        .world_servers
+                        .iter_mut()
+                        .find(|s| s.entity == world_server)
+                        .unwrap();
+                    world_server.channels.push(GameServer {
+                        entity: entity,
+                        name,
+                        ip,
+                        port,
+                        packet_codec_seed,
+                    });
+                    response_tx.send(entity).unwrap();
+                }
+                ControlMessage::RemoveServer { entity } => {
+                    cmd.remove(entity);
+                }
             },
             Err(_) => break,
         }

@@ -6,18 +6,18 @@ use tokio::net::TcpStream;
 use super::packet::{Packet, PacketCodec};
 use super::{Protocol, ProtocolError};
 
-pub struct Connection {
+pub struct Connection<'a> {
     stream: BufWriter<TcpStream>,
     buffer: BytesMut,
-    protocol: Arc<Protocol>,
+    packet_codec: &'a Box<dyn PacketCodec + Send + Sync>,
 }
 
-impl Connection {
-    pub fn new(socket: TcpStream, protocol: Arc<Protocol>) -> Connection {
-        Connection {
+impl<'a> Connection<'a> {
+    pub fn new(socket: TcpStream, packet_codec: &'a Box<dyn PacketCodec + Send + Sync>) -> Self {
+        Self {
             stream: BufWriter::new(socket),
             buffer: BytesMut::with_capacity(4 * 1024),
-            protocol: protocol,
+            packet_codec: packet_codec,
         }
     }
 
@@ -44,20 +44,13 @@ impl Connection {
             }
 
             if !have_read_header {
-                read_length = self
-                    .protocol
-                    .packet_codec
-                    .decrypt_client_header(&mut self.buffer);
+                read_length = self.packet_codec.decrypt_client_header(&mut self.buffer);
                 if read_length == 0 {
                     return Err(ProtocolError::InvalidPacket);
                 }
                 have_read_header = true;
             } else {
-                if self
-                    .protocol
-                    .packet_codec
-                    .decrypt_client_body(&mut self.buffer)
-                {
+                if self.packet_codec.decrypt_client_body(&mut self.buffer) {
                     // Read packet into size, command, data
                     let size = self.buffer.get_u16_le() as usize;
                     let command = self.buffer.get_u16_le();
@@ -88,7 +81,7 @@ impl Connection {
         buffer.put_u16_le(packet.command);
         buffer.put_u16_le(0);
         buffer.put(packet.data);
-        self.protocol.packet_codec.encrypt_server(&mut buffer);
+        self.packet_codec.encrypt_server(&mut buffer);
 
         if self.stream.write_all(&buffer).await.is_err() {
             return Err(ProtocolError::Disconnect);

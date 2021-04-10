@@ -11,14 +11,6 @@ pub trait PacketCodec {
     fn encrypt_server(self: &Self, buffer: &mut BytesMut);
 }
 
-pub trait PacketDecoder {
-    fn decode(self: &Self, packet: &Packet) -> Result<ClientMessage, ProtocolError>;
-}
-
-pub trait PacketEncoder {
-    fn encode(self: &Self, message: &ServerMessage) -> Packet;
-}
-
 #[derive(Debug)]
 pub struct Packet {
     pub command: u16,

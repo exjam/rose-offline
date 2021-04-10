@@ -10,12 +10,15 @@ mod game;
 mod login;
 mod world;
 
+use self::game::GameClient;
+use self::login::LoginClient;
+use self::world::WorldClient;
+
 pub fn login_protocol() -> Arc<Protocol> {
     Arc::new(Protocol {
         client_type: ClientType::Login,
         packet_codec: Box::new(PacketCodec::default(&packet_codec::IROSE_112_TABLE)),
-        packet_encoder: Box::new(login::LoginPacketEncoder::new()),
-        packet_decoder: Box::new(login::LoginPacketDecoder::new()),
+        create_client: || Box::new(LoginClient::new()),
     })
 }
 
@@ -27,8 +30,7 @@ pub fn world_protocol() -> Arc<Protocol> {
             &packet_codec::IROSE_112_TABLE,
             packet_codec_seed,
         )),
-        packet_encoder: Box::new(world::WorldPacketEncoder::new()),
-        packet_decoder: Box::new(world::WorldPacketDecoder::new()),
+        create_client: || Box::new(WorldClient {}),
     })
 }
 
@@ -40,7 +42,6 @@ pub fn game_protocol() -> Arc<Protocol> {
             &packet_codec::IROSE_112_TABLE,
             packet_codec_seed,
         )),
-        packet_encoder: Box::new(world::WorldPacketEncoder::new()),
-        packet_decoder: Box::new(world::WorldPacketDecoder::new()),
+        create_client: || Box::new(GameClient {}),
     })
 }

@@ -1,6 +1,6 @@
-use crossbeam_channel::Receiver;
 use crate::game::messages::control::ControlMessage;
+use crossbeam_channel::Receiver;
 
-pub struct ControlClient {
+pub struct ControlChannel {
     pub control_rx: Receiver<ControlMessage>,
 }
