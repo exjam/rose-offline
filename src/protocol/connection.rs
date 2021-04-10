@@ -1,0 +1,103 @@
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
+use tokio::net::TcpStream;
+
+use super::packet::{Packet, PacketCodec};
+use super::{Protocol, ProtocolError};
+
+pub struct Connection {
+    stream: BufWriter<TcpStream>,
+    buffer: BytesMut,
+    protocol: Arc<Protocol>,
+}
+
+impl Connection {
+    pub fn new(socket: TcpStream, protocol: Arc<Protocol>) -> Connection {
+        Connection {
+            stream: BufWriter::new(socket),
+            buffer: BytesMut::with_capacity(4 * 1024),
+            protocol: protocol,
+        }
+    }
+
+    pub async fn shutdown(&mut self) {
+        let _ = self.stream.shutdown().await;
+    }
+
+    pub async fn read_packet(&mut self) -> Result<Packet, ProtocolError> {
+        let mut read_length = 6usize;
+        let mut have_read_header = false;
+
+        loop {
+            while self.buffer.len() < read_length {
+                match self.stream.read_buf(&mut self.buffer).await {
+                    Ok(_) => {
+                        if self.buffer.is_empty() {
+                            return Err(ProtocolError::Disconnect);
+                        }
+                    }
+                    Err(_) => {
+                        return Err(ProtocolError::Disconnect);
+                    }
+                }
+            }
+
+            if !have_read_header {
+                read_length = self
+                    .protocol
+                    .packet_codec
+                    .decrypt_client_header(&mut self.buffer);
+                if read_length == 0 {
+                    return Err(ProtocolError::InvalidPacket);
+                }
+                have_read_header = true;
+            } else {
+                if self
+                    .protocol
+                    .packet_codec
+                    .decrypt_client_body(&mut self.buffer)
+                {
+                    // Read packet into size, command, data
+                    let size = self.buffer.get_u16_le() as usize;
+                    let command = self.buffer.get_u16_le();
+                    self.buffer.advance(2);
+                    let data: Bytes = self.buffer.split_to(size - 6).into();
+
+                    // Packets can contain random amount of padding at end
+                    self.buffer.advance(read_length - size);
+
+                    println!("RECV [{:03X}] {:02x?}", command, &data[..]);
+                    return Ok(Packet {
+                        command: command,
+                        data: data,
+                    });
+                } else {
+                    return Err(ProtocolError::InvalidPacket);
+                }
+            }
+        }
+    }
+
+    pub async fn write_packet(&mut self, packet: Packet) -> Result<(), ProtocolError> {
+        println!("SEND [{:03X}] {:02x?}", packet.command, &packet.data[..]);
+
+        let size = packet.data.len() + 6;
+        let mut buffer = BytesMut::with_capacity(size);
+        buffer.put_u16_le(size as u16);
+        buffer.put_u16_le(packet.command);
+        buffer.put_u16_le(0);
+        buffer.put(packet.data);
+        self.protocol.packet_codec.encrypt_server(&mut buffer);
+
+        if self.stream.write_all(&buffer).await.is_err() {
+            return Err(ProtocolError::Disconnect);
+        }
+
+        if self.stream.flush().await.is_err() {
+            return Err(ProtocolError::Disconnect);
+        }
+
+        Ok(())
+    }
+}
