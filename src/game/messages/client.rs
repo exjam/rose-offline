@@ -9,7 +9,7 @@ use crate::game::{
 
 pub enum ConnectionRequestError {
     Failed,
-    InvalidId,
+    InvalidToken,
     InvalidPassword,
 }
 
@@ -18,7 +18,8 @@ pub struct ConnectionRequestResponse {
 }
 
 pub struct ConnectionRequest {
-    pub login_token: Option<(u32, String)>,
+    pub login_token: u32,
+    pub password_md5: String,
     pub response_tx: oneshot::Sender<Result<ConnectionRequestResponse, ConnectionRequestError>>,
 }
 

@@ -34,7 +34,8 @@ impl LoginClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
-                        login_token: None,
+                        login_token: 0u32,
+                        password_md5: String::new(),
                         response_tx: response_tx,
                     }))?;
                 let packet = match response_rx.await? {

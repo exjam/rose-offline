@@ -32,10 +32,8 @@ impl WorldClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
-                        login_token: Some((
-                            request.login_token,
-                            String::from(request.password_md5),
-                        )),
+                        login_token: request.login_token,
+                        password_md5: String::from(request.password_md5),
                         response_tx: response_tx,
                     }))?;
                 let packet = match response_rx.await? {

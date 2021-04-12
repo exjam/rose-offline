@@ -39,62 +39,47 @@ pub fn world_server_authentication(
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::ConnectionRequest(message) => {
-                let response = if let Some((login_token, password_md5)) = message.login_token {
-                    if let Some(LoginToken {
-                        username,
-                        selected_game_server,
-                        ..
-                    }) = login_tokens.tokens.iter().find(|t| t.token == login_token)
-                    {
-                        match AccountStorage::try_load(username, &password_md5) {
+                let response = login_tokens
+                    .tokens
+                    .iter()
+                    .find(|t| t.token == message.login_token)
+                    .ok_or(ConnectionRequestError::InvalidToken)
+                    .and_then(|token| {
+                        match AccountStorage::try_load(&token.username, &message.password_md5) {
                             Ok(mut account) => {
-                                // Load character list, processing any characters ready for deletion
-                                let mut character_list = CharacterList::new();
+                                // Load character list, deleting any characters ready for deletion
+                                let character_list = CharacterList::new();
                                 account.character_names.retain(|name| {
-                                    match CharacterStorage::try_load(name) {
-                                        Ok(character) => {
-                                            if character
-                                                .delete_time
-                                                .as_ref()
-                                                .and_then(|x| Some(x.get_time_until_delete()))
-                                                .filter(|x| x.as_nanos() == 0)
-                                                .is_some()
-                                            {
-                                                CharacterStorage::delete(&character.info.name);
+                                    CharacterStorage::try_load(name).map_or(false, |character| {
+                                        character
+                                            .delete_time
+                                            .as_ref()
+                                            .and_then(|x| Some(x.get_time_until_delete()))
+                                            .filter(|x| x.as_nanos() == 0)
+                                            .map_or(true, |_| {
+                                                CharacterStorage::delete(&character.info.name).ok();
                                                 false
-                                            } else {
-                                                character_list.characters.push(character);
-                                                true
-                                            }
-                                        }
-                                        Err(_) => false,
-                                    }
+                                            })
+                                    })
                                 });
 
                                 // Save account in case we have deleted characters
-                                account.save();
+                                account.save().ok();
 
-                                client.selected_game_server = Some(selected_game_server.clone());
+                                client.selected_game_server =
+                                    Some(token.selected_game_server.clone());
                                 cmd.add_component(*entity, Account::from(account));
                                 cmd.add_component(*entity, character_list);
                                 Ok(ConnectionRequestResponse {
                                     packet_sequence_id: 123,
                                 })
                             }
-                            Err(error) => Err(match error {
-                                AccountStorageError::InvalidPassword => {
-                                    ConnectionRequestError::InvalidPassword
-                                }
-                                _ => ConnectionRequestError::Failed,
-                            }),
+                            Err(AccountStorageError::InvalidPassword) => {
+                                Err(ConnectionRequestError::InvalidPassword)
+                            }
+                            Err(_) => Err(ConnectionRequestError::Failed),
                         }
-                    } else {
-                        Err(ConnectionRequestError::InvalidId)
-                    }
-                } else {
-                    Err(ConnectionRequestError::Failed)
-                };
-
+                    });
                 message.response_tx.send(response).ok();
             }
             _ => {
@@ -111,7 +96,7 @@ pub fn world_server(
     account: &mut Account,
     character_list: &mut CharacterList,
     client: &mut WorldClient,
-    #[resource] server_list: &ServerList,
+    #[resource] login_tokens: &mut LoginTokens,
 ) {
     while let Some(message) = client.pending_messages.pop_front() {
         match message {
@@ -130,16 +115,14 @@ pub fn world_server(
                 } else if CharacterStorage::exists(&message.name) {
                     Err(CreateCharacterError::AlreadyExists)
                 } else {
-                    match CharacterStorage::try_create(
+                    CharacterStorage::try_create(
                         message.name,
                         message.gender,
                         message.birth_stone,
                         message.face,
                         message.hair,
-                    ) {
-                        Ok(character) => Ok(character),
-                        Err(_) => Err(CreateCharacterError::Failed),
-                    }
+                    )
+                    .map_err(|_| CreateCharacterError::Failed)
                 }
                 .and_then(|character| {
                     let slot = account.character_names.len();
@@ -169,29 +152,38 @@ pub fn world_server(
                 message.response_tx.send(response).ok();
             }
             ClientMessage::SelectCharacter(message) => {
-                let selected_character = character_list
+                let response = character_list
                     .characters
                     .get_mut(message.slot as usize)
-                    .filter(|character| character.info.name == message.name);
+                    .filter(|character| character.info.name == message.name)
+                    .map_or(Err(SelectCharacterError::Failed), |selected_character| {
+                        // Set the selected_character for the login token
+                        login_tokens
+                            .tokens
+                            .iter_mut()
+                            .find(|t| t.token == client.login_token)
+                            .map(|token| {
+                                token.selected_character = selected_character.info.name.clone()
+                            });
 
-                let entry = client
-                    .selected_game_server
-                    .and_then(|e| world.entry_ref(e).ok());
-
-                let response = entry.map_or(Err(SelectCharacterError::Failed), |e| {
-                    e.get_component::<ServerInfo>().map_or(
-                        Err(SelectCharacterError::Failed),
-                        |server_info| {
-                            Ok(JoinServerResponse {
-                                login_token: client.login_token,
-                                packet_codec_seed: server_info.packet_codec_seed,
-                                ip: server_info.ip.clone(),
-                                port: server_info.port,
+                        // Find the selected game server details
+                        client
+                            .selected_game_server
+                            .and_then(|e| world.entry_ref(e).ok())
+                            .map_or(Err(SelectCharacterError::Failed), |e| {
+                                e.get_component::<ServerInfo>().map_or(
+                                    Err(SelectCharacterError::Failed),
+                                    |server_info| {
+                                        Ok(JoinServerResponse {
+                                            login_token: client.login_token,
+                                            packet_codec_seed: server_info.packet_codec_seed,
+                                            ip: server_info.ip.clone(),
+                                            port: server_info.port,
+                                        })
+                                    },
+                                )
                             })
-                        },
-                    )
-                });
-
+                    });
                 message.response_tx.send(response).ok();
             }
             _ => {

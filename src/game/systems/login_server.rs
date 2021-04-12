@@ -69,54 +69,45 @@ pub fn login_server(
                 message.response_tx.send(servers).ok();
             }
             ClientMessage::GetChannelList(message) => {
-                if let Some(world_server) =
-                    server_list.world_servers.get(message.server_id as usize)
-                {
-                    let mut channels = Vec::new();
-                    for (id, channel) in world_server.channels.iter().enumerate() {
-                        channels.push((id as u8, channel.name.clone()));
-                    }
-                    message.response_tx.send(Ok(channels)).ok();
-                } else {
-                    message
-                        .response_tx
-                        .send(Err(GetChannelListError::InvalidServerId))
-                        .ok();
-                }
+                let response = server_list
+                    .world_servers
+                    .get(message.server_id as usize)
+                    .ok_or(GetChannelListError::InvalidServerId)
+                    .map(|world_server| {
+                        let mut channels = Vec::new();
+                        for (id, channel) in world_server.channels.iter().enumerate() {
+                            channels.push((id as u8, channel.name.clone()));
+                        }
+                        channels
+                    });
+                message.response_tx.send(response).ok();
             }
             ClientMessage::JoinServer(message) => {
-                if let Some(world_server) =
-                    server_list.world_servers.get(message.server_id as usize)
-                {
-                    if let Some(game_server) =
-                        world_server.channels.get(message.channel_id as usize)
-                    {
-                        client.login_token = login_tokens.generate(
-                            account.name.clone(),
-                            world_server.entity,
-                            game_server.entity,
-                        );
-                        message
-                            .response_tx
-                            .send(Ok(JoinServerResponse {
-                                login_token: client.login_token,
-                                packet_codec_seed: world_server.packet_codec_seed,
-                                ip: world_server.ip.clone(),
-                                port: world_server.port,
-                            }))
-                            .ok();
-                    } else {
-                        message
-                            .response_tx
-                            .send(Err(JoinServerError::InvalidChannelId))
-                            .ok();
-                    }
-                } else {
-                    message
-                        .response_tx
-                        .send(Err(JoinServerError::InvalidServerId))
-                        .ok();
-                }
+                let response = server_list
+                    .world_servers
+                    .get(message.server_id as usize)
+                    .ok_or(JoinServerError::InvalidServerId)
+                    .and_then(|world_server| {
+                        world_server
+                            .channels
+                            .get(message.channel_id as usize)
+                            .ok_or(JoinServerError::InvalidChannelId)
+                            .map(|game_server| {
+                                client.login_token = login_tokens.generate(
+                                    account.name.clone(),
+                                    world_server.entity,
+                                    game_server.entity,
+                                );
+                                JoinServerResponse {
+                                    login_token: client.login_token,
+                                    packet_codec_seed: world_server.packet_codec_seed,
+                                    ip: world_server.ip.clone(),
+                                    port: world_server.port,
+                                }
+                            })
+                    });
+
+                message.response_tx.send(response).ok();
             }
             _ => {
                 panic!("Unhandled client message for login server!");
