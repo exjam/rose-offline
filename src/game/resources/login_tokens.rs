@@ -5,6 +5,7 @@ pub struct LoginToken {
     pub token: u32,
     pub selected_world_server: Entity,
     pub selected_game_server: Entity,
+    pub selected_character: String,
 }
 
 pub struct LoginTokens {
@@ -27,6 +28,7 @@ impl LoginTokens {
             token,
             selected_world_server,
             selected_game_server,
+            selected_character: String::default(),
         });
         token
     }

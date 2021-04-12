@@ -1,6 +1,11 @@
+use std::time::Duration;
+
 use tokio::sync::oneshot;
 
-use crate::game::components::{CharacterDeleteTime, CharacterInfo, CharacterList, Equipment};
+use crate::game::{
+    components::{CharacterDeleteTime, CharacterInfo, CharacterList, Equipment, Level},
+    data::character::CharacterStorage,
+};
 
 pub enum ConnectionRequestError {
     Failed,
@@ -60,8 +65,27 @@ pub struct JoinServer {
     pub response_tx: oneshot::Sender<Result<JoinServerResponse, JoinServerError>>,
 }
 
+#[derive(Clone)]
+pub struct CharacterListItem {
+    pub info: CharacterInfo,
+    pub level: Level,
+    pub delete_time: Option<CharacterDeleteTime>,
+    pub equipment: Equipment,
+}
+
+impl From<&CharacterStorage> for CharacterListItem {
+    fn from(storage: &CharacterStorage) -> CharacterListItem {
+        CharacterListItem {
+            info: storage.info.clone(),
+            delete_time: storage.delete_time.clone(),
+            equipment: storage.equipment.clone(),
+            level: storage.level.clone(),
+        }
+    }
+}
+
 pub struct GetCharacterList {
-    pub response_tx: oneshot::Sender<CharacterList>,
+    pub response_tx: oneshot::Sender<Vec<CharacterListItem>>,
 }
 
 pub enum CreateCharacterError {
@@ -80,6 +104,27 @@ pub struct CreateCharacter {
     pub response_tx: oneshot::Sender<Result<u8, CreateCharacterError>>,
 }
 
+pub enum DeleteCharacterError {
+    Failed,
+}
+
+pub struct DeleteCharacter {
+    pub slot: u8,
+    pub name: String,
+    pub is_delete: bool,
+    pub response_tx: oneshot::Sender<Result<Option<CharacterDeleteTime>, DeleteCharacterError>>,
+}
+
+pub enum SelectCharacterError {
+    Failed,
+}
+
+pub struct SelectCharacter {
+    pub slot: u8,
+    pub name: String,
+    pub response_tx: oneshot::Sender<Result<JoinServerResponse, SelectCharacterError>>,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -88,4 +133,6 @@ pub enum ClientMessage {
     JoinServer(JoinServer),
     GetCharacterList(GetCharacterList),
     CreateCharacter(CreateCharacter),
+    DeleteCharacter(DeleteCharacter),
+    SelectCharacter(SelectCharacter),
 }

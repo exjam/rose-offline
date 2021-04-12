@@ -4,16 +4,21 @@ use legion::systems::CommandBuffer;
 use legion::world::SubWorld;
 use legion::*;
 
-use crate::game::data::character::{CharacterStorage, CharacterStorageError};
-use crate::game::{
-    components::CharacterListItem,
-    messages::client::{
+use crate::game::messages::{
+    client::{
         ClientMessage, ConnectionRequestError, ConnectionRequestResponse, GetChannelListError,
         JoinServerError, JoinServerResponse, LoginError,
     },
+    server,
 };
 use crate::game::{
-    components::{Account, CharacterList, WorldClient},
+    components::CharacterDeleteTime,
+    data::character::{CharacterStorage, CharacterStorageError},
+    messages::client::{CharacterListItem, DeleteCharacterError, SelectCharacterError},
+    resources::LoginToken,
+};
+use crate::game::{
+    components::{Account, CharacterList, ServerInfo, WorldClient},
     resources::LoginTokens,
     resources::ServerList,
 };
@@ -35,11 +40,11 @@ pub fn world_server_authentication(
         match message {
             ClientMessage::ConnectionRequest(message) => {
                 let response = if let Some((login_token, password_md5)) = message.login_token {
-                    if let Some(username) = login_tokens
-                        .tokens
-                        .iter()
-                        .find(|t| t.token == login_token)
-                        .and_then(|t| Some(&t.username))
+                    if let Some(LoginToken {
+                        username,
+                        selected_game_server,
+                        ..
+                    }) = login_tokens.tokens.iter().find(|t| t.token == login_token)
                     {
                         match AccountStorage::try_load(username, &password_md5) {
                             Ok(mut account) => {
@@ -58,9 +63,7 @@ pub fn world_server_authentication(
                                                 CharacterStorage::delete(&character.info.name);
                                                 false
                                             } else {
-                                                character_list
-                                                    .characters
-                                                    .push(CharacterListItem::from(character));
+                                                character_list.characters.push(character);
                                                 true
                                             }
                                         }
@@ -71,6 +74,7 @@ pub fn world_server_authentication(
                                 // Save account in case we have deleted characters
                                 account.save();
 
+                                client.selected_game_server = Some(selected_game_server.clone());
                                 cmd.add_component(*entity, Account::from(account));
                                 cmd.add_component(*entity, character_list);
                                 Ok(ConnectionRequestResponse {
@@ -101,15 +105,22 @@ pub fn world_server_authentication(
 }
 
 #[system(for_each)]
+#[read_component(ServerInfo)]
 pub fn world_server(
+    world: &SubWorld,
     account: &mut Account,
     character_list: &mut CharacterList,
     client: &mut WorldClient,
+    #[resource] server_list: &ServerList,
 ) {
     while let Some(message) = client.pending_messages.pop_front() {
         match message {
             ClientMessage::GetCharacterList(message) => {
-                message.response_tx.send(character_list.clone()).ok();
+                let mut characters = Vec::new();
+                for character in &character_list.characters {
+                    characters.push(CharacterListItem::from(character));
+                }
+                message.response_tx.send(characters).ok();
             }
             ClientMessage::CreateCharacter(message) => {
                 let response = if account.character_names.len() >= 5 {
@@ -130,15 +141,57 @@ pub fn world_server(
                         Err(_) => Err(CreateCharacterError::Failed),
                     }
                 }
-                .and_then(|storage| {
+                .and_then(|character| {
                     let slot = account.character_names.len();
-                    account.character_names.push(storage.info.name.clone());
+                    account.character_names.push(character.info.name.clone());
                     AccountStorage::from(&*account).save().ok();
-                    character_list
-                        .characters
-                        .push(CharacterListItem::from(storage));
+                    character_list.characters.push(character);
                     Ok(slot as u8)
                 });
+                message.response_tx.send(response).ok();
+            }
+            ClientMessage::DeleteCharacter(message) => {
+                let response = character_list
+                    .characters
+                    .get_mut(message.slot as usize)
+                    .filter(|character| character.info.name == message.name)
+                    .map_or(Err(DeleteCharacterError::Failed), |character| {
+                        if message.is_delete {
+                            if character.delete_time.is_none() {
+                                character.delete_time = Some(CharacterDeleteTime::new());
+                            }
+                        } else {
+                            character.delete_time = None;
+                        }
+                        character.save().ok();
+                        Ok(character.delete_time.clone())
+                    });
+                message.response_tx.send(response).ok();
+            }
+            ClientMessage::SelectCharacter(message) => {
+                let selected_character = character_list
+                    .characters
+                    .get_mut(message.slot as usize)
+                    .filter(|character| character.info.name == message.name);
+
+                let entry = client
+                    .selected_game_server
+                    .and_then(|e| world.entry_ref(e).ok());
+
+                let response = entry.map_or(Err(SelectCharacterError::Failed), |e| {
+                    e.get_component::<ServerInfo>().map_or(
+                        Err(SelectCharacterError::Failed),
+                        |server_info| {
+                            Ok(JoinServerResponse {
+                                login_token: client.login_token,
+                                packet_codec_seed: server_info.packet_codec_seed,
+                                ip: server_info.ip.clone(),
+                                port: server_info.port,
+                            })
+                        },
+                    )
+                });
+
                 message.response_tx.send(response).ok();
             }
             _ => {

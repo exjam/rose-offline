@@ -9,6 +9,12 @@ pub struct CharacterDeleteTime {
 }
 
 impl CharacterDeleteTime {
+    pub fn new() -> Self {
+        Self {
+            start_time: SystemTime::now(),
+        }
+    }
+
     pub fn get_time_until_delete(&self) -> Duration {
         let time_since_delete = self.start_time.elapsed().unwrap();
 

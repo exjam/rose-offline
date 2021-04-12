@@ -63,7 +63,7 @@ impl WorldClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerCharacterList {
-                        characters: &response.characters[..],
+                        characters: &response[..],
                     }))
                     .await?;
             }

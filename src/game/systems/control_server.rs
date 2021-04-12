@@ -1,5 +1,8 @@
-use crate::game::messages::control::{ClientType, ControlMessage};
 use crate::game::resources::ControlChannel;
+use crate::game::{
+    components::ServerInfo,
+    messages::control::{ClientType, ControlMessage},
+};
 use crate::game::{
     components::{GameClient, LoginClient, WorldClient},
     resources::{GameServer, ServerList, WorldServer},
@@ -46,7 +49,12 @@ pub fn control_server(
                     packet_codec_seed,
                     response_tx,
                 } => {
-                    let entity = cmd.push(());
+                    let entity = cmd.push((ServerInfo {
+                        name: name.clone(),
+                        ip: ip.clone(),
+                        port: port,
+                        packet_codec_seed: packet_codec_seed,
+                    },));
                     server_list.world_servers.push(WorldServer {
                         entity: entity,
                         name,
@@ -65,7 +73,12 @@ pub fn control_server(
                     packet_codec_seed,
                     response_tx,
                 } => {
-                    let entity = cmd.push(());
+                    let entity = cmd.push((ServerInfo {
+                        name: name.clone(),
+                        ip: ip.clone(),
+                        port: port,
+                        packet_codec_seed: packet_codec_seed,
+                    },));
                     let world_server = server_list
                         .world_servers
                         .iter_mut()
