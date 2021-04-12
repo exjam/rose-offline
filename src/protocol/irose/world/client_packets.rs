@@ -53,3 +53,87 @@ impl TryFrom<&Packet> for PacketClientCharacterList {
         Ok(PacketClientCharacterList {})
     }
 }
+
+#[derive(Debug)]
+pub struct PacketClientCreateCharacter<'a> {
+    pub gender: u8,
+    pub birth_stone: u8,
+    pub hair: u8,
+    pub face: u8,
+    pub start_point: u16,
+    pub name: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketClientCreateCharacter<'a> {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::CreateCharacter as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+        let mut reader = PacketReader::from(packet);
+        let gender = reader.read_u8()?;
+        let birth_stone = reader.read_u8()?;
+        let hair = reader.read_u8()?;
+        let face = reader.read_u8()?;
+        let _weapon_type = reader.read_u8()?;
+        let start_point = reader.read_u16()?;
+        let name = reader.read_null_terminated_utf8()?;
+        Ok(PacketClientCreateCharacter {
+            gender,
+            birth_stone,
+            hair,
+            face,
+            start_point,
+            name,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientDeleteCharacter<'a> {
+    pub slot: u8,
+    pub is_delete: bool,
+    pub name: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketClientDeleteCharacter<'a> {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::DeleteCharacter as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+        let mut reader = PacketReader::from(packet);
+        let slot = reader.read_u8()?;
+        let is_delete = reader.read_u8()? != 0;
+        let name = reader.read_null_terminated_utf8()?;
+        Ok(PacketClientDeleteCharacter {
+            slot,
+            is_delete,
+            name,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientSelectCharacter<'a> {
+    pub slot: u8,
+    pub name: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketClientSelectCharacter<'a> {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::SelectCharacter as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+        let mut reader = PacketReader::from(packet);
+        let slot = reader.read_u8()?;
+        let _run_mode = reader.read_u8()?;
+        let _ride_mode = reader.read_u8()?;
+        let name = reader.read_null_terminated_utf8()?;
+        Ok(PacketClientSelectCharacter { slot, name })
+    }
+}

@@ -37,6 +37,7 @@ impl Game {
             .add_system(login_server_authentication_system())
             .add_system(login_server_system())
             .add_system(world_server_authentication_system())
+            .add_system(world_server_system())
             .build();
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);

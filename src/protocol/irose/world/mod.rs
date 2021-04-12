@@ -53,6 +53,64 @@ impl WorldClient {
                 client.connection.write_packet(packet).await?;
             }
             Some(ClientPackets::CharacterListRequest) => {
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::GetCharacterList(GetCharacterList {
+                        response_tx: response_tx,
+                    }))?;
+                let response = response_rx.await?;
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCharacterList {
+                        characters: &response.characters[..],
+                    }))
+                    .await?;
+            }
+            Some(ClientPackets::CreateCharacter) => {
+                let request = PacketClientCreateCharacter::try_from(&packet)?;
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CreateCharacter(CreateCharacter {
+                        gender: request.gender,
+                        birth_stone: request.birth_stone,
+                        hair: request.hair,
+                        face: request.face,
+                        name: String::from(request.name),
+                        response_tx: response_tx,
+                    }))?;
+                let response = match response_rx.await? {
+                    Ok(slot) => Packet::from(&PacketServerCreateCharacterReply {
+                        result: CreateCharacterResult::Ok,
+                        is_platinum: slot >= 3,
+                    }),
+                    Err(CreateCharacterError::Failed) => {
+                        Packet::from(&PacketServerCreateCharacterReply {
+                            result: CreateCharacterResult::Failed,
+                            is_platinum: false,
+                        })
+                    }
+                    Err(CreateCharacterError::AlreadyExists) => {
+                        Packet::from(&PacketServerCreateCharacterReply {
+                            result: CreateCharacterResult::NameAlreadyExists,
+                            is_platinum: false,
+                        })
+                    }
+                    Err(CreateCharacterError::InvalidValue) => {
+                        Packet::from(&PacketServerCreateCharacterReply {
+                            result: CreateCharacterResult::InvalidValue,
+                            is_platinum: false,
+                        })
+                    }
+                    Err(CreateCharacterError::NoMoreSlots) => {
+                        Packet::from(&PacketServerCreateCharacterReply {
+                            result: CreateCharacterResult::NoMoreSlots,
+                            is_platinum: false,
+                        })
+                    }
+                };
+                client.connection.write_packet(response).await?;
             }
             _ => return Err(ProtocolError::InvalidPacket),
         }

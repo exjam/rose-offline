@@ -2,12 +2,13 @@ use legion::systems::CommandBuffer;
 use legion::world::SubWorld;
 use legion::*;
 
+use crate::game::data::account::{AccountStorage, AccountStorageError};
 use crate::game::messages::client::{
     ClientMessage, ConnectionRequestResponse, GetChannelListError, JoinServerError,
     JoinServerResponse, LoginError,
 };
 use crate::game::{
-    components::{Account, AccountError, LoginClient},
+    components::{Account, LoginClient},
     resources::LoginTokens,
     resources::ServerList,
 };
@@ -30,17 +31,18 @@ pub fn login_server_authentication(
                     .ok();
             }
             ClientMessage::LoginRequest(message) => {
-                let result = match Account::try_load(&message.username, &message.password_md5) {
-                    Ok(account) => {
-                        cmd.add_component(*entity, account);
-                        Ok(())
-                    }
-                    Err(error) => Err(match error {
-                        AccountError::NotFound => LoginError::InvalidAccount,
-                        AccountError::InvalidPassword => LoginError::InvalidPassword,
-                        _ => LoginError::Failed,
-                    }),
-                };
+                let result =
+                    match AccountStorage::try_load(&message.username, &message.password_md5) {
+                        Ok(account) => {
+                            cmd.add_component(*entity, Account::from(account));
+                            Ok(())
+                        }
+                        Err(error) => Err(match error {
+                            AccountStorageError::NotFound => LoginError::InvalidAccount,
+                            AccountStorageError::InvalidPassword => LoginError::InvalidPassword,
+                            _ => LoginError::Failed,
+                        }),
+                    };
                 message.response_tx.send(result).ok();
             }
             _ => {

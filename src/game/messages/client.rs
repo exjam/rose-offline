@@ -1,5 +1,7 @@
 use tokio::sync::oneshot;
 
+use crate::game::components::{CharacterDeleteTime, CharacterInfo, CharacterList, Equipment};
+
 pub enum ConnectionRequestError {
     Failed,
     InvalidId,
@@ -58,10 +60,32 @@ pub struct JoinServer {
     pub response_tx: oneshot::Sender<Result<JoinServerResponse, JoinServerError>>,
 }
 
+pub struct GetCharacterList {
+    pub response_tx: oneshot::Sender<CharacterList>,
+}
+
+pub enum CreateCharacterError {
+    Failed,
+    AlreadyExists,
+    InvalidValue,
+    NoMoreSlots,
+}
+
+pub struct CreateCharacter {
+    pub gender: u8,
+    pub birth_stone: u8,
+    pub hair: u8,
+    pub face: u8,
+    pub name: String,
+    pub response_tx: oneshot::Sender<Result<u8, CreateCharacterError>>,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
     GetWorldServerList(GetWorldServerList),
     GetChannelList(GetChannelList),
     JoinServer(JoinServer),
+    GetCharacterList(GetCharacterList),
+    CreateCharacter(CreateCharacter),
 }
