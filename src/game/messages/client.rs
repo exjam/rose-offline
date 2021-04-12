@@ -1,6 +1,7 @@
 use tokio::sync::oneshot;
 
 pub enum ConnectionRequestError {
+    Failed,
     InvalidId,
     InvalidPassword,
 }
@@ -10,8 +11,7 @@ pub struct ConnectionRequestResponse {
 }
 
 pub struct ConnectionRequest {
-    pub unique_id: Option<u32>,
-    pub password_md5: Option<String>,
+    pub login_token: Option<(u32, String)>,
     pub response_tx: oneshot::Sender<Result<ConnectionRequestResponse, ConnectionRequestError>>,
 }
 
@@ -45,10 +45,17 @@ pub enum JoinServerError {
     InvalidChannelId,
 }
 
+pub struct JoinServerResponse {
+    pub login_token: u32,
+    pub packet_codec_seed: u32,
+    pub ip: String,
+    pub port: u16,
+}
+
 pub struct JoinServer {
     pub server_id: u32,
     pub channel_id: u8,
-    pub response_tx: oneshot::Sender<Result<(), JoinServerError>>,
+    pub response_tx: oneshot::Sender<Result<JoinServerResponse, JoinServerError>>,
 }
 
 pub enum ClientMessage {

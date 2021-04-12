@@ -123,3 +123,47 @@ impl<'a> From<&PacketServerChannelList<'a>> for Packet {
         writer.into()
     }
 }
+
+#[allow(dead_code)]
+#[derive(Copy, Clone)]
+pub enum SelectServerResult {
+    Ok = 0,
+    Failed = 1,
+    Full = 2,
+    InvalidChannel = 3,
+    InactiveChannel = 4,
+    InvalidAge = 5,
+    NeedCharge = 6,
+}
+
+pub struct PacketServerSelectServer<'a> {
+    pub result: SelectServerResult,
+    pub login_token: u32,
+    pub packet_codec_seed: u32,
+    pub ip: &'a str,
+    pub port: u16,
+}
+
+impl PacketServerSelectServer<'_> {
+    pub fn with_result(result: SelectServerResult) -> PacketServerSelectServer<'static> {
+        PacketServerSelectServer {
+            result,
+            login_token: 0u32,
+            packet_codec_seed: 0u32,
+            ip: "",
+            port: 0,
+        }
+    }
+}
+
+impl<'a> From<&PacketServerSelectServer<'a>> for Packet {
+    fn from(packet: &PacketServerSelectServer) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::SelectServer as u16);
+        writer.write_u8(packet.result as u8);
+        writer.write_u32(packet.login_token);
+        writer.write_u32(packet.packet_codec_seed);
+        writer.write_null_terminated_utf8(packet.ip);
+        writer.write_u16(packet.port);
+        writer.into()
+    }
+}

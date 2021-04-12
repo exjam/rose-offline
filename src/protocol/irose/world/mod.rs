@@ -1,9 +1,17 @@
+use std::convert::TryFrom;
+
+use crate::game::messages::client::*;
 use crate::game::messages::server::ServerMessage;
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
 use async_trait::async_trait;
+use num_traits::FromPrimitive;
 
 mod client_packets;
 mod server_packets;
+
+use client_packets::*;
+use server_packets::*;
+use tokio::sync::oneshot;
 
 pub struct WorldClient {}
 
@@ -17,7 +25,39 @@ impl WorldClient {
         client: &mut Client<'a>,
         packet: Packet,
     ) -> Result<(), ProtocolError> {
-        Err(ProtocolError::InvalidPacket)
+        match FromPrimitive::from_u16(packet.command) {
+            Some(ClientPackets::ConnectRequest) => {
+                let request = PacketClientConnectRequest::try_from(&packet)?;
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                        login_token: Some((
+                            request.login_token,
+                            String::from(request.password_md5),
+                        )),
+                        response_tx: response_tx,
+                    }))?;
+                let packet = match response_rx.await? {
+                    Ok(result) => Packet::from(&PacketConnectionReply {
+                        result: ConnectResult::Ok,
+                        packet_sequence_id: result.packet_sequence_id,
+                        pay_flags: 0xff,
+                    }),
+                    Err(_) => Packet::from(&PacketConnectionReply {
+                        result: ConnectResult::Failed,
+                        packet_sequence_id: 0,
+                        pay_flags: 0,
+                    }),
+                };
+                client.connection.write_packet(packet).await?;
+            }
+            Some(ClientPackets::CharacterListRequest) => {
+            }
+            _ => return Err(ProtocolError::InvalidPacket),
+        }
+
+        Ok(())
     }
 
     async fn handle_server_message<'a>(

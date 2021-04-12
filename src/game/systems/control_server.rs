@@ -6,7 +6,7 @@ use crate::game::{
 };
 use legion::systems::CommandBuffer;
 use legion::*;
-use std::sync::atomic::Ordering;
+use std::{collections::VecDeque, sync::atomic::Ordering};
 
 #[system]
 pub fn control_server(
@@ -24,18 +24,15 @@ pub fn control_server(
                     response_tx,
                 } => {
                     let entity = match client_type {
-                        ClientType::Login => cmd.push((LoginClient {
-                            client_message_rx,
-                            server_message_tx,
-                        },)),
-                        ClientType::World => cmd.push((WorldClient {
-                            client_message_rx,
-                            server_message_tx,
-                        },)),
-                        ClientType::Game => cmd.push((GameClient {
-                            client_message_rx,
-                            server_message_tx,
-                        },)),
+                        ClientType::Login => {
+                            cmd.push((LoginClient::new(client_message_rx, server_message_tx),))
+                        }
+                        ClientType::World => {
+                            cmd.push((WorldClient::new(client_message_rx, server_message_tx),))
+                        }
+                        ClientType::Game => {
+                            cmd.push((GameClient::new(client_message_rx, server_message_tx),))
+                        }
                     };
                     response_tx.send(entity).unwrap();
                 }

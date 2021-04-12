@@ -25,3 +25,4 @@ tokio = { version = "1.4.0", features = ["full"] }
 crossbeam-channel = "0.5.0"
 scopeguard = "1.1.0"
 async-trait = "0.1.48"
+rand = "0.8.3"

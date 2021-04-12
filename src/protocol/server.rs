@@ -73,8 +73,11 @@ impl LoginServer {
                         let protocol = self.protocol.clone();
                         let control_message_tx = self.control_message_tx.clone();
                         tokio::spawn(async move {
+                            if let Ok(addr) = socket.peer_addr() {
+                                println!("[LOGIN] New connection from: {:?}", addr);
+                            }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                println!("Login server connection error: {:?}", err);
+                                println!("[LOGIN] Connection error: {:?}", err);
                             }
                         });
                     }
@@ -133,8 +136,11 @@ impl WorldServer {
                         let protocol = self.protocol.clone();
                         let control_message_tx = self.control_message_tx.clone();
                         tokio::spawn(async move {
+                            if let Ok(addr) = socket.peer_addr() {
+                                println!("[WORLD] New connection from: {:?}", addr);
+                            }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                println!("Login server connection error: {:?}", err);
+                                println!("[WORLD] Connection error: {:?}", err);
                             }
                         });
                     }
@@ -197,8 +203,11 @@ impl GameServer {
                         let protocol = self.protocol.clone();
                         let control_message_tx = self.control_message_tx.clone();
                         tokio::spawn(async move {
+                            if let Ok(addr) = socket.peer_addr() {
+                                println!("[ GAME] New connection from: {:?}", addr);
+                            }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                println!("Login server connection error: {:?}", err);
+                                println!("[ GAME] Connection error: {:?}", err);
                             }
                         });
                     }

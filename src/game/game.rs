@@ -3,9 +3,9 @@ use legion::world::SubWorld;
 use legion::*;
 use std::{sync::atomic::AtomicU32, sync::atomic::AtomicU8, time::Duration};
 
-use super::resources::ControlChannel;
+use super::messages::control::ControlMessage;
+use super::resources::{ControlChannel, LoginTokens, ServerList};
 use super::systems::*;
-use super::{messages::control::ControlMessage, resources::ServerList};
 
 pub struct Game {
     tick_rate_hz: u64,
@@ -30,10 +30,13 @@ impl Game {
         resources.insert(ServerList {
             world_servers: Vec::new(),
         });
+        resources.insert(LoginTokens { tokens: Vec::new() });
 
         let mut schedule = Schedule::builder()
             .add_system(control_server_system())
+            .add_system(login_server_authentication_system())
             .add_system(login_server_system())
+            .add_system(world_server_authentication_system())
             .build();
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);

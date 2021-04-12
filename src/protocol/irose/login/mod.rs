@@ -14,6 +14,8 @@ use num_traits::FromPrimitive;
 
 use tokio::sync::oneshot;
 
+use super::login_protocol;
+
 pub struct LoginClient {}
 
 impl LoginClient {
@@ -32,8 +34,7 @@ impl LoginClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
-                        unique_id: None,
-                        password_md5: None,
+                        login_token: None,
                         response_tx: response_tx,
                     }))?;
                 let packet = match response_rx.await? {
@@ -122,10 +123,31 @@ impl LoginClient {
             }
             Some(ClientPackets::SelectServer) => {
                 let select_server = PacketClientSelectServer::try_from(&packet)?;
-                /*Ok(ClientMessage::JoinServer {
-                    server_id: select_server.server_id,
-                    channel_id: select_server.channel_id,
-                })*/
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::JoinServer(JoinServer {
+                        server_id: select_server.server_id,
+                        channel_id: select_server.channel_id,
+                        response_tx,
+                    }))?;
+
+                let packet = match response_rx.await? {
+                    Ok(response) => Packet::from(&PacketServerSelectServer {
+                        result: SelectServerResult::Ok,
+                        login_token: response.login_token,
+                        packet_codec_seed: response.packet_codec_seed,
+                        ip: &response.ip,
+                        port: response.port,
+                    }),
+                    Err(JoinServerError::InvalidChannelId) => Packet::from(
+                        &PacketServerSelectServer::with_result(SelectServerResult::InvalidChannel),
+                    ),
+                    Err(JoinServerError::InvalidServerId) => Packet::from(
+                        &PacketServerSelectServer::with_result(SelectServerResult::Failed),
+                    ),
+                };
+                client.connection.write_packet(packet).await?;
             }
             _ => return Err(ProtocolError::InvalidPacket),
         }
