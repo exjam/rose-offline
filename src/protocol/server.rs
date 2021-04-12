@@ -109,7 +109,7 @@ impl WorldServer {
             name: name.clone(),
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),
-            packet_codec_seed: 0x12345678,
+            packet_codec_seed: protocol.packet_codec.get_seed(),
             response_tx,
         })?;
         let entity = response_rx.await?;
@@ -180,7 +180,7 @@ impl GameServer {
             world_server: world_server.clone(),
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),
-            packet_codec_seed: 0x12345678,
+            packet_codec_seed: protocol.packet_codec.get_seed(),
             response_tx,
         })?;
         let entity = response_rx.await?;

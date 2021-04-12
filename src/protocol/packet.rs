@@ -5,10 +5,10 @@ use std::io::Cursor;
 use std::str;
 
 pub trait PacketCodec {
-    fn decrypt_client_header(self: &Self, buffer: &mut BytesMut) -> usize;
-    fn decrypt_client_body(self: &Self, buffer: &mut BytesMut) -> bool;
-
-    fn encrypt_server(self: &Self, buffer: &mut BytesMut);
+    fn get_seed(&self) -> u32;
+    fn decrypt_client_header(&self, buffer: &mut BytesMut) -> usize;
+    fn decrypt_client_body(&self, buffer: &mut BytesMut) -> bool;
+    fn encrypt_server(&self, buffer: &mut BytesMut);
 }
 
 #[derive(Debug)]

@@ -242,6 +242,7 @@ impl Head {
 }
 
 pub struct PacketCodec {
+    seed: u32,
     crc_table: &'static [u8; 256],
     table: [u32; 16 * 2048],
     index: [u16; 512],
@@ -252,6 +253,7 @@ impl PacketCodec {
         let mut seed = Random::new(0x0042D266u32);
         let seed_types: Vec<SeedType> = (0..16).map(get_seed_type).collect();
         let mut crypt = PacketCodec {
+            seed: 0,
             crc_table: crc_table,
             table: [0u32; 16 * 2048],
             index: [0u16; 512],
@@ -261,12 +263,13 @@ impl PacketCodec {
         return crypt;
     }
 
-    pub fn init(crc_table: &'static [u8; 256], seed: u32) -> PacketCodec {
-        let mut seed = Random::new(Random::new(seed).next_my());
+    pub fn init(crc_table: &'static [u8; 256], init_seed: u32) -> PacketCodec {
+        let mut seed = Random::new(Random::new(init_seed).next_my());
         let seed_types: Vec<SeedType> = (0..17)
             .map(|_| get_seed_type(seed.next_bc() & 0xFF))
             .collect();
         let mut crypt = PacketCodec {
+            seed: init_seed,
             crc_table: crc_table,
             table: [0u32; 16 * 2048],
             index: [0u16; 512],
@@ -278,7 +281,11 @@ impl PacketCodec {
 }
 
 impl crate::protocol::packet::PacketCodec for PacketCodec {
-    fn encrypt_server(self: &PacketCodec, buffer: &mut BytesMut) {
+    fn get_seed(&self) -> u32 {
+        self.seed
+    }
+
+    fn encrypt_server(&self, buffer: &mut BytesMut) {
         let add_table_value = 1u16;
         let encrypt_add_value = 1u8;
         let size = (&buffer[0..2]).get_u16_le();
@@ -314,7 +321,7 @@ impl crate::protocol::packet::PacketCodec for PacketCodec {
         (&mut buffer[0..5]).copy_from_slice(&head_server.into_bytes());
     }
 
-    fn decrypt_client_header(self: &PacketCodec, buffer: &mut BytesMut) -> usize {
+    fn decrypt_client_header(&self, buffer: &mut BytesMut) -> usize {
         let mut head = Head::new();
         head.decode_client_final(&HeadCryptedClient::from_bytes(
             buffer[0..5].try_into().unwrap(),
@@ -332,7 +339,7 @@ impl crate::protocol::packet::PacketCodec for PacketCodec {
         return head.add_buffer_len() as usize;
     }
 
-    fn decrypt_client_body(self: &PacketCodec, buffer: &mut BytesMut) -> bool {
+    fn decrypt_client_body(&self, buffer: &mut BytesMut) -> bool {
         let head = Head::from_bytes(buffer[0..5].try_into().unwrap());
         let mut checksum: u8 = 0;
         for i in 0..5 {
