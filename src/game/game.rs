@@ -3,7 +3,7 @@ use legion::world::SubWorld;
 use legion::*;
 use std::{sync::atomic::AtomicU32, sync::atomic::AtomicU8, time::Duration};
 
-use super::messages::control::ControlMessage;
+use super::{messages::control::ControlMessage, resources::ClientEntityIdList};
 use super::resources::{ControlChannel, LoginTokens, ServerList};
 use super::systems::*;
 
@@ -31,6 +31,7 @@ impl Game {
             world_servers: Vec::new(),
         });
         resources.insert(LoginTokens { tokens: Vec::new() });
+        resources.insert(ClientEntityIdList::new());
 
         let mut schedule = Schedule::builder()
             .add_system(control_server_system())

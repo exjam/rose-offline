@@ -34,3 +34,6 @@ pub use character_list::CharacterList;
 
 mod server_info;
 pub use server_info::ServerInfo;
+
+mod client_entity_id;
+pub use client_entity_id::ClientEntityId;
