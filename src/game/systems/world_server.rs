@@ -67,7 +67,7 @@ pub fn world_server_authentication(
 
                                 // Save account in case we have deleted characters
                                 account.save().ok();
-
+                                client.login_token = token.token;
                                 client.selected_game_server =
                                     Some(token.selected_game_server.clone());
                                 cmd.add_component(*entity, Account::from(account));
