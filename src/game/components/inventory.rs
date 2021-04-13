@@ -9,7 +9,7 @@ use crate::game::data::items::*;
 
 const INVENTORY_PAGE_SIZE: usize = 5 * 6;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct InventoryPage<T> {
     pub slots: [Option<T>; INVENTORY_PAGE_SIZE],
 }
@@ -152,7 +152,7 @@ impl InventoryPageType {
 
 pub struct ItemSlot(InventoryPageType, usize);
 
-#[derive(Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Inventory {
     pub money: Money,
     pub equipment: InventoryPage<EquipmentItem>,
