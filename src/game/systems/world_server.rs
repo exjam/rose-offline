@@ -48,18 +48,20 @@ pub fn world_server_authentication(
                         match AccountStorage::try_load(&token.username, &message.password_md5) {
                             Ok(mut account) => {
                                 // Load character list, deleting any characters ready for deletion
-                                let character_list = CharacterList::new();
+                                let mut character_list = CharacterList::new();
                                 account.character_names.retain(|name| {
                                     CharacterStorage::try_load(name).map_or(false, |character| {
-                                        character
+                                        if character
                                             .delete_time
                                             .as_ref()
                                             .and_then(|x| Some(x.get_time_until_delete()))
-                                            .filter(|x| x.as_nanos() == 0)
-                                            .map_or(true, |_| {
-                                                CharacterStorage::delete(&character.info.name).ok();
-                                                false
-                                            })
+                                            .filter(|x| x.as_nanos() == 0).is_some() {
+                                            CharacterStorage::delete(&character.info.name).ok();
+                                            false
+                                        } else {
+                                            character_list.characters.push(character);
+                                            true
+                                        }
                                     })
                                 });
 
