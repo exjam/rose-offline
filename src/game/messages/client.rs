@@ -3,7 +3,10 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 
 use crate::game::{
-    components::{CharacterDeleteTime, CharacterInfo, CharacterList, Equipment, Level},
+    components::{
+        BasicStats, CharacterDeleteTime, CharacterInfo, CharacterList, Equipment, Inventory, Level,
+        Position,
+    },
     data::character::CharacterStorage,
 };
 
@@ -126,6 +129,19 @@ pub struct SelectCharacter {
     pub response_tx: oneshot::Sender<Result<JoinServerResponse, SelectCharacterError>>,
 }
 
+pub struct InitialCharacterData {
+    pub character_info: CharacterInfo,
+    pub position: Position,
+    pub equipment: Equipment,
+    pub basic_stats: BasicStats,
+    pub level: Level,
+    pub inventory: Inventory,
+}
+
+pub struct GetInitialCharacterData {
+    pub response_tx: oneshot::Sender<InitialCharacterData>,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -136,4 +152,5 @@ pub enum ClientMessage {
     CreateCharacter(CreateCharacter),
     DeleteCharacter(DeleteCharacter),
     SelectCharacter(SelectCharacter),
+    GetInitialCharacterData(GetInitialCharacterData),
 }

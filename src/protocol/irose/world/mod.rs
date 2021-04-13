@@ -110,6 +110,27 @@ impl WorldClient {
                 };
                 client.connection.write_packet(response).await?;
             }
+            Some(ClientPackets::SelectCharacter) => {
+                let request = PacketClientSelectCharacter::try_from(&packet)?;
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::SelectCharacter(SelectCharacter {
+                        slot: request.slot,
+                        name: String::from(request.name),
+                        response_tx: response_tx,
+                    }))?;
+                let packet = match response_rx.await? {
+                        Ok(response) => Packet::from(&PacketServerMoveServer {
+                            login_token: response.login_token,
+                            packet_codec_seed: response.packet_codec_seed,
+                            ip: &response.ip,
+                            port: response.port,
+                        }),
+                        Err(_) =>  return Err(ProtocolError::InvalidPacket)
+                    };
+                client.connection.write_packet(packet).await?;
+            }
             _ => return Err(ProtocolError::InvalidPacket),
         }
 

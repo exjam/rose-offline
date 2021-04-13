@@ -147,7 +147,7 @@ impl<'a> From<&'a PacketServerDeleteCharacterReply<'a>> for Packet {
 }
 
 pub struct PacketServerMoveServer<'a> {
-    pub client_id: u32,
+    pub login_token: u32,
     pub packet_codec_seed: u32,
     pub ip: &'a str,
     pub port: u16,
@@ -157,7 +157,7 @@ impl<'a> From<&PacketServerMoveServer<'a>> for Packet {
     fn from(packet: &PacketServerMoveServer) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::MoveServer as u16);
         writer.write_u16(packet.port);
-        writer.write_u32(packet.client_id);
+        writer.write_u32(packet.login_token);
         writer.write_u32(packet.packet_codec_seed);
         writer.write_null_terminated_utf8(packet.ip);
         writer.into()
