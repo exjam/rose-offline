@@ -63,6 +63,14 @@ impl<'a> PacketReader<'a> {
         }
     }
 
+    pub fn read_f32(&mut self) -> Result<f32, ProtocolError> {
+        if self.cursor.remaining() < 4 {
+            Err(ProtocolError::InvalidPacket)
+        } else {
+            Ok(self.cursor.get_f32_le())
+        }
+    }
+
     pub fn read_fixed_length_bytes(&mut self, length: usize) -> Result<&'a [u8], ProtocolError> {
         if self.cursor.remaining() < length {
             Err(ProtocolError::InvalidPacket)
