@@ -1,5 +1,6 @@
 use legion::Entity;
 
+#[derive(Clone, Copy)]
 pub struct ZoneEntityId(pub u16);
 
 #[derive(Default)]

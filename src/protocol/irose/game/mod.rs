@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::game::messages::{
     client::{
-        ClientMessage, ConnectionRequest, GetInitialCharacterData, InitialCharacterData,
+        ClientMessage, GameConnectionRequest,
         JoinZoneRequest, Move,
     },
     server::ServerMessage,
@@ -36,49 +36,38 @@ impl GameClient {
                 let (response_tx, response_rx) = oneshot::channel();
                 client
                     .client_message_tx
-                    .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                    .send(ClientMessage::GameConnectionRequest(GameConnectionRequest {
                         login_token: request.login_token,
                         password_md5: String::from(request.password_md5),
                         response_tx: response_tx,
                     }))?;
                 match response_rx.await? {
-                    Ok(result) => {
+                    Ok(response) => {
                         client
                             .connection
                             .write_packet(Packet::from(&PacketConnectionReply {
                                 result: ConnectResult::Ok,
-                                packet_sequence_id: result.packet_sequence_id,
+                                packet_sequence_id: response.packet_sequence_id,
                                 pay_flags: 0xff,
                             }))
                             .await?;
 
-                        let (response_tx, response_rx) = oneshot::channel();
-                        client
-                            .client_message_tx
-                            .send(ClientMessage::GetInitialCharacterData(
-                                GetInitialCharacterData {
-                                    response_tx: Some(response_tx),
-                                },
-                            ))?;
-
-                        let character_data = response_rx.await?;
-
                         client
                             .connection
                             .write_packet(Packet::from(&PacketServerSelectCharacter {
-                                character_info: &character_data.character_info,
-                                position: &character_data.position,
-                                equipment: &character_data.equipment,
-                                basic_stats: &character_data.basic_stats,
-                                level: &character_data.level,
+                                character_info: &response.character_info,
+                                position: &response.position,
+                                equipment: &response.equipment,
+                                basic_stats: &response.basic_stats,
+                                level: &response.level,
                             }))
                             .await?;
 
                         client
                             .connection
                             .write_packet(Packet::from(&PacketServerCharacterInventory {
-                                inventory: &character_data.inventory,
-                                equipment: &character_data.equipment,
+                                inventory: &response.inventory,
+                                equipment: &response.equipment,
                             }))
                             .await?;
 

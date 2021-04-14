@@ -129,7 +129,8 @@ pub struct SelectCharacter {
     pub response_tx: oneshot::Sender<Result<JoinServerResponse, SelectCharacterError>>,
 }
 
-pub struct InitialCharacterData {
+pub struct GameConnectionResponse {
+    pub packet_sequence_id: u32,
     pub character_info: CharacterInfo,
     pub position: Position,
     pub equipment: Equipment,
@@ -138,8 +139,10 @@ pub struct InitialCharacterData {
     pub inventory: Inventory,
 }
 
-pub struct GetInitialCharacterData {
-    pub response_tx: Option<oneshot::Sender<InitialCharacterData>>,
+pub struct GameConnectionRequest {
+    pub login_token: u32,
+    pub password_md5: String,
+    pub response_tx: oneshot::Sender<Result<GameConnectionResponse, ConnectionRequestError>>,
 }
 
 pub struct JoinZoneResponse {
@@ -169,7 +172,7 @@ pub enum ClientMessage {
     CreateCharacter(CreateCharacter),
     DeleteCharacter(DeleteCharacter),
     SelectCharacter(SelectCharacter),
-    GetInitialCharacterData(GetInitialCharacterData),
+    GameConnectionRequest(GameConnectionRequest),
     JoinZoneRequest(JoinZoneRequest),
     Move(Move),
 }

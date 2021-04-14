@@ -19,7 +19,7 @@ use crate::game::{
 use crate::game::{
     messages::{
         client::{
-            ClientMessage, ConnectionRequestError, ConnectionRequestResponse, GetChannelListError,
+            ClientMessage, ConnectionRequestError, GameConnectionRequest, GameConnectionResponse, GetChannelListError,
             JoinServerError, JoinServerResponse, LoginError,
         },
         server,
@@ -35,7 +35,7 @@ use crate::{
         },
         data::character::{CharacterStorage, CharacterStorageError},
         messages::client::{
-            CharacterListItem, DeleteCharacterError, GetInitialCharacterData, InitialCharacterData,
+            CharacterListItem, DeleteCharacterError,
             SelectCharacterError,
         },
         resources::{LoginToken, ZoneEntityId},
@@ -53,7 +53,7 @@ pub fn game_server_authentication(
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
-            ClientMessage::ConnectionRequest(message) => {
+            ClientMessage::GameConnectionRequest(message) => {
                 let response = login_tokens
                     .tokens
                     .iter()
@@ -69,21 +69,21 @@ pub fn game_server_authentication(
                                     .ok_or(ConnectionRequestError::Failed)
                             })
                             .and_then(|character| {
-                                let entity_id = client_entity_id_list
-                                    .get_zone_mut(character.position.zone as usize)
-                                    .allocate(*entity)
-                                    .unwrap();
+                                cmd.add_component(*entity, character.basic_stats.clone());
+                                cmd.add_component(*entity, character.info.clone());
+                                cmd.add_component(*entity, character.equipment.clone());
+                                cmd.add_component(*entity, character.inventory.clone());
+                                cmd.add_component(*entity, character.level.clone());
+                                cmd.add_component(*entity, character.position.clone());
 
-                                cmd.add_component(*entity, character.basic_stats);
-                                cmd.add_component(*entity, character.info);
-                                cmd.add_component(*entity, character.equipment);
-                                cmd.add_component(*entity, character.inventory);
-                                cmd.add_component(*entity, character.level);
-                                cmd.add_component(*entity, character.position);
-                                cmd.add_component(*entity, ClientEntityId { id: entity_id });
-
-                                Ok(ConnectionRequestResponse {
+                                Ok(GameConnectionResponse {
                                     packet_sequence_id: 123,
+                                    character_info: character.info,
+                                    position: character.position,
+                                    equipment: character.equipment,
+                                    basic_stats: character.basic_stats,
+                                    level: character.level,
+                                    inventory: character.inventory,
                                 })
                             })
                     });
@@ -92,6 +92,40 @@ pub fn game_server_authentication(
             _ => {
                 client.pending_messages.push_back(message);
             }
+        }
+    }
+}
+
+#[system(for_each)]
+pub fn game_server_join(
+    cmd: &mut CommandBuffer,
+    client: &mut GameClient,
+    entity: &Entity,
+    level: &Level,
+    position: &Position,
+    #[resource] client_entity_id_list: &mut ClientEntityIdList,
+) {
+    for message in client.pending_messages.iter_mut() {
+        match message {
+            ClientMessage::JoinZoneRequest(message) => {
+                let entity_id = client_entity_id_list
+                    .get_zone_mut(position.zone as usize)
+                    .allocate(*entity)
+                    .unwrap();
+
+                cmd.add_component(*entity, ClientEntityId { id: entity_id });
+
+                message
+                    .response_tx
+                    .take()
+                    .unwrap()
+                    .send(JoinZoneResponse {
+                        entity_id: entity_id.0,
+                        level: level.clone(),
+                    })
+                    .ok();
+            }
+            _ => (),
         }
     }
 }
@@ -154,52 +188,6 @@ pub fn game_server_move(
                         z: message.z,
                     }),
                 );
-            }
-            _ => (),
-        }
-    }
-}
-
-#[system(for_each)]
-pub fn game_server(
-    client: &mut GameClient,
-    entity_id: &ClientEntityId,
-    character_info: &CharacterInfo,
-    position: &Position,
-    equipment: &Equipment,
-    basic_stats: &BasicStats,
-    level: &Level,
-    inventory: &Inventory,
-) {
-    for message in client.pending_messages.iter_mut() {
-        match message {
-            ClientMessage::GetInitialCharacterData(message) => {
-                // TODO: This might be better merged into connect request response.
-                message
-                    .response_tx
-                    .take()
-                    .unwrap()
-                    .send(InitialCharacterData {
-                        character_info: character_info.clone(),
-                        position: position.clone(),
-                        equipment: equipment.clone(),
-                        basic_stats: basic_stats.clone(),
-                        level: level.clone(),
-                        inventory: inventory.clone(),
-                    })
-                    .ok();
-            }
-            ClientMessage::JoinZoneRequest(message) => {
-                // TODO: We probably need to wait until this message to assign ClientEntityId.
-                message
-                    .response_tx
-                    .take()
-                    .unwrap()
-                    .send(JoinZoneResponse {
-                        entity_id: entity_id.id.0,
-                        level: level.clone(),
-                    })
-                    .ok();
             }
             _ => (),
         }
