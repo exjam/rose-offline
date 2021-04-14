@@ -19,6 +19,13 @@ pub struct WorldServer {
     pub channels: Vec<GameServer>,
 }
 
+#[derive(Default)]
 pub struct ServerList {
     pub world_servers: Vec<WorldServer>,
+}
+
+impl ServerList {
+    pub fn new() -> Self {
+        Default::default()
+    }
 }

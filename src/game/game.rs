@@ -24,13 +24,9 @@ impl Game {
         let mut world = World::default();
 
         let mut resources = Resources::default();
-        resources.insert(ControlChannel {
-            control_rx: self.control_rx.clone(),
-        });
-        resources.insert(ServerList {
-            world_servers: Vec::new(),
-        });
-        resources.insert(LoginTokens { tokens: Vec::new() });
+        resources.insert(ControlChannel::new(self.control_rx.clone()));
+        resources.insert(ServerList::new());
+        resources.insert(LoginTokens::new());
         resources.insert(ClientEntityIdList::new());
 
         let mut schedule = Schedule::builder()

@@ -8,11 +8,16 @@ pub struct LoginToken {
     pub selected_character: String,
 }
 
+#[derive(Default)]
 pub struct LoginTokens {
     pub tokens: Vec<LoginToken>,
 }
 
 impl LoginTokens {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn generate(
         &mut self,
         username: String,
