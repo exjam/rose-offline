@@ -121,14 +121,14 @@ impl WorldClient {
                         response_tx: response_tx,
                     }))?;
                 let packet = match response_rx.await? {
-                        Ok(response) => Packet::from(&PacketServerMoveServer {
-                            login_token: response.login_token,
-                            packet_codec_seed: response.packet_codec_seed,
-                            ip: &response.ip,
-                            port: response.port,
-                        }),
-                        Err(_) =>  return Err(ProtocolError::InvalidPacket)
-                    };
+                    Ok(response) => Packet::from(&PacketServerMoveServer {
+                        login_token: response.login_token,
+                        packet_codec_seed: response.packet_codec_seed,
+                        ip: &response.ip,
+                        port: response.port,
+                    }),
+                    Err(_) => return Err(ProtocolError::InvalidPacket),
+                };
                 client.connection.write_packet(packet).await?;
             }
             _ => return Err(ProtocolError::InvalidPacket),

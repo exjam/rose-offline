@@ -55,7 +55,9 @@ pub fn world_server_authentication(
                                             .delete_time
                                             .as_ref()
                                             .and_then(|x| Some(x.get_time_until_delete()))
-                                            .filter(|x| x.as_nanos() == 0).is_some() {
+                                            .filter(|x| x.as_nanos() == 0)
+                                            .is_some()
+                                        {
                                             CharacterStorage::delete(&character.info.name).ok();
                                             false
                                         } else {
