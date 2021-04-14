@@ -107,4 +107,17 @@ impl STB {
         let (position, size) = self.cells[row * self.columns + column];
         str::from_utf8(&self.data[position..(position + size as usize)]).unwrap()
     }
+
+    pub fn try_get(&self, row: usize, column: usize) -> Option<&str> {
+        let cell_index = row * self.columns + column;
+        if row >= self.rows || column >= self.columns || cell_index >= self.cells.len() {
+            return None;
+        }
+
+        let (position, size) = self.cells[row * self.columns + column];
+        if size == 0 {
+            return None;
+        }
+        str::from_utf8(&self.data[position..(position + size as usize)]).ok()
+    }
 }
