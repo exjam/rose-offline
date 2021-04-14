@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime};
 
-const DELETE_CHARACTER_DURATION: Duration = Duration::from_secs(0);
+const DELETE_CHARACTER_DURATION: Duration = Duration::from_secs(60 * 60);
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct CharacterDeleteTime {
