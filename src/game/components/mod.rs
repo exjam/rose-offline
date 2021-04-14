@@ -37,3 +37,6 @@ pub use server_info::ServerInfo;
 
 mod client_entity_id;
 pub use client_entity_id::ClientEntityId;
+
+mod destination;
+pub use destination::Destination;
