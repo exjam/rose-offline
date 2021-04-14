@@ -1,6 +1,6 @@
 use legion::Entity;
 
-pub struct ZoneEntityId(u32);
+pub struct ZoneEntityId(pub u16);
 
 #[derive(Default)]
 pub struct ZoneEntityList {
@@ -18,7 +18,7 @@ impl ZoneEntityList {
 
     pub fn allocate(&mut self, entity: Entity) -> Option<ZoneEntityId> {
         if let Some(last_free_idx) = self.last_free_idx {
-            let id = ZoneEntityId(last_free_idx as u32);
+            let id = ZoneEntityId(last_free_idx as u16);
             self.entity_list[last_free_idx] = Some(entity);
             self.last_free_idx = self
                 .entity_list

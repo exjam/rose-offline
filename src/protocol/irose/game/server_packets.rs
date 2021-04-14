@@ -17,6 +17,8 @@ pub enum ServerPackets {
     SelectCharacter = 0x715,
     CharacterInventory = 0x716,
     QuestData = 0x71b,
+    JoinZone = 0x753,
+    MoveEntity = 0x79a,
 }
 
 #[allow(dead_code)]
@@ -335,6 +337,59 @@ impl From<&PacketServerCharacterQuestData> for Packet {
             write_full_item(&mut writer, &None); // wish list items
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketMoveEntity {
+    pub entity_id: u16,
+    pub target_entity_id: u16,
+    pub distance: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: u16,
+}
+
+impl From<&PacketMoveEntity> for Packet {
+    fn from(packet: &PacketMoveEntity) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::MoveEntity as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_u16(packet.target_entity_id);
+        writer.write_u16(packet.distance);
+        writer.write_f32(packet.x);
+        writer.write_f32(packet.y);
+        writer.write_u16(packet.z);
+        writer.into()
+    }
+}
+
+pub struct PacketServerJoinZone<'a> {
+    pub entity_id: u16,
+    pub level: &'a Level,
+}
+
+impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
+    fn from(packet: &'a PacketServerJoinZone<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::JoinZone as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_u16(100); // hp
+        writer.write_u16(50); // mp
+
+        writer.write_u32(packet.level.xp as u32);
+        writer.write_u32(0); // penalty xp
+
+        // tagVAR_GLOBAL
+        writer.write_u16(100); // craft rate
+        writer.write_u32(0); // update time
+        writer.write_u16(100); // world price rate
+        writer.write_u8(100); // town rate
+        for i in 0..1 {
+            writer.write_u8(100); // item rate
+        }
+        writer.write_u32(0); // global flags (0x1 = pvp allowed)
+
+        writer.write_u32(0); // account world time
+        writer.write_u32(0); // team number
         writer.into()
     }
 }

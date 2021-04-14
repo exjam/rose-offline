@@ -139,10 +139,27 @@ pub struct InitialCharacterData {
 }
 
 pub struct GetInitialCharacterData {
-    pub response_tx: oneshot::Sender<InitialCharacterData>,
+    pub response_tx: Option<oneshot::Sender<InitialCharacterData>>,
+}
+
+pub struct JoinZoneResponse {
+    pub entity_id: u16,
+    pub level: Level,
+}
+
+pub struct JoinZoneRequest {
+    pub response_tx: Option<oneshot::Sender<JoinZoneResponse>>,
+}
+
+pub struct Move {
+    pub target_entity_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: u16,
 }
 
 pub enum ClientMessage {
+    Read,
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
     GetWorldServerList(GetWorldServerList),
@@ -153,4 +170,6 @@ pub enum ClientMessage {
     DeleteCharacter(DeleteCharacter),
     SelectCharacter(SelectCharacter),
     GetInitialCharacterData(GetInitialCharacterData),
+    JoinZoneRequest(JoinZoneRequest),
+    Move(Move),
 }

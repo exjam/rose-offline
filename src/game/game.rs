@@ -3,13 +3,23 @@ use legion::world::SubWorld;
 use legion::*;
 use std::{sync::atomic::AtomicU32, sync::atomic::AtomicU8, time::Duration};
 
-use super::{messages::control::ControlMessage, resources::ClientEntityIdList};
-use super::resources::{ControlChannel, LoginTokens, ServerList};
 use super::systems::*;
+use super::{
+    components::Destination,
+    resources::{ControlChannel, LoginTokens, ServerList, ServerMessages},
+};
+use super::{
+    components::GameClient, messages::control::ControlMessage, resources::ClientEntityIdList,
+};
 
 pub struct Game {
     tick_rate_hz: u64,
     control_rx: Receiver<ControlMessage>,
+}
+
+#[system(for_each)]
+pub fn cleanup_unread_messages(client: &mut GameClient) {
+    client.pending_messages.clear();
 }
 
 impl Game {
@@ -28,6 +38,7 @@ impl Game {
         resources.insert(ServerList::new());
         resources.insert(LoginTokens::new());
         resources.insert(ClientEntityIdList::new());
+        resources.insert(ServerMessages::new());
 
         let mut schedule = Schedule::builder()
             .add_system(control_server_system())
@@ -36,7 +47,11 @@ impl Game {
             .add_system(world_server_authentication_system())
             .add_system(world_server_system())
             .add_system(game_server_authentication_system())
+            .add_system(game_server_move_system())
             .add_system(game_server_system())
+            .flush()
+            .add_system(server_messages_sender_system())
+            .add_system(cleanup_unread_messages_system())
             .build();
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);

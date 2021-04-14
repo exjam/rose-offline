@@ -1,7 +1,10 @@
 use std::convert::TryFrom;
 
 use crate::game::messages::{
-    client::{ClientMessage, ConnectionRequest, GetInitialCharacterData, InitialCharacterData},
+    client::{
+        ClientMessage, ConnectionRequest, GetInitialCharacterData, InitialCharacterData,
+        JoinZoneRequest, Move,
+    },
     server::ServerMessage,
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
@@ -50,11 +53,12 @@ impl GameClient {
                             .await?;
 
                         let (response_tx, response_rx) = oneshot::channel();
-                        // TODO: We're not getting a response here.
                         client
                             .client_message_tx
                             .send(ClientMessage::GetInitialCharacterData(
-                                GetInitialCharacterData { response_tx },
+                                GetInitialCharacterData {
+                                    response_tx: Some(response_tx),
+                                },
                             ))?;
 
                         let character_data = response_rx.await?;
@@ -95,7 +99,33 @@ impl GameClient {
                     }
                 };
             }
-            _ => return Err(ProtocolError::InvalidPacket),
+            Some(ClientPackets::JoinZone) => {
+                let request = PacketClientJoinZone::try_from(&packet)?;
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::JoinZoneRequest(JoinZoneRequest {
+                        response_tx: Some(response_tx),
+                    }))?;
+                let response = response_rx.await?;
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerJoinZone {
+                        entity_id: response.entity_id,
+                        level: &response.level,
+                    }))
+                    .await?;
+            }
+            Some(ClientPackets::Move) => {
+                let packet = PacketClientMove::try_from(&packet)?;
+                client.client_message_tx.send(ClientMessage::Move(Move {
+                    target_entity_id: packet.target_entity_id,
+                    x: packet.x,
+                    y: packet.y,
+                    z: packet.z,
+                }))?;
+            }
+            _ => println!("Unhandled packet {}", packet.command),
         }
         Ok(())
     }
@@ -106,10 +136,24 @@ impl GameClient {
         message: ServerMessage,
     ) -> Result<(), ProtocolError> {
         match message {
+            ServerMessage::MoveEntity(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketMoveEntity {
+                        entity_id: message.entity_id,
+                        target_entity_id: message.target_entity_id,
+                        distance: message.distance,
+                        x: message.x,
+                        y: message.y,
+                        z: message.z,
+                    }))
+                    .await?;
+            }
             _ => {
                 panic!("Unimplemented message for irose game server!")
             }
         }
+        Ok(())
     }
 }
 
