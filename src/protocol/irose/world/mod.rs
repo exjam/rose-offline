@@ -110,6 +110,35 @@ impl WorldClient {
                 };
                 client.connection.write_packet(response).await?;
             }
+            Some(ClientPackets::DeleteCharacter) => {
+                let request = PacketClientDeleteCharacter::try_from(&packet)?;
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::DeleteCharacter(DeleteCharacter {
+                        slot: request.slot,
+                        name: String::from(request.name),
+                        is_delete: request.is_delete,
+                        response_tx: response_tx,
+                    }))?;
+                let packet = match response_rx.await? {
+                    Ok(response) => Packet::from(&PacketServerDeleteCharacterReply {
+                        seconds_until_delete: Some(
+                            response
+                                .map(|t| t.get_time_until_delete().as_secs())
+                                .unwrap_or(0) as u32,
+                        ),
+                        name: request.name,
+                    }),
+                    Err(DeleteCharacterError::Failed) => {
+                        Packet::from(&PacketServerDeleteCharacterReply {
+                            seconds_until_delete: None,
+                            name: request.name,
+                        })
+                    }
+                };
+                client.connection.write_packet(packet).await?;
+            }
             Some(ClientPackets::SelectCharacter) => {
                 let request = PacketClientSelectCharacter::try_from(&packet)?;
                 let (response_tx, response_rx) = oneshot::channel();
