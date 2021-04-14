@@ -1,6 +1,6 @@
 use crate::game::components::BasicStats;
 use crate::game::data::formats::STB;
-use crate::game::data::items::{EquipmentItem, Item, StackableItem};
+use crate::game::data::items::{EquipmentItem, Item};
 
 pub struct StbInitAvatar(pub STB);
 
@@ -24,7 +24,7 @@ impl StbInitAvatar {
         let mut items = Vec::new();
         for i in 6..=13 {
             let item = self.0.get(row, i).parse().unwrap_or(0);
-            if let Some(item) = EquipmentItem::from_integer(item, 1) {
+            if let Some(item) = EquipmentItem::from_integer(item) {
                 items.push(item);
             }
         }

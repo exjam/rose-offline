@@ -1,8 +1,8 @@
-use super::ProtocolError;
-use crate::game::messages::{client::ClientMessage, server::ServerMessage};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::io::Cursor;
 use std::str;
+
+use super::ProtocolError;
 
 pub trait PacketCodec {
     fn get_seed(&self) -> u32;
@@ -82,11 +82,6 @@ impl<'a> PacketReader<'a> {
         }
     }
 
-    pub fn read_u16_length_bytes(&mut self) -> Result<&'a [u8], ProtocolError> {
-        let length = self.read_u16()?;
-        self.read_fixed_length_bytes(length as usize)
-    }
-
     pub fn read_null_terminated_bytes(&mut self) -> Result<&'a [u8], ProtocolError> {
         let start = self.cursor.position() as usize;
         let end = self.cursor.get_ref().as_ref().len();
@@ -103,13 +98,6 @@ impl<'a> PacketReader<'a> {
 
     pub fn read_fixed_length_utf8(&mut self, length: usize) -> Result<&'a str, ProtocolError> {
         match str::from_utf8(self.read_fixed_length_bytes(length)?) {
-            Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => return Err(ProtocolError::InvalidPacket),
-        }
-    }
-
-    pub fn read_u16_length_utf8(&mut self) -> Result<&'a str, ProtocolError> {
-        match str::from_utf8(self.read_u16_length_bytes()?) {
             Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
             Err(_) => return Err(ProtocolError::InvalidPacket),
         }

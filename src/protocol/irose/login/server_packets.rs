@@ -7,6 +7,7 @@ pub enum ServerPackets {
     NetworkStatus = 0x7ff,
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum ConnectionResult {
     Connect = 1,
@@ -50,11 +51,6 @@ pub enum LoginResult {
     NoRealName = 9,
     InvalidVersion = 10,
     OutsideRegion = 11,
-}
-
-pub struct ServerListItem<'a> {
-    pub id: u32,
-    pub name: &'a str,
 }
 
 pub struct PacketServerLoginReply<'a> {

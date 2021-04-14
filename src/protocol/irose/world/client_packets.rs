@@ -1,7 +1,5 @@
-use bytes::{BufMut, BytesMut};
 use num_derive::FromPrimitive;
 use std::convert::TryFrom;
-use std::time::SystemTime;
 
 use crate::protocol::packet::*;
 use crate::protocol::ProtocolError;

@@ -139,7 +139,7 @@ impl WorldClient {
 
     async fn handle_server_message<'a>(
         &self,
-        client: &mut Client<'a>,
+        _client: &mut Client<'a>,
         message: ServerMessage,
     ) -> Result<(), ProtocolError> {
         match message {

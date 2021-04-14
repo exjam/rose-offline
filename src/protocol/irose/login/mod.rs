@@ -1,20 +1,17 @@
+use async_trait::async_trait;
+use num_traits::FromPrimitive;
 use std::convert::TryFrom;
+use tokio::sync::oneshot;
 
 use crate::game::messages::client::*;
 use crate::game::messages::server::ServerMessage;
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
-use async_trait::async_trait;
 
 mod client_packets;
 mod server_packets;
 use client_packets::*;
 use server_packets::*;
 
-use num_traits::FromPrimitive;
-
-use tokio::sync::oneshot;
-
-use super::login_protocol;
 
 pub struct LoginClient {}
 
@@ -158,7 +155,7 @@ impl LoginClient {
 
     async fn handle_server_message<'a>(
         &self,
-        client: &mut Client<'a>,
+        _client: &mut Client<'a>,
         message: ServerMessage,
     ) -> Result<(), ProtocolError> {
         match message {

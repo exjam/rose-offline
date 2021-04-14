@@ -3,11 +3,7 @@ use encoding_rs::EUC_KR;
 use memmap::{Mmap, MmapOptions};
 use std::collections::HashMap;
 use std::fs::File;
-use std::{
-    convert::TryInto,
-    io::{BufReader, Read},
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 struct FileEntry {
     offset: usize,
@@ -63,7 +59,7 @@ impl VfsIndex {
 
         let num_vfs = reader.read_u32()? as usize;
         for _ in 0..num_vfs {
-            let (filename, _, decode_errors) =
+            let (filename, _, _) =
                 EUC_KR.decode(reader.read_u16_length_bytes()?.split_last().unwrap().1);
             let offset = reader.read_u32()? as u64;
 
@@ -87,7 +83,7 @@ impl VfsIndex {
             };
 
             for _ in 0..num_files {
-                let (filename, _, decode_errors) =
+                let (filename, _, _) =
                     EUC_KR.decode(reader.read_u16_length_bytes()?.split_last().unwrap().1);
                 let offset = reader.read_u32()? as usize;
                 let size = reader.read_u32()? as usize;

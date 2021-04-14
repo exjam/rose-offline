@@ -1,47 +1,16 @@
-use std::{char, collections::VecDeque};
-
 use legion::systems::CommandBuffer;
-use legion::world::SubWorld;
-use legion::TryRead;
 use legion::*;
-use std::f32;
 
-use crate::game::{
-    components::{Account, CharacterList, GameClient, ServerInfo},
-    messages::{client::JoinZoneResponse, server::ServerMessage},
-    resources::LoginTokens,
-    resources::{ServerList, ServerMessages},
+use crate::game::components::{
+    GameClient,
+    ClientEntityId, Destination, Level,
+    Position, Target,
 };
-use crate::game::{
-    data::account::{AccountStorage, AccountStorageError},
-    messages::client::CreateCharacterError,
-};
-use crate::game::{
-    messages::{
-        client::{
-            ClientMessage, ConnectionRequestError, GameConnectionRequest, GameConnectionResponse, GetChannelListError,
-            JoinServerError, JoinServerResponse, LoginError,
-        },
-        server,
-    },
-    resources::ClientEntityIdList,
-};
-use crate::{
-    game::{
-        components::CharacterDeleteTime,
-        components::{
-            BasicStats, CharacterInfo, ClientEntityId, Destination, Equipment, Inventory, Level,
-            Position, Target,
-        },
-        data::character::{CharacterStorage, CharacterStorageError},
-        messages::client::{
-            CharacterListItem, DeleteCharacterError,
-            SelectCharacterError,
-        },
-        resources::{LoginToken, ZoneEntityId},
-    },
-    protocol::Client,
-};
+use crate::game::data::{account::AccountStorage, character::CharacterStorage};
+use crate::game::messages::client::{ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse};
+use crate::game::messages::server;
+use crate::game::messages::server::{ServerMessage};
+use crate::game::resources::{ClientEntityIdList, LoginTokens, ServerMessages, ZoneEntityId};
 
 #[system(for_each)]
 pub fn game_server_authentication(
@@ -49,7 +18,6 @@ pub fn game_server_authentication(
     entity: &Entity,
     client: &mut GameClient,
     #[resource] login_tokens: &mut LoginTokens,
-    #[resource] client_entity_id_list: &mut ClientEntityIdList,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
@@ -172,9 +140,9 @@ pub fn game_server_move(
                     },
                 );
 
-                let dx = (position.x - message.x);
-                let dy = (position.y - message.y);
-                let dz = (position.z as f32 - message.z as f32);
+                let dx = position.x - message.x;
+                let dy = position.y - message.y;
+                let dz = position.z as f32 - message.z as f32;
                 let distance = (dx * dx + dy * dy + dz * dz).sqrt();
 
                 server_messages.send_nearby_message(

@@ -1,15 +1,9 @@
-use crate::game::resources::ControlChannel;
-use crate::game::{
-    components::ServerInfo,
-    messages::control::{ClientType, ControlMessage},
-};
-use crate::game::{
-    components::{GameClient, LoginClient, WorldClient},
-    resources::{GameServer, ServerList, WorldServer},
-};
-use legion::systems::CommandBuffer;
 use legion::*;
-use std::{collections::VecDeque, sync::atomic::Ordering};
+use legion::systems::CommandBuffer;
+
+use crate::game::components::{ServerInfo, GameClient, LoginClient, WorldClient};
+use crate::game::resources::{ControlChannel, GameServer, ServerList, WorldServer};
+use crate::game::messages::control::{ClientType, ControlMessage};
 
 #[system]
 pub fn control_server(

@@ -1,12 +1,7 @@
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
-use std::ops::{Add, Sub};
-use std::time::{Duration, SystemTime};
-
 use crate::game::data::items::*;
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum EquipmentIndex {
     Face = 1,
@@ -23,6 +18,7 @@ pub enum EquipmentIndex {
     Max,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum VehiclePartIndex {
     Body = 0,
@@ -33,6 +29,7 @@ pub enum VehiclePartIndex {
     Max,
 }
 
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum AmmoType {
     Arrow = 0,

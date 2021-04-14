@@ -1,14 +1,10 @@
-use std::time::Duration;
-
 use tokio::sync::oneshot;
 
-use crate::game::{
-    components::{
-        BasicStats, CharacterDeleteTime, CharacterInfo, CharacterList, Equipment, Inventory, Level,
-        Position,
-    },
-    data::character::CharacterStorage,
+use crate::game::components::{
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Inventory, Level,
+    Position,
 };
+use crate::game::data::character::CharacterStorage;
 
 pub enum ConnectionRequestError {
     Failed,
@@ -162,7 +158,6 @@ pub struct Move {
 }
 
 pub enum ClientMessage {
-    Read,
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
     GetWorldServerList(GetWorldServerList),

@@ -13,8 +13,12 @@ pub enum CharacterStorageError {
 }
 
 impl From<std::io::Error> for CharacterStorageError {
-    fn from(_: std::io::Error) -> Self {
-        CharacterStorageError::IoError
+    fn from(err: std::io::Error) -> Self {
+        if err.kind() == std::io::ErrorKind::NotFound {
+            CharacterStorageError::NotFound
+        } else {
+            CharacterStorageError::IoError
+        }
     }
 }
 

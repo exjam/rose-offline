@@ -1,16 +1,11 @@
 use crossbeam_channel::Receiver;
-use legion::world::SubWorld;
 use legion::*;
-use std::{sync::atomic::AtomicU32, sync::atomic::AtomicU8, time::Duration};
+use std::time::Duration;
 
 use super::systems::*;
-use super::{
-    components::Destination,
-    resources::{ControlChannel, LoginTokens, ServerList, ServerMessages},
-};
-use super::{
-    components::GameClient, messages::control::ControlMessage, resources::ClientEntityIdList,
-};
+use super::resources::{ClientEntityIdList, ControlChannel, LoginTokens, ServerList, ServerMessages};
+use super::components::GameClient;
+use super::messages::control::ControlMessage;
 
 pub struct Game {
     tick_rate_hz: u64,

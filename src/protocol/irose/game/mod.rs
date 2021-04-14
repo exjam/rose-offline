@@ -1,4 +1,7 @@
+use async_trait::async_trait;
+use num_traits::FromPrimitive;
 use std::convert::TryFrom;
+use tokio::sync::oneshot;
 
 use crate::game::messages::{
     client::{
@@ -8,15 +11,12 @@ use crate::game::messages::{
     server::ServerMessage,
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
-use async_trait::async_trait;
-use num_traits::FromPrimitive;
 
 mod client_packets;
 mod server_packets;
 
 use client_packets::*;
 use server_packets::*;
-use tokio::sync::oneshot;
 
 pub struct GameClient {}
 
@@ -89,7 +89,7 @@ impl GameClient {
                 };
             }
             Some(ClientPackets::JoinZone) => {
-                let request = PacketClientJoinZone::try_from(&packet)?;
+                let _request = PacketClientJoinZone::try_from(&packet)?;
                 let (response_tx, response_rx) = oneshot::channel();
                 client
                     .client_message_tx

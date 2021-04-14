@@ -88,7 +88,6 @@ impl LoginServer {
 }
 
 pub struct WorldServer {
-    name: String,
     entity: Entity,
 
     listener: TcpListener,
@@ -106,7 +105,7 @@ impl WorldServer {
         let (response_tx, response_rx) = oneshot::channel();
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddWorldServer {
-            name: name.clone(),
+            name: name,
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),
             packet_codec_seed: protocol.packet_codec.get_seed(),
@@ -115,7 +114,6 @@ impl WorldServer {
         let entity = response_rx.await?;
 
         Ok(WorldServer {
-            name,
             entity,
             listener,
             protocol,
@@ -157,7 +155,6 @@ impl WorldServer {
 }
 
 pub struct GameServer {
-    name: String,
     entity: Entity,
 
     listener: TcpListener,
@@ -176,7 +173,7 @@ impl GameServer {
         let (response_tx, response_rx) = oneshot::channel();
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddGameServer {
-            name: name.clone(),
+            name: name,
             world_server: world_server.clone(),
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),
@@ -186,7 +183,6 @@ impl GameServer {
         let entity = response_rx.await?;
 
         Ok(GameServer {
-            name,
             entity,
             listener,
             protocol,

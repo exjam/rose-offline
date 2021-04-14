@@ -49,16 +49,20 @@ impl From<&PacketConnectionReply> for Packet {
 
 #[bitfield]
 #[derive(Clone, Copy)]
-pub struct tagPartITEM {
+pub struct PacketEquipmentItemPart {
+    #[skip(getters)]
     item_number: B10,
+    #[skip(getters)]
     gem: B9,
+    #[skip(getters)]
     has_socket: bool,
+    #[skip(getters)]
     grade: B4,
 }
 
-fn write_part_item(writer: &mut PacketWriter, item: &Option<EquipmentItem>) {
+fn write_equipment_item_part(writer: &mut PacketWriter, item: &Option<EquipmentItem>) {
     if let Some(item) = item {
-        let part = tagPartITEM::new()
+        let part = PacketEquipmentItemPart::new()
             .with_item_number(item.item_number)
             .with_gem(item.gem)
             .with_has_socket(item.has_socket)
@@ -74,32 +78,31 @@ fn write_part_item(writer: &mut PacketWriter, item: &Option<EquipmentItem>) {
 
 #[bitfield]
 #[derive(Clone, Copy)]
-pub struct tagBaseITEM_Equipment {
+pub struct PacketEquipmentItemFull {
+    #[skip(getters)]
     item_type: B5,
+    #[skip(getters)]
     item_number: B10,
+    #[skip(getters)]
     is_crafted: bool,
+    #[skip(getters)]
     gem: B9,
+    #[skip(getters)]
     durability: B7,
+    #[skip(getters)]
     life: B10,
+    #[skip(getters)]
     has_socket: bool,
+    #[skip(getters)]
     is_appraised: bool,
+    #[skip(getters)]
     grade: B4,
 }
 
-#[bitfield]
-#[derive(Clone, Copy)]
-pub struct tagBaseITEM_Stackable {
-    item_type: B5,
-    item_number: B10,
-    #[skip]
-    __: B1,
-    quantity: B32,
-}
-
-fn write_full_equipment_item(writer: &mut PacketWriter, equipment: Option<&EquipmentItem>) {
+fn write_equipment_item_full(writer: &mut PacketWriter, equipment: Option<&EquipmentItem>) {
     match equipment {
         Some(equipment) => {
-            let item = tagBaseITEM_Equipment::new()
+            let item = PacketEquipmentItemFull::new()
                 .with_item_type(equipment.item_type as u8)
                 .with_item_number(equipment.item_number as u16)
                 .with_is_crafted(equipment.is_crafted)
@@ -118,10 +121,23 @@ fn write_full_equipment_item(writer: &mut PacketWriter, equipment: Option<&Equip
     }
 }
 
-fn write_full_stackable_item(writer: &mut PacketWriter, stackable: Option<&StackableItem>) {
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct PacketStackableItemFull {
+    #[skip(getters)]
+    item_type: B5,
+    #[skip(getters)]
+    item_number: B10,
+    #[skip]
+    __: B1,
+    #[skip(getters)]
+    quantity: B32,
+}
+
+fn write_stackable_item_full(writer: &mut PacketWriter, stackable: Option<&StackableItem>) {
     match stackable {
         Some(stackable) => {
-            let item = tagBaseITEM_Stackable::new()
+            let item = PacketStackableItemFull::new()
                 .with_item_type(stackable.item_type as u8)
                 .with_item_number(stackable.item_number as u16)
                 .with_quantity(stackable.quantity);
@@ -137,13 +153,13 @@ fn write_full_stackable_item(writer: &mut PacketWriter, stackable: Option<&Stack
 fn write_full_item(writer: &mut PacketWriter, item: &Option<Item>) {
     match item {
         Some(Item::Equipment(equipment)) => {
-            write_full_equipment_item(writer, Some(equipment));
+            write_equipment_item_full(writer, Some(equipment));
         }
         Some(Item::Stackable(stackable)) => {
-            write_full_stackable_item(writer, Some(stackable));
+            write_stackable_item_full(writer, Some(stackable));
         }
         Some(Item::Money(money)) => {
-            let item = tagBaseITEM_Stackable::new()
+            let item = PacketStackableItemFull::new()
                 .with_item_type(ItemType::Money as u8)
                 .with_quantity(money.quantity);
             writer.write_bytes(&item.into_bytes());
@@ -178,17 +194,17 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
 
         // tagPartITEM * N
         let equipped_items = &packet.equipment.equipped_items;
-        write_part_item(&mut writer, &equipped_items[EquipmentIndex::Head as usize]);
-        write_part_item(&mut writer, &equipped_items[EquipmentIndex::Body as usize]);
-        write_part_item(&mut writer, &equipped_items[EquipmentIndex::Hands as usize]);
-        write_part_item(&mut writer, &equipped_items[EquipmentIndex::Feet as usize]);
-        write_part_item(&mut writer, &equipped_items[EquipmentIndex::Face as usize]);
-        write_part_item(&mut writer, &equipped_items[EquipmentIndex::Back as usize]);
-        write_part_item(
+        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Head as usize]);
+        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Body as usize]);
+        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Hands as usize]);
+        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Feet as usize]);
+        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Face as usize]);
+        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Back as usize]);
+        write_equipment_item_part(
             &mut writer,
             &equipped_items[EquipmentIndex::WeaponRight as usize],
         );
-        write_part_item(
+        write_equipment_item_part(
             &mut writer,
             &equipped_items[EquipmentIndex::WeaponLeft as usize],
         );
@@ -223,7 +239,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u32(0); // Penalty XP
         writer.write_u16(0); // Fame G
         writer.write_u16(0); // Fame B
-        for i in 0..10 {
+        for _ in 0..10 {
             writer.write_u16(0); // Union points
         }
         writer.write_u32(0); // Guild ID
@@ -232,19 +248,19 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u16(0); // PK flag
         writer.write_u16(100); // Stamina
 
-        for i in 0..40 {
+        for _ in 0..40 {
             writer.write_u32(0); // seconds remaining
             writer.write_u16(0); // buff id
             writer.write_u16(0); // reserved
         }
 
         // tagSkillAbility
-        for i in 0..120 {
+        for _ in 0..120 {
             writer.write_u16(0); // skill id
         }
 
         // CHotIcons
-        for i in 0..32 {
+        for _ in 0..32 {
             writer.write_u16(0); // skill id
         }
 
@@ -267,31 +283,31 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
         writer.write_i64(inventory.money.0);
 
         for item in &equipment.equipped_items {
-            write_full_equipment_item(&mut writer, item.as_ref());
+            write_equipment_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.equipment.slots {
-            write_full_equipment_item(&mut writer, item.as_ref());
+            write_equipment_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.consumables.slots {
-            write_full_stackable_item(&mut writer, item.as_ref());
+            write_stackable_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.materials.slots {
-            write_full_stackable_item(&mut writer, item.as_ref());
+            write_stackable_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.vehicles.slots {
-            write_full_equipment_item(&mut writer, item.as_ref());
+            write_equipment_item_full(&mut writer, item.as_ref());
         }
 
         for item in &equipment.equipped_ammo {
-            write_full_stackable_item(&mut writer, item.as_ref());
+            write_stackable_item_full(&mut writer, item.as_ref());
         }
 
         for item in &equipment.equipped_vehicle {
-            write_full_equipment_item(&mut writer, item.as_ref());
+            write_equipment_item_full(&mut writer, item.as_ref());
         }
 
         writer.into()
@@ -301,7 +317,7 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
 pub struct PacketServerCharacterQuestData {}
 
 impl From<&PacketServerCharacterQuestData> for Packet {
-    fn from(packet: &PacketServerCharacterQuestData) -> Self {
+    fn from(_packet: &PacketServerCharacterQuestData) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::QuestData as u16);
 
         for _ in 0..5 {
@@ -383,7 +399,7 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
         writer.write_u32(0); // update time
         writer.write_u16(100); // world price rate
         writer.write_u8(100); // town rate
-        for i in 0..1 {
+        for _ in 0..11 {
             writer.write_u8(100); // item rate
         }
         writer.write_u32(0); // global flags (0x1 = pvp allowed)

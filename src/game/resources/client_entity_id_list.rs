@@ -26,7 +26,7 @@ impl ZoneEntityList {
                 .iter()
                 .enumerate()
                 .skip(last_free_idx)
-                .find(|(index, entity)| entity.is_none())
+                .find(|(_, entity)| entity.is_none())
                 .map(|(index, _)| index);
             return Some(id);
         } else {
@@ -54,7 +54,7 @@ pub struct ClientEntityIdList {
 impl ClientEntityIdList {
     pub fn new() -> Self {
         let mut zones = Vec::new();
-        for i in 0..100 {
+        for _ in 0..100 { // TODO: Actual zone count from STB
             zones.push(ZoneEntityList::new());
         }
         Self { zones }

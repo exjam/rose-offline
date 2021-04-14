@@ -1,12 +1,9 @@
-use bytes::{BufMut, BytesMut};
 use num_derive::FromPrimitive;
-use std::convert::TryFrom;
-use std::time::SystemTime;
 
 use crate::game::data::items::EquipmentItem;
-use crate::game::{components::EquipmentIndex, messages::client::CharacterListItem};
+use crate::game::components::EquipmentIndex;
+use crate::game::messages::client::CharacterListItem;
 use crate::protocol::packet::*;
-use crate::protocol::ProtocolError;
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {

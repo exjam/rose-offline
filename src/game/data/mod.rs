@@ -18,8 +18,8 @@ lazy_static! {
         let project = ProjectDirs::from("", "", "rose-offline").unwrap();
         PathBuf::from(project.data_local_dir())
     };
-    pub static ref ACCOUNT_STORAGE_DIR: PathBuf = { LOCAL_STORAGE_DIR.join("accounts") };
-    pub static ref CHARACTER_STORAGE_DIR: PathBuf = { LOCAL_STORAGE_DIR.join("characters") };
+    pub static ref ACCOUNT_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("accounts");
+    pub static ref CHARACTER_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("characters");
     pub static ref VFS_INDEX: VfsIndex = {
         if let Ok(index) = VfsIndex::load(&Path::new("data.idx")) {
             return index;

@@ -30,7 +30,7 @@ pub fn world_protocol() -> Arc<Protocol> {
             &packet_codec::IROSE_112_TABLE,
             packet_codec_seed,
         )),
-        create_client: || Box::new(WorldClient {}),
+        create_client: || Box::new(WorldClient::new()),
     })
 }
 
@@ -42,6 +42,6 @@ pub fn game_protocol() -> Arc<Protocol> {
             &packet_codec::IROSE_112_TABLE,
             packet_codec_seed,
         )),
-        create_client: || Box::new(GameClient {}),
+        create_client: || Box::new(GameClient::new()),
     })
 }

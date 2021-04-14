@@ -1,10 +1,6 @@
 use bytes::Buf;
-use encoding_rs::Encoding;
 use std::str;
-use std::{
-    io::{Cursor, Seek},
-    usize,
-};
+use std::io::Cursor;
 
 pub enum ReadError {
     UnexpectedEof,
@@ -38,6 +34,7 @@ impl<'a> From<&'a [u8]> for FileReader<'a> {
     }
 }
 
+#[allow(dead_code)]
 impl<'a> FileReader<'a> {
     pub fn remaining(&self) -> usize {
         self.cursor.remaining()

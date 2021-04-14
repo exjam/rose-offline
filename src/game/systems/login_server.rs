@@ -1,5 +1,4 @@
 use legion::systems::CommandBuffer;
-use legion::world::SubWorld;
 use legion::*;
 
 use crate::game::data::account::{AccountStorage, AccountStorageError};
@@ -7,18 +6,14 @@ use crate::game::messages::client::{
     ClientMessage, ConnectionRequestResponse, GetChannelListError, JoinServerError,
     JoinServerResponse, LoginError,
 };
-use crate::game::{
-    components::{Account, LoginClient},
-    resources::LoginTokens,
-    resources::ServerList,
-};
+use crate::game::components::{Account, LoginClient};
+use crate::game::resources::{LoginTokens, ServerList};
 
 #[system(for_each)]
 pub fn login_server_authentication(
     cmd: &mut CommandBuffer,
     entity: &Entity,
     client: &mut LoginClient,
-    #[resource] login_tokens: &mut LoginTokens,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {

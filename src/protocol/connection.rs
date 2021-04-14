@@ -1,10 +1,9 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
 use tokio::net::TcpStream;
 
 use super::packet::{Packet, PacketCodec};
-use super::{Protocol, ProtocolError};
+use super::ProtocolError;
 
 pub struct Connection<'a> {
     stream: BufWriter<TcpStream>,

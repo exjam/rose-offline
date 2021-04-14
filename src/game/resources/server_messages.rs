@@ -24,6 +24,7 @@ pub struct ServerMessages {
     pub pending_nearby_messages: Vec<NearbyMessage>,
 }
 
+#[allow(dead_code)]
 impl ServerMessages {
     pub fn new() -> Self {
         Default::default()

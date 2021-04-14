@@ -1,9 +1,6 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
-use std::ops::{Add, Sub};
-use std::time::{Duration, SystemTime};
 
 const MAX_STACKABLE_ITEM_QUANTITY: u32 = 999;
 
@@ -75,7 +72,7 @@ pub struct EquipmentItem {
 }
 
 impl EquipmentItem {
-    pub fn from_integer(value: u32, quantity: u32) -> Option<EquipmentItem> {
+    pub fn from_integer(value: u32) -> Option<EquipmentItem> {
         let item_number: u16 = (value % 1000) as u16;
         let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
 
@@ -158,7 +155,6 @@ pub enum Item {
 
 impl Item {
     pub fn from_integer(value: u32, quantity: u32) -> Option<Item> {
-        let item_number: u16 = (value % 1000) as u16;
         let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
 
         if item_type.is_money() {
@@ -169,7 +165,7 @@ impl Item {
                 None => None,
             }
         } else if item_type.is_equipment() {
-            match EquipmentItem::from_integer(value, quantity) {
+            match EquipmentItem::from_integer(value) {
                 Some(equipment) => Some(Item::Equipment(equipment)),
                 None => None,
             }

@@ -1,5 +1,3 @@
-use std::sync::atomic::AtomicU32;
-
 use legion::Entity;
 
 pub struct GameServer {

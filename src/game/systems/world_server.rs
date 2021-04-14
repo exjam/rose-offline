@@ -1,31 +1,16 @@
-use std::char;
 
 use legion::systems::CommandBuffer;
 use legion::world::SubWorld;
 use legion::*;
 
-use crate::game::messages::{
-    client::{
-        ClientMessage, ConnectionRequestError, ConnectionRequestResponse, GetChannelListError,
-        JoinServerError, JoinServerResponse, LoginError,
-    },
-    server,
+use crate::game::components::{Account, CharacterList, CharacterDeleteTime, ServerInfo, WorldClient};
+use crate::game::data::account::{AccountStorage, AccountStorageError};
+use crate::game::data::character::{CharacterStorage};
+use crate::game::messages::client::{
+    ClientMessage, ConnectionRequestError, ConnectionRequestResponse, CreateCharacterError,
+    JoinServerResponse, CharacterListItem, DeleteCharacterError, SelectCharacterError,
 };
-use crate::game::{
-    components::CharacterDeleteTime,
-    data::character::{CharacterStorage, CharacterStorageError},
-    messages::client::{CharacterListItem, DeleteCharacterError, SelectCharacterError},
-    resources::LoginToken,
-};
-use crate::game::{
-    components::{Account, CharacterList, ServerInfo, WorldClient},
-    resources::LoginTokens,
-    resources::ServerList,
-};
-use crate::game::{
-    data::account::{AccountStorage, AccountStorageError},
-    messages::client::CreateCharacterError,
-};
+use crate::game::resources::{LoginTokens};
 
 #[system(for_each)]
 #[write_component(Account)]
