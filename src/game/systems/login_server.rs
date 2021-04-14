@@ -1,12 +1,12 @@
 use legion::systems::CommandBuffer;
 use legion::*;
 
+use crate::game::components::{Account, LoginClient};
 use crate::game::data::account::{AccountStorage, AccountStorageError};
 use crate::game::messages::client::{
     ClientMessage, ConnectionRequestResponse, GetChannelListError, JoinServerError,
     JoinServerResponse, LoginError,
 };
-use crate::game::components::{Account, LoginClient};
 use crate::game::resources::{LoginTokens, ServerList};
 
 #[system(for_each)]

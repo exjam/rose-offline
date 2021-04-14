@@ -4,10 +4,7 @@ use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
 use crate::game::messages::{
-    client::{
-        ClientMessage, GameConnectionRequest,
-        JoinZoneRequest, Move,
-    },
+    client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move},
     server::ServerMessage,
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
@@ -36,11 +33,13 @@ impl GameClient {
                 let (response_tx, response_rx) = oneshot::channel();
                 client
                     .client_message_tx
-                    .send(ClientMessage::GameConnectionRequest(GameConnectionRequest {
-                        login_token: request.login_token,
-                        password_md5: String::from(request.password_md5),
-                        response_tx: response_tx,
-                    }))?;
+                    .send(ClientMessage::GameConnectionRequest(
+                        GameConnectionRequest {
+                            login_token: request.login_token,
+                            password_md5: String::from(request.password_md5),
+                            response_tx: response_tx,
+                        },
+                    ))?;
                 match response_rx.await? {
                     Ok(response) => {
                         client

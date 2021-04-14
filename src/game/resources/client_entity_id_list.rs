@@ -54,7 +54,8 @@ pub struct ClientEntityIdList {
 impl ClientEntityIdList {
     pub fn new() -> Self {
         let mut zones = Vec::new();
-        for _ in 0..100 { // TODO: Actual zone count from STB
+        for _ in 0..100 {
+            // TODO: Actual zone count from STB
             zones.push(ZoneEntityList::new());
         }
         Self { zones }

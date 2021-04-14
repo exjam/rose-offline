@@ -1,7 +1,7 @@
 use num_derive::FromPrimitive;
 
-use crate::game::data::items::EquipmentItem;
 use crate::game::components::EquipmentIndex;
+use crate::game::data::items::EquipmentItem;
 use crate::game::messages::client::CharacterListItem;
 use crate::protocol::packet::*;
 

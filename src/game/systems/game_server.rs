@@ -1,15 +1,13 @@
 use legion::systems::CommandBuffer;
 use legion::*;
 
-use crate::game::components::{
-    GameClient,
-    ClientEntityId, Destination, Level,
-    Position, Target,
-};
+use crate::game::components::{ClientEntityId, Destination, GameClient, Level, Position, Target};
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
-use crate::game::messages::client::{ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse};
+use crate::game::messages::client::{
+    ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse,
+};
 use crate::game::messages::server;
-use crate::game::messages::server::{ServerMessage};
+use crate::game::messages::server::ServerMessage;
 use crate::game::resources::{ClientEntityIdList, LoginTokens, ServerMessages, ZoneEntityId};
 
 #[system(for_each)]

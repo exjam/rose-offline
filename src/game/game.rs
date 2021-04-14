@@ -2,10 +2,12 @@ use crossbeam_channel::Receiver;
 use legion::*;
 use std::time::Duration;
 
-use super::systems::*;
-use super::resources::{ClientEntityIdList, ControlChannel, LoginTokens, ServerList, ServerMessages};
 use super::components::GameClient;
 use super::messages::control::ControlMessage;
+use super::resources::{
+    ClientEntityIdList, ControlChannel, LoginTokens, ServerList, ServerMessages,
+};
+use super::systems::*;
 
 pub struct Game {
     tick_rate_hz: u64,

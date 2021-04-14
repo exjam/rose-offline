@@ -12,7 +12,6 @@ mod server_packets;
 use client_packets::*;
 use server_packets::*;
 
-
 pub struct LoginClient {}
 
 impl LoginClient {

@@ -1,6 +1,6 @@
 use bytes::Buf;
-use std::str;
 use std::io::Cursor;
+use std::str;
 
 pub enum ReadError {
     UnexpectedEof,

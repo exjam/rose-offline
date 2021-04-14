@@ -1,8 +1,7 @@
 use tokio::sync::oneshot;
 
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Inventory, Level,
-    Position,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Inventory, Level, Position,
 };
 use crate::game::data::character::CharacterStorage;
 
