@@ -40,3 +40,6 @@ pub use client_entity_id::ClientEntityId;
 
 mod destination;
 pub use destination::Destination;
+
+mod target;
+pub use target::Target;
