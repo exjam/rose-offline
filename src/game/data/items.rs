@@ -92,6 +92,10 @@ impl EquipmentItem {
             None
         }
     }
+
+    pub fn is_broken(&self) -> bool {
+        self.life == 0
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
