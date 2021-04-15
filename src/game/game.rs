@@ -2,12 +2,12 @@ use crossbeam_channel::Receiver;
 use legion::*;
 use std::time::Duration;
 
-use super::components::GameClient;
 use super::messages::control::ControlMessage;
 use super::resources::{
     ClientEntityIdList, ControlChannel, LoginTokens, ServerList, ServerMessages,
 };
 use super::systems::*;
+use super::{components::GameClient, resources::DeltaTime};
 
 pub struct Game {
     tick_rate_hz: u64,
@@ -42,13 +42,21 @@ impl Game {
             .add_system(game_server_join_system())
             .add_system(game_server_move_system())
             .flush()
+            .add_system(update_position_system())
+            .flush()
             .add_system(server_messages_sender_system())
             .build();
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);
+        let mut last_tick = std::time::Instant::now();
 
         loop {
+            let current_tick = std::time::Instant::now();
+            resources.insert(DeltaTime {
+                delta: current_tick - last_tick,
+            });
             schedule.execute(&mut world, &mut resources);
+            last_tick = current_tick;
             std::thread::sleep(min_tick_duration); // TODO: This should account for duration of execution
         }
     }

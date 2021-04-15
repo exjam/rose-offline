@@ -185,8 +185,8 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         let character_info = packet.character_info;
         writer.write_u8(character_info.gender);
         writer.write_u16(packet.position.zone);
-        writer.write_f32(packet.position.x);
-        writer.write_f32(packet.position.y);
+        writer.write_f32(packet.position.position.x);
+        writer.write_f32(packet.position.position.y);
         writer.write_u16(packet.position.respawn_zone);
 
         writer.write_u32(character_info.face as u32);

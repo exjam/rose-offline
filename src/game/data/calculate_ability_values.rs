@@ -1,20 +1,11 @@
 use crate::game::components::{AbilityValues, BasicStats, Equipment, EquipmentIndex, Inventory};
-use crate::game::data::{
-    STB_ITEM_BACK, STB_ITEM_FACE,
-    STB_ITEM_HEAD,
-    STB_ITEM_BODY,
-    STB_ITEM_HANDS,
-    STB_ITEM_FEET,
-    STB_ITEM_JEWELLERY,
-    STB_ITEM_WEAPON,
-    STB_ITEM_SUB_WEAPON,
-    STB_ITEM_CONSUMABLE,
-    STB_ITEM_GEM,
-    STB_ITEM_MATERIAL,
-    STB_ITEM_QUEST,STB_ITEM_VEHICLE
-};
-use crate::game::data::stb::StbItem;
 use crate::game::data::items::{AbilityType, ItemType};
+use crate::game::data::stb::StbItem;
+use crate::game::data::{
+    STB_ITEM_BACK, STB_ITEM_BODY, STB_ITEM_CONSUMABLE, STB_ITEM_FACE, STB_ITEM_FEET, STB_ITEM_GEM,
+    STB_ITEM_HANDS, STB_ITEM_HEAD, STB_ITEM_JEWELLERY, STB_ITEM_MATERIAL, STB_ITEM_QUEST,
+    STB_ITEM_SUB_WEAPON, STB_ITEM_VEHICLE, STB_ITEM_WEAPON,
+};
 
 fn get_item_stb(item_type: ItemType) -> Option<&'static StbItem> {
     match item_type {
@@ -49,7 +40,9 @@ impl EquipmentAbilityValue {
     pub fn add_ability_value(&mut self, ability_type: AbilityType, value: i32) {
         match ability_type {
             AbilityType::Speed => self.move_speed += value,
-            _ => { println!("Item has unimplemented ability type {:?}", ability_type)}
+            _ => {
+                println!("Item has unimplemented ability type {:?}", ability_type)
+            }
         }
     }
 }
@@ -75,7 +68,11 @@ fn calculate_equipment_ability_values(equipment: &Equipment) -> EquipmentAbility
     result
 }
 
-fn calculate_run_speed( basic_stats: &BasicStats, equipment_ability_values: &EquipmentAbilityValue, equipment: &Equipment) -> f32 {
+fn calculate_run_speed(
+    basic_stats: &BasicStats,
+    equipment_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+) -> f32 {
     // TODO: Check if riding cart
     let mut item_speed = 20f32;
 
@@ -91,10 +88,12 @@ fn calculate_run_speed( basic_stats: &BasicStats, equipment_ability_values: &Equ
         .map(|item| STB_ITEM_BACK.get_back_move_speed(item.item_number))
         .unwrap_or(0) as f32;
 
-    let run_speed = item_speed * (basic_stats.dexterity as f32 + 500.0) / 100.0 + equipment_ability_values.move_speed as f32;
+    let run_speed = item_speed * (basic_stats.dexterity as f32 + 500.0) / 100.0
+        + equipment_ability_values.move_speed as f32;
 
     // TODO: Adding of passive move speed
     // TODO: run_speed += add_value
+    println!("Run speed: {}", run_speed);
     run_speed
 }
 

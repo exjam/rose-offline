@@ -3,6 +3,7 @@ use crate::game::components::{
     BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Inventory, Level, Position,
 };
 use crate::game::data::CHARACTER_STORAGE_DIR;
+use nalgebra::Vector3;
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf};
 
@@ -78,9 +79,7 @@ impl CharacterStorage {
             inventory: Inventory::default(),
             level: Level::default(),
             position: Position {
-                x: 530500f32,
-                y: 539500f32,
-                z: 0,
+                position: Vector3::new(530500.0, 539500.0, 0.0),
                 zone: 20,
                 respawn_zone: 20,
             },

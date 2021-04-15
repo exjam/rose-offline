@@ -46,3 +46,6 @@ pub use destination::Destination;
 
 mod target;
 pub use target::Target;
+
+mod move_speed;
+pub use move_speed::MoveSpeed;

@@ -168,5 +168,6 @@ pub enum ClientMessage {
     SelectCharacter(SelectCharacter),
     GameConnectionRequest(GameConnectionRequest),
     JoinZoneRequest(JoinZoneRequest),
+    Chat(String),
     Move(Move),
 }

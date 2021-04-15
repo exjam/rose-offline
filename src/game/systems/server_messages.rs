@@ -5,7 +5,7 @@ use crate::game::components::{GameClient, Position};
 use crate::game::resources::ServerMessages;
 
 // TODO: Read sector size from zone STB for how we define "nearby"
-const NEARBY_DISTANCE_SQUARED: f32 = 10000f32 * 10000f32;
+const NEARBY_DISTANCE: f32 = 10000f32;
 
 #[system]
 pub fn server_messages_sender(
@@ -27,7 +27,11 @@ pub fn server_messages_sender(
         for message in server_messages.pending_nearby_messages.iter() {
             if message.except_entity.is_none() || message.except_entity.as_ref().unwrap() != entity
             {
-                if position.distance(&message.position) < NEARBY_DISTANCE_SQUARED {
+                if position
+                    .position
+                    .metric_distance(&message.position.position)
+                    < NEARBY_DISTANCE
+                {
                     client.server_message_tx.send(message.message.clone()).ok();
                 }
             }

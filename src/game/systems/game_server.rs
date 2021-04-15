@@ -1,8 +1,9 @@
 use legion::systems::CommandBuffer;
 use legion::*;
+use nalgebra::Vector3;
 
 use crate::game::components::{
-    AbilityValues, CharacterInfo, ClientEntityId, Destination, GameClient, Level, Position, Target,
+    CharacterInfo, ClientEntityId, Destination, GameClient, Level, MoveSpeed, Position, Target,
 };
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
@@ -39,14 +40,18 @@ pub fn game_server_authentication(
                                     .ok_or(ConnectionRequestError::Failed)
                             })
                             .and_then(|character| {
+                                let ability_values = calculate_ability_values(
+                                    &character.equipment,
+                                    &character.inventory,
+                                    &character.basic_stats,
+                                );
                                 cmd.add_component(
                                     *entity,
-                                    calculate_ability_values(
-                                        &character.equipment,
-                                        &character.inventory,
-                                        &character.basic_stats,
-                                    ),
+                                    MoveSpeed {
+                                        speed: ability_values.run_speed,
+                                    },
                                 );
+                                cmd.add_component(*entity, ability_values);
                                 cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.info.clone());
                                 cmd.add_component(*entity, character.equipment.clone());
@@ -138,20 +143,15 @@ pub fn game_server_move(
                     cmd.remove_component::<Target>(*entity);
                 }
 
+                let destination = Vector3::new(message.x, message.y, message.z as f32);
                 cmd.add_component(
                     *entity,
                     Destination {
-                        x: message.x,
-                        y: message.y,
-                        z: message.z,
+                        position: destination,
                     },
                 );
 
-                let dx = position.x - message.x;
-                let dy = position.y - message.y;
-                let dz = position.z as f32 - message.z as f32;
-                let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-
+                let distance = destination.metric_distance(&position.position);
                 server_messages.send_nearby_message(
                     position.clone(),
                     ServerMessage::MoveEntity(server::MoveEntity {
