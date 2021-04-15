@@ -4,6 +4,9 @@ use legion::*;
 use crate::game::components::{GameClient, Position};
 use crate::game::resources::ServerMessages;
 
+// TODO: Read sector size from zone STB for how we define "nearby"
+const NEARBY_DISTANCE_SQUARED: f32 = 10000f32 * 10000f32;
+
 #[system]
 pub fn server_messages_sender(
     world: &SubWorld,
@@ -24,8 +27,7 @@ pub fn server_messages_sender(
         for message in server_messages.pending_nearby_messages.iter() {
             if message.except_entity.is_none() || message.except_entity.as_ref().unwrap() != entity
             {
-                if position.distance(&message.position) < 10000f32 {
-                    // TODO: Read sector size from zone STB for how we define "nearby"
+                if position.distance(&message.position) < NEARBY_DISTANCE_SQUARED {
                     client.server_message_tx.send(message.message.clone()).ok();
                 }
             }
