@@ -58,6 +58,30 @@ impl ItemType {
     }
 }
 
+#[derive(FromPrimitive)]
+pub enum ItemClass {
+    Ring = 171,
+    Necklace = 172,
+    Earring = 173,
+    Arrow = 231,
+    Arrow2 = 271,
+    Bullet = 232,
+    Throw = 233,
+    Bullet2 = 253,
+    NotUseBullet = 242,
+    Shield = 261,
+    SkillDoing = 313,
+    SkillLearn = 314,
+    RepairItem = 315,
+    EventItem = 316,
+    Fuel = 317,
+    CartBody = 511,
+    CastlerGearBody = 512,
+    CartEngine = 521,
+    CastleGearEngine = 522,
+    CastleGearWeapon = 552,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EquipmentItem {
     pub item_type: ItemType,
@@ -177,4 +201,116 @@ impl Item {
             None
         }
     }
+}
+
+// TODO: Probably doesn't belong here, but will do for now.
+#[derive(Debug, FromPrimitive)]
+pub enum AbilityType {
+    Gender = 2,
+    Birthstone = 3,
+    Class = 4,
+    Union = 5,
+    Rank = 6,
+    Fame = 7,
+    Face = 8,
+    Hair = 9,
+
+    Strength = 10,
+    Dexterity = 11,
+    Intelligence = 12,
+    Concentration = 13,
+    Charm = 14,
+    Sense = 15,
+
+    Health = 16,
+    Mana = 17,
+    Attack = 18,
+    Defence = 19,
+    Hit = 20,
+    Resistence = 21,
+    Avoid = 22,
+    Speed = 23,
+    AttackSpeed = 24,
+    Weight = 25,
+    Critical = 26,
+    RecoverHealth = 27,
+    RecoverMana = 28,
+
+    SaveMana = 29,
+    Experience = 30,
+    Level = 31,
+    BonusPoint = 32,
+    PvpFlag = 33,
+    TeamNumber = 34,
+    HeadSize = 35,
+    BodySize = 36,
+    Skillpoint = 37,
+    MaxHealth = 38,
+    MaxMana = 39,
+    Money = 40,
+
+    PassiveAttackPowerUnarmed = 41,
+    PassiveAttackPowerOneHanded = 42,
+    PassiveAttackPowerTwoHanded = 43,
+    PassiveAttackPowerBow = 44,
+    PassiveAttackPowerGun = 45,
+    PassiveAttackPowerStaffWand = 46,
+    PassiveAttackPowerAutoBow = 47,
+    PassiveAttackPowerKatarPair = 48,
+
+    PassiveAttackSpeedBow = 49,
+    PassiveAttackSpeedGun = 50,
+    PassiveAttackSpeedPair = 51,
+
+    PassiveMoveSpeed = 52,
+    PassiveDefence = 53,
+    PassiveMaxHealth = 54,
+    PassiveMaxMana = 55,
+    PassiveRecoverHealth = 56,
+    PassiveRecoverMana = 57,
+    PassiveWeight = 58,
+
+    PassiveBuySkill = 59,
+    PassiveSellSkill = 60,
+    PassiveSaveMana = 61,
+    PassiveMaxSummons = 62,
+    PassiveDropRate = 63,
+
+    Race = 71,
+    DropRate = 72,
+    FameG = 73,
+    FameB = 74,
+    CurrentPlanet = 75,
+    Stamina = 76,
+    Fuel = 77,
+    Immunity = 78,
+
+    UnionPoint1 = 81,
+    UnionPoint2 = 82,
+    UnionPoint3 = 83,
+    UnionPoint4 = 84,
+    UnionPoint5 = 85,
+    UnionPoint6 = 86,
+    UnionPoint7 = 87,
+    UnionPoint8 = 88,
+    UnionPoint9 = 89,
+    UnionPoint10 = 90,
+
+    GuildNumber = 91,
+    GuildScore = 92,
+    GuildPosition = 93,
+
+    BankFree = 94,
+    BankAddon = 95,
+    StoreSkin = 96,
+    VehicleHealth = 97,
+
+    PassiveResistence = 98,
+    PassiveHit = 99,
+    PassiveCritical = 100,
+    PassiveAvoid = 101,
+    PassiveShield = 102,
+    PassiveImmunity = 103,
+
+    Max = 105,
 }

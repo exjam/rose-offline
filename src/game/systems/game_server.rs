@@ -1,7 +1,10 @@
 use legion::systems::CommandBuffer;
 use legion::*;
 
-use crate::game::components::{ClientEntityId, Destination, GameClient, Level, Position, Target};
+use crate::game::components::{
+    AbilityValues, CharacterInfo, ClientEntityId, Destination, GameClient, Level, Position, Target,
+};
+use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
 use crate::game::messages::client::{
     ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse,
@@ -36,6 +39,14 @@ pub fn game_server_authentication(
                                     .ok_or(ConnectionRequestError::Failed)
                             })
                             .and_then(|character| {
+                                cmd.add_component(
+                                    *entity,
+                                    calculate_ability_values(
+                                        &character.equipment,
+                                        &character.inventory,
+                                        &character.basic_stats,
+                                    ),
+                                );
                                 cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.info.clone());
                                 cmd.add_component(*entity, character.equipment.clone());

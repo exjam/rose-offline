@@ -17,6 +17,9 @@ pub use equipment::*;
 mod basic_stats;
 pub use basic_stats::*;
 
+mod ability_values;
+pub use ability_values::AbilityValues;
+
 mod character_info;
 pub use character_info::*;
 

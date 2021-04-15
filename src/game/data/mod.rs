@@ -4,6 +4,9 @@ pub mod formats;
 pub mod items;
 pub mod stb;
 
+mod calculate_ability_values;
+pub use calculate_ability_values::calculate_ability_values;
+
 use directories::ProjectDirs;
 use formats::FileReader;
 use formats::VfsIndex;
@@ -54,7 +57,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_FACE.STB");
     };
-    pub static ref STB_FACE_ITEM: StbItem = {
+    pub static ref STB_ITEM_FACE: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_FACEITEM.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -63,7 +66,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_FACEITEM.STB");
     };
-    pub static ref STB_BODY: StbItem = {
+    pub static ref STB_ITEM_BODY: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_BODY.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -72,7 +75,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_BODY.STB");
     };
-    pub static ref STB_ARMS: StbItem = {
+    pub static ref STB_ITEM_HANDS: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_ARMS.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -81,7 +84,16 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_ARMS.STB");
     };
-    pub static ref STB_FOOT: StbItemFoot = {
+    pub static ref STB_ITEM_HEAD: StbItem = {
+        if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_CAP.STB") {
+            if let Ok(data) = STB::read(FileReader::from(&file)) {
+                return StbItem(data);
+            }
+        }
+
+        panic!("Failed reading 3DDATA/STB/LIST_CAP.STB");
+    };
+    pub static ref STB_ITEM_FEET: StbItemFoot = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_FOOT.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItemFoot(StbItem(data));
@@ -90,7 +102,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_FOOT.STB");
     };
-    pub static ref STB_BACK: StbItemBack = {
+    pub static ref STB_ITEM_BACK: StbItemBack = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_BACK.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItemBack(StbItem(data));
@@ -99,7 +111,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_BACK.STB");
     };
-    pub static ref STB_JEWEL: StbItem = {
+    pub static ref STB_ITEM_JEWELLERY: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_JEWEL.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -108,7 +120,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_JEWEL.STB");
     };
-    pub static ref STB_WEAPON: StbItem = {
+    pub static ref STB_ITEM_WEAPON: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_WEAPON.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -117,7 +129,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_WEAPON.STB");
     };
-    pub static ref STB_SUBWPN: StbItem = {
+    pub static ref STB_ITEM_SUB_WEAPON: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_SUBWPN.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -126,7 +138,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_SUBWPN.STB");
     };
-    pub static ref STB_USE_ITEM: StbItem = {
+    pub static ref STB_ITEM_CONSUMABLE: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_USEITEM.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -135,7 +147,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_USEITEM.STB");
     };
-    pub static ref STB_GEM_ITEM: StbItem = {
+    pub static ref STB_ITEM_GEM: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_JEMITEM.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -144,7 +156,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_JEMITEM.STB");
     };
-    pub static ref STB_NATURAL: StbItem = {
+    pub static ref STB_ITEM_MATERIAL: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_NATURAL.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -153,7 +165,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_NATURAL.STB");
     };
-    pub static ref STB_QUEST_ITEM: StbItem = {
+    pub static ref STB_ITEM_QUEST: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_QUESTITEM.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
@@ -162,7 +174,7 @@ lazy_static! {
 
         panic!("Failed reading 3DDATA/STB/LIST_QUESTITEM.STB");
     };
-    pub static ref STB_PAT: StbItem = {
+    pub static ref STB_ITEM_VEHICLE: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_PAT.STB") {
             if let Ok(data) = STB::read(FileReader::from(&file)) {
                 return StbItem(data);
