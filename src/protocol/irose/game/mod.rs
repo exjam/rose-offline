@@ -5,7 +5,7 @@ use tokio::sync::oneshot;
 
 use crate::game::messages::{
     client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move},
-    server::ServerMessage,
+    server::{ServerMessage, LocalChat, Whisper},
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
 
@@ -104,6 +104,12 @@ impl GameClient {
                     }))
                     .await?;
             }
+            Some(ClientPackets::Chat) => {
+                let packet = PacketClientChat::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::Chat(String::from(packet.text)))?;
+            }
             Some(ClientPackets::Move) => {
                 let packet = PacketClientMove::try_from(&packet)?;
                 client.client_message_tx.send(ClientMessage::Move(Move {
@@ -127,13 +133,53 @@ impl GameClient {
             ServerMessage::MoveEntity(message) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketMoveEntity {
+                    .write_packet(Packet::from(&PacketServerMoveEntity {
                         entity_id: message.entity_id,
                         target_entity_id: message.target_entity_id,
                         distance: message.distance,
                         x: message.x,
                         y: message.y,
                         z: message.z,
+                    }))
+                    .await?;
+            }
+            ServerMessage::StopMoveEntity(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerStopMoveEntity {
+                        entity_id: message.entity_id,
+                        x: message.x,
+                        y: message.y,
+                        z: message.z,
+                    }))
+                    .await?;
+            }
+            ServerMessage::Teleport(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerTeleport {
+                        entity_id: message.entity_id,
+                        zone_no: message.zone_no,
+                        x: message.x,
+                        y: message.y,
+                        run_mode: message.run_mode,
+                        ride_mode: message.ride_mode,
+                    }))
+                    .await?;
+            }
+            ServerMessage::LocalChat(LocalChat { entity_id , text }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerLocalChat {
+                        entity_id, text: &text
+                    }))
+                    .await?;
+            }
+            ServerMessage::Whisper(Whisper { from, text }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerWhisper {
+                        from: &from, text: &text
                     }))
                     .await?;
             }

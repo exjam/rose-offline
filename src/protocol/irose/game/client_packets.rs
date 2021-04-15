@@ -11,6 +11,8 @@ use crate::protocol::{
 pub enum ClientPackets {
     ConnectRequest = 0x70b,
     JoinZone = 0x753,
+    Chat = 0x783,
+    StopMove = 0x796,
     Move = 0x79a,
 }
 
@@ -86,5 +88,24 @@ impl TryFrom<&Packet> for PacketClientMove {
             y,
             z,
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientChat<'a> {
+    pub text: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketClientChat<'a> {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::Chat as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let text = reader.read_null_terminated_utf8()?;
+        Ok(PacketClientChat { text })
     }
 }

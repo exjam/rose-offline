@@ -27,3 +27,5 @@ scopeguard = "1.1.0"
 async-trait = "0.1.48"
 rand = "0.8.3"
 nalgebra = { version = "0.26.1", features = ["serde-serialize"] }
+clap = "3.0.0-beta.2"
+shellwords = "1.1.0"

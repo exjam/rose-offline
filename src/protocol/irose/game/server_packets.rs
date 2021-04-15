@@ -18,7 +18,11 @@ pub enum ServerPackets {
     CharacterInventory = 0x716,
     QuestData = 0x71b,
     JoinZone = 0x753,
+    LocalChat = 0x783,
+    Whisper = 0x784,
+    StopMoveEntity = 0x796,
     MoveEntity = 0x79a,
+    Teleport = 0x7a8,
 }
 
 #[allow(dead_code)]
@@ -357,7 +361,7 @@ impl From<&PacketServerCharacterQuestData> for Packet {
     }
 }
 
-pub struct PacketMoveEntity {
+pub struct PacketServerMoveEntity {
     pub entity_id: u16,
     pub target_entity_id: u16,
     pub distance: u16,
@@ -366,8 +370,8 @@ pub struct PacketMoveEntity {
     pub z: u16,
 }
 
-impl From<&PacketMoveEntity> for Packet {
-    fn from(packet: &PacketMoveEntity) -> Self {
+impl From<&PacketServerMoveEntity> for Packet {
+    fn from(packet: &PacketServerMoveEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::MoveEntity as u16);
         writer.write_u16(packet.entity_id);
         writer.write_u16(packet.target_entity_id);
@@ -406,6 +410,74 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
 
         writer.write_u32(0); // account world time
         writer.write_u32(0); // team number
+        writer.into()
+    }
+}
+
+pub struct PacketServerLocalChat<'a> {
+    pub entity_id: u16,
+    pub text: &'a str,
+}
+
+impl<'a> From<&'a PacketServerLocalChat<'a>> for Packet {
+    fn from(packet: &'a PacketServerLocalChat<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::LocalChat as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_null_terminated_utf8(packet.text);
+        writer.into()
+    }
+}
+
+pub struct PacketServerWhisper<'a> {
+    pub from: &'a str,
+    pub text: &'a str,
+}
+
+impl<'a> From<&'a PacketServerWhisper<'a>> for Packet {
+    fn from(packet: &'a PacketServerWhisper<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::Whisper as u16);
+        writer.write_null_terminated_utf8(packet.from);
+        writer.write_null_terminated_utf8(packet.text);
+        writer.into()
+    }
+}
+
+pub struct PacketServerStopMoveEntity {
+    pub entity_id: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: u16,
+}
+
+impl From<&PacketServerStopMoveEntity> for Packet {
+    fn from(packet: &PacketServerStopMoveEntity) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::StopMoveEntity as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_f32(packet.x);
+        writer.write_f32(packet.y);
+        writer.write_u16(packet.z);
+        writer.into()
+    }
+}
+
+pub struct PacketServerTeleport {
+    pub entity_id: u16,
+    pub zone_no: u16,
+    pub x: f32,
+    pub y: f32,
+    pub run_mode: u8,
+    pub ride_mode: u8,
+}
+
+impl From<&PacketServerTeleport> for Packet {
+    fn from(packet: &PacketServerTeleport) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::Teleport as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_u16(packet.zone_no);
+        writer.write_f32(packet.x);
+        writer.write_f32(packet.y);
+        writer.write_u8(packet.run_mode);
+        writer.write_u8(packet.ride_mode);
         writer.into()
     }
 }
