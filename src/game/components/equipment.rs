@@ -46,6 +46,10 @@ pub struct Equipment {
 }
 
 impl Equipment {
+    pub fn get_equipment_item(&self, index: EquipmentIndex) -> Option<&EquipmentItem> {
+        self.equipped_items[index as usize].as_ref()
+    }
+
     pub fn equip_item(
         &mut self,
         item: EquipmentItem,
