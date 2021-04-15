@@ -93,7 +93,7 @@ impl GameClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::JoinZoneRequest(JoinZoneRequest {
-                        response_tx: Some(response_tx),
+                        response_tx
                     }))?;
                 let response = response_rx.await?;
                 client

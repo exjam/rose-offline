@@ -11,6 +11,7 @@ use crate::game::messages::server::ServerMessage;
 use crate::game::resources::{ClientEntityIdList, LoginTokens, ServerMessages, ZoneEntityId};
 
 #[system(for_each)]
+#[filter(!component::<CharacterInfo>())]
 pub fn game_server_authentication(
     cmd: &mut CommandBuffer,
     entity: &Entity,
@@ -55,14 +56,13 @@ pub fn game_server_authentication(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => {
-                client.pending_messages.push_back(message);
-            }
+            _ => println!("Received unexpected client message"),
         }
     }
 }
 
 #[system(for_each)]
+#[filter(!component::<ClientEntityId>())]
 pub fn game_server_join(
     cmd: &mut CommandBuffer,
     client: &mut GameClient,
@@ -71,7 +71,7 @@ pub fn game_server_join(
     position: &Position,
     #[resource] client_entity_id_list: &mut ClientEntityIdList,
 ) {
-    for message in client.pending_messages.iter_mut() {
+    if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::JoinZoneRequest(message) => {
                 let entity_id = client_entity_id_list
@@ -81,17 +81,14 @@ pub fn game_server_join(
 
                 cmd.add_component(*entity, ClientEntityId { id: entity_id });
 
-                message
-                    .response_tx
-                    .take()
-                    .unwrap()
+                message.response_tx
                     .send(JoinZoneResponse {
                         entity_id: entity_id.0,
                         level: level.clone(),
                     })
                     .ok();
             }
-            _ => (),
+            _ => println!("Received unexpected client message"),
         }
     }
 }
@@ -106,7 +103,7 @@ pub fn game_server_move(
     #[resource] client_entity_id_list: &mut ClientEntityIdList,
     #[resource] server_messages: &mut ServerMessages,
 ) {
-    for message in client.pending_messages.iter_mut() {
+    if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::Move(message) => {
                 let mut target_entity_id = 0;
@@ -155,7 +152,7 @@ pub fn game_server_move(
                     }),
                 );
             }
-            _ => (),
+            _ => println!("Received unimplemented client message"),
         }
     }
 }

@@ -146,7 +146,7 @@ pub struct JoinZoneResponse {
 }
 
 pub struct JoinZoneRequest {
-    pub response_tx: Option<oneshot::Sender<JoinZoneResponse>>,
+    pub response_tx: oneshot::Sender<JoinZoneResponse>,
 }
 
 pub struct Move {

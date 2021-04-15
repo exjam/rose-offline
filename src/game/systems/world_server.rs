@@ -14,8 +14,7 @@ use crate::game::messages::client::{
 use crate::game::resources::LoginTokens;
 
 #[system(for_each)]
-#[write_component(Account)]
-#[write_component(CharacterList)]
+#[filter(!component::<Account>())]
 pub fn world_server_authentication(
     cmd: &mut CommandBuffer,
     entity: &Entity,
@@ -72,9 +71,7 @@ pub fn world_server_authentication(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => {
-                client.pending_messages.push_back(message);
-            }
+            _ => println!("Received unexpected client message"),
         }
     }
 }
@@ -88,7 +85,7 @@ pub fn world_server(
     client: &mut WorldClient,
     #[resource] login_tokens: &mut LoginTokens,
 ) {
-    while let Some(message) = client.pending_messages.pop_front() {
+    if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::GetCharacterList(message) => {
                 let mut characters = Vec::new();
@@ -176,9 +173,7 @@ pub fn world_server(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => {
-                panic!("Unhandled client message for world server!");
-            }
+            _ => println!("Received unimplemented client message"),
         }
     }
 }

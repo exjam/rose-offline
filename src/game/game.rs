@@ -14,11 +14,6 @@ pub struct Game {
     control_rx: Receiver<ControlMessage>,
 }
 
-#[system(for_each)]
-pub fn cleanup_unread_messages(client: &mut GameClient) {
-    client.pending_messages.clear();
-}
-
 impl Game {
     pub fn new(control_rx: Receiver<ControlMessage>) -> Game {
         Game {
@@ -48,7 +43,6 @@ impl Game {
             .add_system(game_server_move_system())
             .flush()
             .add_system(server_messages_sender_system())
-            .add_system(cleanup_unread_messages_system())
             .build();
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);

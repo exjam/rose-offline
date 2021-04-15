@@ -10,6 +10,7 @@ use crate::game::messages::client::{
 use crate::game::resources::{LoginTokens, ServerList};
 
 #[system(for_each)]
+#[filter(!component::<Account>())]
 pub fn login_server_authentication(
     cmd: &mut CommandBuffer,
     entity: &Entity,
@@ -40,9 +41,7 @@ pub fn login_server_authentication(
                     };
                 message.response_tx.send(result).ok();
             }
-            _ => {
-                client.pending_messages.push_back(message);
-            }
+            _ => println!("Received unexpected client message"),
         }
     }
 }
@@ -54,7 +53,7 @@ pub fn login_server(
     #[resource] server_list: &ServerList,
     #[resource] login_tokens: &mut LoginTokens,
 ) {
-    while let Some(message) = client.pending_messages.pop_front() {
+    if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::GetWorldServerList(message) => {
                 let mut servers = Vec::new();
@@ -104,9 +103,7 @@ pub fn login_server(
 
                 message.response_tx.send(response).ok();
             }
-            _ => {
-                panic!("Unhandled client message for login server!");
-            }
+            _ => println!("Received unimplemented client message"),
         }
     }
 }
