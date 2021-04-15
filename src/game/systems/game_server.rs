@@ -81,7 +81,8 @@ pub fn game_server_join(
 
                 cmd.add_component(*entity, ClientEntityId { id: entity_id });
 
-                message.response_tx
+                message
+                    .response_tx
                     .send(JoinZoneResponse {
                         entity_id: entity_id.0,
                         level: level.clone(),
