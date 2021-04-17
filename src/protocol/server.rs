@@ -34,15 +34,16 @@ async fn run_connection(
         client_message_tx: client_message_tx,
         server_message_rx: server_message_rx,
     };
-    (protocol.create_client)().run_client(&mut client).await?;
+    let result = (protocol.create_client)().run_client(&mut client).await;
 
     control_message_tx
         .send(ControlMessage::RemoveClient {
+            client_type: protocol.client_type,
             entity: client.entity,
         })
         .ok();
     client.connection.shutdown().await;
-    Ok(())
+    result
 }
 
 pub struct LoginServer {
