@@ -2,13 +2,7 @@ use crate::game::components::BasicStats;
 use crate::game::data::formats::StbFile;
 use crate::game::data::items::{EquipmentItem, Item};
 
-pub struct StbInitAvatar(StbFile);
-
-impl StbInitAvatar {
-    pub fn new(file: StbFile) -> Self {
-        Self(file)
-    }
-}
+pub struct StbInitAvatar(pub StbFile);
 
 impl StbInitAvatar {
     pub fn get_basic_stats(&self, row: usize) -> Option<BasicStats> {

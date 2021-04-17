@@ -21,7 +21,9 @@ pub struct RemoveEntities {
 
 impl From<u16> for RemoveEntities {
     fn from(entity_id: u16) -> Self {
-        Self { entity_ids: vec![entity_id] }
+        Self {
+            entity_ids: vec![entity_id],
+        }
     }
 }
 

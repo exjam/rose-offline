@@ -1,7 +1,8 @@
 use tokio::sync::oneshot;
 
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Inventory, Level, Position,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Hotbar, Inventory, Level, Position,
+    SkillList,
 };
 use crate::game::data::character::CharacterStorage;
 
@@ -132,6 +133,8 @@ pub struct GameConnectionResponse {
     pub basic_stats: BasicStats,
     pub level: Level,
     pub inventory: Inventory,
+    pub skill_list: SkillList,
+    pub hotbar: Hotbar,
 }
 
 pub struct GameConnectionRequest {

@@ -1,6 +1,7 @@
 use super::STB_INIT_AVATAR;
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Inventory, Level, Position,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Hotbar, Inventory, Level, Position,
+    SkillList,
 };
 use crate::game::data::CHARACTER_STORAGE_DIR;
 use nalgebra::Vector3;
@@ -43,6 +44,8 @@ pub struct CharacterStorage {
     pub equipment: Equipment,
     pub level: Level,
     pub position: Position,
+    pub skill_list: SkillList,
+    pub hotbar: Hotbar,
     pub delete_time: Option<CharacterDeleteTime>,
 }
 
@@ -82,6 +85,8 @@ impl CharacterStorage {
                 zone: 20,
                 respawn_zone: 20,
             },
+            skill_list: SkillList::default(),
+            hotbar: Hotbar::default(),
             delete_time: None,
         };
         character

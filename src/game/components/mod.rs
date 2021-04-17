@@ -49,3 +49,9 @@ pub use target::Target;
 
 mod move_speed;
 pub use move_speed::MoveSpeed;
+
+mod skill_list;
+pub use skill_list::SkillList;
+
+mod hotbar;
+pub use hotbar::{Hotbar, HotbarSlot};

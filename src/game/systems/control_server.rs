@@ -33,12 +33,13 @@ pub fn control_server(
                     };
                     response_tx.send(entity).unwrap();
                 }
-                ControlMessage::RemoveClient { client_type, entity } => {
-                    match client_type {
-                        ClientType::Game => cmd.remove_component::<GameClient>(entity),
-                        _ => cmd.remove(entity)
-                    }
-                }
+                ControlMessage::RemoveClient {
+                    client_type,
+                    entity,
+                } => match client_type {
+                    ClientType::Game => cmd.remove_component::<GameClient>(entity),
+                    _ => cmd.remove(entity),
+                },
                 ControlMessage::AddWorldServer {
                     name,
                     ip,

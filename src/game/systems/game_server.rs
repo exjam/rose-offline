@@ -1,15 +1,17 @@
-use std::{
-    num::{ParseFloatError, ParseIntError},
-};
+use std::num::{ParseFloatError, ParseIntError};
 
-use legion::{systems::CommandBuffer, world::{ComponentError, EntityAccessError}};
-use legion::*;
 use legion::world::SubWorld;
+use legion::*;
+use legion::{
+    systems::CommandBuffer,
+    world::{ComponentError, EntityAccessError},
+};
 use nalgebra::Vector3;
 use server::Whisper;
 
 use crate::game::components::{
-    CharacterInfo, ClientEntityId, BasicStats, Inventory, Equipment, Destination, GameClient, Level, MoveSpeed, Position, Target,
+    BasicStats, CharacterInfo, ClientEntityId, Destination, Equipment, GameClient, Hotbar,
+    Inventory, Level, MoveSpeed, Position, SkillList, Target,
 };
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
@@ -64,6 +66,8 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.inventory.clone());
                                 cmd.add_component(*entity, character.level.clone());
                                 cmd.add_component(*entity, character.position.clone());
+                                cmd.add_component(*entity, character.skill_list.clone());
+                                cmd.add_component(*entity, character.hotbar.clone());
 
                                 Ok(GameConnectionResponse {
                                     packet_sequence_id: 123,
@@ -73,6 +77,8 @@ pub fn game_server_authentication(
                                     basic_stats: character.basic_stats,
                                     level: character.level,
                                     inventory: character.inventory,
+                                    skill_list: character.skill_list,
+                                    hotbar: character.hotbar,
                                 })
                             })
                     });
@@ -333,6 +339,8 @@ pub fn game_server_move(
 #[read_component(Equipment)]
 #[read_component(Level)]
 #[read_component(Position)]
+#[read_component(SkillList)]
+#[read_component(Hotbar)]
 #[filter(!component::<GameClient>())]
 pub fn game_server_disconnect_handler(
     world: &SubWorld,
@@ -350,6 +358,8 @@ pub fn game_server_disconnect_handler(
         let equipment = entry.get_component::<Equipment>();
         let level = entry.get_component::<Level>();
         let position = entry.get_component::<Position>();
+        let skill_list = entry.get_component::<SkillList>();
+        let hotbar = entry.get_component::<Hotbar>();
         let storage = CharacterStorage {
             info: info.clone(),
             basic_stats: basic_stats.unwrap().clone(),
@@ -357,6 +367,8 @@ pub fn game_server_disconnect_handler(
             equipment: equipment.unwrap().clone(),
             level: level.unwrap().clone(),
             position: position.unwrap().clone(),
+            skill_list: skill_list.unwrap().clone(),
+            hotbar: hotbar.unwrap().clone(),
             delete_time: None,
         };
         storage.save().ok();
@@ -367,7 +379,9 @@ pub fn game_server_disconnect_handler(
             position.clone(),
             ServerMessage::RemoveEntities(client_entity_id.id.0.into()),
         );
-        client_entity_id_list.get_zone_mut(position.zone as usize).free(ZoneEntityId(client_entity_id.id.0));
+        client_entity_id_list
+            .get_zone_mut(position.zone as usize)
+            .free(ZoneEntityId(client_entity_id.id.0));
     }
 
     cmd.remove(*entity);

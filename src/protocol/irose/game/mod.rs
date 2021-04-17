@@ -9,6 +9,8 @@ use crate::game::messages::{
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
 
+mod common_packets;
+
 mod client_packets;
 mod server_packets;
 
@@ -59,6 +61,8 @@ impl GameClient {
                                 equipment: &response.equipment,
                                 basic_stats: &response.basic_stats,
                                 level: &response.level,
+                                skill_list: &response.skill_list,
+                                hotbar: &response.hotbar,
                             }))
                             .await?;
 

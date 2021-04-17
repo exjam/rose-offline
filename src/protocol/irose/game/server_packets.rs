@@ -3,12 +3,14 @@ use num_derive::FromPrimitive;
 use crate::{
     game::{
         components::{
-            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory, Level, Position,
+            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, Inventory,
+            Level, Position, SkillList,
         },
         data::items::{EquipmentItem, Item, ItemType, StackableItem},
     },
     protocol::packet::{Packet, PacketWriter},
 };
+use super::common_packets::write_hotbar_slot;
 use modular_bitfield::prelude::*;
 
 #[derive(FromPrimitive)]
@@ -181,6 +183,8 @@ pub struct PacketServerSelectCharacter<'a> {
     pub equipment: &'a Equipment,
     pub basic_stats: &'a BasicStats,
     pub level: &'a Level,
+    pub skill_list: &'a SkillList,
+    pub hotbar: &'a Hotbar,
 }
 
 impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
@@ -259,16 +263,22 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         }
 
         // tagSkillAbility
-        for _ in 0..120 {
-            writer.write_u16(0); // skill id
+        assert!(packet.skill_list.pages.len() * packet.skill_list.pages[0].len() == 120);
+        for page in &packet.skill_list.pages {
+            for slot in page {
+                writer.write_u16(slot.unwrap_or(0u16));
+            }
         }
 
         // CHotIcons
-        for _ in 0..32 {
-            writer.write_u16(0); // skill id
+        assert!(packet.hotbar.pages.len() * packet.hotbar.pages[0].len() == 32);
+        for page in &packet.hotbar.pages {
+            for slot in page {
+                write_hotbar_slot(&mut writer, slot);
+            }
         }
 
-        writer.write_u32(123); // client id
+        writer.write_u32(123); // server wide unique id
         writer.write_null_terminated_utf8(&character_info.name);
         writer.into()
     }
