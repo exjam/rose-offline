@@ -22,4 +22,11 @@ impl Hotbar {
     pub fn new() -> Self {
         Default::default()
     }
+
+    pub fn set_slot(&mut self, index: usize, slot: Option<HotbarSlot>) -> Option<()> {
+        let page = self.pages.get_mut(index / HOTBAR_PAGE_SIZE)?;
+        let page_slot = page.get_mut(index % HOTBAR_PAGE_SIZE)?;
+        *page_slot = slot;
+        Some(())
+    }
 }

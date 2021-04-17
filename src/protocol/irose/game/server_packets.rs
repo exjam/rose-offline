@@ -1,16 +1,16 @@
 use num_derive::FromPrimitive;
 
+use super::common_packets::write_hotbar_slot;
 use crate::{
     game::{
         components::{
-            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, Inventory,
+            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory,
             Level, Position, SkillList,
         },
         data::items::{EquipmentItem, Item, ItemType, StackableItem},
     },
     protocol::packet::{Packet, PacketWriter},
 };
-use super::common_packets::write_hotbar_slot;
 use modular_bitfield::prelude::*;
 
 #[derive(FromPrimitive)]
@@ -25,6 +25,7 @@ pub enum ServerPackets {
     StopMoveEntity = 0x796,
     MoveEntity = 0x79a,
     Teleport = 0x7a8,
+    SetHotbarSlot = 0x7aa,
 }
 
 #[allow(dead_code)]
@@ -488,6 +489,21 @@ impl From<&PacketServerTeleport> for Packet {
         writer.write_f32(packet.y);
         writer.write_u8(packet.run_mode);
         writer.write_u8(packet.ride_mode);
+        writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketServerSetHotbarSlot {
+    pub slot_index: u8,
+    pub slot: Option<HotbarSlot>,
+}
+
+impl From<&PacketServerSetHotbarSlot> for Packet {
+    fn from(packet: &PacketServerSetHotbarSlot) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::SetHotbarSlot as u16);
+        writer.write_u8(packet.slot_index);
+        write_hotbar_slot(&mut writer, &packet.slot);
         writer.into()
     }
 }

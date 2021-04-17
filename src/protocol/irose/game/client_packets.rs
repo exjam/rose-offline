@@ -2,10 +2,15 @@ use std::convert::TryFrom;
 
 use num_derive::FromPrimitive;
 
-use crate::protocol::{
-    packet::{Packet, PacketReader},
-    ProtocolError,
+use crate::{
+    game::components::HotbarSlot,
+    protocol::{
+        packet::{Packet, PacketReader},
+        ProtocolError,
+    },
 };
+
+use super::common_packets::read_hotbar_slot;
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -14,6 +19,7 @@ pub enum ClientPackets {
     Chat = 0x783,
     StopMove = 0x796,
     Move = 0x79a,
+    SetHotbarSlot = 0x7aa,
 }
 
 #[derive(Debug)]
@@ -107,5 +113,26 @@ impl<'a> TryFrom<&'a Packet> for PacketClientChat<'a> {
         let mut reader = PacketReader::from(packet);
         let text = reader.read_null_terminated_utf8()?;
         Ok(PacketClientChat { text })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientSetHotbarSlot {
+    pub slot_index: u8,
+    pub slot: Option<HotbarSlot>,
+}
+
+impl TryFrom<&Packet> for PacketClientSetHotbarSlot {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::SetHotbarSlot as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let slot_index = reader.read_u8()?;
+        let slot = read_hotbar_slot(&mut reader)?;
+        Ok(PacketClientSetHotbarSlot { slot_index, slot })
     }
 }

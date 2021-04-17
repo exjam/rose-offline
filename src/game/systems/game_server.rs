@@ -11,12 +11,13 @@ use server::Whisper;
 
 use crate::game::components::{
     BasicStats, CharacterInfo, ClientEntityId, Destination, Equipment, GameClient, Hotbar,
-    Inventory, Level, MoveSpeed, Position, SkillList, Target,
+    HotbarSlot, Inventory, Level, MoveSpeed, Position, SkillList, Target,
 };
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
 use crate::game::messages::client::{
-    ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse,
+    ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse, SetHotbarSlot,
+    SetHotbarSlotError,
 };
 use crate::game::messages::server;
 use crate::game::messages::server::ServerMessage;
@@ -264,6 +265,7 @@ pub fn game_server_main(
     client: &mut GameClient,
     entity_id: &ClientEntityId,
     position: &Position,
+    hotbar: &mut Hotbar,
     #[resource] client_entity_id_list: &mut ClientEntityIdList,
     #[resource] server_messages: &mut ServerMessages,
 ) {
@@ -327,6 +329,17 @@ pub fn game_server_main(
                         z: message.z,
                     }),
                 );
+            }
+            ClientMessage::SetHotbarSlot(SetHotbarSlot {
+                slot_index,
+                slot,
+                response_tx,
+            }) => {
+                if let Some(_) = hotbar.set_slot(slot_index, slot) {
+                    response_tx.send(Ok(())).ok();
+                } else {
+                    response_tx.send(Err(SetHotbarSlotError::InvalidSlot)).ok();
+                }
             }
             _ => println!("Received unimplemented client message"),
         }

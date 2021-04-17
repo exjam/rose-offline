@@ -1,8 +1,8 @@
 use tokio::sync::oneshot;
 
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Hotbar, Inventory, Level, Position,
-    SkillList,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Hotbar, HotbarSlot, Inventory,
+    Level, Position, SkillList,
 };
 use crate::game::data::character::CharacterStorage;
 
@@ -159,6 +159,17 @@ pub struct Move {
     pub z: u16,
 }
 
+pub enum SetHotbarSlotError {
+    InvalidSlotIndex,
+    InvalidSlot,
+}
+
+pub struct SetHotbarSlot {
+    pub slot_index: usize,
+    pub slot: Option<HotbarSlot>,
+    pub response_tx: oneshot::Sender<Result<(), SetHotbarSlotError>>,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -173,4 +184,5 @@ pub enum ClientMessage {
     JoinZoneRequest(JoinZoneRequest),
     Chat(String),
     Move(Move),
+    SetHotbarSlot(SetHotbarSlot),
 }

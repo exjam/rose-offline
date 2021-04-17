@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
 use crate::game::messages::{
-    client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move},
+    client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move, SetHotbarSlot},
     server::{LocalChat, ServerMessage, Whisper},
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
@@ -122,6 +122,26 @@ impl GameClient {
                     y: packet.y,
                     z: packet.z,
                 }))?;
+            }
+            Some(ClientPackets::SetHotbarSlot) => {
+                let request = PacketClientSetHotbarSlot::try_from(&packet)?;
+                let (response_tx, response_rx) = oneshot::channel();
+                client
+                    .client_message_tx
+                    .send(ClientMessage::SetHotbarSlot(SetHotbarSlot {
+                        slot_index: request.slot_index as usize,
+                        slot: request.slot.clone(),
+                        response_tx,
+                    }))?;
+                if let Ok(_) = response_rx.await? {
+                    client
+                        .connection
+                        .write_packet(Packet::from(&PacketServerSetHotbarSlot {
+                            slot_index: request.slot_index,
+                            slot: request.slot,
+                        }))
+                        .await?;
+                }
             }
             _ => println!("Unhandled packet {}", packet.command),
         }
