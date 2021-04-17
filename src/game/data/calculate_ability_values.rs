@@ -99,7 +99,7 @@ fn calculate_run_speed(
 
 pub fn calculate_ability_values(
     equipment: &Equipment,
-    inventory: &Inventory,
+    _inventory: &Inventory,
     basic_stats: &BasicStats,
 ) -> AbilityValues {
     // TODO: Passive skills

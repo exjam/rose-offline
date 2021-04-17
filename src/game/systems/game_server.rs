@@ -1,5 +1,4 @@
 use std::{
-    borrow::Borrow,
     num::{ParseFloatError, ParseIntError},
 };
 

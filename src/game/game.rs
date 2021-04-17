@@ -4,10 +4,9 @@ use std::time::Duration;
 
 use super::messages::control::ControlMessage;
 use super::resources::{
-    ClientEntityIdList, ControlChannel, LoginTokens, ServerList, ServerMessages,
+    ClientEntityIdList, ControlChannel, DeltaTime, LoginTokens, ServerList, ServerMessages,
 };
 use super::systems::*;
-use super::{components::GameClient, resources::DeltaTime};
 
 pub struct Game {
     tick_rate_hz: u64,

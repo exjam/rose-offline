@@ -12,6 +12,7 @@ impl Deref for StbItem {
     }
 }
 
+#[allow(dead_code)]
 impl StbItem {
     pub fn get_item_class(&self, item_number: u16) -> Option<ItemClass> {
         self.0

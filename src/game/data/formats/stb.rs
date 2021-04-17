@@ -39,6 +39,7 @@ fn decode_string<'a>(mut bytes: &'a [u8]) -> Cow<'a, str> {
     decoded
 }
 
+#[allow(dead_code)]
 impl StbFile {
     pub fn read(mut reader: FileReader) -> Result<Self, STBReadError> {
         let magic = reader.read_fixed_length_utf8(3)?;
