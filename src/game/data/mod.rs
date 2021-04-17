@@ -12,7 +12,7 @@ use formats::FileReader;
 use formats::StbFile;
 use formats::VfsIndex;
 use lazy_static::lazy_static;
-use stb::{StbInitAvatar, StbItem, StbItemBack, StbItemFoot};
+use stb::{StbInitAvatar, StbItem, StbItemBack, StbItemFoot, StbZone};
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -38,6 +38,15 @@ lazy_static! {
         }
 
         panic!("Failed reading 3DDATA/STB/INIT_AVATAR.STB");
+    };
+    pub static ref STB_ZONE: StbZone = {
+        if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_ZONE.STB") {
+            if let Ok(data) = StbFile::read(FileReader::from(&file)) {
+                return StbZone(data);
+            }
+        }
+
+        panic!("Failed reading 3DDATA/STB/LIST_ZONE.STB");
     };
     pub static ref STB_HAIR: StbItem = {
         if let Some(file) = VFS_INDEX.open_file("3DDATA/STB/LIST_HAIR.STB") {
