@@ -1,23 +1,25 @@
 use crate::game::components::BasicStats;
-use crate::game::data::formats::STB;
+use crate::game::data::formats::StbFile;
 use crate::game::data::items::{EquipmentItem, Item};
 
-pub struct StbInitAvatar(pub STB);
+pub struct StbInitAvatar(StbFile);
 
 impl StbInitAvatar {
-    pub fn rows(&self) -> usize {
-        self.0.rows
+    pub fn new(file: StbFile) -> Self {
+        Self(file)
     }
+}
 
-    pub fn get_basic_stats(&self, row: usize) -> BasicStats {
-        BasicStats {
-            strength: self.0.get(row, 0).parse().unwrap_or(0),
-            dexterity: self.0.get(row, 1).parse().unwrap_or(0),
-            intelligence: self.0.get(row, 2).parse().unwrap_or(0),
-            concentration: self.0.get(row, 3).parse().unwrap_or(0),
-            charm: self.0.get(row, 4).parse().unwrap_or(0),
-            sense: self.0.get(row, 5).parse().unwrap_or(0),
-        }
+impl StbInitAvatar {
+    pub fn get_basic_stats(&self, row: usize) -> Option<BasicStats> {
+        Some(BasicStats {
+            strength: self.0.try_get_int(row, 0)? as u16,
+            dexterity: self.0.try_get_int(row, 1)? as u16,
+            intelligence: self.0.try_get_int(row, 2)? as u16,
+            concentration: self.0.try_get_int(row, 3)? as u16,
+            charm: self.0.try_get_int(row, 4)? as u16,
+            sense: self.0.try_get_int(row, 5)? as u16,
+        })
     }
 
     pub fn get_equipment(&self, row: usize) -> Vec<EquipmentItem> {

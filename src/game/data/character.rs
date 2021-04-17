@@ -59,9 +59,6 @@ impl CharacterStorage {
         hair: u8,
     ) -> Result<Self, CharacterStorageError> {
         let init_avatar_row = gender as usize;
-        if init_avatar_row >= STB_INIT_AVATAR.rows() {
-            return Err(CharacterStorageError::InvalidValue);
-        }
 
         // TODO: Verify birth_stone, face, hair values
 
@@ -74,7 +71,9 @@ impl CharacterStorage {
                 face: face,
                 hair: hair,
             },
-            basic_stats: STB_INIT_AVATAR.get_basic_stats(init_avatar_row),
+            basic_stats: STB_INIT_AVATAR
+                .get_basic_stats(init_avatar_row)
+                .ok_or(CharacterStorageError::InvalidValue)?,
             equipment: Equipment::default(),
             inventory: Inventory::default(),
             level: Level::default(),

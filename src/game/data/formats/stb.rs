@@ -5,9 +5,9 @@ use std::str;
 
 use super::reader::{FileReader, ReadError};
 
-pub struct STB {
-    pub rows: usize,
-    pub columns: usize,
+pub struct StbFile {
+    rows: usize,
+    columns: usize,
     data: Vec<u8>,
     cells: Vec<(usize, u16)>,
 }
@@ -39,8 +39,8 @@ fn decode_string<'a>(mut bytes: &'a [u8]) -> Cow<'a, str> {
     decoded
 }
 
-impl STB {
-    pub fn read(mut reader: FileReader) -> Result<STB, STBReadError> {
+impl StbFile {
+    pub fn read(mut reader: FileReader) -> Result<Self, STBReadError> {
         let magic = reader.read_fixed_length_utf8(3)?;
         if magic != "STB" {
             return Err(STBReadError::InvalidMagic);
@@ -95,7 +95,7 @@ impl STB {
             }
         }
 
-        Ok(STB {
+        Ok(Self {
             rows: rows,
             columns: columns,
             data: data,
@@ -103,9 +103,12 @@ impl STB {
         })
     }
 
-    pub fn get(&self, row: usize, column: usize) -> &str {
-        let (position, size) = self.cells[row * self.columns + column];
-        str::from_utf8(&self.data[position..(position + size as usize)]).unwrap()
+    pub fn rows(&self) -> usize {
+        self.rows
+    }
+
+    pub fn columns(&self) -> usize {
+        self.columns
     }
 
     pub fn try_get(&self, row: usize, column: usize) -> Option<&str> {
@@ -119,5 +122,21 @@ impl STB {
             return None;
         }
         str::from_utf8(&self.data[position..(position + size as usize)]).ok()
+    }
+
+    pub fn get(&self, row: usize, column: usize) -> &str {
+        self.try_get(row, column).unwrap_or(&"")
+    }
+
+    pub fn try_get_int(&self, row: usize, column: usize) -> Option<i32> {
+        self.try_get(row, column)
+            .and_then(|x| x.parse::<i32>().ok())
+    }
+
+    pub fn get_int(&self, row: usize, column: usize) -> i32 {
+        self.try_get(row, column)
+            .unwrap_or(&"")
+            .parse::<i32>()
+            .unwrap_or(0)
     }
 }

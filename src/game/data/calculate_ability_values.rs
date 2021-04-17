@@ -79,13 +79,13 @@ fn calculate_run_speed(
     item_speed += equipment
         .get_equipment_item(EquipmentIndex::Feet)
         .filter(|item| !item.is_broken())
-        .map(|item| STB_ITEM_FEET.get_boots_move_speed(item.item_number))
-        .unwrap_or(STB_ITEM_FEET.get_boots_move_speed(0)) as f32;
+        .and_then(|item| STB_ITEM_FEET.get_boots_move_speed(item.item_number))
+        .unwrap_or(STB_ITEM_FEET.get_boots_move_speed(0).unwrap_or(0)) as f32;
 
     item_speed += equipment
         .get_equipment_item(EquipmentIndex::Back)
         .filter(|item| !item.is_broken())
-        .map(|item| STB_ITEM_BACK.get_back_move_speed(item.item_number))
+        .and_then(|item| STB_ITEM_BACK.get_back_move_speed(item.item_number))
         .unwrap_or(0) as f32;
 
     let run_speed = item_speed * (basic_stats.dexterity as f32 + 500.0) / 100.0
