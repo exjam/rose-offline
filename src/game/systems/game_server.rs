@@ -1,4 +1,7 @@
-use std::{borrow::Borrow, num::{ParseFloatError, ParseIntError}};
+use std::{
+    borrow::Borrow,
+    num::{ParseFloatError, ParseIntError},
+};
 
 use legion::systems::CommandBuffer;
 use legion::*;
@@ -120,18 +123,17 @@ lazy_static! {
     pub static ref GM_COMMANDS: App<'static> = {
         App::new("GM Commands")
             .subcommand(App::new("help"))
-            .subcommand(
-                App::new("where"))
+            .subcommand(App::new("where"))
             .subcommand(
                 App::new("mm")
                     .arg(Arg::new("zone").required(true))
                     .arg(Arg::new("x").required(true))
-                    .arg(Arg::new("y").required(true)))
+                    .arg(Arg::new("y").required(true)),
+            )
     };
 }
 
-fn send_gm_commands_help(client: &mut GameClient)
-{
+fn send_gm_commands_help(client: &mut GameClient) {
     for subcommand in GM_COMMANDS.get_subcommands() {
         let mut help_string = String::from(subcommand.get_name());
         for arg in subcommand.get_arguments() {
@@ -145,12 +147,13 @@ fn send_gm_commands_help(client: &mut GameClient)
             }
         }
 
-        client.server_message_tx.send(ServerMessage::Whisper(
-            Whisper {
+        client
+            .server_message_tx
+            .send(ServerMessage::Whisper(Whisper {
                 from: String::from("SERVER"),
                 text: help_string,
-            },
-        )).ok();
+            }))
+            .ok();
     }
 }
 
@@ -192,46 +195,57 @@ fn handle_gm_command(
     client: &mut GameClient,
     text: &str,
     entity_id: &ClientEntityId,
-    position: &Position) -> Result<(), GMCommandError>
-{
-    let mut args=  shellwords::split(text)?;
+    position: &Position,
+) -> Result<(), GMCommandError> {
+    let mut args = shellwords::split(text)?;
     args.insert(0, String::new()); // Clap expects arg[0] to be like executable name
     let matches = GM_COMMANDS.clone().try_get_matches_from(args)?;
 
     match matches.subcommand().ok_or(GMCommandError::InvalidCommand)? {
         ("where", _) => {
-            client.server_message_tx.send(ServerMessage::Whisper(
-                Whisper {
+            client
+                .server_message_tx
+                .send(ServerMessage::Whisper(Whisper {
                     from: String::from("SERVER"),
-                    text: format!("zone: {} x: {} y: {} z: {}", position.zone, position.position.x, position.position.y, position.position.z),
-                },
-            )).ok();
+                    text: format!(
+                        "zone: {} x: {} y: {} z: {}",
+                        position.zone,
+                        position.position.x,
+                        position.position.y,
+                        position.position.z
+                    ),
+                }))
+                .ok();
         }
         ("mm", matches) => {
             let zone = matches.value_of("zone").unwrap().parse::<u16>()?;
             let x = matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
             let y = matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
 
-            cmd.add_component(*entity, Position {
-                position: Vector3::new(x, y, 0.0),
-                zone: zone,
-                respawn_zone: position.respawn_zone,
-            });
+            cmd.add_component(
+                *entity,
+                Position {
+                    position: Vector3::new(x, y, 0.0),
+                    zone: zone,
+                    respawn_zone: position.respawn_zone,
+                },
+            );
             cmd.remove_component::<ClientEntityId>(*entity);
             // TODO: Destroy entity for nearby players
 
-            client.server_message_tx.send(ServerMessage::Teleport(
-                server::Teleport {
+            client
+                .server_message_tx
+                .send(ServerMessage::Teleport(server::Teleport {
                     entity_id: entity_id.id.0,
                     zone_no: zone,
                     x: x,
                     y: y,
                     run_mode: 1,
                     ride_mode: 0,
-                },
-            )).ok();
+                }))
+                .ok();
         }
-        _ => return Err(GMCommandError::InvalidCommand)
+        _ => return Err(GMCommandError::InvalidCommand),
     }
 
     Ok(())
@@ -251,7 +265,9 @@ pub fn game_server_move(
         match message {
             ClientMessage::Chat(text) => {
                 if text.chars().nth(0).map_or(false, |c| c == '/') {
-                    if handle_gm_command(cmd, entity, client, &text[1..], entity_id, position).is_err() {
+                    if handle_gm_command(cmd, entity, client, &text[1..], entity_id, position)
+                        .is_err()
+                    {
                         send_gm_commands_help(client);
                     }
                 } else {

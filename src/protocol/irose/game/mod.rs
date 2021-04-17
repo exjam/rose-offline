@@ -5,7 +5,7 @@ use tokio::sync::oneshot;
 
 use crate::game::messages::{
     client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move},
-    server::{ServerMessage, LocalChat, Whisper},
+    server::{LocalChat, ServerMessage, Whisper},
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
 
@@ -167,11 +167,12 @@ impl GameClient {
                     }))
                     .await?;
             }
-            ServerMessage::LocalChat(LocalChat { entity_id , text }) => {
+            ServerMessage::LocalChat(LocalChat { entity_id, text }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerLocalChat {
-                        entity_id, text: &text
+                        entity_id,
+                        text: &text,
                     }))
                     .await?;
             }
@@ -179,7 +180,8 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerWhisper {
-                        from: &from, text: &text
+                        from: &from,
+                        text: &text,
                     }))
                     .await?;
             }
