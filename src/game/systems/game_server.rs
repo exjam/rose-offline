@@ -2,13 +2,14 @@ use std::{
     num::{ParseFloatError, ParseIntError},
 };
 
-use legion::systems::CommandBuffer;
+use legion::{systems::CommandBuffer, world::{ComponentError, EntityAccessError}};
 use legion::*;
+use legion::world::SubWorld;
 use nalgebra::Vector3;
 use server::Whisper;
 
 use crate::game::components::{
-    CharacterInfo, ClientEntityId, Destination, GameClient, Level, MoveSpeed, Position, Target,
+    CharacterInfo, ClientEntityId, BasicStats, Inventory, Equipment, Destination, GameClient, Level, MoveSpeed, Position, Target,
 };
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
@@ -324,4 +325,50 @@ pub fn game_server_move(
             _ => println!("Received unimplemented client message"),
         }
     }
+}
+
+#[system(for_each)]
+#[read_component(BasicStats)]
+#[read_component(Inventory)]
+#[read_component(Equipment)]
+#[read_component(Level)]
+#[read_component(Position)]
+#[filter(!component::<GameClient>())]
+pub fn game_server_disconnect_handler(
+    world: &SubWorld,
+    cmd: &mut CommandBuffer,
+    entity: &Entity,
+    client_entity_id: Option<&ClientEntityId>,
+    info: &CharacterInfo,
+    position: &Position,
+    #[resource] client_entity_id_list: &mut ClientEntityIdList,
+    #[resource] server_messages: &mut ServerMessages,
+) {
+    if let Ok(entry) = world.entry_ref(*entity) {
+        let basic_stats = entry.get_component::<BasicStats>();
+        let inventory = entry.get_component::<Inventory>();
+        let equipment = entry.get_component::<Equipment>();
+        let level = entry.get_component::<Level>();
+        let position = entry.get_component::<Position>();
+        let storage = CharacterStorage {
+            info: info.clone(),
+            basic_stats: basic_stats.unwrap().clone(),
+            inventory: inventory.unwrap().clone(),
+            equipment: equipment.unwrap().clone(),
+            level: level.unwrap().clone(),
+            position: position.unwrap().clone(),
+            delete_time: None,
+        };
+        storage.save().ok();
+    }
+
+    if let Some(client_entity_id) = client_entity_id {
+        server_messages.send_nearby_message(
+            position.clone(),
+            ServerMessage::RemoveEntities(client_entity_id.id.0.into()),
+        );
+        client_entity_id_list.get_zone_mut(position.zone as usize).free(ZoneEntityId(client_entity_id.id.0));
+    }
+
+    cmd.remove(*entity);
 }

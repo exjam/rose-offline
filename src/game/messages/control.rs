@@ -20,6 +20,7 @@ pub enum ControlMessage {
         response_tx: oneshot::Sender<Entity>,
     },
     RemoveClient {
+        client_type: ClientType,
         entity: Entity,
     },
     AddWorldServer {
