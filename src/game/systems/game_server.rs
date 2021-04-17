@@ -258,7 +258,7 @@ fn handle_gm_command(
 }
 
 #[system(for_each)]
-pub fn game_server_move(
+pub fn game_server_main(
     cmd: &mut CommandBuffer,
     entity: &Entity,
     client: &mut GameClient,

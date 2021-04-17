@@ -39,7 +39,7 @@ impl Game {
             .add_system(world_server_system())
             .add_system(game_server_authentication_system())
             .add_system(game_server_join_system())
-            .add_system(game_server_move_system())
+            .add_system(game_server_main_system())
             .add_system(game_server_disconnect_handler_system())
             .flush()
             .add_system(update_position_system())
