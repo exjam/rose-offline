@@ -37,11 +37,11 @@ impl<'a> From<&'a VfsFile<'a>> for FileReader<'a> {
     }
 }
 
-fn normalize_path(path: &str) -> String {
-    path.replace(r#"\"#, "/").to_uppercase()
-}
-
 impl VfsIndex {
+    pub fn normalise_path(path: &str) -> String {
+        path.replace(r#"\"#, "/").to_uppercase()
+    }
+
     pub fn load(path: &Path) -> Result<VfsIndex, std::io::Error> {
         let data = std::fs::read(path)?;
         let mut reader = FileReader::from(&data);
@@ -97,7 +97,7 @@ impl VfsIndex {
                 if is_deleted == 0 {
                     storage
                         .files
-                        .insert(normalize_path(&filename), FileEntry { offset, size });
+                        .insert(Self::normalise_path(&filename), FileEntry { offset, size });
                 }
             }
 
@@ -113,7 +113,7 @@ impl VfsIndex {
             return Some(VfsFile::Buffer(buffer));
         }
 
-        let path = path.replace(r#"\"#, "/").to_uppercase();
+        let path = Self::normalise_path(path);
         for vfs in &self.storages {
             if let Some(entry) = vfs.files.get(&path) {
                 return Some(VfsFile::View(

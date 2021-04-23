@@ -1,6 +1,8 @@
 use bytes::Buf;
-use std::io::Cursor;
+use encoding_rs::EUC_KR;
+use nalgebra::{Quaternion, Vector3};
 use std::str;
+use std::{borrow::Cow, io::Cursor};
 
 pub enum ReadError {
     UnexpectedEof,
@@ -30,6 +32,24 @@ impl<'a> From<&'a [u8]> for FileReader<'a> {
     fn from(slice: &'a [u8]) -> Self {
         Self {
             cursor: Cursor::new(slice),
+        }
+    }
+}
+
+fn decode_string<'b>(mut bytes: &'b [u8]) -> Cow<'b, str> {
+    // Some fixed length strings include a null terminator, so we should trim it.
+    for (i, c) in bytes.iter().enumerate() {
+        if *c == 0 {
+            bytes = &bytes[0..i];
+            break;
+        }
+    }
+
+    match str::from_utf8(bytes) {
+        Ok(s) => Cow::from(s),
+        Err(_) => {
+            let (decoded, _, _) = EUC_KR.decode(bytes);
+            decoded
         }
     }
 }
@@ -76,6 +96,29 @@ impl<'a> FileReader<'a> {
         }
     }
 
+    pub fn read_f32(&mut self) -> Result<f32, ReadError> {
+        if self.cursor.remaining() < 4 {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_f32_le())
+        }
+    }
+
+    pub fn read_vector3_f32(&mut self) -> Result<Vector3<f32>, ReadError> {
+        let x = self.read_f32()?;
+        let y = self.read_f32()?;
+        let z = self.read_f32()?;
+        Ok(Vector3::new(x, y, z))
+    }
+
+    pub fn read_quaternion_f32(&mut self) -> Result<Quaternion<f32>, ReadError> {
+        let x = self.read_f32()?;
+        let y = self.read_f32()?;
+        let z = self.read_f32()?;
+        let w = self.read_f32()?;
+        Ok(Quaternion::new(w, x, y, z))
+    }
+
     pub fn read_fixed_length_bytes(&mut self, length: usize) -> Result<&'a [u8], ReadError> {
         if self.cursor.remaining() < length {
             Err(ReadError::UnexpectedEof)
@@ -85,6 +128,11 @@ impl<'a> FileReader<'a> {
             self.cursor.set_position(end as u64);
             Ok(&self.cursor.get_ref()[start..end])
         }
+    }
+
+    pub fn read_u8_length_bytes(&mut self) -> Result<&'a [u8], ReadError> {
+        let length = self.read_u8()?;
+        self.read_fixed_length_bytes(length as usize)
     }
 
     pub fn read_u16_length_bytes(&mut self) -> Result<&'a [u8], ReadError> {
@@ -106,24 +154,19 @@ impl<'a> FileReader<'a> {
         Err(ReadError::UnexpectedEof)
     }
 
-    pub fn read_fixed_length_utf8(&mut self, length: usize) -> Result<&'a str, ReadError> {
-        match str::from_utf8(self.read_fixed_length_bytes(length)?) {
-            Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => return Err(ReadError::UnexpectedEof),
-        }
+    pub fn read_fixed_length_string(&mut self, length: usize) -> Result<Cow<'a, str>, ReadError> {
+        Ok(decode_string(self.read_fixed_length_bytes(length)?))
     }
 
-    pub fn read_u16_length_utf8(&mut self) -> Result<&'a str, ReadError> {
-        match str::from_utf8(self.read_u16_length_bytes()?) {
-            Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => return Err(ReadError::UnexpectedEof),
-        }
+    pub fn read_u8_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
+        Ok(decode_string(self.read_u8_length_bytes()?))
     }
 
-    pub fn read_null_terminated_utf8(&mut self) -> Result<&'a str, ReadError> {
-        match str::from_utf8(self.read_null_terminated_bytes()?) {
-            Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => return Err(ReadError::UnexpectedEof),
-        }
+    pub fn read_u16_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
+        Ok(decode_string(self.read_u16_length_bytes()?))
+    }
+
+    pub fn read_null_terminated_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
+        Ok(decode_string(self.read_null_terminated_bytes()?))
     }
 }

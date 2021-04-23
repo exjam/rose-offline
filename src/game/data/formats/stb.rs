@@ -1,6 +1,4 @@
 use core::mem::size_of;
-use encoding_rs::EUC_KR;
-use std::borrow::Cow;
 use std::str;
 
 use super::reader::{FileReader, ReadError};
@@ -13,38 +11,26 @@ pub struct StbFile {
 }
 
 #[derive(Debug)]
-pub enum STBReadError {
+pub enum StbReadError {
     InvalidMagic,
     UnsupportedVersion,
     UnexpectedEof,
 }
 
-impl From<ReadError> for STBReadError {
+impl From<ReadError> for StbReadError {
     fn from(err: ReadError) -> Self {
         match err {
-            ReadError::UnexpectedEof => STBReadError::UnexpectedEof,
+            ReadError::UnexpectedEof => StbReadError::UnexpectedEof,
         }
     }
-}
-
-fn decode_string<'a>(mut bytes: &'a [u8]) -> Cow<'a, str> {
-    for (length, c) in bytes.iter().enumerate() {
-        if *c == 0 {
-            bytes = &bytes[0..length];
-            break;
-        }
-    }
-
-    let (decoded, _, _) = EUC_KR.decode(bytes);
-    decoded
 }
 
 #[allow(dead_code)]
 impl StbFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, STBReadError> {
-        let magic = reader.read_fixed_length_utf8(3)?;
+    pub fn read(mut reader: FileReader) -> Result<Self, StbReadError> {
+        let magic = reader.read_fixed_length_string(3)?;
         if magic != "STB" {
-            return Err(STBReadError::InvalidMagic);
+            return Err(StbReadError::InvalidMagic);
         }
 
         let version = {
@@ -54,7 +40,7 @@ impl StbFile {
             } else if version == '1' as u8 {
                 1
             } else {
-                return Err(STBReadError::UnsupportedVersion);
+                return Err(StbReadError::UnsupportedVersion);
             }
         };
 
@@ -88,7 +74,7 @@ impl StbFile {
         reader.set_position(data_position);
         for _ in 0..rows {
             for _ in 0..columns {
-                let cell = decode_string(reader.read_u16_length_bytes()?);
+                let cell = reader.read_u16_length_string()?;
                 let size = cell.as_bytes().len();
                 let position = data.len();
                 data.extend_from_slice(cell.as_bytes());
