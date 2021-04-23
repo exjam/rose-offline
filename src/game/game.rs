@@ -1,12 +1,17 @@
 use crossbeam_channel::Receiver;
 use legion::*;
 use std::time::Duration;
+use nalgebra::Point3;
 
-use super::messages::control::ControlMessage;
-use super::resources::{
+use super::{components::MonsterSpawnPoint, resources::{
     ClientEntityIdList, ControlChannel, DeltaTime, LoginTokens, ServerList, ServerMessages,
-};
+}};
 use super::systems::*;
+use super::{
+    components::{Npc, Position, Zone},
+    messages::control::ControlMessage,
+};
+use crate::game::data::ZONE_LIST;
 
 pub struct Game {
     tick_rate_hz: u64,
@@ -23,6 +28,25 @@ impl Game {
 
     pub fn run(&mut self) {
         let mut world = World::default();
+        for zone_info in &ZONE_LIST.zones {
+            let x_offset = (64.0 / 2.0) * (zone_info.grid_size * zone_info.grid_per_patch * 16.0) + (zone_info.grid_size * zone_info.grid_per_patch * 16.0) / 2.0;
+            let y_offset = (64.0 / 2.0) * (zone_info.grid_size * zone_info.grid_per_patch * 16.0) + (zone_info.grid_size * zone_info.grid_per_patch * 16.0) / 2.0;
+            world.push((Zone { id: zone_info.id },));
+
+            for npc in &zone_info.npcs {
+                world.push((
+                    Npc::from(npc),
+                    Position::new(Point3::new(npc.object.position.x + x_offset, npc.object.position.y + y_offset, npc.object.position.z), zone_info.id),
+                ));
+            }
+
+            for spawn in &zone_info.monster_spawns {
+                world.push((
+                    MonsterSpawnPoint::from(spawn),
+                    Position::new(Point3::new(spawn.object.position.x + x_offset, spawn.object.position.y + y_offset, spawn.object.position.z), zone_info.id),
+                ));
+            }
+        }
 
         let mut resources = Resources::default();
         resources.insert(ControlChannel::new(self.control_rx.clone()));

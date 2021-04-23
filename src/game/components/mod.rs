@@ -55,3 +55,12 @@ pub use skill_list::SkillList;
 
 mod hotbar;
 pub use hotbar::{Hotbar, HotbarSlot};
+
+mod zone;
+pub use zone::Zone;
+
+mod npc;
+pub use npc::Npc;
+
+mod monster_spawn_point;
+pub use monster_spawn_point::MonsterSpawnPoint;
