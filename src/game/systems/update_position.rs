@@ -14,14 +14,15 @@ pub fn update_position(
     #[resource] delta_time: &DeltaTime,
 ) {
     let direction = destination.position - position.position;
-    if direction.magnitude_squared() == 0.0 {
+    let distance_squared = direction.magnitude_squared();
+    if distance_squared == 0.0 {
         position.position = destination.position;
         cmd.remove_component::<Destination>(*entity);
         return;
     }
 
     let move_vector = direction.normalize() * move_speed.speed * delta_time.delta.as_secs_f32();
-    if move_vector.magnitude_squared() >= direction.magnitude_squared() {
+    if move_vector.magnitude_squared() >= distance_squared {
         position.position = destination.position;
         cmd.remove_component::<Destination>(*entity);
         return;

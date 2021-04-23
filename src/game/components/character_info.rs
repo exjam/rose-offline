@@ -8,4 +8,5 @@ pub struct CharacterInfo {
     pub job: u16,
     pub face: u8,
     pub hair: u8,
+    pub respawn_zone: u16,
 }

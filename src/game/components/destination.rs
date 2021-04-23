@@ -1,4 +1,5 @@
-use nalgebra::Vector3;
+use nalgebra::Point3;
+
 pub struct Destination {
-    pub position: Vector3<f32>,
+    pub position: Point3<f32>,
 }

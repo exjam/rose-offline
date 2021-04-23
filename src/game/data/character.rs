@@ -4,7 +4,7 @@ use crate::game::components::{
     SkillList,
 };
 use crate::game::data::CHARACTER_STORAGE_DIR;
-use nalgebra::Vector3;
+use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf};
 
@@ -73,6 +73,7 @@ impl CharacterStorage {
                 job: 0,
                 face: face,
                 hair: hair,
+                respawn_zone: 20,
             },
             basic_stats: STB_INIT_AVATAR
                 .get_basic_stats(init_avatar_row)
@@ -81,9 +82,8 @@ impl CharacterStorage {
             inventory: Inventory::default(),
             level: Level::default(),
             position: Position {
-                position: Vector3::new(530500.0, 539500.0, 0.0),
+                position: Point3::new(530500.0, 539500.0, 0.0),
                 zone: 20,
-                respawn_zone: 20,
             },
             skill_list: SkillList::default(),
             hotbar: Hotbar::default(),

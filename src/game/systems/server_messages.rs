@@ -27,11 +27,8 @@ pub fn server_messages_sender(
         for message in server_messages.pending_nearby_messages.iter() {
             if message.except_entity.is_none() || message.except_entity.as_ref().unwrap() != entity
             {
-                if position
-                    .position
-                    .metric_distance(&message.position.position)
-                    < NEARBY_DISTANCE
-                {
+                let distance = (position.position - message.position.position).magnitude();
+                if distance < NEARBY_DISTANCE {
                     client.server_message_tx.send(message.message.clone()).ok();
                 }
             }

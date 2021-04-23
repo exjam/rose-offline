@@ -1,17 +1,14 @@
 use std::num::{ParseFloatError, ParseIntError};
 
+use legion::systems::CommandBuffer;
 use legion::world::SubWorld;
 use legion::*;
-use legion::{
-    systems::CommandBuffer,
-    world::{ComponentError, EntityAccessError},
-};
-use nalgebra::Vector3;
+use nalgebra::Point3;
 use server::Whisper;
 
 use crate::game::components::{
     BasicStats, CharacterInfo, ClientEntityId, Destination, Equipment, GameClient, Hotbar,
-    HotbarSlot, Inventory, Level, MoveSpeed, Position, SkillList, Target,
+    Inventory, Level, MoveSpeed, Position, SkillList, Target,
 };
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
@@ -232,9 +229,8 @@ fn handle_gm_command(
             cmd.add_component(
                 *entity,
                 Position {
-                    position: Vector3::new(x, y, 0.0),
+                    position: Point3::new(x, y, 0.0),
                     zone: zone,
-                    respawn_zone: position.respawn_zone,
                 },
             );
             cmd.remove_component::<ClientEntityId>(*entity);
@@ -309,7 +305,7 @@ pub fn game_server_main(
                     cmd.remove_component::<Target>(*entity);
                 }
 
-                let destination = Vector3::new(message.x, message.y, message.z as f32);
+                let destination = Point3::new(message.x, message.y, message.z as f32);
                 cmd.add_component(
                     *entity,
                     Destination {
@@ -317,7 +313,7 @@ pub fn game_server_main(
                     },
                 );
 
-                let distance = destination.metric_distance(&position.position);
+                let distance = (destination - position.position).magnitude();
                 server_messages.send_nearby_message(
                     position.clone(),
                     ServerMessage::MoveEntity(server::MoveEntity {

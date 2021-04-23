@@ -196,7 +196,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u16(packet.position.zone);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
-        writer.write_u16(packet.position.respawn_zone);
+        writer.write_u16(character_info.respawn_zone);
 
         writer.write_u32(character_info.face as u32);
         writer.write_u32(character_info.hair as u32);
