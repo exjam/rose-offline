@@ -4,6 +4,10 @@ pub struct StbZone(pub StbFile);
 
 #[allow(dead_code)]
 impl StbZone {
+    pub fn rows(&self) -> usize {
+        self.0.rows()
+    }
+
     pub fn get_zone_file(&self, row: usize) -> Option<&str> {
         self.0.try_get(row, 1)
     }

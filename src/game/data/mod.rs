@@ -3,6 +3,7 @@ pub mod character;
 pub mod formats;
 pub mod items;
 pub mod stb;
+pub mod zone;
 
 mod calculate_ability_values;
 pub use calculate_ability_values::calculate_ability_values;
@@ -15,6 +16,7 @@ use lazy_static::lazy_static;
 use stb::{StbInitAvatar, StbItem, StbItemBack, StbItemFoot, StbZone};
 use std::path::Path;
 use std::path::PathBuf;
+use zone::{ZoneInfo, ZoneInfoList};
 
 use self::stb::StbSkill;
 
@@ -64,4 +66,5 @@ lazy_static! {
     pub static ref STB_ITEM_MATERIAL: StbItem = StbItem(load_stb("3DDATA/STB/LIST_NATURAL.STB"));
     pub static ref STB_ITEM_QUEST: StbItem = StbItem(load_stb("3DDATA/STB/LIST_QUESTITEM.STB"));
     pub static ref STB_ITEM_VEHICLE: StbItem = StbItem(load_stb("3DDATA/STB/LIST_PAT.STB"));
+    pub static ref ZONE_LIST: ZoneInfoList = ZoneInfoList::load();
 }
