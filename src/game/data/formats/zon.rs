@@ -76,6 +76,10 @@ impl ZonFile {
             reader.set_position(next_block_header_offset);
         }
 
-        Ok(Self { grid_size, grid_per_patch, event_positions })
+        Ok(Self {
+            grid_size,
+            grid_per_patch,
+            event_positions,
+        })
     }
 }

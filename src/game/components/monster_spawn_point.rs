@@ -17,8 +17,22 @@ pub struct MonsterSpawnPoint {
 impl From<&ifo::MonsterSpawnPoint> for MonsterSpawnPoint {
     fn from(spawn_point: &ifo::MonsterSpawnPoint) -> Self {
         Self {
-            basic_spawns: spawn_point.basic_spawns.iter().map(|x| MonsterSpawn { id: x.id, count: x.count }).collect(),
-            tactic_spawns: spawn_point.tactic_spawns.iter().map(|x| MonsterSpawn { id: x.id, count: x.count }).collect(),
+            basic_spawns: spawn_point
+                .basic_spawns
+                .iter()
+                .map(|x| MonsterSpawn {
+                    id: x.id,
+                    count: x.count,
+                })
+                .collect(),
+            tactic_spawns: spawn_point
+                .tactic_spawns
+                .iter()
+                .map(|x| MonsterSpawn {
+                    id: x.id,
+                    count: x.count,
+                })
+                .collect(),
             interval: spawn_point.interval,
             limit_count: spawn_point.limit_count,
             range: spawn_point.range,

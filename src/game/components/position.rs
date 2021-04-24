@@ -1,6 +1,5 @@
 use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
-use std::f32;
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Position {
@@ -10,8 +9,6 @@ pub struct Position {
 
 impl Position {
     pub fn new(position: Point3<f32>, zone: u16) -> Self {
-        Self {
-            position, zone
-        }
+        Self { position, zone }
     }
 }
