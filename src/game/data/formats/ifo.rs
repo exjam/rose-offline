@@ -1,5 +1,5 @@
 use super::reader::{FileReader, ReadError};
-use nalgebra::{Point2, Point3, Quaternion, Vector3};
+use nalgebra::{Point2, Point3, UnitQuaternion, Vector3};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -42,7 +42,7 @@ pub struct Object {
     pub warp_id: u16,
     pub event_id: u16,
     pub position: Point3<f32>,
-    pub rotation: Quaternion<f32>,
+    pub rotation: UnitQuaternion<f32>,
     pub scale: Vector3<f32>,
 }
 
