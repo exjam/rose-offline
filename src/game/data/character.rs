@@ -81,10 +81,7 @@ impl CharacterStorage {
             equipment: Equipment::default(),
             inventory: Inventory::default(),
             level: Level::default(),
-            position: Position {
-                position: Point3::new(530500.0, 539500.0, 0.0),
-                zone: 20,
-            },
+            position: Position::new(Point3::new(530500.0, 539500.0, 0.0), 20),
             skill_list: SkillList::default(),
             hotbar: Hotbar::default(),
             delete_time: None,
