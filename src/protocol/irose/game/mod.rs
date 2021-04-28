@@ -5,7 +5,7 @@ use tokio::sync::oneshot;
 
 use crate::game::messages::{
     client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move, SetHotbarSlot},
-    server::{LocalChat, ServerMessage, Whisper},
+    server::{LocalChat, ServerMessage, SpawnEntityNpc, Whisper},
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
 
@@ -206,6 +206,20 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerWhisper {
                         from: &from,
                         text: &text,
+                    }))
+                    .await?;
+            }
+            ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
+                entity_id,
+                npc,
+                position,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerSpawnEntityNpc {
+                        entity_id,
+                        npc: &npc,
+                        position: &position,
                     }))
                     .await?;
             }
