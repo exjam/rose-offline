@@ -13,7 +13,7 @@ use formats::FileReader;
 use formats::StbFile;
 use formats::VfsIndex;
 use lazy_static::lazy_static;
-use stb::{StbInitAvatar, StbItem, StbItemBack, StbItemFoot, StbZone};
+use stb::{StbEvent, StbInitAvatar, StbItem, StbItemBack, StbItemFoot, StbZone};
 use std::path::Path;
 use std::path::PathBuf;
 use zone::{ZoneInfo, ZoneInfoList};
@@ -23,6 +23,16 @@ use self::stb::StbSkill;
 fn load_stb(path: &str) -> StbFile {
     if let Some(file) = VFS_INDEX.open_file(path) {
         if let Ok(data) = StbFile::read(FileReader::from(&file)) {
+            return data;
+        }
+    }
+
+    panic!("Failed reading {}", path);
+}
+
+fn load_stb_with_keys(path: &str) -> StbFile {
+    if let Some(file) = VFS_INDEX.open_file(path) {
+        if let Ok(data) = StbFile::read_with_keys(FileReader::from(&file)) {
             return data;
         }
     }
@@ -66,5 +76,6 @@ lazy_static! {
     pub static ref STB_ITEM_MATERIAL: StbItem = StbItem(load_stb("3DDATA/STB/LIST_NATURAL.STB"));
     pub static ref STB_ITEM_QUEST: StbItem = StbItem(load_stb("3DDATA/STB/LIST_QUESTITEM.STB"));
     pub static ref STB_ITEM_VEHICLE: StbItem = StbItem(load_stb("3DDATA/STB/LIST_PAT.STB"));
+    pub static ref STB_EVENT: StbEvent = StbEvent(load_stb_with_keys("3DDATA/STB/LIST_EVENT.STB"));
     pub static ref ZONE_LIST: ZoneInfoList = ZoneInfoList::load();
 }

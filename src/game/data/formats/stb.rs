@@ -1,13 +1,16 @@
 use core::mem::size_of;
-use std::str;
+use std::{collections::HashMap, str};
 
 use super::reader::{FileReader, ReadError};
 
 pub struct StbFile {
     rows: usize,
     columns: usize,
+    row_names: Vec<String>,
+    column_names: Vec<String>,
     data: Vec<u8>,
     cells: Vec<(usize, u16)>,
+    row_keys: HashMap<String, usize>,
 }
 
 #[derive(Debug)]
@@ -56,12 +59,14 @@ impl StbFile {
             let _column_widths = reader.skip((size_of::<u16>() * (column_count + 1)) as u64);
         }
 
+        let mut column_names = Vec::with_capacity(column_count);
         for _ in 0..column_count {
-            let _column_name = reader.read_u16_length_bytes()?;
+            column_names.push(String::from(reader.read_u16_length_string()?));
         }
 
+        let mut row_names = Vec::with_capacity(row_count);
         for _ in 0..row_count {
-            let _row_name = reader.read_u16_length_bytes()?;
+            row_names.push(String::from(reader.read_u16_length_string()?));
         }
 
         // Ignore the row / column headers
@@ -85,9 +90,24 @@ impl StbFile {
         Ok(Self {
             rows: rows,
             columns: columns,
+            row_names: row_names,
+            column_names: column_names,
             data: data,
             cells: cells,
+            row_keys: Default::default(),
         })
+    }
+
+    pub fn read_with_keys(reader: FileReader) -> Result<Self, StbReadError> {
+        let mut stb = Self::read(reader)?;
+
+        for (index, key) in stb.row_names.iter().enumerate() {
+            if !key.is_empty() {
+                stb.row_keys.insert(key.clone(), index);
+            }
+        }
+
+        Ok(stb)
     }
 
     pub fn rows(&self) -> usize {
@@ -96,6 +116,18 @@ impl StbFile {
 
     pub fn columns(&self) -> usize {
         self.columns
+    }
+
+    pub fn lookup_row_name(&self, name: &str) -> Option<usize> {
+        self.row_keys.get(name).cloned()
+    }
+
+    pub fn try_get_row_name(&self, row: usize) -> Option<&str> {
+        self.row_names.get(row).map(String::as_str)
+    }
+
+    pub fn get_row_name(&self, row: usize) -> &str {
+        self.try_get_row_name(row).unwrap_or(&"")
     }
 
     pub fn try_get(&self, row: usize, column: usize) -> Option<&str> {
