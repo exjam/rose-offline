@@ -7,8 +7,8 @@ use nalgebra::Point3;
 use server::Whisper;
 
 use crate::game::components::{
-    BasicStats, CharacterInfo, ClientEntityId, Destination, Equipment, GameClient, Hotbar,
-    Inventory, Level, MoveSpeed, Position, SkillList, Target,
+    BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment,
+    GameClient, Hotbar, Inventory, Level, MoveSpeed, Position, SkillList, Target,
 };
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
@@ -18,7 +18,7 @@ use crate::game::messages::client::{
 };
 use crate::game::messages::server;
 use crate::game::messages::server::ServerMessage;
-use crate::game::resources::{ClientEntityIdList, LoginTokens, ServerMessages, ZoneEntityId};
+use crate::game::resources::{ClientEntityId, ClientEntityList, LoginTokens, ServerMessages};
 
 #[system(for_each)]
 #[filter(!component::<CharacterInfo>())]
@@ -88,32 +88,33 @@ pub fn game_server_authentication(
 }
 
 #[system(for_each)]
-#[filter(!component::<ClientEntityId>())]
+#[filter(!component::<ClientEntity>())]
 pub fn game_server_join(
     cmd: &mut CommandBuffer,
     client: &mut GameClient,
     entity: &Entity,
     level: &Level,
     position: &Position,
-    #[resource] client_entity_id_list: &mut ClientEntityIdList,
+    #[resource] client_entity_list: &mut ClientEntityList,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::JoinZoneRequest(message) => {
-                let entity_id = client_entity_id_list
-                    .get_zone_mut(position.zone as usize)
-                    .allocate(*entity)
-                    .unwrap();
+                if let Some(zone) = client_entity_list.get_zone_mut(position.zone as usize) {
+                    if let Some(client_entity) = zone.allocate(*entity, position.position) {
+                        let entity_id = client_entity.id;
+                        cmd.add_component(*entity, client_entity);
+                        cmd.add_component(*entity, ClientEntityVisibility::new());
 
-                cmd.add_component(*entity, ClientEntityId { id: entity_id });
-
-                message
-                    .response_tx
-                    .send(JoinZoneResponse {
-                        entity_id: entity_id.0,
-                        level: level.clone(),
-                    })
-                    .ok();
+                        message
+                            .response_tx
+                            .send(JoinZoneResponse {
+                                entity_id: entity_id.0,
+                                level: level.clone(),
+                            })
+                            .ok();
+                    }
+                }
             }
             _ => println!("Received unexpected client message"),
         }
@@ -198,7 +199,7 @@ fn handle_gm_command(
     entity: &Entity,
     client: &mut GameClient,
     text: &str,
-    entity_id: &ClientEntityId,
+    entity_id: &ClientEntity,
     position: &Position,
 ) -> Result<(), GMCommandError> {
     let mut args = shellwords::split(text)?;
@@ -226,14 +227,8 @@ fn handle_gm_command(
             let x = matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
             let y = matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
 
-            cmd.add_component(
-                *entity,
-                Position {
-                    position: Point3::new(x, y, 0.0),
-                    zone: zone,
-                },
-            );
-            cmd.remove_component::<ClientEntityId>(*entity);
+            cmd.add_component(*entity, Position::new(Point3::new(x, y, 0.0), zone));
+            cmd.remove_component::<ClientEntity>(*entity);
             // TODO: Destroy entity for nearby players
 
             client
@@ -259,10 +254,10 @@ pub fn game_server_main(
     cmd: &mut CommandBuffer,
     entity: &Entity,
     client: &mut GameClient,
-    entity_id: &ClientEntityId,
+    entity_id: &ClientEntity,
     position: &Position,
     hotbar: &mut Hotbar,
-    #[resource] client_entity_id_list: &mut ClientEntityIdList,
+    #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] server_messages: &mut ServerMessages,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
@@ -275,8 +270,8 @@ pub fn game_server_main(
                         send_gm_commands_help(client);
                     }
                 } else {
-                    server_messages.send_nearby_message(
-                        position.clone(),
+                    server_messages.send_entity_message(
+                        entity.clone(),
                         ServerMessage::LocalChat(server::LocalChat {
                             entity_id: entity_id.id.0,
                             text: text,
@@ -287,9 +282,9 @@ pub fn game_server_main(
             ClientMessage::Move(message) => {
                 let mut target_entity_id = 0;
                 if message.target_entity_id > 0 {
-                    if let Some(target_entity) = client_entity_id_list
+                    if let Some(target_entity) = client_entity_list
                         .get_zone(position.zone as usize)
-                        .get_entity(ZoneEntityId(message.target_entity_id))
+                        .and_then(|zone| zone.get_entity(ClientEntityId(message.target_entity_id)))
                     {
                         target_entity_id = message.target_entity_id;
                         cmd.add_component(
@@ -314,8 +309,8 @@ pub fn game_server_main(
                 );
 
                 let distance = (destination - position.position).magnitude();
-                server_messages.send_nearby_message(
-                    position.clone(),
+                server_messages.send_entity_message(
+                    entity.clone(),
                     ServerMessage::MoveEntity(server::MoveEntity {
                         entity_id: entity_id.id.0,
                         target_entity_id: target_entity_id,
@@ -355,11 +350,10 @@ pub fn game_server_disconnect_handler(
     world: &SubWorld,
     cmd: &mut CommandBuffer,
     entity: &Entity,
-    client_entity_id: Option<&ClientEntityId>,
+    client_entity: Option<&ClientEntity>,
     info: &CharacterInfo,
     position: &Position,
-    #[resource] client_entity_id_list: &mut ClientEntityIdList,
-    #[resource] server_messages: &mut ServerMessages,
+    #[resource] client_entity_list: &mut ClientEntityList,
 ) {
     if let Ok(entry) = world.entry_ref(*entity) {
         let basic_stats = entry.get_component::<BasicStats>();
@@ -383,14 +377,11 @@ pub fn game_server_disconnect_handler(
         storage.save().ok();
     }
 
-    if let Some(client_entity_id) = client_entity_id {
-        server_messages.send_nearby_message(
-            position.clone(),
-            ServerMessage::RemoveEntities(client_entity_id.id.0.into()),
-        );
-        client_entity_id_list
+    if let Some(client_entity) = client_entity {
+        client_entity_list
             .get_zone_mut(position.zone as usize)
-            .free(ZoneEntityId(client_entity_id.id.0));
+            .unwrap()
+            .free(ClientEntityId(client_entity.id.0));
     }
 
     cmd.remove(*entity);

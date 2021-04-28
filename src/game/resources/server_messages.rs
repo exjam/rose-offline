@@ -1,6 +1,6 @@
 use legion::Entity;
 
-use crate::game::{components::Position, messages::server::ServerMessage};
+use crate::game::messages::server::ServerMessage;
 
 pub struct GlobalMessage {
     pub message: ServerMessage,
@@ -11,9 +11,8 @@ pub struct ZoneMessage {
     pub message: ServerMessage,
 }
 
-pub struct NearbyMessage {
-    pub except_entity: Option<Entity>,
-    pub position: Position,
+pub struct EntityMessage {
+    pub entity: Entity,
     pub message: ServerMessage,
 }
 
@@ -21,7 +20,7 @@ pub struct NearbyMessage {
 pub struct ServerMessages {
     pub pending_global_messages: Vec<GlobalMessage>,
     pub pending_zone_messages: Vec<ZoneMessage>,
-    pub pending_nearby_messages: Vec<NearbyMessage>,
+    pub pending_entity_messages: Vec<EntityMessage>,
 }
 
 #[allow(dead_code)]
@@ -39,24 +38,8 @@ impl ServerMessages {
             .push(ZoneMessage { zone, message });
     }
 
-    pub fn send_nearby_message(&mut self, position: Position, message: ServerMessage) {
-        self.pending_nearby_messages.push(NearbyMessage {
-            except_entity: None,
-            position,
-            message,
-        });
-    }
-
-    pub fn send_nearby_except_entity_message(
-        &mut self,
-        except_entity: Entity,
-        position: Position,
-        message: ServerMessage,
-    ) {
-        self.pending_nearby_messages.push(NearbyMessage {
-            except_entity: Some(except_entity),
-            position,
-            message,
-        });
+    pub fn send_entity_message(&mut self, entity: Entity, message: ServerMessage) {
+        self.pending_entity_messages
+            .push(EntityMessage { entity, message });
     }
 }

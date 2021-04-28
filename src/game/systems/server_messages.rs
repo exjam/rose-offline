@@ -1,19 +1,16 @@
 use legion::world::SubWorld;
 use legion::*;
 
-use crate::game::components::{GameClient, Position};
+use crate::game::components::{ClientEntityVisibility, GameClient, Position};
 use crate::game::resources::ServerMessages;
-
-// TODO: Read sector size from zone STB for how we define "nearby"
-const NEARBY_DISTANCE: f32 = 10000f32;
 
 #[system]
 pub fn server_messages_sender(
     world: &SubWorld,
-    query: &mut Query<(Entity, &Position, &GameClient)>,
+    query: &mut Query<(&Position, &GameClient, &ClientEntityVisibility)>,
     #[resource] server_messages: &mut ServerMessages,
 ) {
-    for (entity, position, client) in query.iter(world) {
+    for (position, client, client_visibility) in query.iter(world) {
         for message in server_messages.pending_global_messages.iter() {
             client.server_message_tx.send(message.message.clone()).ok();
         }
@@ -24,18 +21,14 @@ pub fn server_messages_sender(
             }
         }
 
-        for message in server_messages.pending_nearby_messages.iter() {
-            if message.except_entity.is_none() || message.except_entity.as_ref().unwrap() != entity
-            {
-                let distance = (position.position - message.position.position).magnitude();
-                if distance < NEARBY_DISTANCE {
-                    client.server_message_tx.send(message.message.clone()).ok();
-                }
+        for message in server_messages.pending_entity_messages.iter() {
+            if client_visibility.entities.contains(&message.entity) {
+                client.server_message_tx.send(message.message.clone()).ok();
             }
         }
     }
 
     server_messages.pending_global_messages.clear();
     server_messages.pending_zone_messages.clear();
-    server_messages.pending_nearby_messages.clear();
+    server_messages.pending_entity_messages.clear();
 }

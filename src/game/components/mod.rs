@@ -38,8 +38,11 @@ pub use character_list::CharacterList;
 mod server_info;
 pub use server_info::ServerInfo;
 
-mod client_entity_id;
-pub use client_entity_id::ClientEntityId;
+mod client_entity;
+pub use client_entity::ClientEntity;
+
+mod client_entity_visibility;
+pub use client_entity_visibility::ClientEntityVisibility;
 
 mod destination;
 pub use destination::Destination;

@@ -7,8 +7,8 @@ pub use server_list::{GameServer, ServerList, WorldServer};
 mod login_tokens;
 pub use login_tokens::{LoginToken, LoginTokens};
 
-mod client_entity_id_list;
-pub use client_entity_id_list::{ClientEntityIdList, ZoneEntityId, ZoneEntityList};
+mod client_entity_list;
+pub use client_entity_list::{ClientEntityId, ClientEntityList};
 
 mod server_messages;
 pub use server_messages::ServerMessages;
