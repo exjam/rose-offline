@@ -29,6 +29,12 @@ impl From<u16> for RemoveEntities {
     }
 }
 
+impl RemoveEntities {
+    pub fn new(entity_ids: Vec<u16>) -> Self {
+        Self { entity_ids }
+    }
+}
+
 #[derive(Clone)]
 pub struct SpawnEntityNpc {
     pub entity_id: u16,
