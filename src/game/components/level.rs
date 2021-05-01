@@ -6,8 +6,14 @@ pub struct Level {
     pub xp: u64,
 }
 
-impl Level {
-    pub fn default() -> Self {
+impl Default for Level {
+    fn default() -> Self {
         Self { level: 1, xp: 0 }
+    }
+}
+
+impl Level {
+    fn new(level: u16) -> Self {
+        Self { level, xp: 0 }
     }
 }

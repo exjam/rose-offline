@@ -9,8 +9,8 @@ pub struct SkillList {
     pub pages: [[Option<u16>; SKILL_PAGE_SIZE]; SKILL_NUM_PAGES],
 }
 
-impl SkillList {
-    pub fn default() -> Self {
+impl Default for SkillList {
+    fn default() -> Self {
         let mut skill_list = Self {
             pages: Default::default(),
         };
@@ -22,11 +22,9 @@ impl SkillList {
         skill_list.learn_skill(21);
         skill_list
     }
+}
 
-    pub fn new() -> Self {
-        SkillList::default()
-    }
-
+impl SkillList {
     pub fn learn_skill(&mut self, id: u16) -> Option<u16> {
         let page_index = STB_SKILL.get_skill_tab_type(id as usize)? as usize;
         let page = self.pages.get_mut(page_index)?;
