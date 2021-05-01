@@ -146,7 +146,7 @@ impl GameClient {
                         .await?;
                 }
             }
-            _ => println!("Unhandled packet {}", packet.command),
+            _ => println!("Unhandled packet 0x{:#03X}", packet.command),
         }
         Ok(())
     }
