@@ -5,7 +5,7 @@ use crate::{
     game::{
         components::{
             BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory,
-            Level, Npc, Position, SkillList,
+            Level, Monster, Npc, Position, SkillList,
         },
         data::items::{EquipmentItem, Item, ItemType, StackableItem},
     },
@@ -23,6 +23,8 @@ pub enum ServerPackets {
     LocalChat = 0x783,
     Whisper = 0x784,
     SpawnEntityNpc = 0x791,
+    SpawnEntityMonster = 0x792,
+    SpawnEntityCharacter = 0x793,
     StopMoveEntity = 0x796,
     MoveEntity = 0x79a,
     Teleport = 0x7a8,
@@ -533,6 +535,32 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_u16(packet.npc.quest_index);
         writer.write_f32(packet.npc.direction);
         writer.write_u16(0); // event status
+        writer.into()
+    }
+}
+
+pub struct PacketServerSpawnEntityMonster<'a> {
+    pub entity_id: u16,
+    pub monster: &'a Monster,
+    pub position: &'a Position,
+}
+
+impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
+    fn from(packet: &'a PacketServerSpawnEntityMonster<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::SpawnEntityMonster as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_f32(packet.position.position.x);
+        writer.write_f32(packet.position.position.y);
+        writer.write_f32(0.0); // destination x
+        writer.write_f32(0.0); // destination y
+        writer.write_u16(0); // action
+        writer.write_u16(0); // target entity id
+        writer.write_u8(0); // move mode
+        writer.write_u32(100); // hp
+        writer.write_u32(0); // team number
+        writer.write_u32(0); // status flag
+        writer.write_u16(packet.monster.id as u16);
+        writer.write_u16(0); // quest_index
         writer.into()
     }
 }

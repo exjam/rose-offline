@@ -1,4 +1,4 @@
-use crate::game::components::{Npc, Position};
+use crate::game::components::{Monster, Npc, Position};
 
 #[derive(Clone)]
 pub struct LocalChat {
@@ -43,6 +43,13 @@ pub struct SpawnEntityNpc {
 }
 
 #[derive(Clone)]
+pub struct SpawnEntityMonster {
+    pub entity_id: u16,
+    pub monster: Monster,
+    pub position: Position,
+}
+
+#[derive(Clone)]
 pub struct StopMoveEntity {
     pub entity_id: u16,
     pub x: f32,
@@ -70,6 +77,7 @@ pub struct Teleport {
 pub enum ServerMessage {
     LocalChat(LocalChat),
     SpawnEntityNpc(SpawnEntityNpc),
+    SpawnEntityMonster(SpawnEntityMonster),
     RemoveEntities(RemoveEntities),
     MoveEntity(MoveEntity),
     StopMoveEntity(StopMoveEntity),

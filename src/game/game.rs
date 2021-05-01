@@ -92,6 +92,7 @@ impl Game {
             .add_system(game_server_join_system())
             .add_system(game_server_main_system())
             .add_system(game_server_disconnect_handler_system())
+            .add_system(monster_spawn_system())
             .flush()
             .add_system(update_position_system())
             .flush()

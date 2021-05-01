@@ -62,8 +62,11 @@ pub use hotbar::{Hotbar, HotbarSlot};
 mod zone;
 pub use zone::Zone;
 
+mod monster;
+pub use monster::Monster;
+
 mod npc;
 pub use npc::Npc;
 
 mod monster_spawn_point;
-pub use monster_spawn_point::MonsterSpawnPoint;
+pub use monster_spawn_point::{MonsterSpawn, MonsterSpawnPoint};

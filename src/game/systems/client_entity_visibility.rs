@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::game::{
-    components::{ClientEntity, ClientEntityVisibility, GameClient, Npc, Position},
-    messages::server::{RemoveEntities, ServerMessage, SpawnEntityNpc},
+    components::{ClientEntity, ClientEntityVisibility, GameClient, Monster, Npc, Position},
+    messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
     resources::ClientEntityList,
 };
 
@@ -26,6 +26,7 @@ pub fn client_entity_visibility(
     )>,
     entity_id_query: &mut Query<&ClientEntity>,
     npcs_query: &mut Query<(&ClientEntity, &Npc, &Position)>,
+    monsters_query: &mut Query<(&ClientEntity, &Monster, &Position)>,
     #[resource] client_entity_list: &ClientEntityList,
 ) {
     let mut visibility_changes = Vec::new();
@@ -87,8 +88,23 @@ pub fn client_entity_visibility(
         if !visibility_change.spawn_entities.is_empty() {
             for entity in visibility_change.spawn_entities.iter() {
                 // TODO: Try read the entity as a character
-                // TODO: Try read the entity as a monster
                 // TODO: Try read the entity as a dropped item
+
+                // Try read the entity as a monster
+                monsters_query
+                    .get(world, *entity)
+                    .map(|(client_entity, monster, position)| {
+                        visibility_change
+                            .client
+                            .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
+                                entity_id: client_entity.id.0,
+                                monster: monster.clone(),
+                                position: position.clone(),
+                            }))
+                            .ok();
+                    })
+                    .ok();
+
                 // Try read the entity as an NPC
                 npcs_query
                     .get(world, *entity)
