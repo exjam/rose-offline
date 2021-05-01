@@ -4,8 +4,8 @@ use super::common_packets::write_hotbar_slot;
 use crate::{
     game::{
         components::{
-            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory,
-            Level, Npc, NpcStandingDirection, Position, SkillList, Team,
+            BasicStats, CharacterInfo, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot,
+            Inventory, Level, ManaPoints, Npc, NpcStandingDirection, Position, SkillList, Team,
         },
         data::items::{EquipmentItem, Item, ItemType, StackableItem},
     },
@@ -402,14 +402,16 @@ pub struct PacketServerJoinZone<'a> {
     pub entity_id: u16,
     pub level: &'a Level,
     pub team: &'a Team,
+    pub health_points: &'a HealthPoints,
+    pub mana_points: &'a ManaPoints,
 }
 
 impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
     fn from(packet: &'a PacketServerJoinZone<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::JoinZone as u16);
         writer.write_u16(packet.entity_id);
-        writer.write_u16(100); // hp
-        writer.write_u16(50); // mp
+        writer.write_u16(packet.health_points.hp as u16);
+        writer.write_u16(packet.mana_points.mp as u16);
 
         writer.write_u32(packet.level.xp as u32);
         writer.write_u32(0); // penalty xp

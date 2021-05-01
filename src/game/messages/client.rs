@@ -1,8 +1,8 @@
 use tokio::sync::oneshot;
 
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Hotbar, HotbarSlot, Inventory,
-    Level, Position, SkillList, Team,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, HealthPoints, Hotbar, HotbarSlot,
+    Inventory, Level, ManaPoints, Position, SkillList, Team,
 };
 use crate::game::data::character::CharacterStorage;
 
@@ -147,6 +147,8 @@ pub struct JoinZoneResponse {
     pub entity_id: u16,
     pub level: Level,
     pub team: Team,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
 }
 
 pub struct JoinZoneRequest {

@@ -108,6 +108,8 @@ impl GameClient {
                         entity_id: response.entity_id,
                         level: &response.level,
                         team: &response.team,
+                        health_points: &response.health_points,
+                        mana_points: &response.mana_points,
                     }))
                     .await?;
             }

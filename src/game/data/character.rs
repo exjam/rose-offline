@@ -1,7 +1,7 @@
 use super::STB_INIT_AVATAR;
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, Hotbar, Inventory, Level, Position,
-    SkillList,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, HealthPoints, Hotbar, Inventory,
+    Level, ManaPoints, Position, SkillList,
 };
 use crate::game::data::CHARACTER_STORAGE_DIR;
 use nalgebra::Point3;
@@ -47,6 +47,8 @@ pub struct CharacterStorage {
     pub skill_list: SkillList,
     pub hotbar: Hotbar,
     pub delete_time: Option<CharacterDeleteTime>,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
 }
 
 fn get_character_path(name: &str) -> PathBuf {
@@ -85,6 +87,8 @@ impl CharacterStorage {
             skill_list: SkillList::default(),
             hotbar: Hotbar::default(),
             delete_time: None,
+            health_points: HealthPoints::default(),
+            mana_points: ManaPoints::default(),
         };
         character
             .equipment
