@@ -5,7 +5,7 @@ use crate::{
     game::{
         components::{
             BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory,
-            Level, Monster, Npc, Position, SkillList,
+            Level, Npc, NpcStandingDirection, Position, SkillList,
         },
         data::items::{EquipmentItem, Item, ItemType, StackableItem},
     },
@@ -515,6 +515,7 @@ impl From<&PacketServerSetHotbarSlot> for Packet {
 pub struct PacketServerSpawnEntityNpc<'a> {
     pub entity_id: u16,
     pub npc: &'a Npc,
+    pub direction: &'a NpcStandingDirection,
     pub position: &'a Position,
 }
 
@@ -534,7 +535,7 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_u32(0); // status flag
         writer.write_u16(packet.npc.id as u16);
         writer.write_u16(packet.npc.quest_index);
-        writer.write_f32(packet.npc.direction);
+        writer.write_f32(packet.direction.direction);
         writer.write_u16(0); // event status
         writer.into()
     }
@@ -542,7 +543,7 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
 
 pub struct PacketServerSpawnEntityMonster<'a> {
     pub entity_id: u16,
-    pub monster: &'a Monster,
+    pub npc: &'a Npc,
     pub position: &'a Position,
 }
 
@@ -560,8 +561,8 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_u32(100); // hp
         writer.write_u32(0); // team number
         writer.write_u32(0); // status flag
-        writer.write_u16(packet.monster.id as u16);
-        writer.write_u16(0); // quest_index
+        writer.write_u16(packet.npc.id as u16);
+        writer.write_u16(packet.npc.quest_index);
         writer.into()
     }
 }

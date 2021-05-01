@@ -3,18 +3,18 @@ use legion::*;
 use nalgebra::Point3;
 use std::time::Duration;
 
-use super::systems::*;
 use super::{
     components::MonsterSpawnPoint,
     resources::{
         ClientEntityList, ControlChannel, DeltaTime, LoginTokens, ServerList, ServerMessages,
     },
 };
+use super::{components::NpcStandingDirection, systems::*};
 use super::{
     components::{Npc, Position, Zone},
     messages::control::ControlMessage,
 };
-use crate::game::data::ZONE_LIST;
+use crate::game::data::{STB_EVENT, ZONE_LIST};
 
 pub struct Game {
     tick_rate_hz: u64,
@@ -48,7 +48,16 @@ impl Game {
                     npc.object.position.y + y_offset,
                     npc.object.position.z,
                 );
-                let entity = world.push((Npc::from(npc), Position::new(position, zone_info.id)));
+
+                let quest_index =
+                    STB_EVENT.lookup_row_name(&npc.quest_file_name).unwrap_or(0) as u16;
+                let direction = npc.object.rotation.euler_angles().2.to_degrees();
+
+                let entity = world.push((
+                    Npc::new(npc.object.object_id, quest_index),
+                    NpcStandingDirection::new(direction),
+                    Position::new(position, zone_info.id),
+                ));
                 world
                     .entry(entity)
                     .unwrap()

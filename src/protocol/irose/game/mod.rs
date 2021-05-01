@@ -214,6 +214,7 @@ impl GameClient {
             ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
                 entity_id,
                 npc,
+                direction,
                 position,
             }) => {
                 client
@@ -221,20 +222,21 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerSpawnEntityNpc {
                         entity_id,
                         npc: &npc,
+                        direction: &direction,
                         position: &position,
                     }))
                     .await?;
             }
             ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
                 entity_id,
-                monster,
+                npc,
                 position,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerSpawnEntityMonster {
                         entity_id,
-                        monster: &monster,
+                        npc: &npc,
                         position: &position,
                     }))
                     .await?;

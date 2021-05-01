@@ -2,7 +2,7 @@ use nalgebra::Point3;
 use rand::Rng;
 
 use crate::game::{
-    components::{Monster, MonsterSpawnPoint, Position},
+    components::{MonsterSpawnPoint, Npc, Position},
     resources::{ClientEntityList, DeltaTime},
 };
 use legion::{system, systems::CommandBuffer};
@@ -187,7 +187,7 @@ pub fn monster_spawn(
                     + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
                 0.0,
             );
-            let entity = cmd.push((Monster::new(id), Position::new(position, spawn_point_zone)));
+            let entity = cmd.push((Npc::new(id, 0), Position::new(position, spawn_point_zone)));
             cmd.add_component(
                 entity,
                 client_entity_zone.allocate(entity, position).unwrap(),

@@ -3,7 +3,9 @@ use std::collections::HashSet;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::game::{
-    components::{ClientEntity, ClientEntityVisibility, GameClient, Monster, Npc, Position},
+    components::{
+        ClientEntity, ClientEntityVisibility, GameClient, Npc, NpcStandingDirection, Position,
+    },
     messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
     resources::ClientEntityList,
 };
@@ -25,8 +27,8 @@ pub fn client_entity_visibility(
         &Position,
     )>,
     entity_id_query: &mut Query<&ClientEntity>,
-    npcs_query: &mut Query<(&ClientEntity, &Npc, &Position)>,
-    monsters_query: &mut Query<(&ClientEntity, &Monster, &Position)>,
+    npcs_query: &mut Query<(&ClientEntity, &Npc, &NpcStandingDirection, &Position)>,
+    monsters_query: &mut Query<(&ClientEntity, &Npc, &Position)>,
     #[resource] client_entity_list: &ClientEntityList,
 ) {
     let mut visibility_changes = Vec::new();
@@ -90,35 +92,46 @@ pub fn client_entity_visibility(
                 // TODO: Try read the entity as a character
                 // TODO: Try read the entity as a dropped item
 
-                // Try read the entity as a monster
-                monsters_query
-                    .get(world, *entity)
-                    .map(|(client_entity, monster, position)| {
-                        visibility_change
-                            .client
-                            .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
-                                entity_id: client_entity.id.0,
-                                monster: monster.clone(),
-                                position: position.clone(),
-                            }))
-                            .ok();
-                    })
-                    .ok();
-
                 // Try read the entity as an NPC
-                npcs_query
+                if npcs_query
                     .get(world, *entity)
-                    .map(|(client_entity, npc, position)| {
+                    .map(|(client_entity, npc, direction, position)| {
                         visibility_change
                             .client
                             .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
                                 entity_id: client_entity.id.0,
                                 npc: npc.clone(),
+                                direction: direction.clone(),
                                 position: position.clone(),
                             }))
                             .ok();
+                        ()
                     })
-                    .ok();
+                    .ok()
+                    .is_some()
+                {
+                    continue;
+                }
+
+                // Try read the entity as a monster
+                if monsters_query
+                    .get(world, *entity)
+                    .map(|(client_entity, npc, position)| {
+                        visibility_change
+                            .client
+                            .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
+                                entity_id: client_entity.id.0,
+                                npc: npc.clone(),
+                                position: position.clone(),
+                            }))
+                            .ok();
+                        ()
+                    })
+                    .ok()
+                    .is_some()
+                {
+                    continue;
+                }
             }
         }
     }
