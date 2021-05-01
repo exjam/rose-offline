@@ -64,14 +64,16 @@ impl StbFile {
             column_names.push(String::from(reader.read_u16_length_string()?));
         }
 
-        let mut row_names = Vec::with_capacity(row_count);
-        for _ in 0..row_count {
-            row_names.push(String::from(reader.read_u16_length_string()?));
-        }
-
         // Ignore the row / column headers
         let rows = row_count - 1;
         let columns = column_count - 1;
+
+        reader.read_u16_length_string()?; // Ignore column title line
+
+        let mut row_names = Vec::with_capacity(row_count);
+        for _ in 0..rows {
+            row_names.push(String::from(reader.read_u16_length_string()?));
+        }
 
         let mut data = Vec::with_capacity(reader.remaining());
         let mut cells = Vec::with_capacity(row_count * column_count);
