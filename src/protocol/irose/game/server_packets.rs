@@ -25,6 +25,7 @@ pub enum ServerPackets {
     SpawnEntityNpc = 0x791,
     SpawnEntityMonster = 0x792,
     SpawnEntityCharacter = 0x793,
+    RemoveEntities = 0x794,
     StopMoveEntity = 0x796,
     MoveEntity = 0x79a,
     Teleport = 0x7a8,
@@ -561,6 +562,20 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_u32(0); // status flag
         writer.write_u16(packet.monster.id as u16);
         writer.write_u16(0); // quest_index
+        writer.into()
+    }
+}
+
+pub struct PacketServerRemoveEntities<'a> {
+    pub entity_ids: &'a [u16],
+}
+
+impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
+    fn from(packet: &'a PacketServerRemoveEntities<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::RemoveEntities as u16);
+        for entity_id in packet.entity_ids {
+            writer.write_u16(*entity_id);
+        }
         writer.into()
     }
 }

@@ -239,6 +239,14 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::RemoveEntities(RemoveEntities { entity_ids }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerRemoveEntities {
+                        entity_ids: &entity_ids,
+                    }))
+                    .await?;
+            }
             _ => {
                 panic!("Unimplemented message for irose game server!")
             }
