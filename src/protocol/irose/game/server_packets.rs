@@ -190,6 +190,8 @@ pub struct PacketServerSelectCharacter<'a> {
     pub level: &'a Level,
     pub skill_list: &'a SkillList,
     pub hotbar: &'a Hotbar,
+    pub health_points: &'a HealthPoints,
+    pub mana_points: &'a ManaPoints,
 }
 
 impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
@@ -241,9 +243,9 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u16(basic_stats.sense);
 
         // tagGrowAbility
-        writer.write_u16(100); // HP
-        writer.write_u16(100); // MP
-        writer.write_u32(packet.level.xp as u32); // XP
+        writer.write_u16(packet.health_points.hp as u16);
+        writer.write_u16(packet.mana_points.mp as u16);
+        writer.write_u32(packet.level.xp as u32);
         writer.write_u16(packet.level.level);
         writer.write_u16(0); // Stat points
         writer.write_u16(0); // Skill points

@@ -81,6 +81,8 @@ pub fn game_server_authentication(
                                     inventory: character.inventory,
                                     skill_list: character.skill_list,
                                     hotbar: character.hotbar,
+                                    health_points: character.health_points,
+                                    mana_points: character.mana_points,
                                 })
                             })
                     });

@@ -135,6 +135,8 @@ pub struct GameConnectionResponse {
     pub inventory: Inventory,
     pub skill_list: SkillList,
     pub hotbar: Hotbar,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
 }
 
 pub struct GameConnectionRequest {

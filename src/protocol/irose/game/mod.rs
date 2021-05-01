@@ -65,6 +65,8 @@ impl GameClient {
                                 level: &response.level,
                                 skill_list: &response.skill_list,
                                 hotbar: &response.hotbar,
+                                health_points: &response.health_points,
+                                mana_points: &response.mana_points,
                             }))
                             .await?;
 
