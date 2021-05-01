@@ -6,10 +6,7 @@ use legion::*;
 use nalgebra::Point3;
 use server::Whisper;
 
-use crate::game::components::{
-    BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment,
-    GameClient, Hotbar, Inventory, Level, MoveSpeed, Position, SkillList, Target,
-};
+use crate::game::components::{BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment, GameClient, Hotbar, Inventory, Level, MoveSpeed, Position, SkillList, Target, Team};
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
 use crate::game::messages::client::{
@@ -66,6 +63,7 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.position.clone());
                                 cmd.add_component(*entity, character.skill_list.clone());
                                 cmd.add_component(*entity, character.hotbar.clone());
+                                cmd.add_component(*entity, Team::default_character());
 
                                 Ok(GameConnectionResponse {
                                     packet_sequence_id: 123,
@@ -94,6 +92,7 @@ pub fn game_server_join(
     client: &mut GameClient,
     entity: &Entity,
     level: &Level,
+    team: &Team,
     position: &Position,
     #[resource] client_entity_list: &mut ClientEntityList,
 ) {
@@ -111,6 +110,7 @@ pub fn game_server_join(
                             .send(JoinZoneResponse {
                                 entity_id: entity_id.0,
                                 level: level.clone(),
+                                team: team.clone(),
                             })
                             .ok();
                     }

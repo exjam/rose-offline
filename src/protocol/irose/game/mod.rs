@@ -107,6 +107,7 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerJoinZone {
                         entity_id: response.entity_id,
                         level: &response.level,
+                        team: &response.team,
                     }))
                     .await?;
             }
@@ -216,6 +217,7 @@ impl GameClient {
                 npc,
                 direction,
                 position,
+                team,
             }) => {
                 client
                     .connection
@@ -224,6 +226,7 @@ impl GameClient {
                         npc: &npc,
                         direction: &direction,
                         position: &position,
+                        team: &team,
                     }))
                     .await?;
             }
@@ -231,6 +234,7 @@ impl GameClient {
                 entity_id,
                 npc,
                 position,
+                team,
             }) => {
                 client
                     .connection
@@ -238,6 +242,7 @@ impl GameClient {
                         entity_id,
                         npc: &npc,
                         position: &position,
+                        team: &team,
                     }))
                     .await?;
             }

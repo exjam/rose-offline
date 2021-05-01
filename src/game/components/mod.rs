@@ -21,6 +21,7 @@ mod position;
 mod server_info;
 mod skill_list;
 mod target;
+mod team;
 mod world_client;
 mod zone;
 
@@ -47,5 +48,6 @@ pub use position::Position;
 pub use server_info::ServerInfo;
 pub use skill_list::SkillList;
 pub use target::Target;
+pub use team::Team;
 pub use world_client::*;
 pub use zone::Zone;

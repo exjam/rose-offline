@@ -3,12 +3,9 @@ use legion::*;
 use nalgebra::Point3;
 use std::time::Duration;
 
-use super::{
-    components::MonsterSpawnPoint,
-    resources::{
+use super::{components::{MonsterSpawnPoint, Team}, resources::{
         ClientEntityList, ControlChannel, DeltaTime, LoginTokens, ServerList, ServerMessages,
-    },
-};
+    }};
 use super::{components::NpcStandingDirection, systems::*};
 use super::{
     components::{Npc, Position, Zone},
@@ -57,6 +54,7 @@ impl Game {
                     Npc::new(npc.object.object_id, quest_index),
                     NpcStandingDirection::new(direction),
                     Position::new(position, zone_info.id),
+                    Team::default_npc(),
                 ));
                 world
                     .entry(entity)

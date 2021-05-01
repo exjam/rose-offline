@@ -1,16 +1,7 @@
 use num_derive::FromPrimitive;
 
 use super::common_packets::write_hotbar_slot;
-use crate::{
-    game::{
-        components::{
-            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory,
-            Level, Npc, NpcStandingDirection, Position, SkillList,
-        },
-        data::items::{EquipmentItem, Item, ItemType, StackableItem},
-    },
-    protocol::packet::{Packet, PacketWriter},
-};
+use crate::{game::{components::{BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory, Level, Npc, NpcStandingDirection, Position, SkillList, Team}, data::items::{EquipmentItem, Item, ItemType, StackableItem}}, protocol::packet::{Packet, PacketWriter}};
 use modular_bitfield::prelude::*;
 
 #[derive(FromPrimitive)]
@@ -401,6 +392,7 @@ impl From<&PacketServerMoveEntity> for Packet {
 pub struct PacketServerJoinZone<'a> {
     pub entity_id: u16,
     pub level: &'a Level,
+    pub team: &'a Team,
 }
 
 impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
@@ -424,7 +416,7 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
         writer.write_u32(0); // global flags (0x1 = pvp allowed)
 
         writer.write_u32(0); // account world time
-        writer.write_u32(0); // team number
+        writer.write_u32(packet.team.id);
         writer.into()
     }
 }
@@ -517,6 +509,7 @@ pub struct PacketServerSpawnEntityNpc<'a> {
     pub npc: &'a Npc,
     pub direction: &'a NpcStandingDirection,
     pub position: &'a Position,
+    pub team: &'a Team,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
@@ -531,7 +524,7 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_u16(0); // target entity id
         writer.write_u8(0); // move mode
         writer.write_u32(100); // hp
-        writer.write_u32(0); // team number
+        writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u16(packet.npc.id as u16);
         writer.write_u16(packet.npc.quest_index);
@@ -545,6 +538,7 @@ pub struct PacketServerSpawnEntityMonster<'a> {
     pub entity_id: u16,
     pub npc: &'a Npc,
     pub position: &'a Position,
+    pub team: &'a Team,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
@@ -559,7 +553,7 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_u16(0); // target entity id
         writer.write_u8(0); // move mode
         writer.write_u32(100); // hp
-        writer.write_u32(0); // team number
+        writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u16(packet.npc.id as u16);
         writer.write_u16(packet.npc.quest_index);

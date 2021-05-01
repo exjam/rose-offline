@@ -1,4 +1,4 @@
-use crate::game::components::{Npc, NpcStandingDirection, Position};
+use crate::game::components::{Npc, NpcStandingDirection, Position, Team};
 
 #[derive(Clone)]
 pub struct LocalChat {
@@ -41,6 +41,7 @@ pub struct SpawnEntityNpc {
     pub npc: Npc,
     pub direction: NpcStandingDirection,
     pub position: Position,
+    pub team: Team,
 }
 
 #[derive(Clone)]
@@ -48,6 +49,7 @@ pub struct SpawnEntityMonster {
     pub entity_id: u16,
     pub npc: Npc,
     pub position: Position,
+    pub team: Team,
 }
 
 #[derive(Clone)]

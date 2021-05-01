@@ -2,13 +2,7 @@ use legion::{system, world::SubWorld, Entity, Query};
 use std::collections::HashSet;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::game::{
-    components::{
-        ClientEntity, ClientEntityVisibility, GameClient, Npc, NpcStandingDirection, Position,
-    },
-    messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
-    resources::ClientEntityList,
-};
+use crate::game::{components::{ClientEntity, ClientEntityVisibility, GameClient, Npc, NpcStandingDirection, Position, Team}, messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc}, resources::ClientEntityList};
 
 pub struct VisibilityChange {
     client: UnboundedSender<ServerMessage>,
@@ -27,8 +21,8 @@ pub fn client_entity_visibility(
         &Position,
     )>,
     entity_id_query: &mut Query<&ClientEntity>,
-    npcs_query: &mut Query<(&ClientEntity, &Npc, &NpcStandingDirection, &Position)>,
-    monsters_query: &mut Query<(&ClientEntity, &Npc, &Position)>,
+    npcs_query: &mut Query<(&ClientEntity, &Npc, &NpcStandingDirection, &Position, &Team)>,
+    monsters_query: &mut Query<(&ClientEntity, &Npc, &Position, &Team)>,
     #[resource] client_entity_list: &ClientEntityList,
 ) {
     let mut visibility_changes = Vec::new();
@@ -95,7 +89,7 @@ pub fn client_entity_visibility(
                 // Try read the entity as an NPC
                 if npcs_query
                     .get(world, *entity)
-                    .map(|(client_entity, npc, direction, position)| {
+                    .map(|(client_entity, npc, direction, position, team)| {
                         visibility_change
                             .client
                             .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
@@ -103,6 +97,7 @@ pub fn client_entity_visibility(
                                 npc: npc.clone(),
                                 direction: direction.clone(),
                                 position: position.clone(),
+                                team: team.clone(),
                             }))
                             .ok();
                         ()
@@ -116,13 +111,14 @@ pub fn client_entity_visibility(
                 // Try read the entity as a monster
                 if monsters_query
                     .get(world, *entity)
-                    .map(|(client_entity, npc, position)| {
+                    .map(|(client_entity, npc, position, team)| {
                         visibility_change
                             .client
                             .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
                                 entity_id: client_entity.id.0,
                                 npc: npc.clone(),
                                 position: position.clone(),
+                                team: team.clone(),
                             }))
                             .ok();
                         ()
