@@ -3,10 +3,13 @@ use legion::*;
 use nalgebra::Point3;
 use std::time::Duration;
 
-use super::{components::{MonsterSpawnPoint, Team}, resources::{
-        ClientEntityList, ControlChannel, DeltaTime, LoginTokens, ServerList, ServerMessages,
-    }};
 use super::{components::NpcStandingDirection, systems::*};
+use super::{
+    components::{MonsterSpawnPoint, Team},
+    resources::{
+        ClientEntityList, ControlChannel, DeltaTime, LoginTokens, ServerList, ServerMessages,
+    },
+};
 use super::{
     components::{Npc, Position, Zone},
     messages::control::ControlMessage,
@@ -30,14 +33,15 @@ impl Game {
         let mut client_entity_list = ClientEntityList::new();
         let mut world = World::default();
         for zone_info in ZONE_LIST.zones.iter().filter_map(|x| x.as_ref()) {
+            let client_entity_zone = client_entity_list
+                .get_zone_mut(zone_info.id as usize)
+                .unwrap();
+            world.push((Zone { id: zone_info.id },));
+
             let x_offset = (64.0 / 2.0) * (zone_info.grid_size * zone_info.grid_per_patch * 16.0)
                 + (zone_info.grid_size * zone_info.grid_per_patch * 16.0) / 2.0;
             let y_offset = (64.0 / 2.0) * (zone_info.grid_size * zone_info.grid_per_patch * 16.0)
                 + (zone_info.grid_size * zone_info.grid_per_patch * 16.0) / 2.0;
-            world.push((Zone { id: zone_info.id },));
-            let client_entity_zone = client_entity_list
-                .get_zone_mut(zone_info.id as usize)
-                .unwrap();
 
             for npc in &zone_info.npcs {
                 let position = Point3::new(

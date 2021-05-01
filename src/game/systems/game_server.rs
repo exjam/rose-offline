@@ -6,7 +6,10 @@ use legion::*;
 use nalgebra::Point3;
 use server::Whisper;
 
-use crate::game::components::{BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment, GameClient, Hotbar, Inventory, Level, MoveSpeed, Position, SkillList, Target, Team};
+use crate::game::components::{
+    BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment,
+    GameClient, Hotbar, Inventory, Level, MoveSpeed, Position, SkillList, Target, Team,
+};
 use crate::game::data::calculate_ability_values;
 use crate::game::data::{account::AccountStorage, character::CharacterStorage};
 use crate::game::messages::client::{

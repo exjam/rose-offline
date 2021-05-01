@@ -1,7 +1,16 @@
 use num_derive::FromPrimitive;
 
 use super::common_packets::write_hotbar_slot;
-use crate::{game::{components::{BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory, Level, Npc, NpcStandingDirection, Position, SkillList, Team}, data::items::{EquipmentItem, Item, ItemType, StackableItem}}, protocol::packet::{Packet, PacketWriter}};
+use crate::{
+    game::{
+        components::{
+            BasicStats, CharacterInfo, Equipment, EquipmentIndex, Hotbar, HotbarSlot, Inventory,
+            Level, Npc, NpcStandingDirection, Position, SkillList, Team,
+        },
+        data::items::{EquipmentItem, Item, ItemType, StackableItem},
+    },
+    protocol::packet::{Packet, PacketWriter},
+};
 use modular_bitfield::prelude::*;
 
 #[derive(FromPrimitive)]

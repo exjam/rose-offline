@@ -2,7 +2,13 @@ use legion::{system, world::SubWorld, Entity, Query};
 use std::collections::HashSet;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::game::{components::{ClientEntity, ClientEntityVisibility, GameClient, Npc, NpcStandingDirection, Position, Team}, messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc}, resources::ClientEntityList};
+use crate::game::{
+    components::{
+        ClientEntity, ClientEntityVisibility, GameClient, Npc, NpcStandingDirection, Position, Team,
+    },
+    messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
+    resources::ClientEntityList,
+};
 
 pub struct VisibilityChange {
     client: UnboundedSender<ServerMessage>,

@@ -1,7 +1,10 @@
 use nalgebra::Point3;
 use rand::Rng;
 
-use crate::game::{components::{MonsterSpawnPoint, Npc, Position, Team}, resources::{ClientEntityList, DeltaTime}};
+use crate::game::{
+    components::{MonsterSpawnPoint, Npc, Position, Team},
+    resources::{ClientEntityList, DeltaTime},
+};
 use legion::{system, systems::CommandBuffer};
 
 #[system(for_each)]
