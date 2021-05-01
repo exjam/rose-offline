@@ -2,6 +2,7 @@ use crate::game::data::formats::StbFile;
 
 pub struct StbEvent(pub StbFile);
 
+#[allow(dead_code)]
 impl StbEvent {
     pub fn lookup_row_name(&self, name: &str) -> Option<usize> {
         self.0.lookup_row_name(name)

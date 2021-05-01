@@ -1,5 +1,4 @@
 use legion::Entity;
-use nalgebra::Point3;
 use std::time::Duration;
 
 use crate::game::data::formats::ifo;

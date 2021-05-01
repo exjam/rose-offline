@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use stb::{StbEvent, StbInitAvatar, StbItem, StbItemBack, StbItemFoot, StbZone};
 use std::path::Path;
 use std::path::PathBuf;
-use zone::{ZoneInfo, ZoneInfoList};
+use zone::ZoneInfoList;
 
 use self::stb::StbSkill;
 

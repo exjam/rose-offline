@@ -7,7 +7,7 @@ pub struct StbFile {
     rows: usize,
     columns: usize,
     row_names: Vec<String>,
-    column_names: Vec<String>,
+    _column_names: Vec<String>,
     data: Vec<u8>,
     cells: Vec<(usize, u16)>,
     row_keys: HashMap<String, usize>,
@@ -90,12 +90,12 @@ impl StbFile {
         }
 
         Ok(Self {
-            rows: rows,
-            columns: columns,
-            row_names: row_names,
-            column_names: column_names,
-            data: data,
-            cells: cells,
+            rows,
+            columns,
+            row_names,
+            _column_names: column_names,
+            data,
+            cells,
             row_keys: Default::default(),
         })
     }
