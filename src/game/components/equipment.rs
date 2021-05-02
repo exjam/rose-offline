@@ -1,8 +1,9 @@
 use crate::game::data::items::*;
+use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 #[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FromPrimitive)]
 pub enum EquipmentIndex {
     Face = 1,
     Head = 2,
@@ -15,7 +16,6 @@ pub enum EquipmentIndex {
     Necklace = 9,
     Ring = 10,
     Earring = 11,
-    Max,
 }
 
 #[allow(dead_code)]
@@ -26,7 +26,6 @@ pub enum VehiclePartIndex {
     Leg = 2,
     Ability = 3,
     Arms = 4,
-    Max,
 }
 
 #[allow(dead_code)]
@@ -35,14 +34,13 @@ pub enum AmmoType {
     Arrow = 0,
     Bullet = 1,
     Throw = 2,
-    Max,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Equipment {
-    pub equipped_items: [Option<EquipmentItem>; EquipmentIndex::Max as usize],
-    pub equipped_vehicle: [Option<EquipmentItem>; VehiclePartIndex::Max as usize],
-    pub equipped_ammo: [Option<StackableItem>; AmmoType::Max as usize],
+    pub equipped_items: [Option<EquipmentItem>; EquipmentIndex::Earring as usize + 1],
+    pub equipped_vehicle: [Option<EquipmentItem>; VehiclePartIndex::Arms as usize + 1],
+    pub equipped_ammo: [Option<StackableItem>; AmmoType::Throw as usize + 1],
 }
 
 impl Equipment {
