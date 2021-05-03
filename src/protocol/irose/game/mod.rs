@@ -4,9 +4,12 @@ use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
 use crate::game::messages::{
-    client::{ClientMessage, GameConnectionRequest, JoinZoneRequest, Move, SetHotbarSlot},
+    client::{
+        ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest, Move, SetHotbarSlot,
+    },
     server::{
-        LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc, Whisper,
+        LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc,
+        UpdateEquipment, UpdateInventory, Whisper,
     },
 };
 use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
@@ -150,6 +153,18 @@ impl GameClient {
                         .await?;
                 }
             }
+            Some(ClientPackets::ChangeEquipment) => {
+                let PacketClientChangeEquipment {
+                    equipment_index,
+                    item_slot,
+                } = PacketClientChangeEquipment::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ChangeEquipment(ChangeEquipment {
+                        equipment_index,
+                        item_slot,
+                    }))?;
+            }
             _ => println!("Unhandled packet 0x{:#03X}", packet.command),
         }
         Ok(())
@@ -255,6 +270,27 @@ impl GameClient {
                     .connection
                     .write_packet(Packet::from(&PacketServerRemoveEntities {
                         entity_ids: &entity_ids,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UpdateInventory(UpdateInventory { items }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateInventory { items: &items }))
+                    .await?;
+            }
+            ServerMessage::UpdateEquipment(UpdateEquipment {
+                entity_id,
+                equipment_index,
+                item,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateEquipment {
+                        entity_id,
+                        equipment_index,
+                        item,
+                        run_speed: None,
                     }))
                     .await?;
             }

@@ -24,13 +24,9 @@ pub enum ItemType {
 }
 
 impl ItemType {
-    pub fn is_stackable(self) -> bool {
+    pub fn is_stackable_item(self) -> bool {
         match self {
-            ItemType::Consumable
-            | ItemType::Gem
-            | ItemType::Material
-            | ItemType::Quest
-            | ItemType::Money => true,
+            ItemType::Consumable | ItemType::Gem | ItemType::Material | ItemType::Quest => true,
             _ => false,
         }
     }
@@ -129,12 +125,19 @@ pub struct StackableItem {
     pub quantity: u32,
 }
 
+#[derive(Debug)]
+pub enum StackError {
+    NotStackable,
+    NotSameItem,
+    PartialStack(u32), // usize is how much quantity can stack
+}
+
 impl StackableItem {
     pub fn from_integer(value: u32, quantity: u32) -> Option<StackableItem> {
         let item_number: u16 = (value % 1000) as u16;
         let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
 
-        if item_type.is_stackable() {
+        if item_type.is_stackable_item() {
             Some(StackableItem {
                 item_type,
                 item_number,
@@ -145,49 +148,36 @@ impl StackableItem {
         }
     }
 
-    pub fn try_combine(&mut self, stackable: &StackableItem) -> Result<Option<StackableItem>, ()> {
-        if self.item_type != stackable.item_type {
-            Err(())
-        } else if self.item_number != stackable.item_number {
-            Err(())
-        } else if self.quantity >= MAX_STACKABLE_ITEM_QUANTITY {
-            Err(())
+    pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
+        if self.item_type != stackable.item_type || self.item_number != stackable.item_number {
+            Err(StackError::NotSameItem)
+        } else if self.quantity + stackable.quantity > MAX_STACKABLE_ITEM_QUANTITY {
+            Err(StackError::PartialStack(
+                MAX_STACKABLE_ITEM_QUANTITY - self.quantity,
+            ))
         } else {
-            let remaining = MAX_STACKABLE_ITEM_QUANTITY - self.quantity;
-            if remaining > stackable.quantity {
-                self.quantity += stackable.quantity;
-                Ok(None)
-            } else {
-                self.quantity += remaining;
-                Ok(Some(StackableItem {
-                    item_type: stackable.item_type,
-                    item_number: stackable.item_number,
-                    quantity: stackable.quantity - remaining,
-                }))
-            }
+            Ok(())
         }
+    }
+
+    pub fn stack_with(&mut self, stackable: StackableItem) -> Result<(), StackError> {
+        self.can_stack_with(&stackable)?;
+        self.quantity += stackable.quantity;
+        Ok(())
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct MoneyItem {
-    pub quantity: u32,
-}
-
-#[derive(Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum Item {
     Equipment(EquipmentItem),
     Stackable(StackableItem),
-    Money(MoneyItem),
 }
 
 impl Item {
     pub fn from_integer(value: u32, quantity: u32) -> Option<Item> {
         let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
 
-        if item_type.is_money() {
-            Some(Item::Money(MoneyItem { quantity }))
-        } else if item_type.is_stackable() {
+        if item_type.is_stackable_item() {
             match StackableItem::from_integer(value, quantity) {
                 Some(stackable) => Some(Item::Stackable(stackable)),
                 None => None,
@@ -199,6 +189,34 @@ impl Item {
             }
         } else {
             None
+        }
+    }
+
+    pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
+        match self {
+            Item::Equipment(_) => Err(StackError::NotStackable),
+            Item::Stackable(item) => item.can_stack_with(stackable),
+        }
+    }
+
+    pub fn stack_with(&mut self, stackable: StackableItem) -> Result<(), StackError> {
+        match self {
+            Item::Equipment(_) => Err(StackError::NotStackable),
+            Item::Stackable(item) => item.stack_with(stackable),
+        }
+    }
+
+    pub fn get_item_type(&self) -> ItemType {
+        match self {
+            Item::Equipment(item) => item.item_type,
+            Item::Stackable(item) => item.item_type,
+        }
+    }
+
+    pub fn get_item_number(&self) -> u16 {
+        match self {
+            Item::Equipment(item) => item.item_number,
+            Item::Stackable(item) => item.item_number,
         }
     }
 }

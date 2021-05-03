@@ -4,15 +4,9 @@ use legion::systems::CommandBuffer;
 use legion::world::SubWorld;
 use legion::*;
 use nalgebra::Point3;
+use num_traits::FromPrimitive;
 use server::Whisper;
 
-use crate::game::components::{
-    BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment,
-    GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints, MoveSpeed, Position, SkillList,
-    Target, Team,
-};
-use crate::game::data::calculate_ability_values;
-use crate::game::data::{account::AccountStorage, character::CharacterStorage};
 use crate::game::messages::client::{
     ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse, SetHotbarSlot,
     SetHotbarSlotError,
@@ -20,6 +14,23 @@ use crate::game::messages::client::{
 use crate::game::messages::server;
 use crate::game::messages::server::ServerMessage;
 use crate::game::resources::{ClientEntityId, ClientEntityList, LoginTokens, ServerMessages};
+use crate::game::{
+    components::EquipmentIndex,
+    data::{calculate_ability_values, items::Item},
+    messages::server::UpdateInventory,
+};
+use crate::game::{
+    components::ItemSlot,
+    data::{account::AccountStorage, character::CharacterStorage},
+};
+use crate::game::{
+    components::{
+        BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment,
+        GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints, MoveSpeed, Position,
+        SkillList, Target, Team,
+    },
+    messages::client::ChangeEquipment,
+};
 
 #[system(for_each)]
 #[filter(!component::<CharacterInfo>())]
@@ -269,6 +280,8 @@ pub fn game_server_main(
     entity_id: &ClientEntity,
     position: &Position,
     hotbar: &mut Hotbar,
+    equipment: &mut Equipment,
+    inventory: &mut Inventory,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] server_messages: &mut ServerMessages,
 ) {
@@ -342,6 +355,88 @@ pub fn game_server_main(
                     response_tx.send(Ok(())).ok();
                 } else {
                     response_tx.send(Err(SetHotbarSlotError::InvalidSlot)).ok();
+                }
+            }
+            ClientMessage::ChangeEquipment(ChangeEquipment {
+                equipment_index,
+                item_slot,
+            }) => {
+                // TODO: Cannot change equipment whilst casting spell
+                // TODO: Cannot change equipment whilst stunned
+
+                if let Some(item_slot) = item_slot {
+                    // TODO: Check if satisfy equipment requirements
+                    // TODO: Handle 2 handed weapons
+                    // Try equip item from inventory
+                    if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
+                        let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
+
+                        match inventory_slot {
+                            Some(Item::Equipment(equipment_item)) => {
+                                let previous = equipment_slot.take();
+                                *equipment_slot = Some(equipment_item.clone());
+                                *inventory_slot = previous.map(|item| Item::Equipment(item));
+
+                                client
+                                    .server_message_tx
+                                    .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                        items: vec![
+                                            (
+                                                ItemSlot::Equipped(equipment_index),
+                                                equipment_slot
+                                                    .clone()
+                                                    .map(|item| Item::Equipment(item)),
+                                            ),
+                                            (item_slot, inventory_slot.clone()),
+                                        ],
+                                    }))
+                                    .ok();
+
+                                server_messages.send_entity_message(
+                                    entity.clone(),
+                                    ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                        entity_id: entity_id.id.0,
+                                        equipment_index,
+                                        item: equipment_slot.clone(),
+                                    }),
+                                );
+                            }
+                            _ => {}
+                        }
+                    }
+                } else {
+                    // Try unequip to inventory
+                    let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
+                    let item = equipment_slot.take();
+                    if let Some(item) = item {
+                        match inventory.try_add_equipment_item(item) {
+                            Ok(inventory_slot) => {
+                                *equipment_slot = None;
+
+                                client
+                                    .server_message_tx
+                                    .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                        items: vec![
+                                            (ItemSlot::Equipped(equipment_index), None),
+                                            (inventory_slot, inventory.get_item(inventory_slot)),
+                                        ],
+                                    }))
+                                    .ok();
+
+                                server_messages.send_entity_message(
+                                    entity.clone(),
+                                    ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                        entity_id: entity_id.id.0,
+                                        equipment_index,
+                                        item: equipment_slot.clone(),
+                                    }),
+                                );
+                            }
+                            Err(item) => {
+                                *equipment_slot = Some(item.into());
+                            }
+                        }
+                    }
                 }
             }
             _ => println!("Received unimplemented client message"),

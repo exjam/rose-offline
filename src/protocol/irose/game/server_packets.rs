@@ -5,7 +5,8 @@ use crate::{
     game::{
         components::{
             BasicStats, CharacterInfo, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot,
-            Inventory, Level, ManaPoints, Npc, NpcStandingDirection, Position, SkillList, Team,
+            Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
+            Position, SkillList, Team, INVENTORY_PAGE_SIZE,
         },
         data::items::{EquipmentItem, Item, ItemType, StackableItem},
     },
@@ -18,6 +19,7 @@ pub enum ServerPackets {
     ConnectReply = 0x70c,
     SelectCharacter = 0x715,
     CharacterInventory = 0x716,
+    UpdateInventory = 0x718,
     QuestData = 0x71b,
     JoinZone = 0x753,
     LocalChat = 0x783,
@@ -28,6 +30,7 @@ pub enum ServerPackets {
     RemoveEntities = 0x794,
     StopMoveEntity = 0x796,
     MoveEntity = 0x79a,
+    UpdateEquipment = 0x7a5,
     Teleport = 0x7a8,
     SetHotbarSlot = 0x7aa,
 }
@@ -161,19 +164,13 @@ fn write_stackable_item_full(writer: &mut PacketWriter, stackable: Option<&Stack
     }
 }
 
-fn write_full_item(writer: &mut PacketWriter, item: &Option<Item>) {
+fn write_item_full(writer: &mut PacketWriter, item: Option<&Item>) {
     match item {
         Some(Item::Equipment(equipment)) => {
             write_equipment_item_full(writer, Some(equipment));
         }
         Some(Item::Stackable(stackable)) => {
             write_stackable_item_full(writer, Some(stackable));
-        }
-        Some(Item::Money(money)) => {
-            let item = PacketStackableItemFull::new()
-                .with_item_type(ItemType::Money as u8)
-                .with_quantity(money.quantity);
-            writer.write_bytes(&item.into_bytes());
         }
         _ => {
             writer.write_u16(0);
@@ -308,19 +305,19 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
         }
 
         for item in &inventory.equipment.slots {
-            write_equipment_item_full(&mut writer, item.as_ref());
+            write_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.consumables.slots {
-            write_stackable_item_full(&mut writer, item.as_ref());
+            write_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.materials.slots {
-            write_stackable_item_full(&mut writer, item.as_ref());
+            write_item_full(&mut writer, item.as_ref());
         }
 
         for item in &inventory.vehicles.slots {
-            write_equipment_item_full(&mut writer, item.as_ref());
+            write_item_full(&mut writer, item.as_ref());
         }
 
         for item in &equipment.equipped_ammo {
@@ -366,12 +363,12 @@ impl From<&PacketServerCharacterQuestData> for Packet {
             }
             writer.write_u32(0); // switches bitvec
             for _ in 0..6 {
-                write_full_item(&mut writer, &None); // quest items
+                write_item_full(&mut writer, None); // quest items
             }
         }
 
         for _ in 0..30 {
-            write_full_item(&mut writer, &None); // wish list items
+            write_item_full(&mut writer, None); // wish list items
         }
 
         writer.into()
@@ -583,6 +580,54 @@ impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::RemoveEntities as u16);
         for entity_id in packet.entity_ids {
             writer.write_u16(*entity_id);
+        }
+        writer.into()
+    }
+}
+
+fn item_slot_to_index(slot: &ItemSlot) -> usize {
+    match slot {
+        ItemSlot::Equipped(equipment_index) => *equipment_index as usize,
+        ItemSlot::Inventory(page_type, index) => match page_type {
+            InventoryPageType::Equipment => 12 + 0 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Consumables => 12 + 1 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Materials => 12 + 2 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Vehicles => 12 + 3 * INVENTORY_PAGE_SIZE + index,
+        },
+    }
+}
+
+pub struct PacketServerUpdateInventory<'a> {
+    pub items: &'a [(ItemSlot, Option<Item>)],
+}
+
+impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
+    fn from(packet: &'a PacketServerUpdateInventory<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateInventory as u16);
+        writer.write_u8(packet.items.len() as u8);
+        for (slot, item) in packet.items {
+            writer.write_u8(item_slot_to_index(slot) as u8);
+            write_item_full(&mut writer, item.as_ref());
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateEquipment {
+    pub entity_id: u16,
+    pub equipment_index: EquipmentIndex,
+    pub item: Option<EquipmentItem>,
+    pub run_speed: Option<u16>,
+}
+
+impl From<&PacketServerUpdateEquipment> for Packet {
+    fn from(packet: &PacketServerUpdateEquipment) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_u16(packet.equipment_index as u16);
+        write_equipment_item_part(&mut writer, &packet.item);
+        if let Some(run_speed) = packet.run_speed {
+            writer.write_u16(run_speed);
         }
         writer.into()
     }

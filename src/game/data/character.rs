@@ -90,18 +90,18 @@ impl CharacterStorage {
             health_points: HealthPoints::default(),
             mana_points: ManaPoints::default(),
         };
+
         character
             .equipment
             .equip_items(STB_INIT_AVATAR.get_equipment(init_avatar_row));
-        character
-            .inventory
-            .add_items(STB_INIT_AVATAR.get_inventory_consumables(init_avatar_row));
-        character
-            .inventory
-            .add_items(STB_INIT_AVATAR.get_inventory_equipment(init_avatar_row));
-        character
-            .inventory
-            .add_items(STB_INIT_AVATAR.get_inventory_materials(init_avatar_row));
+
+        for item in STB_INIT_AVATAR
+            .get_inventory_items(init_avatar_row)
+            .into_iter()
+        {
+            character.inventory.try_add_item(item).ok();
+        }
+
         Ok(character)
     }
 

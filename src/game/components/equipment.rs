@@ -48,6 +48,10 @@ impl Equipment {
         self.equipped_items[index as usize].as_ref()
     }
 
+    pub fn get_equipment_slot_mut(&mut self, index: EquipmentIndex) -> &mut Option<EquipmentItem> {
+        &mut self.equipped_items[index as usize]
+    }
+
     pub fn equip_item(
         &mut self,
         item: EquipmentItem,

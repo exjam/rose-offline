@@ -27,6 +27,13 @@ impl StbInitAvatar {
         items
     }
 
+    pub fn get_inventory_items(&self, row: usize) -> Vec<Item> {
+        let mut items = self.get_inventory_equipment(row);
+        items.append(&mut self.get_inventory_consumables(row));
+        items.append(&mut self.get_inventory_materials(row));
+        items
+    }
+
     pub fn get_inventory_equipment(&self, row: usize) -> Vec<Item> {
         let mut items = Vec::new();
         for i in 0..10 {

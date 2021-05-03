@@ -1,4 +1,7 @@
-use crate::game::components::{Npc, NpcStandingDirection, Position, Team};
+use crate::game::{
+    components::{EquipmentIndex, ItemSlot, Npc, NpcStandingDirection, Position, Team},
+    data::items::{EquipmentItem, Item},
+};
 
 #[derive(Clone)]
 pub struct LocalChat {
@@ -77,6 +80,18 @@ pub struct Teleport {
 }
 
 #[derive(Clone)]
+pub struct UpdateInventory {
+    pub items: Vec<(ItemSlot, Option<Item>)>,
+}
+
+#[derive(Clone)]
+pub struct UpdateEquipment {
+    pub entity_id: u16,
+    pub equipment_index: EquipmentIndex,
+    pub item: Option<EquipmentItem>,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     LocalChat(LocalChat),
     SpawnEntityNpc(SpawnEntityNpc),
@@ -86,4 +101,6 @@ pub enum ServerMessage {
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
     Whisper(Whisper),
+    UpdateInventory(UpdateInventory),
+    UpdateEquipment(UpdateEquipment),
 }

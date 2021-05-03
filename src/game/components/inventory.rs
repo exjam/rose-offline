@@ -4,72 +4,9 @@ use std::ops::{Add, Sub};
 
 use crate::game::data::items::*;
 
-const INVENTORY_PAGE_SIZE: usize = 5 * 6;
+use super::EquipmentIndex;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct InventoryPage<T> {
-    pub slots: [Option<T>; INVENTORY_PAGE_SIZE],
-}
-
-impl<T> Default for InventoryPage<T> {
-    fn default() -> Self {
-        Self {
-            slots: Default::default(),
-        }
-    }
-}
-
-impl<T> InventoryPage<T> {
-    pub fn try_add_item(&mut self, item: T) -> Result<usize, T> {
-        if let Some((index, slot)) = self.slots.iter_mut().enumerate().find(|x| x.1.is_none()) {
-            *slot = Some(item);
-            Ok(index)
-        } else {
-            Err(item)
-        }
-    }
-}
-
-impl InventoryPage<StackableItem> {
-    pub fn try_add_stackable(
-        &mut self,
-        item: StackableItem,
-    ) -> (Vec<usize>, Option<StackableItem>) {
-        let mut slots_updated: Vec<usize> = Vec::new();
-
-        // First try to combine with other stacks of same item
-        let mut remaining = Some(item);
-        for (index, slot) in self.slots.iter_mut().enumerate() {
-            if remaining.is_none() {
-                break;
-            }
-
-            if slot.is_some() {
-                let combine_result = slot
-                    .as_mut()
-                    .unwrap()
-                    .try_combine(remaining.as_ref().unwrap());
-                if combine_result.is_ok() {
-                    slots_updated.push(index);
-                    remaining = combine_result.unwrap();
-                }
-            }
-        }
-
-        // If there is any remaining, then find an empty slot to add it
-        if let Some(item) = remaining {
-            match self.try_add_item(item) {
-                Ok(slot) => {
-                    slots_updated.push(slot);
-                    remaining = None;
-                }
-                Err(item) => remaining = Some(item),
-            }
-        }
-
-        (slots_updated, remaining)
-    }
-}
+pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, PartialOrd)]
 pub struct Money(pub i64);
@@ -118,9 +55,8 @@ impl Into<u32> for Money {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum InventoryPageType {
-    Money,
     Equipment,
     Consumables,
     Materials,
@@ -142,31 +78,115 @@ impl InventoryPageType {
             ItemType::Consumable => InventoryPageType::Consumables,
             ItemType::Gem | ItemType::Material | ItemType::Quest => InventoryPageType::Materials,
             ItemType::Vehicle => InventoryPageType::Vehicles,
-            ItemType::Money => InventoryPageType::Money,
+            _ => panic!("Unexpected item_type in InventoryPageType"),
         }
     }
 }
 
-pub struct ItemSlot(InventoryPageType, usize);
-
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
-pub struct Inventory {
-    pub money: Money,
-    pub equipment: InventoryPage<EquipmentItem>,
-    pub consumables: InventoryPage<StackableItem>,
-    pub materials: InventoryPage<StackableItem>,
-    pub vehicles: InventoryPage<EquipmentItem>,
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct InventoryPage {
+    pub page_type: InventoryPageType,
+    pub slots: [Option<Item>; INVENTORY_PAGE_SIZE],
 }
 
-#[derive(Default)]
-pub struct InventoryUpdateResult {
-    pub updated_slots: Vec<ItemSlot>,
-    pub updated_money: bool,
-    pub remaining_items: Vec<Item>,
+impl InventoryPage {
+    pub fn new(page_type: InventoryPageType) -> Self {
+        Self {
+            page_type,
+            slots: Default::default(),
+        }
+    }
+
+    pub fn try_add_item(&mut self, item: Item) -> Result<ItemSlot, Item> {
+        match item {
+            Item::Equipment(item) => self
+                .try_add_equipment_item(item)
+                .map_err(|item| Item::Equipment(item)),
+            Item::Stackable(item) => self
+                .try_add_stackable_item(item)
+                .map_err(|item| Item::Stackable(item)),
+            _ => Err(item),
+        }
+    }
+
+    pub fn try_add_equipment_item(
+        &mut self,
+        item: EquipmentItem,
+    ) -> Result<ItemSlot, EquipmentItem> {
+        if let Some((index, slot)) = self
+            .slots
+            .iter_mut()
+            .enumerate()
+            .find(|(_, slot)| slot.is_none())
+        {
+            *slot = Some(Item::Equipment(item));
+            Ok(ItemSlot::Inventory(self.page_type, index))
+        } else {
+            Err(item)
+        }
+    }
+
+    pub fn try_add_stackable_item(
+        &mut self,
+        item: StackableItem,
+    ) -> Result<ItemSlot, StackableItem> {
+        if let Some(index) = self
+            .slots
+            .iter()
+            .enumerate()
+            .find(|(_, slot)| {
+                slot.as_ref()
+                    .map(|slot_item| slot_item.can_stack_with(&item).is_ok())
+                    .unwrap_or(true)
+            })
+            .map(|(index, _)| index)
+        {
+            if self.slots[index].is_none() {
+                self.slots[index] = Some(Item::Stackable(item));
+            } else {
+                self.slots[index]
+                    .as_mut()
+                    .unwrap()
+                    .stack_with(item)
+                    .expect("how did we get here");
+            }
+
+            Ok(ItemSlot::Inventory(self.page_type, index))
+        } else {
+            Err(item)
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum ItemSlot {
+    Equipped(EquipmentIndex),
+    Inventory(InventoryPageType, usize),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct Inventory {
+    pub money: Money,
+    pub equipment: InventoryPage,
+    pub consumables: InventoryPage,
+    pub materials: InventoryPage,
+    pub vehicles: InventoryPage,
+}
+
+impl Default for Inventory {
+    fn default() -> Self {
+        Self {
+            money: Default::default(),
+            equipment: InventoryPage::new(InventoryPageType::Equipment),
+            consumables: InventoryPage::new(InventoryPageType::Consumables),
+            materials: InventoryPage::new(InventoryPageType::Materials),
+            vehicles: InventoryPage::new(InventoryPageType::Vehicles),
+        }
+    }
 }
 
 impl Inventory {
-    pub fn add_money(&mut self, money: Money) -> Option<Money> {
+    pub fn try_add_money(&mut self, money: Money) -> Option<Money> {
         let before = self.money;
         self.money = self.money + money;
 
@@ -178,71 +198,70 @@ impl Inventory {
         }
     }
 
-    pub fn add_item(&mut self, item: Item) -> InventoryUpdateResult {
-        let mut updated_slots = Vec::new();
-        let mut updated_money = false;
-        let mut remaining_items = Vec::new();
-
-        match item {
-            Item::Equipment(equipment) => {
-                let page_type = InventoryPageType::from_item_type(equipment.item_type);
-                let page = match page_type {
-                    InventoryPageType::Equipment => &mut self.equipment,
-                    InventoryPageType::Vehicles => &mut self.vehicles,
-                    _ => panic!("Unexpected inventory page for stackable"),
-                };
-
-                match page.try_add_item(equipment) {
-                    Ok(slot) => updated_slots.push(ItemSlot(page_type, slot)),
-                    Err(remaining) => remaining_items.push(Item::Equipment(remaining)),
-                }
-            }
-            Item::Stackable(stackable) => {
-                let page_type = InventoryPageType::from_item_type(stackable.item_type);
-                let page = match page_type {
-                    InventoryPageType::Consumables => &mut self.consumables,
-                    InventoryPageType::Materials => &mut self.materials,
-                    _ => panic!("Unexpected inventory page for stackable"),
-                };
-
-                let (updated, remaining) = page.try_add_stackable(stackable);
-                updated_slots = updated.iter().map(|x| ItemSlot(page_type, *x)).collect();
-
-                if let Some(item) = remaining {
-                    remaining_items.push(Item::Stackable(item));
-                }
-            }
-            Item::Money(money) => {
-                if let Some(remaining) = self.add_money(Money(money.quantity as i64)) {
-                    remaining_items.push(Item::Money(MoneyItem {
-                        quantity: remaining.into(),
-                    }));
-                }
-                updated_money = true;
-            }
-        }
-
-        InventoryUpdateResult {
-            updated_slots,
-            updated_money,
-            remaining_items,
+    fn get_page(&self, page_type: InventoryPageType) -> &InventoryPage {
+        match page_type {
+            InventoryPageType::Equipment => &self.equipment,
+            InventoryPageType::Consumables => &self.consumables,
+            InventoryPageType::Materials => &self.materials,
+            InventoryPageType::Vehicles => &self.vehicles,
         }
     }
 
-    pub fn add_items(&mut self, items: Vec<Item>) -> InventoryUpdateResult {
-        let mut result = InventoryUpdateResult::default();
-        for item in items {
-            let InventoryUpdateResult {
-                updated_slots,
-                updated_money,
-                remaining_items,
-            } = self.add_item(item);
-
-            result.updated_slots.extend(updated_slots);
-            result.updated_money = result.updated_money || updated_money;
-            result.remaining_items.extend(remaining_items);
+    fn get_page_mut(&mut self, page_type: InventoryPageType) -> &mut InventoryPage {
+        match page_type {
+            InventoryPageType::Equipment => &mut self.equipment,
+            InventoryPageType::Consumables => &mut self.consumables,
+            InventoryPageType::Materials => &mut self.materials,
+            InventoryPageType::Vehicles => &mut self.vehicles,
         }
+    }
 
-        result
+    pub fn try_add_item(&mut self, item: Item) -> Result<ItemSlot, Item> {
+        let page_type = InventoryPageType::from_item_type(item.get_item_type());
+        self.get_page_mut(page_type).try_add_item(item)
+    }
+
+    pub fn try_add_equipment_item(
+        &mut self,
+        item: EquipmentItem,
+    ) -> Result<ItemSlot, EquipmentItem> {
+        let page_type = InventoryPageType::from_item_type(item.item_type);
+        self.get_page_mut(page_type).try_add_equipment_item(item)
+    }
+
+    pub fn try_add_stackable_item(
+        &mut self,
+        item: StackableItem,
+    ) -> Result<ItemSlot, StackableItem> {
+        let page_type = InventoryPageType::from_item_type(item.item_type);
+        self.get_page_mut(page_type).try_add_stackable_item(item)
+    }
+
+    pub fn get_item(&self, slot: ItemSlot) -> Option<Item> {
+        match slot {
+            ItemSlot::Inventory(page_type, index) => self
+                .get_page(page_type)
+                .slots
+                .get(index)
+                .cloned()
+                .unwrap_or(None),
+            ItemSlot::Equipped(_) => None,
+        }
+    }
+
+    pub fn get_item_slot(&self, slot: ItemSlot) -> Option<&Option<Item>> {
+        match slot {
+            ItemSlot::Inventory(page_type, index) => self.get_page(page_type).slots.get(index),
+            ItemSlot::Equipped(_) => None,
+        }
+    }
+
+    pub fn get_item_slot_mut(&mut self, slot: ItemSlot) -> Option<&mut Option<Item>> {
+        match slot {
+            ItemSlot::Inventory(page_type, index) => {
+                self.get_page_mut(page_type).slots.get_mut(index)
+            }
+            ItemSlot::Equipped(_) => None,
+        }
     }
 }

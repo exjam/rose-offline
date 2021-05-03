@@ -1,9 +1,12 @@
 use std::convert::TryFrom;
 
 use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
 use crate::{
-    game::components::HotbarSlot,
+    game::components::{
+        EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, INVENTORY_PAGE_SIZE,
+    },
     protocol::{
         packet::{Packet, PacketReader},
         ProtocolError,
@@ -18,7 +21,10 @@ pub enum ClientPackets {
     JoinZone = 0x753,
     Chat = 0x783,
     StopMove = 0x796,
+    Attack = 0x798,
     Move = 0x79a,
+    DropItem = 0x7a4,
+    ChangeEquipment = 0x7a5,
     SetHotbarSlot = 0x7aa,
 }
 
@@ -134,5 +140,48 @@ impl TryFrom<&Packet> for PacketClientSetHotbarSlot {
         let slot_index = reader.read_u8()?;
         let slot = read_hotbar_slot(&mut reader)?;
         Ok(PacketClientSetHotbarSlot { slot_index, slot })
+    }
+}
+
+fn item_slot_from_index(index: usize) -> Option<ItemSlot> {
+    if index == 0 {
+        None // Invalid
+    } else if index < 12 {
+        Some(ItemSlot::Equipped(FromPrimitive::from_usize(index)?))
+    } else {
+        let index = index - 12;
+        let page = index / INVENTORY_PAGE_SIZE;
+        let slot = index % INVENTORY_PAGE_SIZE;
+        match page {
+            0 => Some(ItemSlot::Inventory(InventoryPageType::Equipment, slot)),
+            1 => Some(ItemSlot::Inventory(InventoryPageType::Consumables, slot)),
+            2 => Some(ItemSlot::Inventory(InventoryPageType::Materials, slot)),
+            3 => Some(ItemSlot::Inventory(InventoryPageType::Vehicles, slot)),
+            _ => None,
+        }
+    }
+}
+
+pub struct PacketClientChangeEquipment {
+    pub equipment_index: EquipmentIndex,
+    pub item_slot: Option<ItemSlot>,
+}
+
+impl TryFrom<&Packet> for PacketClientChangeEquipment {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ChangeEquipment as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let equipment_index =
+            FromPrimitive::from_u16(reader.read_u16()?).ok_or(ProtocolError::InvalidPacket)?;
+        let inventory_index = reader.read_u16()? as usize;
+        Ok(PacketClientChangeEquipment {
+            equipment_index,
+            item_slot: item_slot_from_index(inventory_index),
+        })
     }
 }
