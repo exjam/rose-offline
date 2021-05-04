@@ -115,13 +115,18 @@ impl ZoneInfo {
             .unwrap_or(0)
             .clamp(MIN_SECTOR_SIZE, MAX_SECTOR_SIZE) as u32;
         let block_size = 16.0 * zon_file.grid_per_patch * zon_file.grid_size;
+        let num_blocks_x = (max_x + 1) - min_x;
+        let num_blocks_y = (max_y + 1) - min_y;
+        let num_sectors_x = ((num_blocks_x as f32 * block_size) / sector_size as f32) as u32;
+        let num_sectors_y = ((num_blocks_y as f32 * block_size) / sector_size as f32) as u32;
 
         println!(
-            "Loaded zone {}, chunks: {} monster spawns: {}, npcs: {}",
+            "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {})",
             index as u16,
             ifo_count,
             monster_spawns.len(),
-            npcs.len()
+            npcs.len(),
+            num_sectors_x, num_sectors_y
         );
         Ok(Self {
             id: index as u16,
@@ -136,8 +141,8 @@ impl ZoneInfo {
                 (min_x as f32) * block_size,
                 (min_y as f32) * block_size,
             ),
-            num_sectors_x: (max_x + 1) - min_x,
-            num_sectors_y: (max_y + 1) - min_y,
+            num_sectors_x,
+            num_sectors_y,
         })
     }
 }
