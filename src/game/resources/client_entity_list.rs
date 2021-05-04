@@ -58,12 +58,13 @@ fn calculate_sector_midpoint(zone_info: &'static ZoneInfo, sector: Point2<u32>) 
 
 impl ClientEntityZone {
     pub fn new(zone_info: &'static ZoneInfo) -> Self {
+        let sector_size = zone_info.sector_size as f32;
+        let sector_limit = (sector_size / 2.0) + (sector_size * 0.2);
         Self {
             zone_info: zone_info,
             entity_list_by_id: vec![None; MAX_CLIENT_ENTITY_ID],
             last_free_entity_index: Some(1),
-            sector_limit_squared: (zone_info.sector_size as f32 * 1.2)
-                * (zone_info.sector_size as f32 * 1.2),
+            sector_limit_squared: sector_limit * sector_limit,
             sectors: vec![
                 Default::default();
                 (zone_info.num_sectors_x * zone_info.num_sectors_y) as usize
