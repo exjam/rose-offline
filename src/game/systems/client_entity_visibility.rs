@@ -38,10 +38,10 @@ pub fn client_entity_visibility(
         world,
         |(entity, client, client_entity, client_visibility, position)| {
             if let Some(zone) = client_entity_list.get_zone(position.zone as usize) {
-                let sector = zone.get_sector(client_entity.sector);
+                let sector_visible_entities = zone.get_sector_visible_entities(client_entity.sector);
 
-                let mut remove_entities = &client_visibility.entities - &sector.entities;
-                let mut spawn_entities = &sector.entities - &client_visibility.entities;
+                let mut remove_entities = &client_visibility.entities - sector_visible_entities;
+                let mut spawn_entities = sector_visible_entities - &client_visibility.entities;
 
                 // Ignore self in entity lists
                 remove_entities.remove(entity);
@@ -53,9 +53,8 @@ pub fn client_entity_visibility(
                         remove_entities,
                         spawn_entities,
                     });
+                    client_visibility.entities = sector_visible_entities.clone();
                 }
-
-                client_visibility.entities = sector.entities.clone();
             }
         },
     );

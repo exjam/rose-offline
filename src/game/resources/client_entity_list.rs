@@ -14,16 +14,32 @@ pub struct ClientEntityId(pub u16);
 
 #[derive(Clone, Default)]
 pub struct ClientEntitySector {
-    pub entities: HashSet<Entity>,
+    // The list of entities currently inside this sector
+    entities: HashSet<Entity>,
+
+    // The list of entities visible from this sector, this is a union of the entities of all adjacent sectors
+    visible_entities: HashSet<Entity>,
 }
 
 impl ClientEntitySector {
-    pub fn add_entity(&mut self, entity: Entity) {
+    pub fn get_visible_entities(&self) -> &HashSet<Entity> {
+        &self.visible_entities
+    }
+
+    fn add_entity(&mut self, entity: Entity) {
         self.entities.insert(entity);
     }
 
-    pub fn remove_entity(&mut self, entity: &Entity) {
+    fn remove_entity(&mut self, entity: &Entity) {
         assert_eq!(self.entities.remove(entity), true);
+    }
+
+    fn add_visible_entity(&mut self, entity: Entity) {
+        self.visible_entities.insert(entity);
+    }
+
+    fn remove_visible_entity(&mut self, entity: &Entity) {
+        assert_eq!(self.visible_entities.remove(entity), true);
     }
 }
 
@@ -33,6 +49,8 @@ pub struct ClientEntityZone {
     pub entity_list_by_id: Vec<Option<Entity>>,
     pub last_free_entity_index: Option<usize>,
     pub sectors: Vec<ClientEntitySector>,
+    pub num_sectors_x: u32,
+    pub num_sectors_y: u32,
 }
 
 fn calculate_sector(zone_info: &'static ZoneInfo, position: Point3<f32>) -> Point2<u32> {
@@ -69,6 +87,42 @@ impl ClientEntityZone {
                 Default::default();
                 (zone_info.num_sectors_x * zone_info.num_sectors_y) as usize
             ],
+            num_sectors_x: zone_info.num_sectors_x,
+            num_sectors_y: zone_info.num_sectors_y,
+        }
+    }
+
+    fn add_sector_entity(&mut self, sector: Point2<u32>, entity: &Entity) {
+        // Add to the sector
+        self.get_sector_mut(sector).add_entity(entity.clone());
+
+        // Add to visible list in all adjacent sectors
+        let min_sector_x = sector.x.saturating_sub(1);
+        let max_sector_x = u32::min(sector.x + 1, self.num_sectors_x - 1);
+        let min_sector_y = sector.y.saturating_sub(1);
+        let max_sector_y = u32::min(sector.y + 1, self.num_sectors_y - 1);
+
+        for x in min_sector_x..=max_sector_x {
+            for y in min_sector_y..=max_sector_y {
+                self.get_sector_mut(Point2::new(x, y)).add_visible_entity(entity.clone());
+            }
+        }
+    }
+
+    fn remove_sector_entity(&mut self, sector: Point2<u32>, entity: &Entity) {
+        // Remove from the sector
+        self.get_sector_mut(sector).remove_entity(entity);
+
+        // Remove from visible list in all adjacent sectors
+        let min_sector_x = sector.x.saturating_sub(1);
+        let max_sector_x = u32::min(sector.x + 1, self.num_sectors_x - 1);
+        let min_sector_y = sector.y.saturating_sub(1);
+        let max_sector_y = u32::min(sector.y + 1, self.num_sectors_y - 1);
+
+        for x in min_sector_x..=max_sector_x {
+            for y in min_sector_y..=max_sector_y {
+                self.get_sector_mut(Point2::new(x, y)).remove_visible_entity(entity);
+            }
         }
     }
 
@@ -85,19 +139,23 @@ impl ClientEntityZone {
                 .map(|(index, _)| index);
 
             let sector = calculate_sector(self.zone_info, position);
-            self.get_sector_mut(sector).add_entity(entity);
+            self.add_sector_entity(sector, &entity);
             return Some(ClientEntity::new(id, sector));
         } else {
             None
         }
     }
 
-    pub fn get_sector(&self, sector: Point2<u32>) -> &ClientEntitySector {
-        &self.sectors[sector[0] as usize + (sector[1] * self.zone_info.num_sectors_x) as usize]
+    fn get_sector(&self, sector: Point2<u32>) -> &ClientEntitySector {
+        &self.sectors[sector[0] as usize + (sector[1] * self.num_sectors_x) as usize]
     }
 
-    pub fn get_sector_mut(&mut self, sector: Point2<u32>) -> &mut ClientEntitySector {
-        &mut self.sectors[sector[0] as usize + (sector[1] * self.zone_info.num_sectors_x) as usize]
+    fn get_sector_mut(&mut self, sector: Point2<u32>) -> &mut ClientEntitySector {
+        &mut self.sectors[sector[0] as usize + (sector[1] * self.num_sectors_x) as usize]
+    }
+
+    pub fn get_sector_visible_entities(&self, sector: Point2<u32>) -> &HashSet<Entity> {
+        self.get_sector(sector).get_visible_entities()
     }
 
     pub fn update_sector(
@@ -110,8 +168,8 @@ impl ClientEntityZone {
         if (midpoint - position.xy()).magnitude_squared() > self.sector_limit_squared {
             let previous_sector = client_entity.sector;
             let new_sector = calculate_sector(self.zone_info, position);
-            self.get_sector_mut(previous_sector).remove_entity(entity);
-            self.get_sector_mut(new_sector).add_entity(*entity);
+            self.remove_sector_entity(previous_sector, &entity);
+            self.add_sector_entity(new_sector, &entity);
             client_entity.sector = new_sector;
         }
     }
