@@ -123,7 +123,7 @@ impl WorldServer {
     }
 
     pub fn get_entity(&self) -> Entity {
-        self.entity.clone()
+        self.entity
     }
 
     pub async fn run(&mut self) {
@@ -175,7 +175,7 @@ impl GameServer {
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddGameServer {
             name: name,
-            world_server: world_server.clone(),
+            world_server,
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),
             packet_codec_seed: protocol.packet_codec.get_seed(),

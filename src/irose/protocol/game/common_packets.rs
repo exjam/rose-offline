@@ -1,13 +1,10 @@
+use modular_bitfield::prelude::*;
 use std::convert::TryInto;
 
 use crate::{
     game::components::HotbarSlot,
-    protocol::{
-        packet::{PacketReader, PacketWriter},
-        ProtocolError,
-    },
+    protocol::{PacketReader, PacketWriter, ProtocolError},
 };
-use modular_bitfield::prelude::*;
 
 #[bitfield]
 #[derive(Clone, Copy)]

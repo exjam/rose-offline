@@ -1,6 +1,7 @@
-use crate::game::data::items::*;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
+
+use crate::data::item::{EquipmentItem, ItemType, StackableItem};
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, FromPrimitive)]
@@ -44,6 +45,10 @@ pub struct Equipment {
 }
 
 impl Equipment {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn get_equipment_item(&self, index: EquipmentIndex) -> Option<&EquipmentItem> {
         self.equipped_items[index as usize].as_ref()
     }

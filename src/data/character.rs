@@ -1,12 +1,11 @@
-use super::STB_INIT_AVATAR;
+use serde::{Deserialize, Serialize};
+use std::{io::Write, path::PathBuf};
+
+use crate::data::CHARACTER_STORAGE_DIR;
 use crate::game::components::{
     BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, HealthPoints, Hotbar, Inventory,
     Level, ManaPoints, Position, SkillList,
 };
-use crate::game::data::CHARACTER_STORAGE_DIR;
-use nalgebra::Point3;
-use serde::{Deserialize, Serialize};
-use std::{io::Write, path::PathBuf};
 
 pub enum CharacterStorageError {
     NotFound,
@@ -55,66 +54,28 @@ fn get_character_path(name: &str) -> PathBuf {
     CHARACTER_STORAGE_DIR.join(format!("{}.json", name))
 }
 
+pub enum CharacterCreatorError {
+    InvalidName,
+    InvalidGender,
+    InvalidBirthStone,
+    InvalidFace,
+    InvalidHair,
+}
+
+pub trait CharacterCreator {
+    fn create(
+        &self,
+        name: String,
+        gender: u8,
+        birth_stone: u8,
+        face: u8,
+        hair: u8,
+    ) -> Result<CharacterStorage, CharacterCreatorError>;
+}
+
 impl CharacterStorage {
-    pub fn new(
-        name: String,
-        gender: u8,
-        birth_stone: u8,
-        face: u8,
-        hair: u8,
-    ) -> Result<Self, CharacterStorageError> {
-        let init_avatar_row = gender as usize;
-
-        // TODO: Verify birth_stone, face, hair values
-
-        let mut character = Self {
-            info: CharacterInfo {
-                name: name,
-                gender: gender,
-                birth_stone,
-                job: 0,
-                face: face,
-                hair: hair,
-                respawn_zone: 20,
-            },
-            basic_stats: STB_INIT_AVATAR
-                .get_basic_stats(init_avatar_row)
-                .ok_or(CharacterStorageError::InvalidValue)?,
-            equipment: Equipment::default(),
-            inventory: Inventory::default(),
-            level: Level::default(),
-            position: Position::new(Point3::new(530500.0, 539500.0, 0.0), 20),
-            skill_list: SkillList::default(),
-            hotbar: Hotbar::default(),
-            delete_time: None,
-            health_points: HealthPoints::default(),
-            mana_points: ManaPoints::default(),
-        };
-
-        character
-            .equipment
-            .equip_items(STB_INIT_AVATAR.get_equipment(init_avatar_row));
-
-        for item in STB_INIT_AVATAR
-            .get_inventory_items(init_avatar_row)
-            .into_iter()
-        {
-            character.inventory.try_add_item(item).ok();
-        }
-
-        Ok(character)
-    }
-
-    pub fn try_create(
-        name: String,
-        gender: u8,
-        birth_stone: u8,
-        face: u8,
-        hair: u8,
-    ) -> Result<Self, CharacterStorageError> {
-        let character = Self::new(name, gender, birth_stone, face, hair)?;
-        character.save_character_impl(false)?;
-        Ok(character)
+    pub fn try_create(&self) -> Result<(), CharacterStorageError> {
+        self.save_character_impl(false)
     }
 
     pub fn try_load(name: &str) -> Result<Self, CharacterStorageError> {

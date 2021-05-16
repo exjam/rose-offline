@@ -1,17 +1,20 @@
-use legion::systems::CommandBuffer;
-use legion::world::SubWorld;
-use legion::*;
+use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore};
 
-use crate::game::components::{
-    Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient,
+use crate::{
+    data::{
+        account::{AccountStorage, AccountStorageError},
+        character::CharacterStorage,
+    },
+    game::{
+        components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
+        messages::client::{
+            CharacterListItem, ClientMessage, ConnectionRequestError, ConnectionRequestResponse,
+            CreateCharacter, CreateCharacterError, DeleteCharacterError, JoinServerResponse,
+            SelectCharacterError,
+        },
+        resources::{GameData, LoginTokens},
+    },
 };
-use crate::game::data::account::{AccountStorage, AccountStorageError};
-use crate::game::data::character::CharacterStorage;
-use crate::game::messages::client::{
-    CharacterListItem, ClientMessage, ConnectionRequestError, ConnectionRequestResponse,
-    CreateCharacterError, DeleteCharacterError, JoinServerResponse, SelectCharacterError,
-};
-use crate::game::resources::LoginTokens;
 
 #[system(for_each)]
 #[filter(!component::<Account>())]
@@ -76,6 +79,26 @@ pub fn world_server_authentication(
     }
 }
 
+fn create_character(
+    game_data: &GameData,
+    message: &CreateCharacter,
+) -> Result<CharacterStorage, CreateCharacterError> {
+    let character = game_data
+        .character_creator
+        .create(
+            message.name.clone(),
+            message.gender,
+            message.birth_stone,
+            message.face,
+            message.hair,
+        )
+        .map_err(|_| CreateCharacterError::InvalidValue)?;
+    character
+        .try_create()
+        .map_err(|_| CreateCharacterError::Failed)?;
+    Ok(character)
+}
+
 #[system(for_each)]
 #[read_component(ServerInfo)]
 pub fn world_server(
@@ -84,6 +107,7 @@ pub fn world_server(
     character_list: &mut CharacterList,
     client: &mut WorldClient,
     #[resource] login_tokens: &mut LoginTokens,
+    #[resource] game_data: &GameData,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
@@ -102,14 +126,7 @@ pub fn world_server(
                 } else if CharacterStorage::exists(&message.name) {
                     Err(CreateCharacterError::AlreadyExists)
                 } else {
-                    CharacterStorage::try_create(
-                        message.name,
-                        message.gender,
-                        message.birth_stone,
-                        message.face,
-                        message.hair,
-                    )
-                    .map_err(|_| CreateCharacterError::Failed)
+                    create_character(&game_data, &message)
                 }
                 .and_then(|character| {
                     let slot = account.character_names.len();

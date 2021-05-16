@@ -1,4 +1,4 @@
-use crate::game::data::account::AccountStorage;
+use crate::data::account::AccountStorage;
 
 pub struct Account {
     pub name: String,

@@ -12,7 +12,7 @@ use crate::game::messages::{
         UpdateEquipment, UpdateInventory, Whisper,
     },
 };
-use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
+use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
 
 mod common_packets;
 
@@ -143,7 +143,7 @@ impl GameClient {
                         slot: request.slot.clone(),
                         response_tx,
                     }))?;
-                if let Ok(_) = response_rx.await? {
+                if response_rx.await?.is_ok() {
                     client
                         .connection
                         .write_packet(Packet::from(&PacketServerSetHotbarSlot {

@@ -1,10 +1,10 @@
 use tokio::sync::oneshot;
 
+use crate::data::character::CharacterStorage;
 use crate::game::components::{
     BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, EquipmentIndex, HealthPoints,
     Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Position, SkillList, Team,
 };
-use crate::game::data::character::CharacterStorage;
 
 pub enum ConnectionRequestError {
     Failed,

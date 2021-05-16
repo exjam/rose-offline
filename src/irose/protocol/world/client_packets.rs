@@ -1,8 +1,7 @@
 use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 
-use crate::protocol::packet::*;
-use crate::protocol::ProtocolError;
+use crate::protocol::{Packet, PacketReader, ProtocolError};
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {

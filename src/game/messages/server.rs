@@ -1,6 +1,6 @@
-use crate::game::{
-    components::{EquipmentIndex, ItemSlot, Npc, NpcStandingDirection, Position, Team},
-    data::items::{EquipmentItem, Item},
+use crate::{
+    data::item::{EquipmentItem, Item},
+    game::components::{EquipmentIndex, ItemSlot, Npc, NpcStandingDirection, Position, Team},
 };
 
 #[derive(Clone)]

@@ -2,9 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
-use crate::game::data::items::*;
-
 use super::EquipmentIndex;
+use crate::data::item::{EquipmentItem, Item, ItemType, StackableItem};
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
 
@@ -186,6 +185,10 @@ impl Default for Inventory {
 }
 
 impl Inventory {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn try_add_money(&mut self, money: Money) -> Option<Money> {
         let before = self.money;
         self.money = self.money + money;

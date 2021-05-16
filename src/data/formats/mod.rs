@@ -1,9 +1,11 @@
 mod reader;
 
 pub mod ifo;
-pub mod stb;
 pub mod vfs;
 pub mod zon;
+
+#[macro_use]
+pub mod stb;
 
 pub use ifo::{IfoFile, IfoReadError};
 pub use reader::FileReader;

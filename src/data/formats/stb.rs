@@ -161,3 +161,57 @@ impl StbFile {
             .unwrap_or(0)
     }
 }
+
+#[macro_export]
+macro_rules! stb_column {
+    (
+        $column_index:literal, $name:ident, &str
+    ) => {
+        pub fn $name(&self, row: usize) -> Option<&str> {
+            self.0.try_get(row, $column_index)
+        }
+    };
+    (
+        $column_index:literal, $name:ident, bool
+    ) => {
+        pub fn $name(&self, row: usize) -> Option<bool> {
+            self.0
+                .try_get(row, $column_index)
+                .and_then(|x| x.parse::<i32>().ok())
+                .map(|x| x != 0)
+        }
+    };
+    (
+        $column_index:literal, $name:ident, $value_type:ty
+    ) => {
+        pub fn $name(&self, row: usize) -> Option<$value_type> {
+            self.0
+                .try_get(row, $column_index)
+                .and_then(|x| x.parse::<$value_type>().ok())
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! stb_column_array {
+    (
+        $range:expr, $name:ident, $value_type:ty
+    ) => {
+        pub fn $name(&self, row: usize) -> Vec<Option<$value_type>> {
+            let mut result = Vec::new();
+
+            for i in $range {
+                if let Some(value) = self
+                    .0
+                    .try_get(row, i)
+                    .and_then(|x| x.parse::<$value_type>().ok())
+                {
+                    result.push(value);
+                } else {
+                    result.push(None)
+                }
+            }
+            result
+        }
+    };
+}

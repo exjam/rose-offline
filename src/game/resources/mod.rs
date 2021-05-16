@@ -15,3 +15,6 @@ pub use server_messages::ServerMessages;
 
 mod delta_time;
 pub use delta_time::DeltaTime;
+
+mod game_data;
+pub use game_data::GameData;

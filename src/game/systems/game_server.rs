@@ -1,35 +1,26 @@
+use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore};
+use nalgebra::Point3;
 use std::num::{ParseFloatError, ParseIntError};
 
-use legion::systems::CommandBuffer;
-use legion::world::SubWorld;
-use legion::*;
-use nalgebra::Point3;
-use num_traits::FromPrimitive;
-use server::Whisper;
-
-use crate::game::messages::client::{
-    ClientMessage, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse, SetHotbarSlot,
-    SetHotbarSlotError,
-};
-use crate::game::messages::server;
-use crate::game::messages::server::ServerMessage;
-use crate::game::resources::{ClientEntityId, ClientEntityList, LoginTokens, ServerMessages};
-use crate::game::{
-    components::EquipmentIndex,
-    data::{calculate_ability_values, items::Item},
-    messages::server::UpdateInventory,
-};
-use crate::game::{
-    components::ItemSlot,
-    data::{account::AccountStorage, character::CharacterStorage},
-};
-use crate::game::{
-    components::{
-        BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination, Equipment,
-        GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints, MoveSpeed, Position,
-        SkillList, Target, Team,
+use crate::{
+    data::{
+        account::AccountStorage, calculate_ability_values, character::CharacterStorage, item::Item,
     },
-    messages::client::ChangeEquipment,
+    game::{
+        components::{
+            BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination,
+            Equipment, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints,
+            MoveSpeed, Position, SkillList, Target, Team,
+        },
+        messages::{
+            client::{
+                ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
+                JoinZoneResponse, SetHotbarSlot, SetHotbarSlotError,
+            },
+            server::{self, ServerMessage, UpdateInventory, Whisper},
+        },
+        resources::{ClientEntityId, ClientEntityList, GameData, LoginTokens, ServerMessages},
+    },
 };
 
 #[system(for_each)]
@@ -39,6 +30,7 @@ pub fn game_server_authentication(
     entity: &Entity,
     client: &mut GameClient,
     #[resource] login_tokens: &mut LoginTokens,
+    #[resource] game_data: &GameData,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
@@ -59,6 +51,7 @@ pub fn game_server_authentication(
                             })
                             .and_then(|character| {
                                 let ability_values = calculate_ability_values(
+                                    &game_data.items,
                                     &character.equipment,
                                     &character.inventory,
                                     &character.basic_stats,

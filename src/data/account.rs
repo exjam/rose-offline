@@ -1,9 +1,10 @@
-use crate::game::data::ACCOUNT_STORAGE_DIR;
 use hex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::path::PathBuf;
+
+use crate::data::ACCOUNT_STORAGE_DIR;
 
 #[allow(dead_code)]
 pub enum AccountStorageError {

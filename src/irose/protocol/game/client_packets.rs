@@ -7,10 +7,7 @@ use crate::{
     game::components::{
         EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, INVENTORY_PAGE_SIZE,
     },
-    protocol::{
-        packet::{Packet, PacketReader},
-        ProtocolError,
-    },
+    protocol::{Packet, PacketReader, ProtocolError},
 };
 
 use super::common_packets::read_hotbar_slot;

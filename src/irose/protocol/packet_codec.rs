@@ -260,7 +260,7 @@ impl PacketCodec {
         };
         seed_table(&mut crypt.table, &mut seed, &seed_types);
         seed_index(&mut crypt.index, &mut seed, SeedType::AC);
-        return crypt;
+        crypt
     }
 
     pub fn init(crc_table: &'static [u8; 256], init_seed: u32) -> PacketCodec {
@@ -276,11 +276,11 @@ impl PacketCodec {
         };
         seed_table(&mut crypt.table, &mut seed, &seed_types);
         seed_index(&mut crypt.index, &mut seed, seed_types[16]);
-        return crypt;
+        crypt
     }
 }
 
-impl crate::protocol::packet::PacketCodec for PacketCodec {
+impl crate::protocol::PacketCodec for PacketCodec {
     fn get_seed(&self) -> u32 {
         self.seed
     }
@@ -304,14 +304,14 @@ impl crate::protocol::packet::PacketCodec for PacketCodec {
         let head_bytes = head.into_bytes();
         for i in 0..5 {
             checksum = self.crc_table[(head_bytes[i] ^ checksum) as usize];
-            buffer[i] = buffer[i] ^ (self.table[i * 2048 + add_table_value as usize] as u8);
+            buffer[i] ^= self.table[i * 2048 + add_table_value as usize] as u8;
         }
 
         for i in 6..size as usize {
             let table_start = ((encrypt_add_value as usize + i) & 0xF) * 2048;
             let table_offset = (add_table_value as usize + i) & 0x7FF;
             checksum = self.crc_table[(buffer[i] ^ checksum) as usize];
-            buffer[i] = buffer[i] ^ (self.table[table_start + table_offset] as u8);
+            buffer[i] ^= self.table[table_start + table_offset] as u8;
         }
 
         buffer[5] = checksum;
@@ -329,14 +329,14 @@ impl crate::protocol::packet::PacketCodec for PacketCodec {
         let add_table_value = head.add_table_value();
 
         for i in 0..5 {
-            buffer[i] = buffer[i] ^ self.table[i * 2048 + add_table_value as usize] as u8;
+            buffer[i] ^= self.table[i * 2048 + add_table_value as usize] as u8;
         }
 
         head.decode_client_main(&HeadCryptedClient::from_bytes(
             buffer[0..5].try_into().unwrap(),
         ));
         (&mut buffer[0..5]).copy_from_slice(&head.into_bytes());
-        return head.add_buffer_len() as usize;
+        head.add_buffer_len() as usize
     }
 
     fn decrypt_client_body(&self, buffer: &mut BytesMut) -> bool {
@@ -353,7 +353,7 @@ impl crate::protocol::packet::PacketCodec for PacketCodec {
         for i in 6..data_length {
             let table_start = ((encrypt_add_value + i) & 0xF) * 2048;
             let table_offset = (add_table_value + i) & 0x7FF;
-            buffer[i] = buffer[i] ^ (self.table[table_start + table_offset] as u8);
+            buffer[i] ^= self.table[table_start + table_offset] as u8;
             checksum = self.crc_table[(buffer[i] ^ checksum) as usize];
         }
 
@@ -363,6 +363,6 @@ impl crate::protocol::packet::PacketCodec for PacketCodec {
 
         (&mut buffer[0..2]).copy_from_slice(&data_length.to_le_bytes()[0..2]);
         (&mut buffer[2..4]).copy_from_slice(&head.command().to_le_bytes()[0..2]);
-        return true;
+        true
     }
 }

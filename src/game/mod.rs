@@ -1,9 +1,6 @@
-pub mod data;
-
-pub mod messages;
-
 pub mod components;
 mod game;
+pub mod messages;
 mod resources;
 mod systems;
 

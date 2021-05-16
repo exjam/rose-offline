@@ -1,8 +1,9 @@
-use legion::world::SubWorld;
-use legion::*;
+use legion::{system, world::SubWorld, Query};
 
-use crate::game::components::{ClientEntityVisibility, GameClient, Position};
-use crate::game::resources::ServerMessages;
+use crate::game::{
+    components::{ClientEntityVisibility, GameClient, Position},
+    resources::ServerMessages,
+};
 
 #[system]
 pub fn server_messages_sender(

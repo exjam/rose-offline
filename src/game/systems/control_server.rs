@@ -1,9 +1,10 @@
-use legion::systems::CommandBuffer;
-use legion::*;
+use legion::{system, systems::CommandBuffer};
 
-use crate::game::components::{GameClient, LoginClient, ServerInfo, WorldClient};
-use crate::game::messages::control::{ClientType, ControlMessage};
-use crate::game::resources::{ControlChannel, GameServer, ServerList, WorldServer};
+use crate::game::{
+    components::{GameClient, LoginClient, ServerInfo, WorldClient},
+    messages::control::{ClientType, ControlMessage},
+    resources::{ControlChannel, GameServer, ServerList, WorldServer},
+};
 
 #[system]
 pub fn control_server(

@@ -2,6 +2,8 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
+use super::ItemReference;
+
 const MAX_STACKABLE_ITEM_QUANTITY: u32 = 999;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, FromPrimitive, PartialEq)]
@@ -92,14 +94,11 @@ pub struct EquipmentItem {
 }
 
 impl EquipmentItem {
-    pub fn from_integer(value: u32) -> Option<EquipmentItem> {
-        let item_number: u16 = (value % 1000) as u16;
-        let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
-
-        if item_type.is_equipment() {
+    pub fn new(item: &ItemReference) -> Option<EquipmentItem> {
+        if item.item_type.is_equipment() {
             Some(EquipmentItem {
-                item_type,
-                item_number,
+                item_type: item.item_type,
+                item_number: item.item_number as u16,
                 gem: 0,
                 durability: 100,
                 life: 1000,
@@ -133,14 +132,11 @@ pub enum StackError {
 }
 
 impl StackableItem {
-    pub fn from_integer(value: u32, quantity: u32) -> Option<StackableItem> {
-        let item_number: u16 = (value % 1000) as u16;
-        let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
-
-        if item_type.is_stackable_item() {
+    pub fn new(item: &ItemReference, quantity: u32) -> Option<StackableItem> {
+        if item.item_type.is_stackable_item() {
             Some(StackableItem {
-                item_type,
-                item_number,
+                item_type: item.item_type,
+                item_number: item.item_number as u16,
                 quantity,
             })
         } else {
@@ -174,16 +170,14 @@ pub enum Item {
 }
 
 impl Item {
-    pub fn from_integer(value: u32, quantity: u32) -> Option<Item> {
-        let item_type: ItemType = FromPrimitive::from_u32(value / 1000)?;
-
-        if item_type.is_stackable_item() {
-            match StackableItem::from_integer(value, quantity) {
+    pub fn new(item: &ItemReference, quantity: u32) -> Option<Item> {
+        if item.item_type.is_stackable_item() {
+            match StackableItem::new(item, quantity) {
                 Some(stackable) => Some(Item::Stackable(stackable)),
                 None => None,
             }
-        } else if item_type.is_equipment() {
-            match EquipmentItem::from_integer(value) {
+        } else if item.item_type.is_equipment() {
+            match EquipmentItem::new(item) {
                 Some(equipment) => Some(Item::Equipment(equipment)),
                 None => None,
             }
@@ -222,7 +216,7 @@ impl Item {
 }
 
 // TODO: Probably doesn't belong here, but will do for now.
-#[derive(Debug, FromPrimitive)]
+#[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum AbilityType {
     Gender = 2,
     Birthstone = 3,

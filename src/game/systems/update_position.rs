@@ -1,8 +1,9 @@
-use legion::systems::CommandBuffer;
-use legion::*;
+use legion::{system, systems::CommandBuffer, Entity};
 
-use crate::game::components::{ClientEntity, Destination, MoveSpeed, Position};
-use crate::game::resources::{ClientEntityList, DeltaTime};
+use crate::game::{
+    components::{ClientEntity, Destination, MoveSpeed, Position},
+    resources::{ClientEntityList, DeltaTime},
+};
 
 #[system(for_each)]
 pub fn update_position(

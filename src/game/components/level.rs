@@ -13,7 +13,7 @@ impl Default for Level {
 }
 
 impl Level {
-    fn new(level: u16) -> Self {
+    pub fn new(level: u16) -> Self {
         Self { level, xp: 0 }
     }
 }

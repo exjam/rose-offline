@@ -1,11 +1,14 @@
+use legion::{system, systems::CommandBuffer};
 use nalgebra::Point3;
 use rand::Rng;
 
-use crate::game::{
-    components::{MonsterSpawnPoint, Npc, Position, Team},
-    resources::{ClientEntityList, DeltaTime},
+use crate::{
+    data::NpcReference,
+    game::{
+        components::{MonsterSpawnPoint, Npc, Position, Team},
+        resources::{ClientEntityList, DeltaTime},
+    },
 };
-use legion::{system, systems::CommandBuffer};
 
 #[system(for_each)]
 pub fn monster_spawn(
@@ -31,7 +34,7 @@ pub fn monster_spawn(
         ((spawn_point.limit_count * 2 - live_count) * spawn_point.current_tactics_value * 50)
             / (spawn_point.limit_count * spawn_point.tactic_points);
 
-    let mut spawn_queue = Vec::new();
+    let mut spawn_queue: Vec<(NpcReference, usize)> = Vec::new();
     match regen_value {
         0..=10 => {
             // Spawn basic[0]
@@ -39,7 +42,7 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         11..=15 => {
             // Spawn basic[0] - 2, basic[1]
@@ -47,11 +50,11 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count.saturating_sub(2))));
+                .map(|(id, count)| spawn_queue.push((*id, count.saturating_sub(2))));
             spawn_point
                 .basic_spawns
                 .get(1)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         16..=25 => {
             // Spawn basic[2]
@@ -59,7 +62,7 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(2)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         26..=30 => {
             // Spawn basic[0] - 1, basic[2]
@@ -67,11 +70,11 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count.saturating_sub(1))));
+                .map(|(id, count)| spawn_queue.push((*id, count.saturating_sub(1))));
             spawn_point
                 .basic_spawns
                 .get(2)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         31..=40 => {
             // Spawn basic[3]
@@ -79,7 +82,7 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(3)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         41..=50 => {
             // Spawn basic[1], basic[2] - 2
@@ -87,11 +90,11 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(1)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .basic_spawns
                 .get(2)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count.saturating_sub(1))));
+                .map(|(id, count)| spawn_queue.push((*id, count.saturating_sub(1))));
         }
         51..=65 => {
             // Spawn basic[2], basic[3] - 2
@@ -99,11 +102,11 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(2)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .basic_spawns
                 .get(3)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count.saturating_sub(2))));
+                .map(|(id, count)| spawn_queue.push((*id, count.saturating_sub(2))));
         }
         66..=73 => {
             // Spawn basic[3], basic[4]
@@ -111,11 +114,11 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(3)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .basic_spawns
                 .get(4)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         74..=85 => {
             // Spawn basic[0], basic[4] - 2, tactics[0] - 1
@@ -123,15 +126,15 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .basic_spawns
                 .get(4)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count.saturating_sub(2))));
+                .map(|(id, count)| spawn_queue.push((*id, count.saturating_sub(2))));
             spawn_point
                 .tactic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count.saturating_sub(1))));
+                .map(|(id, count)| spawn_queue.push((*id, count.saturating_sub(1))));
         }
         86..=92 => {
             // Spawn basic[1], tactics[0], tactics[1]
@@ -139,15 +142,15 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(1)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .tactic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .tactic_spawns
                 .get(1)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
         _ => {
             // Spawn basic[4], tactics[0] + 1, tactics[1]
@@ -155,15 +158,15 @@ pub fn monster_spawn(
             spawn_point
                 .basic_spawns
                 .get(4)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
             spawn_point
                 .tactic_spawns
                 .get(0)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count + 1)));
+                .map(|(id, count)| spawn_queue.push((*id, count + 1)));
             spawn_point
                 .tactic_spawns
                 .get(1)
-                .map(|spawn| spawn_queue.push((spawn.id, spawn.count)));
+                .map(|(id, count)| spawn_queue.push((*id, *count)));
         }
     }
 
@@ -188,7 +191,7 @@ pub fn monster_spawn(
                 0.0,
             );
             let entity = cmd.push((
-                Npc::new(id, 0),
+                Npc::new(id.0 as u32, 0),
                 Position::new(position, spawn_point_zone),
                 Team::default_monster(),
             ));

@@ -98,15 +98,15 @@ impl<'a> PacketReader<'a> {
 
     pub fn read_fixed_length_utf8(&mut self, length: usize) -> Result<&'a str, ProtocolError> {
         match str::from_utf8(self.read_fixed_length_bytes(length)?) {
-            Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => return Err(ProtocolError::InvalidPacket),
+            Ok(s) => Ok(s.trim_end_matches(char::from(0))),
+            Err(_) => Err(ProtocolError::InvalidPacket),
         }
     }
 
     pub fn read_null_terminated_utf8(&mut self) -> Result<&'a str, ProtocolError> {
         match str::from_utf8(self.read_null_terminated_bytes()?) {
-            Ok(s) => return Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => return Err(ProtocolError::InvalidPacket),
+            Ok(s) => Ok(s.trim_end_matches(char::from(0))),
+            Err(_) => Err(ProtocolError::InvalidPacket),
         }
     }
 }

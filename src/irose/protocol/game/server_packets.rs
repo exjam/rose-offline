@@ -1,18 +1,16 @@
+use modular_bitfield::prelude::*;
 use num_derive::FromPrimitive;
 
 use super::common_packets::write_hotbar_slot;
 use crate::{
-    game::{
-        components::{
-            BasicStats, CharacterInfo, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot,
-            Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
-            Position, SkillList, Team, INVENTORY_PAGE_SIZE,
-        },
-        data::items::{EquipmentItem, Item, ItemType, StackableItem},
+    data::item::{EquipmentItem, Item, StackableItem},
+    game::components::{
+        BasicStats, CharacterInfo, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot,
+        Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
+        Position, SkillList, Team, INVENTORY_PAGE_SIZE,
     },
-    protocol::packet::{Packet, PacketWriter},
+    protocol::{Packet, PacketWriter},
 };
-use modular_bitfield::prelude::*;
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {
@@ -270,7 +268,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         assert!(packet.skill_list.pages.len() * packet.skill_list.pages[0].len() == 120);
         for page in &packet.skill_list.pages {
             for slot in page {
-                writer.write_u16(slot.unwrap_or(0u16));
+                writer.write_u16(slot.map(|x| x.0).unwrap_or(0) as u16);
             }
         }
 
@@ -589,8 +587,8 @@ fn item_slot_to_index(slot: &ItemSlot) -> usize {
     match slot {
         ItemSlot::Equipped(equipment_index) => *equipment_index as usize,
         ItemSlot::Inventory(page_type, index) => match page_type {
-            InventoryPageType::Equipment => 12 + 0 * INVENTORY_PAGE_SIZE + index,
-            InventoryPageType::Consumables => 12 + 1 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Equipment => 12 + index,
+            InventoryPageType::Consumables => 12 + INVENTORY_PAGE_SIZE + index,
             InventoryPageType::Materials => 12 + 2 * INVENTORY_PAGE_SIZE + index,
             InventoryPageType::Vehicles => 12 + 3 * INVENTORY_PAGE_SIZE + index,
         },

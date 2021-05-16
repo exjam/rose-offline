@@ -1,4 +1,4 @@
-use crate::game::data::character::CharacterStorage;
+use crate::data::character::CharacterStorage;
 
 pub struct CharacterList {
     pub characters: Vec<CharacterStorage>,

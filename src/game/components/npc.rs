@@ -1,6 +1,6 @@
 #[derive(Clone)]
 pub struct Npc {
-    pub id: u32,
+    pub id: u32, // TODO: NpcReference
     pub quest_index: u16,
 }
 

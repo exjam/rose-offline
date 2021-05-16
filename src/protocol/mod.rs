@@ -32,23 +32,23 @@ impl From<crossbeam_channel::SendError<crate::game::messages::control::ControlMe
 }
 
 mod packet;
+pub use packet::Packet;
+pub use packet::PacketCodec;
+pub use packet::PacketReader;
+pub use packet::PacketWriter;
 
+mod connection;
 use crate::game::messages::client::ClientMessage;
 use crate::game::messages::control::ClientType;
 use crate::game::messages::server::ServerMessage;
-use packet::Packet;
-use packet::PacketReader;
-use packet::PacketWriter;
-
-mod connection;
 use async_trait::async_trait;
 use connection::Connection;
 
 pub struct Client<'a> {
-    entity: legion::Entity,
-    connection: Connection<'a>,
-    client_message_tx: crossbeam_channel::Sender<ClientMessage>,
-    server_message_rx: tokio::sync::mpsc::UnboundedReceiver<ServerMessage>,
+    pub entity: legion::Entity,
+    pub connection: Connection<'a>,
+    pub client_message_tx: crossbeam_channel::Sender<ClientMessage>,
+    pub server_message_rx: tokio::sync::mpsc::UnboundedReceiver<ServerMessage>,
 }
 
 #[async_trait]
@@ -62,5 +62,4 @@ pub struct Protocol {
     pub create_client: fn() -> Box<dyn ProtocolClient + Send + Sync>,
 }
 
-pub mod irose;
 pub mod server;

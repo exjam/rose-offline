@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::game::messages::client::*;
 use crate::game::messages::server::ServerMessage;
-use crate::protocol::{packet::Packet, Client, ProtocolClient, ProtocolError};
+use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
 use async_trait::async_trait;
 use num_traits::FromPrimitive;
 

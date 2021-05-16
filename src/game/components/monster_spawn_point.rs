@@ -1,7 +1,7 @@
 use legion::Entity;
 use std::time::Duration;
 
-use crate::game::data::formats::ifo;
+use crate::data::{NpcReference, ZoneMonsterSpawnPoint};
 
 pub struct MonsterSpawn {
     pub id: u32,
@@ -9,8 +9,8 @@ pub struct MonsterSpawn {
 }
 
 pub struct MonsterSpawnPoint {
-    pub basic_spawns: Vec<MonsterSpawn>,
-    pub tactic_spawns: Vec<MonsterSpawn>,
+    pub basic_spawns: Vec<(NpcReference, usize)>,
+    pub tactic_spawns: Vec<(NpcReference, usize)>,
     pub interval: Duration,
     pub limit_count: u32,
     pub range: u32,
@@ -21,25 +21,11 @@ pub struct MonsterSpawnPoint {
     pub monsters: Vec<Entity>,
 }
 
-impl From<&ifo::MonsterSpawnPoint> for MonsterSpawnPoint {
-    fn from(spawn_point: &ifo::MonsterSpawnPoint) -> Self {
+impl From<&ZoneMonsterSpawnPoint> for MonsterSpawnPoint {
+    fn from(spawn_point: &ZoneMonsterSpawnPoint) -> Self {
         Self {
-            basic_spawns: spawn_point
-                .basic_spawns
-                .iter()
-                .map(|x| MonsterSpawn {
-                    id: x.id,
-                    count: x.count,
-                })
-                .collect(),
-            tactic_spawns: spawn_point
-                .tactic_spawns
-                .iter()
-                .map(|x| MonsterSpawn {
-                    id: x.id,
-                    count: x.count,
-                })
-                .collect(),
+            basic_spawns: spawn_point.basic_spawns.clone(),
+            tactic_spawns: spawn_point.tactic_spawns.clone(),
             interval: Duration::from_secs(spawn_point.interval as u64),
             limit_count: spawn_point.limit_count,
             range: spawn_point.range,

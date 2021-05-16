@@ -38,7 +38,8 @@ pub fn client_entity_visibility(
         world,
         |(entity, client, client_entity, client_visibility, position)| {
             if let Some(zone) = client_entity_list.get_zone(position.zone as usize) {
-                let sector_visible_entities = zone.get_sector_visible_entities(client_entity.sector);
+                let sector_visible_entities =
+                    zone.get_sector_visible_entities(client_entity.sector);
 
                 let mut remove_entities = &client_visibility.entities - sector_visible_entities;
                 let mut spawn_entities = sector_visible_entities - &client_visibility.entities;
