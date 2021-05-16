@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::{
     data::{item::AbilityType, AbilityValueCalculator, ItemDatabase, ItemReference, SkillDatabase},
     game::components::{
-        AbilityValues, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
+        AbilityValues, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory, Level,
     },
 };
 
@@ -136,4 +136,30 @@ fn calculate_run_speed(
     // TODO: Adding of passive move speed
     // TODO: run_speed += add_value
     run_speed
+}
+
+fn calculate_max_hp(character_info: &CharacterInfo, level: &Level, strength: i32) -> i32 {
+    let (level_add, level_multiplier, strength_multipler) = match character_info.job {
+        111 => (7, 12, 1),
+        121 => (-3, 14, 2),
+        122 => (2, 13, 2),
+
+        211 => (11, 10, 2),
+        221 => (11, 10, 2),
+        222 => (5, 11, 2),
+
+        311 => (10, 11, 2),
+        321 => (2, 13, 2),
+        322 => (11, 11, 2),
+
+        411 => (12, 10, 2),
+        421 => (13, 10, 2),
+        422 => (6, 11, 2),
+
+        _ => (12, 8, 2),
+    };
+
+    (level.level as i32 + level_add) * level_multiplier + strength * strength_multipler
+    // TODO: + max_hp add value
+    // TODO: + passive max hp
 }

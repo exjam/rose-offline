@@ -1,27 +1,34 @@
-use std::sync::Arc;
-
-use protocol::server::{GameServer, LoginServer, WorldServer};
-use tokio::net::TcpListener;
-
 mod data;
-use data::VFS_INDEX;
-
 mod game;
 mod irose;
 mod protocol;
 
+use std::{path::Path, sync::Arc};
+use tokio::net::TcpListener;
+
+use crate::{
+    data::formats::VfsIndex,
+    protocol::server::{GameServer, LoginServer, WorldServer},
+};
+
 #[tokio::main]
 async fn main() {
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
-    let skill_database = Arc::new(irose::data::get_skill_database(&VFS_INDEX).unwrap());
-    let item_database = Arc::new(irose::data::get_item_database(&VFS_INDEX).unwrap());
-    let npc_database = Arc::new(irose::data::get_npc_database(&VFS_INDEX).unwrap());
-    let zone_database = Arc::new(irose::data::get_zone_database(&VFS_INDEX).unwrap());
-    let character_creator =
-        irose::data::get_character_creator(&VFS_INDEX, &skill_database).unwrap();
+    let vfs_index = VfsIndex::load(&Path::new("data.idx")).expect("Failed reading data.idx");
+    let skill_database = Arc::new(
+        irose::data::get_skill_database(&vfs_index).expect("Failed to load skill database"),
+    );
+    let item_database =
+        Arc::new(irose::data::get_item_database(&vfs_index).expect("Failed to load item database"));
+    let npc_database =
+        Arc::new(irose::data::get_npc_database(&vfs_index).expect("Failed to load npc database"));
+    let zone_database =
+        Arc::new(irose::data::get_zone_database(&vfs_index).expect("Failed to load zone database"));
+    let character_creator = irose::data::get_character_creator(&vfs_index, &skill_database)
+        .expect("Failed to get character creator");
     let ability_value_calculator =
         irose::data::get_ability_value_calculator(item_database.clone(), skill_database.clone())
-            .unwrap();
+            .expect("Failed to get ability value calculator");
 
     std::thread::spawn(move || {
         game::Game::new(game_control_rx).run(
