@@ -3,9 +3,6 @@ pub mod character;
 pub mod formats;
 pub mod item;
 
-mod calculate_ability_values;
-pub use calculate_ability_values::calculate_ability_values;
-
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
 use std::path::Path;
@@ -31,25 +28,7 @@ pub use npc_database::{
 pub use skill_database::{SkillData, SkillDatabase, SkillPage, SkillReference};
 pub use zone_database::{ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint, ZoneNpcSpawn};
 
-fn load_stb(path: &str) -> StbFile {
-    if let Some(file) = VFS_INDEX.open_file(path) {
-        if let Ok(data) = StbFile::read(FileReader::from(&file)) {
-            return data;
-        }
-    }
-
-    panic!("Failed reading {}", path);
-}
-
-fn load_stb_with_keys(path: &str) -> StbFile {
-    if let Some(file) = VFS_INDEX.open_file(path) {
-        if let Ok(data) = StbFile::read_with_keys(FileReader::from(&file)) {
-            return data;
-        }
-    }
-
-    panic!("Failed reading {}", path);
-}
+use crate::game::components::{AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory};
 
 lazy_static! {
     pub static ref LOCAL_STORAGE_DIR: PathBuf = {
@@ -65,4 +44,14 @@ lazy_static! {
 
         panic!("Failed reading data.idx");
     };
+}
+
+pub trait AbilityValueCalculator {
+    fn calculate(
+        &self,
+        character_info: &CharacterInfo,
+        equipment: &Equipment,
+        inventory: &Inventory,
+        basic_stats: &BasicStats,
+    ) -> AbilityValues;
 }

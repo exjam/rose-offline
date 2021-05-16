@@ -1,8 +1,59 @@
-use super::{ItemDatabase, ItemReference};
+use std::sync::Arc;
+
 use crate::{
-    data::item::AbilityType,
-    game::components::{AbilityValues, BasicStats, Equipment, EquipmentIndex, Inventory},
+    data::{item::AbilityType, AbilityValueCalculator, ItemDatabase, ItemReference, SkillDatabase},
+    game::components::{
+        AbilityValues, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
+    },
 };
+
+pub struct AbilityValuesData {
+    item_database: Arc<ItemDatabase>,
+    skill_database: Arc<SkillDatabase>,
+}
+
+impl AbilityValuesData {
+    pub fn new(item_database: Arc<ItemDatabase>, skill_database: Arc<SkillDatabase>) -> Self {
+        Self {
+            item_database,
+            skill_database,
+        }
+    }
+}
+
+pub fn get_ability_value_calculator(
+    item_database: Arc<ItemDatabase>,
+    skill_database: Arc<SkillDatabase>,
+) -> Option<Box<impl AbilityValueCalculator + Send + Sync>> {
+    Some(Box::new(AbilityValuesData::new(
+        item_database,
+        skill_database,
+    )))
+}
+
+impl AbilityValueCalculator for AbilityValuesData {
+    fn calculate(
+        &self,
+        character_info: &CharacterInfo,
+        equipment: &Equipment,
+        inventory: &Inventory,
+        basic_stats: &BasicStats,
+    ) -> AbilityValues {
+        // TODO: Passive skills
+        let equipment_ability_values =
+            calculate_equipment_ability_values(&self.item_database, equipment);
+        // TODO: Add buffs / debuffs
+
+        AbilityValues {
+            run_speed: calculate_run_speed(
+                &self.item_database,
+                &basic_stats,
+                &equipment_ability_values,
+                &equipment,
+            ),
+        }
+    }
+}
 
 #[derive(Default)]
 struct EquipmentAbilityValue {
@@ -85,24 +136,4 @@ fn calculate_run_speed(
     // TODO: Adding of passive move speed
     // TODO: run_speed += add_value
     run_speed
-}
-
-pub fn calculate_ability_values(
-    item_database: &ItemDatabase,
-    equipment: &Equipment,
-    _inventory: &Inventory,
-    basic_stats: &BasicStats,
-) -> AbilityValues {
-    // TODO: Passive skills
-    let equipment_ability_values = calculate_equipment_ability_values(item_database, equipment);
-    // TODO: Add buffs / debuffs
-
-    AbilityValues {
-        run_speed: calculate_run_speed(
-            item_database,
-            &basic_stats,
-            &equipment_ability_values,
-            &equipment,
-        ),
-    }
 }

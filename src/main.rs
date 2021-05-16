@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use protocol::server::{GameServer, LoginServer, WorldServer};
 use tokio::net::TcpListener;
 
@@ -11,15 +13,24 @@ mod protocol;
 #[tokio::main]
 async fn main() {
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
-    let skill_database = irose::data::get_skill_database(&VFS_INDEX).unwrap();
+    let skill_database = Arc::new(irose::data::get_skill_database(&VFS_INDEX).unwrap());
+    let item_database = Arc::new(irose::data::get_item_database(&VFS_INDEX).unwrap());
+    let npc_database = Arc::new(irose::data::get_npc_database(&VFS_INDEX).unwrap());
+    let zone_database = Arc::new(irose::data::get_zone_database(&VFS_INDEX).unwrap());
+    let character_creator =
+        irose::data::get_character_creator(&VFS_INDEX, &skill_database).unwrap();
+    let ability_value_calculator =
+        irose::data::get_ability_value_calculator(item_database.clone(), skill_database.clone())
+            .unwrap();
 
     std::thread::spawn(move || {
         game::Game::new(game_control_rx).run(
-            irose::data::get_character_creator(&VFS_INDEX, &skill_database).unwrap(),
-            irose::data::get_item_database(&VFS_INDEX).unwrap(),
-            irose::data::get_npc_database(&VFS_INDEX).unwrap(),
+            character_creator,
+            ability_value_calculator,
+            item_database,
+            npc_database,
             skill_database,
-            irose::data::get_zone_database(&VFS_INDEX).unwrap(),
+            zone_database,
         );
     });
 

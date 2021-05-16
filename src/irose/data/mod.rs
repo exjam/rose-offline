@@ -1,3 +1,4 @@
+mod ability_values;
 mod character_creator;
 mod item_database;
 mod npc_database;
@@ -28,6 +29,7 @@ fn decode_item_reference(value: u32) -> Result<ItemReference, DecodeItemReferenc
     }
 }
 
+pub use ability_values::get_ability_value_calculator;
 pub use character_creator::get_character_creator;
 pub use item_database::get_item_database;
 pub use npc_database::get_npc_database;

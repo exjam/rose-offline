@@ -3,9 +3,7 @@ use nalgebra::Point3;
 use std::num::{ParseFloatError, ParseIntError};
 
 use crate::{
-    data::{
-        account::AccountStorage, calculate_ability_values, character::CharacterStorage, item::Item,
-    },
+    data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
@@ -50,8 +48,8 @@ pub fn game_server_authentication(
                                     .ok_or(ConnectionRequestError::Failed)
                             })
                             .map(|character| {
-                                let ability_values = calculate_ability_values(
-                                    &game_data.items,
+                                let ability_values = game_data.ability_value_calculator.calculate(
+                                    &character.info,
                                     &character.equipment,
                                     &character.inventory,
                                     &character.basic_stats,

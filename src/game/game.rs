@@ -1,6 +1,6 @@
 use crossbeam_channel::Receiver;
 use legion::*;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use super::{
     components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},
@@ -11,7 +11,10 @@ use super::{
     },
     systems::*,
 };
-use crate::data::{CharacterCreator, ItemDatabase, NpcDatabase, SkillDatabase, ZoneDatabase};
+use crate::data::{
+    AbilityValueCalculator, CharacterCreator, ItemDatabase, NpcDatabase, SkillDatabase,
+    ZoneDatabase,
+};
 
 pub struct Game {
     tick_rate_hz: u64,
@@ -29,13 +32,15 @@ impl Game {
     pub fn run(
         &mut self,
         character_creator: Box<dyn CharacterCreator + Send + Sync>,
-        item_database: ItemDatabase,
-        npc_database: NpcDatabase,
-        skill_database: SkillDatabase,
-        zone_database: ZoneDatabase,
+        ability_value_calculator: Box<dyn AbilityValueCalculator + Send + Sync>,
+        item_database: Arc<ItemDatabase>,
+        npc_database: Arc<NpcDatabase>,
+        skill_database: Arc<SkillDatabase>,
+        zone_database: Arc<ZoneDatabase>,
     ) {
         let game_data = GameData {
             character_creator,
+            ability_value_calculator,
             items: item_database,
             npcs: npc_database,
             skills: skill_database,
