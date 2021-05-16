@@ -145,11 +145,15 @@ impl StbItem {
     }
 }
 
-fn load_base_item(data: &StbItem, id: usize) -> Option<BaseItemData> {
-    let icon_number = data.get_icon_number(id)?;
+fn load_base_item(data: &StbItem, id: usize, check_valid: bool) -> Option<BaseItemData> {
+    let icon_number = if check_valid {
+        data.get_icon_number(id)?
+    } else {
+        data.get_icon_number(id).unwrap_or(0)
+    };
 
     Some(BaseItemData {
-        class: data.get_item_class(id)?,
+        class: data.get_item_class(id).unwrap_or(ItemClass::Unknown),
         base_price: data.get_base_price(id).unwrap_or(0),
         price_rate: data.get_price_rate(id).unwrap_or(0),
         weight: data.get_weight(id).unwrap_or(0),
@@ -174,7 +178,7 @@ fn load_base_item(data: &StbItem, id: usize) -> Option<BaseItemData> {
 }
 
 fn load_back_item(data: &StbItem, id: usize) -> Option<BackItemData> {
-    let base_item_data = load_base_item(data, id)?;
+    let base_item_data = load_base_item(data, id, true)?;
     Some(BackItemData {
         item_data: base_item_data,
         move_speed: data.get_back_move_speed(id).unwrap_or(0),
@@ -182,7 +186,8 @@ fn load_back_item(data: &StbItem, id: usize) -> Option<BackItemData> {
 }
 
 fn load_feet_item(data: &StbItem, id: usize) -> Option<FeetItemData> {
-    let base_item_data = load_base_item(data, id)?;
+    // Feet item id == 0 is used for base move speed
+    let base_item_data = load_base_item(data, id, id != 0)?;
     Some(FeetItemData {
         item_data: base_item_data,
         move_speed: data.get_feet_move_speed(id).unwrap_or(0),
@@ -190,7 +195,7 @@ fn load_feet_item(data: &StbItem, id: usize) -> Option<FeetItemData> {
 }
 
 fn load_weapon_item(data: &StbItem, id: usize) -> Option<WeaponItemData> {
-    let base_item_data = load_base_item(data, id)?;
+    let base_item_data = load_base_item(data, id, true)?;
     Some(WeaponItemData {
         item_data: base_item_data,
         weapon_type: data.get_weapon_type(id).unwrap_or(0),
@@ -202,7 +207,7 @@ fn load_weapon_item(data: &StbItem, id: usize) -> Option<WeaponItemData> {
 }
 
 fn load_subweapon_item(data: &StbItem, id: usize) -> Option<SubWeaponItemData> {
-    let base_item_data = load_base_item(data, id)?;
+    let base_item_data = load_base_item(data, id, true)?;
     Some(SubWeaponItemData {
         item_data: base_item_data,
         weapon_type: data.get_subweapon_type(id).unwrap_or(0),
@@ -210,7 +215,7 @@ fn load_subweapon_item(data: &StbItem, id: usize) -> Option<SubWeaponItemData> {
 }
 
 fn load_gem_item(data: &StbItem, id: usize) -> Option<GemItemData> {
-    let base_item_data = load_base_item(data, id)?;
+    let base_item_data = load_base_item(data, id, true)?;
     Some(GemItemData {
         item_data: base_item_data,
         gem_add_ability: data.get_gem_add_ability(id),
@@ -223,7 +228,7 @@ macro_rules! load_item_stb {
         let file = $vfs.open_file($path)?;
         let data = StbItem(StbFile::read(FileReader::from(&file)).ok()?);
         for id in 0..data.rows() {
-            if let Some(item) = load_base_item(&data, id) {
+            if let Some(item) = load_base_item(&data, id, true) {
                 items.insert(id as u16, $item_data_type { item_data: item });
             }
         }

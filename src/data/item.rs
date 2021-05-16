@@ -54,6 +54,7 @@ impl ItemType {
 
 #[derive(FromPrimitive)]
 pub enum ItemClass {
+    Unknown = 0,
     Ring = 171,
     Necklace = 172,
     Earring = 173,
