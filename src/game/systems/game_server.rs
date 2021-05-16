@@ -8,9 +8,9 @@ use crate::{
     },
     game::{
         components::{
-            BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility, Destination,
-            Equipment, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints,
-            MoveSpeed, Position, SkillList, Target, Team,
+            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
+            Destination, Equipment, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
+            ManaPoints, MoveSpeed, Position, SkillList, Target, Team,
         },
         messages::{
             client::{
@@ -145,6 +145,7 @@ lazy_static! {
         App::new("GM Commands")
             .subcommand(App::new("help"))
             .subcommand(App::new("where"))
+            .subcommand(App::new("ability_values"))
             .subcommand(
                 App::new("mm")
                     .arg(Arg::new("zone").required(true))
@@ -173,6 +174,18 @@ fn send_gm_commands_help(client: &mut GameClient) {
             .send(ServerMessage::Whisper(Whisper {
                 from: String::from("SERVER"),
                 text: help_string,
+            }))
+            .ok();
+    }
+}
+
+fn send_multiline_whisper(client: &mut GameClient, str: &str) {
+    for line in str.lines() {
+        client
+            .server_message_tx
+            .send(ServerMessage::Whisper(Whisper {
+                from: String::from("SERVER"),
+                text: line.to_string(),
             }))
             .ok();
     }
@@ -217,6 +230,7 @@ fn handle_gm_command(
     text: &str,
     entity_id: &ClientEntity,
     position: &Position,
+    ability_values: &AbilityValues,
 ) -> Result<(), GMCommandError> {
     let mut args = shellwords::split(text)?;
     args.insert(0, String::new()); // Clap expects arg[0] to be like executable name
@@ -259,6 +273,9 @@ fn handle_gm_command(
                 }))
                 .ok();
         }
+        ("ability_values", _) => {
+            send_multiline_whisper(client, &format!("{:?}", ability_values));
+        }
         _ => return Err(GMCommandError::InvalidCommand),
     }
 
@@ -275,6 +292,7 @@ pub fn game_server_main(
     hotbar: &mut Hotbar,
     equipment: &mut Equipment,
     inventory: &mut Inventory,
+    ability_values: &AbilityValues,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] server_messages: &mut ServerMessages,
 ) {
@@ -282,8 +300,16 @@ pub fn game_server_main(
         match message {
             ClientMessage::Chat(text) => {
                 if text.chars().next().map_or(false, |c| c == '/') {
-                    if handle_gm_command(cmd, entity, client, &text[1..], entity_id, position)
-                        .is_err()
+                    if handle_gm_command(
+                        cmd,
+                        entity,
+                        client,
+                        &text[1..],
+                        entity_id,
+                        position,
+                        ability_values,
+                    )
+                    .is_err()
                     {
                         send_gm_commands_help(client);
                     }

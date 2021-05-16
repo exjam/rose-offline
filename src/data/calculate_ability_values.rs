@@ -84,7 +84,6 @@ fn calculate_run_speed(
 
     // TODO: Adding of passive move speed
     // TODO: run_speed += add_value
-    println!("Run speed: {}", run_speed);
     run_speed
 }
 
