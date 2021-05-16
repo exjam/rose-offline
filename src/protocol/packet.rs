@@ -20,7 +20,7 @@ pub struct Packet {
 impl Packet {
     pub fn with_data(command: u16, data: BytesMut) -> Packet {
         Packet {
-            command: command,
+            command,
             data: data.freeze(),
         }
     }

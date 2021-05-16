@@ -29,10 +29,10 @@ async fn run_connection(
 
     let entity = response_rx.await?;
     let mut client = Client {
-        entity: entity,
+        entity,
         connection: Connection::new(stream, &protocol.packet_codec),
-        client_message_tx: client_message_tx,
-        server_message_rx: server_message_rx,
+        client_message_tx,
+        server_message_rx,
     };
     let result = (protocol.create_client)().run_client(&mut client).await;
 
@@ -106,7 +106,7 @@ impl WorldServer {
         let (response_tx, response_rx) = oneshot::channel();
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddWorldServer {
-            name: name,
+            name,
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),
             packet_codec_seed: protocol.packet_codec.get_seed(),
@@ -174,7 +174,7 @@ impl GameServer {
         let (response_tx, response_rx) = oneshot::channel();
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddGameServer {
-            name: name,
+            name,
             world_server,
             ip: local_addr.ip().to_string(),
             port: local_addr.port(),

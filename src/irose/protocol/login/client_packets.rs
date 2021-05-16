@@ -52,9 +52,7 @@ impl TryFrom<&Packet> for PacketClientChannelList {
         let mut reader = PacketReader::from(packet);
         let server_id = reader.read_u32()?;
 
-        Ok(PacketClientChannelList {
-            server_id: server_id,
-        })
+        Ok(PacketClientChannelList { server_id })
     }
 }
 
@@ -77,8 +75,8 @@ impl TryFrom<&Packet> for PacketClientSelectServer {
         let channel_id = reader.read_u8()? - 1;
 
         Ok(PacketClientSelectServer {
-            server_id: server_id,
-            channel_id: channel_id,
+            server_id,
+            channel_id,
         })
     }
 }

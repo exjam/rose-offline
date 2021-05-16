@@ -49,7 +49,7 @@ pub fn game_server_authentication(
                                     .ok()
                                     .ok_or(ConnectionRequestError::Failed)
                             })
-                            .and_then(|character| {
+                            .map(|character| {
                                 let ability_values = calculate_ability_values(
                                     &game_data.items,
                                     &character.equipment,
@@ -75,7 +75,7 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.mana_points.clone());
                                 cmd.add_component(*entity, Team::default_character());
 
-                                Ok(GameConnectionResponse {
+                                GameConnectionResponse {
                                     packet_sequence_id: 123,
                                     character_info: character.info,
                                     position: character.position,
@@ -87,7 +87,7 @@ pub fn game_server_authentication(
                                     hotbar: character.hotbar,
                                     health_points: character.health_points,
                                     mana_points: character.mana_points,
-                                })
+                                }
                             })
                     });
                 message.response_tx.send(response).ok();
@@ -252,8 +252,8 @@ fn handle_gm_command(
                 .send(ServerMessage::Teleport(server::Teleport {
                     entity_id: entity_id.id.0,
                     zone_no: zone,
-                    x: x,
-                    y: y,
+                    x,
+                    y,
                     run_mode: 1,
                     ride_mode: 0,
                 }))
@@ -281,7 +281,7 @@ pub fn game_server_main(
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::Chat(text) => {
-                if text.chars().nth(0).map_or(false, |c| c == '/') {
+                if text.chars().next().map_or(false, |c| c == '/') {
                     if handle_gm_command(cmd, entity, client, &text[1..], entity_id, position)
                         .is_err()
                     {
@@ -289,10 +289,10 @@ pub fn game_server_main(
                     }
                 } else {
                     server_messages.send_entity_message(
-                        entity.clone(),
+                        *entity,
                         ServerMessage::LocalChat(server::LocalChat {
                             entity_id: entity_id.id.0,
-                            text: text,
+                            text,
                         }),
                     );
                 }
@@ -328,10 +328,10 @@ pub fn game_server_main(
 
                 let distance = (destination - position.position).magnitude();
                 server_messages.send_entity_message(
-                    entity.clone(),
+                    *entity,
                     ServerMessage::MoveEntity(server::MoveEntity {
                         entity_id: entity_id.id.0,
-                        target_entity_id: target_entity_id,
+                        target_entity_id,
                         distance: distance as u16,
                         x: message.x,
                         y: message.y,
@@ -344,7 +344,7 @@ pub fn game_server_main(
                 slot,
                 response_tx,
             }) => {
-                if let Some(_) = hotbar.set_slot(slot_index, slot) {
+                if hotbar.set_slot(slot_index, slot).is_some() {
                     response_tx.send(Ok(())).ok();
                 } else {
                     response_tx.send(Err(SetHotbarSlotError::InvalidSlot)).ok();
@@ -364,37 +364,32 @@ pub fn game_server_main(
                     if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
                         let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
 
-                        match inventory_slot {
-                            Some(Item::Equipment(equipment_item)) => {
-                                let previous = equipment_slot.take();
-                                *equipment_slot = Some(equipment_item.clone());
-                                *inventory_slot = previous.map(|item| Item::Equipment(item));
+                        if let Some(Item::Equipment(equipment_item)) = inventory_slot {
+                            let previous = equipment_slot.take();
+                            *equipment_slot = Some(equipment_item.clone());
+                            *inventory_slot = previous.map(Item::Equipment);
 
-                                client
-                                    .server_message_tx
-                                    .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                        items: vec![
-                                            (
-                                                ItemSlot::Equipped(equipment_index),
-                                                equipment_slot
-                                                    .clone()
-                                                    .map(|item| Item::Equipment(item)),
-                                            ),
-                                            (item_slot, inventory_slot.clone()),
-                                        ],
-                                    }))
-                                    .ok();
+                            client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                    items: vec![
+                                        (
+                                            ItemSlot::Equipped(equipment_index),
+                                            equipment_slot.clone().map(Item::Equipment),
+                                        ),
+                                        (item_slot, inventory_slot.clone()),
+                                    ],
+                                }))
+                                .ok();
 
-                                server_messages.send_entity_message(
-                                    entity.clone(),
-                                    ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                        entity_id: entity_id.id.0,
-                                        equipment_index,
-                                        item: equipment_slot.clone(),
-                                    }),
-                                );
-                            }
-                            _ => {}
+                            server_messages.send_entity_message(
+                                *entity,
+                                ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                    entity_id: entity_id.id.0,
+                                    equipment_index,
+                                    item: equipment_slot.clone(),
+                                }),
+                            );
                         }
                     }
                 } else {
@@ -417,7 +412,7 @@ pub fn game_server_main(
                                     .ok();
 
                                 server_messages.send_entity_message(
-                                    entity.clone(),
+                                    *entity,
                                     ServerMessage::UpdateEquipment(server::UpdateEquipment {
                                         entity_id: entity_id.id.0,
                                         equipment_index,
@@ -426,7 +421,7 @@ pub fn game_server_main(
                                 );
                             }
                             Err(item) => {
-                                *equipment_slot = Some(item.into());
+                                *equipment_slot = Some(item);
                             }
                         }
                     }

@@ -1,12 +1,12 @@
-use std::{collections::HashMap, convert::TryInto};
+use std::collections::HashMap;
 
-use crate::data::{
-    formats::{FileReader, StbFile, VfsIndex},
-    NpcConversationData, NpcData, NpcDatabase,
+use crate::{
+    data::{
+        formats::{FileReader, StbFile, VfsIndex},
+        NpcConversationData, NpcData, NpcDatabase,
+    },
+    stb_column,
 };
-
-#[macro_use]
-use crate::stb_column;
 
 use super::decode_item_reference;
 
@@ -70,10 +70,10 @@ impl StbNpc {
         let mut colour = self.0.try_get_int(id, 39).unwrap_or(0);
 
         let red = colour / 1000000;
-        colour = colour % 1000000;
+        colour %= 1000000;
 
         let green = colour / 1000;
-        colour = colour % 1000;
+        colour %= 1000;
 
         let blue = colour;
 

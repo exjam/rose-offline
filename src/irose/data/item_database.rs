@@ -59,7 +59,7 @@ impl StbItem {
             let ability_type: Option<AbilityType> = self
                 .0
                 .try_get_int(id, 19 + i * 2)
-                .and_then(|x| FromPrimitive::from_i32(x));
+                .and_then(FromPrimitive::from_i32);
             let ability_value = self.0.try_get_int(id, 20 + i * 2);
 
             ability_type.map(|ability_type| {
@@ -88,7 +88,7 @@ impl StbItem {
             let ability_type: Option<AbilityType> = self
                 .0
                 .try_get_int(id, 24 + i * 3)
-                .and_then(|x| FromPrimitive::from_i32(x));
+                .and_then(FromPrimitive::from_i32);
             let ability_value = self.0.try_get_int(id, 25 + i * 3);
 
             ability_type.map(|ability_type| {
@@ -134,7 +134,7 @@ impl StbItem {
             let ability_type: Option<AbilityType> = self
                 .0
                 .try_get_int(id, 16 + i * 2)
-                .and_then(|x| FromPrimitive::from_i32(x));
+                .and_then(FromPrimitive::from_i32);
             let ability_value = self.0.try_get_int(id, 17 + i * 2);
 
             ability_type.map(|ability_type| {

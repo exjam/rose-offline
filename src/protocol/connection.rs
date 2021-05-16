@@ -16,7 +16,7 @@ impl<'a> Connection<'a> {
         Self {
             stream: BufWriter::new(socket),
             buffer: BytesMut::with_capacity(4 * 1024),
-            packet_codec: packet_codec,
+            packet_codec,
         }
     }
 
@@ -48,25 +48,20 @@ impl<'a> Connection<'a> {
                     return Err(ProtocolError::InvalidPacket);
                 }
                 have_read_header = true;
+            } else if self.packet_codec.decrypt_client_body(&mut self.buffer) {
+                // Read packet into size, command, data
+                let size = self.buffer.get_u16_le() as usize;
+                let command = self.buffer.get_u16_le();
+                self.buffer.advance(2);
+                let data: Bytes = self.buffer.split_to(size - 6).into();
+
+                // Packets can contain random amount of padding at end
+                self.buffer.advance(read_length - size);
+
+                println!("RECV [{:03X}] {:02x?}", command, &data[..]);
+                return Ok(Packet { command, data });
             } else {
-                if self.packet_codec.decrypt_client_body(&mut self.buffer) {
-                    // Read packet into size, command, data
-                    let size = self.buffer.get_u16_le() as usize;
-                    let command = self.buffer.get_u16_le();
-                    self.buffer.advance(2);
-                    let data: Bytes = self.buffer.split_to(size - 6).into();
-
-                    // Packets can contain random amount of padding at end
-                    self.buffer.advance(read_length - size);
-
-                    println!("RECV [{:03X}] {:02x?}", command, &data[..]);
-                    return Ok(Packet {
-                        command: command,
-                        data: data,
-                    });
-                } else {
-                    return Err(ProtocolError::InvalidPacket);
-                }
+                return Err(ProtocolError::InvalidPacket);
             }
         }
     }

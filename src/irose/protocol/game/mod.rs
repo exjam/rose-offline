@@ -44,7 +44,7 @@ impl GameClient {
                         GameConnectionRequest {
                             login_token: request.login_token,
                             password_md5: String::from(request.password_md5),
-                            response_tx: response_tx,
+                            response_tx,
                         },
                     ))?;
                 match response_rx.await? {

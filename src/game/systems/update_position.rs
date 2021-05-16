@@ -33,8 +33,8 @@ pub fn update_position(
     }
 
     if let Some(client_entity) = client_entity {
-        client_entity_list
-            .get_zone_mut(position.zone as usize)
-            .map(|zone| zone.update_sector(entity, client_entity, position.position));
+        if let Some(zone) = client_entity_list.get_zone_mut(position.zone as usize) {
+            zone.update_sector(entity, client_entity, position.position)
+        }
     }
 }

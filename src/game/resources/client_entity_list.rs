@@ -95,7 +95,7 @@ impl ClientEntityZone {
 
     fn add_sector_entity(&mut self, sector: Point2<u32>, entity: &Entity) {
         // Add to the sector
-        self.get_sector_mut(sector).add_entity(entity.clone());
+        self.get_sector_mut(sector).add_entity(*entity);
 
         // Add to visible list in all adjacent sectors
         let min_sector_x = sector.x.saturating_sub(1);
@@ -106,7 +106,7 @@ impl ClientEntityZone {
         for x in min_sector_x..=max_sector_x {
             for y in min_sector_y..=max_sector_y {
                 self.get_sector_mut(Point2::new(x, y))
-                    .add_visible_entity(entity.clone());
+                    .add_visible_entity(*entity);
             }
         }
     }
@@ -143,7 +143,7 @@ impl ClientEntityZone {
 
             let sector = self.calculate_sector(position);
             self.add_sector_entity(sector, &entity);
-            return Some(ClientEntity::new(id, sector));
+            Some(ClientEntity::new(id, sector))
         } else {
             None
         }

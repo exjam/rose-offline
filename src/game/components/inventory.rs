@@ -42,11 +42,11 @@ impl Sub<u32> for Money {
     }
 }
 
-impl Into<u32> for Money {
-    fn into(self) -> u32 {
-        if self.0 > (u32::MAX as i64) {
+impl From<Money> for u32 {
+    fn from(value: Money) -> u32 {
+        if value.0 > (u32::MAX as i64) {
             u32::MAX
-        } else if let Ok(result) = u32::try_from(self.0) {
+        } else if let Ok(result) = u32::try_from(value.0) {
             result
         } else {
             0
@@ -98,13 +98,8 @@ impl InventoryPage {
 
     pub fn try_add_item(&mut self, item: Item) -> Result<ItemSlot, Item> {
         match item {
-            Item::Equipment(item) => self
-                .try_add_equipment_item(item)
-                .map_err(|item| Item::Equipment(item)),
-            Item::Stackable(item) => self
-                .try_add_stackable_item(item)
-                .map_err(|item| Item::Stackable(item)),
-            _ => Err(item),
+            Item::Equipment(item) => self.try_add_equipment_item(item).map_err(Item::Equipment),
+            Item::Stackable(item) => self.try_add_stackable_item(item).map_err(Item::Stackable),
         }
     }
 

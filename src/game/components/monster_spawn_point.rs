@@ -3,11 +3,6 @@ use std::time::Duration;
 
 use crate::data::{NpcReference, ZoneMonsterSpawnPoint};
 
-pub struct MonsterSpawn {
-    pub id: u32,
-    pub count: u32,
-}
-
 pub struct MonsterSpawnPoint {
     pub basic_spawns: Vec<(NpcReference, usize)>,
     pub tactic_spawns: Vec<(NpcReference, usize)>,

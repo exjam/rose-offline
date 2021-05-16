@@ -78,7 +78,7 @@ impl VfsIndex {
             let mmap = unsafe { MmapOptions::new().map(&file)? };
 
             let mut storage = Storage {
-                mmap: mmap,
+                mmap,
                 files: HashMap::with_capacity(num_files),
             };
 

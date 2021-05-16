@@ -38,9 +38,9 @@ impl StbFile {
 
         let version = {
             let version = reader.read_u8()?;
-            if version == '0' as u8 {
+            if version == b'0' {
                 0
-            } else if version == '1' as u8 {
+            } else if version == b'1' {
                 1
             } else {
                 return Err(StbReadError::UnsupportedVersion);

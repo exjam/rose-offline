@@ -77,8 +77,8 @@ impl ZonFile {
         }
 
         Ok(Self {
-            grid_size,
             grid_per_patch,
+            grid_size,
             event_positions,
         })
     }

@@ -1,12 +1,12 @@
-use std::{collections::HashMap, convert::TryInto};
+use std::collections::HashMap;
 
-use crate::data::{
-    formats::{FileReader, StbFile, VfsIndex},
-    SkillData, SkillDatabase, SkillPage,
+use crate::{
+    data::{
+        formats::{FileReader, StbFile, VfsIndex},
+        SkillData, SkillDatabase, SkillPage,
+    },
+    stb_column,
 };
-
-#[macro_use]
-use crate::stb_column;
 
 pub struct StbSkill(pub StbFile);
 

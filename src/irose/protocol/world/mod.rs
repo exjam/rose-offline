@@ -34,7 +34,7 @@ impl WorldClient {
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
                         login_token: request.login_token,
                         password_md5: String::from(request.password_md5),
-                        response_tx: response_tx,
+                        response_tx,
                     }))?;
                 let packet = match response_rx.await? {
                     Ok(result) => Packet::from(&PacketConnectionReply {
@@ -55,7 +55,7 @@ impl WorldClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::GetCharacterList(GetCharacterList {
-                        response_tx: response_tx,
+                        response_tx,
                     }))?;
                 let response = response_rx.await?;
                 client
@@ -76,7 +76,7 @@ impl WorldClient {
                         hair: request.hair,
                         face: request.face,
                         name: String::from(request.name),
-                        response_tx: response_tx,
+                        response_tx,
                     }))?;
                 let response = match response_rx.await? {
                     Ok(slot) => Packet::from(&PacketServerCreateCharacterReply {
@@ -119,7 +119,7 @@ impl WorldClient {
                         slot: request.slot,
                         name: String::from(request.name),
                         is_delete: request.is_delete,
-                        response_tx: response_tx,
+                        response_tx,
                     }))?;
                 let packet = match response_rx.await? {
                     Ok(response) => Packet::from(&PacketServerDeleteCharacterReply {
@@ -147,7 +147,7 @@ impl WorldClient {
                     .send(ClientMessage::SelectCharacter(SelectCharacter {
                         slot: request.slot,
                         name: String::from(request.name),
-                        response_tx: response_tx,
+                        response_tx,
                     }))?;
                 let packet = match response_rx.await? {
                     Ok(response) => Packet::from(&PacketServerMoveServer {

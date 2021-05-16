@@ -1,7 +1,6 @@
 use crossbeam_channel::Receiver;
 use legion::*;
-use nalgebra::Point3;
-use std::{thread::current, time::Duration};
+use std::time::Duration;
 
 use super::{
     components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},

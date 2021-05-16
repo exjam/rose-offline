@@ -8,9 +8,6 @@ pub struct ClientEntity {
 
 impl ClientEntity {
     pub fn new(id: ClientEntityId, sector: Point2<u32>) -> Self {
-        Self {
-            id: id,
-            sector: sector,
-        }
+        Self { id, sector }
     }
 }

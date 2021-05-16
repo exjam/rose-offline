@@ -1,5 +1,4 @@
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use super::ItemReference;
@@ -27,32 +26,29 @@ pub enum ItemType {
 
 impl ItemType {
     pub fn is_stackable_item(self) -> bool {
-        match self {
-            ItemType::Consumable | ItemType::Gem | ItemType::Material | ItemType::Quest => true,
-            _ => false,
-        }
+        matches!(
+            self,
+            ItemType::Consumable | ItemType::Gem | ItemType::Material | ItemType::Quest
+        )
     }
 
     pub fn is_money(self) -> bool {
-        match self {
-            ItemType::Money => true,
-            _ => false,
-        }
+        matches!(self, ItemType::Money)
     }
 
     pub fn is_equipment(self) -> bool {
-        match self {
+        matches!(
+            self,
             ItemType::Face
-            | ItemType::Head
-            | ItemType::Body
-            | ItemType::Hands
-            | ItemType::Feet
-            | ItemType::Back
-            | ItemType::Jewellery
-            | ItemType::Weapon
-            | ItemType::SubWeapon => true,
-            _ => false,
-        }
+                | ItemType::Head
+                | ItemType::Body
+                | ItemType::Hands
+                | ItemType::Feet
+                | ItemType::Back
+                | ItemType::Jewellery
+                | ItemType::Weapon
+                | ItemType::SubWeapon
+        )
     }
 }
 
@@ -172,15 +168,9 @@ pub enum Item {
 impl Item {
     pub fn new(item: &ItemReference, quantity: u32) -> Option<Item> {
         if item.item_type.is_stackable_item() {
-            match StackableItem::new(item, quantity) {
-                Some(stackable) => Some(Item::Stackable(stackable)),
-                None => None,
-            }
+            StackableItem::new(item, quantity).map(Item::Stackable)
         } else if item.item_type.is_equipment() {
-            match EquipmentItem::new(item) {
-                Some(equipment) => Some(Item::Equipment(equipment)),
-                None => None,
-            }
+            EquipmentItem::new(item).map(Item::Equipment)
         } else {
             None
         }

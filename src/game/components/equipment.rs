@@ -95,8 +95,8 @@ impl Equipment {
             match self.equip_item(item) {
                 Ok((slot, remaining)) => {
                     updated_slots.push(slot);
-                    if remaining.is_some() {
-                        remaining_items.push(remaining.unwrap());
+                    if let Some(remaining) = remaining {
+                        remaining_items.push(remaining);
                     }
                 }
                 Err(item) => {

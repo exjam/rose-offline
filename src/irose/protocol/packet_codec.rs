@@ -51,22 +51,22 @@ impl Random {
 
     pub fn next_bc(&mut self) -> u32 {
         self.bc = Wrapping(0x8088405) * self.bc + Wrapping(1);
-        return (self.bc / Wrapping(0x10000)).0 as u32;
+        (self.bc / Wrapping(0x10000)).0 as u32
     }
 
     pub fn next_ac(&mut self) -> u32 {
         self.ac = (Wrapping(0x41C64E6D) * self.ac + Wrapping(12345)) & Wrapping(0x7FFFFFFF);
-        return self.ac.0 as u32;
+        self.ac.0 as u32
     }
 
     pub fn next_my(&mut self) -> u32 {
         self.my = Wrapping(0x41C64E6D) * self.my + Wrapping(12345);
-        return (self.my / Wrapping(0x10000)).0 as u32;
+        (self.my / Wrapping(0x10000)).0 as u32
     }
 
     pub fn next_vc(&mut self) -> u32 {
         self.vc = (Wrapping(0x343FD) * self.vc + Wrapping(0x269EC3)) & Wrapping(0x7FFFFFFF);
-        return (self.vc / Wrapping(0x10000)).0 as u32;
+        (self.vc / Wrapping(0x10000)).0 as u32
     }
 
     pub fn get_next_fn(seed_type: SeedType) -> fn(&mut Random) -> u32 {
@@ -79,7 +79,7 @@ impl Random {
     }
 }
 
-fn seed_table(table: &mut [u32; 16 * 2048], mut seed: &mut Random, seed_types: &Vec<SeedType>) {
+fn seed_table(table: &mut [u32; 16 * 2048], mut seed: &mut Random, seed_types: &[SeedType]) {
     for i in 0..16 {
         let seed_next_fn = Random::get_next_fn(seed_types[i]);
         let table_start = i * 2048;
@@ -190,7 +190,7 @@ struct HeadCryptedClient {
 }
 
 impl HeadCryptedServer {
-    pub fn encode_main(self: &mut Self, head: &Head) {
+    pub fn encode_main(&mut self, head: &Head) {
         let b = HeadDecrypted::from_bytes(head.into_bytes());
         self.set_add_buffer_len1(b.add_buffer_len1());
         self.set_add_buffer_len2(b.add_buffer_len2());
@@ -205,7 +205,7 @@ impl HeadCryptedServer {
         self.set_encrypt_add_value2(b.encrypt_add_value2());
     }
 
-    fn encode_final(self: &mut Self, head: &Head) {
+    fn encode_final(&mut self, head: &Head) {
         let b = HeadDecrypted::from_bytes(head.into_bytes());
         self.set_add_table_value1(b.add_table_value1());
         self.set_add_table_value2(b.add_table_value2());
@@ -215,7 +215,7 @@ impl HeadCryptedServer {
 }
 
 impl Head {
-    fn decode_client_main(self: &mut Self, b: &HeadCryptedClient) {
+    fn decode_client_main(&mut self, b: &HeadCryptedClient) {
         let mut a = HeadDecrypted::from_bytes(self.into_bytes());
         a.set_add_buffer_len1(b.add_buffer_len1());
         a.set_add_buffer_len2(b.add_buffer_len2());
@@ -231,7 +231,7 @@ impl Head {
         *self = Head::from_bytes(a.into_bytes());
     }
 
-    fn decode_client_final(self: &mut Self, b: &HeadCryptedClient) {
+    fn decode_client_final(&mut self, b: &HeadCryptedClient) {
         let mut a = HeadDecrypted::from_bytes(self.into_bytes());
         a.set_add_table_value1(b.add_table_value1());
         a.set_add_table_value2(b.add_table_value2());
@@ -254,7 +254,7 @@ impl PacketCodec {
         let seed_types: Vec<SeedType> = (0..16).map(get_seed_type).collect();
         let mut crypt = PacketCodec {
             seed: 0,
-            crc_table: crc_table,
+            crc_table,
             table: [0u32; 16 * 2048],
             index: [0u16; 512],
         };
@@ -270,7 +270,7 @@ impl PacketCodec {
             .collect();
         let mut crypt = PacketCodec {
             seed: init_seed,
-            crc_table: crc_table,
+            crc_table,
             table: [0u32; 16 * 2048],
             index: [0u16; 512],
         };

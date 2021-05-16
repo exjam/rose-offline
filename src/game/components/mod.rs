@@ -44,7 +44,7 @@ pub use inventory::*;
 pub use level::Level;
 pub use login_client::*;
 pub use mana_points::ManaPoints;
-pub use monster_spawn_point::{MonsterSpawn, MonsterSpawnPoint};
+pub use monster_spawn_point::MonsterSpawnPoint;
 pub use move_speed::MoveSpeed;
 pub use npc::Npc;
 pub use npc_standing_direction::NpcStandingDirection;

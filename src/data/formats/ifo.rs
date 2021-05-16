@@ -197,9 +197,9 @@ impl IfoFile {
         }
 
         Ok(IfoFile {
-            event_objects,
             monster_spawns,
             npcs,
+            event_objects,
         })
     }
 }

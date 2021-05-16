@@ -1,9 +1,5 @@
 use std::collections::HashMap;
 
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
-use serde::{Deserialize, Serialize};
-
 use crate::data::item::{AbilityType, ItemClass, ItemType};
 
 pub struct ItemReference {

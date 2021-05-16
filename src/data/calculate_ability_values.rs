@@ -68,7 +68,7 @@ fn calculate_run_speed(
         .get_equipment_item(EquipmentIndex::Feet)
         .filter(|item| !item.is_broken())
         .and_then(|item| item_database.get_feet_item(item.item_number as usize))
-        .or(item_database.get_feet_item(0))
+        .or_else(|| item_database.get_feet_item(0))
         .map(|item_data| item_data.move_speed)
         .unwrap_or(0) as f32;
 

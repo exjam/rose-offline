@@ -36,7 +36,7 @@ impl<'a> From<&'a [u8]> for FileReader<'a> {
     }
 }
 
-fn decode_string<'b>(mut bytes: &'b [u8]) -> Cow<'b, str> {
+fn decode_string(mut bytes: &[u8]) -> Cow<'_, str> {
     // Some fixed length strings include a null terminator, so we should trim it.
     for (i, c) in bytes.iter().enumerate() {
         if *c == 0 {

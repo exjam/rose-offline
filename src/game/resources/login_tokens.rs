@@ -25,7 +25,7 @@ impl LoginTokens {
         selected_game_server: Entity,
     ) -> u32 {
         let mut token = 0u32;
-        while token == 0 || self.tokens.iter().find(|x| x.token == token).is_some() {
+        while token == 0 || self.tokens.iter().any(|x| x.token == token) {
             token = rand::random();
         }
         self.tokens.push(LoginToken {

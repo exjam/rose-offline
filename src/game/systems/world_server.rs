@@ -42,7 +42,7 @@ pub fn world_server_authentication(
                                         if character
                                             .delete_time
                                             .as_ref()
-                                            .and_then(|x| Some(x.get_time_until_delete()))
+                                            .map(|x| x.get_time_until_delete())
                                             .filter(|x| x.as_nanos() == 0)
                                             .is_some()
                                         {
@@ -58,8 +58,7 @@ pub fn world_server_authentication(
                                 // Save account in case we have deleted characters
                                 account.save().ok();
                                 client.login_token = token.token;
-                                client.selected_game_server =
-                                    Some(token.selected_game_server.clone());
+                                client.selected_game_server = Some(token.selected_game_server);
                                 cmd.add_component(*entity, Account::from(account));
                                 cmd.add_component(*entity, character_list);
                                 Ok(ConnectionRequestResponse {
@@ -128,12 +127,12 @@ pub fn world_server(
                 } else {
                     create_character(&game_data, &message)
                 }
-                .and_then(|character| {
+                .map(|character| {
                     let slot = account.character_names.len();
                     account.character_names.push(character.info.name.clone());
                     AccountStorage::from(&*account).save().ok();
                     character_list.characters.push(character);
-                    Ok(slot as u8)
+                    slot as u8
                 });
                 message.response_tx.send(response).ok();
             }
@@ -162,13 +161,13 @@ pub fn world_server(
                     .filter(|character| character.info.name == message.name)
                     .map_or(Err(SelectCharacterError::Failed), |selected_character| {
                         // Set the selected_character for the login token
-                        login_tokens
+                        if let Some(token) = login_tokens
                             .tokens
                             .iter_mut()
                             .find(|t| t.token == client.login_token)
-                            .map(|token| {
-                                token.selected_character = selected_character.info.name.clone()
-                            });
+                        {
+                            token.selected_character = selected_character.info.name.clone()
+                        }
 
                         // Find the selected game server details
                         client

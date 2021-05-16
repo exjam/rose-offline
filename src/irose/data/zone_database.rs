@@ -1,19 +1,17 @@
-use std::{collections::HashMap, convert::TryInto, path::Path};
+use nalgebra::{Point2, Vector3};
+use std::{collections::HashMap, path::Path};
 
-use ifo::IfoReadError;
-use nalgebra::{Point2, Point3, Vector3};
-
-use crate::data::{
-    formats::{
-        ifo::{self, MonsterSpawn, MonsterSpawnPoint},
-        FileReader, IfoFile, StbFile, VfsIndex, ZonFile, ZonReadError,
+use crate::{
+    data::{
+        formats::{
+            ifo::{self, IfoReadError, MonsterSpawn},
+            FileReader, IfoFile, StbFile, VfsIndex, ZonFile, ZonReadError,
+        },
+        NpcConversationReference, NpcReference, ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint,
+        ZoneNpcSpawn,
     },
-    NpcConversationReference, NpcReference, ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint,
-    ZoneNpcSpawn,
+    stb_column,
 };
-
-#[macro_use]
-use crate::stb_column;
 
 const MIN_SECTOR_SIZE: u32 = 5000;
 const MAX_SECTOR_SIZE: u32 = 12000;

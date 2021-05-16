@@ -73,7 +73,7 @@ pub fn client_entity_visibility(
                         .ok()
                         .map(|client_entity| client_entity.id.0)
                 })
-                .filter_map(|x| x)
+                .flatten()
                 .collect();
 
             if !remove_entities.is_empty() {
@@ -106,7 +106,6 @@ pub fn client_entity_visibility(
                                 team: team.clone(),
                             }))
                             .ok();
-                        ()
                     })
                     .ok()
                     .is_some()
@@ -127,7 +126,6 @@ pub fn client_entity_visibility(
                                 team: team.clone(),
                             }))
                             .ok();
-                        ()
                     })
                     .ok()
                     .is_some()

@@ -4,19 +4,19 @@ use crate::data::{
     formats::{FileReader, VfsIndex},
     SkillDatabase,
 };
-#[macro_use]
+
 use crate::{
     data::{
-        ItemReference, SkillReference, SkillPage,
         character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
         formats::StbFile,
         item::{EquipmentItem, Item},
+        SkillPage, SkillReference,
     },
     game::components::{
         BasicStats, CharacterInfo, Equipment, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
         Position, SkillList,
     },
-    stb_column, stb_column_array,
+    stb_column,
 };
 
 use super::decode_item_reference;
@@ -147,12 +147,12 @@ impl CharacterCreator for CharacterCreatorData {
 
         let mut character = CharacterStorage {
             info: CharacterInfo {
-                name: name,
-                gender: gender,
+                name,
+                gender,
                 birth_stone,
                 job: 0,
-                face: face,
-                hair: hair,
+                face,
+                hair,
                 respawn_zone: 20,
             },
             basic_stats: gender_data.basic_stats.clone(),

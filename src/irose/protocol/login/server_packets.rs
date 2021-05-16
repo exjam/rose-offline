@@ -63,7 +63,7 @@ pub struct PacketServerLoginReply<'a> {
 impl<'a> PacketServerLoginReply<'a> {
     pub fn with_error_result(result: LoginResult) -> Self {
         PacketServerLoginReply {
-            result: result,
+            result,
             rights: 0,
             pay_type: 0,
             servers: &[],
