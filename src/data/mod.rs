@@ -20,15 +20,19 @@ lazy_static! {
     pub static ref CHARACTER_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("characters");
 }
 
-use crate::game::components::{AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory};
+use crate::game::components::{
+    AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory, Level, SkillList,
+};
 
 pub trait AbilityValueCalculator {
     fn calculate(
         &self,
         character_info: &CharacterInfo,
+        level: &Level,
         equipment: &Equipment,
         inventory: &Inventory,
         basic_stats: &BasicStats,
+        skill_list: &SkillList,
     ) -> AbilityValues;
 }
 

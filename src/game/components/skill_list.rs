@@ -39,4 +39,8 @@ impl SkillList {
         *empty_slot = Some(skill);
         Some((page_index * SKILL_PAGE_SIZE + slot_index) as u16)
     }
+
+    pub fn get_passive_skills(&self) -> impl Iterator<Item = &SkillReference> + '_ {
+        self.pages[1].iter().filter_map(|x| x.as_ref())
+    }
 }

@@ -50,9 +50,11 @@ pub fn game_server_authentication(
                             .map(|character| {
                                 let ability_values = game_data.ability_value_calculator.calculate(
                                     &character.info,
+                                    &character.level,
                                     &character.equipment,
                                     &character.inventory,
                                     &character.basic_stats,
+                                    &character.skill_list,
                                 );
                                 cmd.add_component(
                                     *entity,
