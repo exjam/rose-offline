@@ -105,6 +105,15 @@ pub struct VehicleItemData {
     pub item_data: BaseItemData,
 }
 
+pub struct ItemGradeData {
+    pub attack: i32,
+    pub hit: i32,
+    pub defence: i32,
+    pub resistance: i32,
+    pub avoid: i32,
+    pub glow_colour: (f32, f32, f32),
+}
+
 pub enum ItemData<'a> {
     Face(&'a FaceItemData),
     Head(&'a HeadItemData),
@@ -137,6 +146,7 @@ pub struct ItemDatabase {
     material: HashMap<u16, MaterialItemData>,
     quest: HashMap<u16, QuestItemData>,
     vehicle: HashMap<u16, VehicleItemData>,
+    item_grades: Vec<ItemGradeData>,
 }
 
 impl ItemDatabase {
@@ -155,6 +165,7 @@ impl ItemDatabase {
         material: HashMap<u16, MaterialItemData>,
         quest: HashMap<u16, QuestItemData>,
         vehicle: HashMap<u16, VehicleItemData>,
+        item_grades: Vec<ItemGradeData>,
     ) -> Self {
         Self {
             face,
@@ -171,7 +182,12 @@ impl ItemDatabase {
             material,
             quest,
             vehicle,
+            item_grades,
         }
+    }
+
+    pub fn get_item_grade(&self, grade: u8) -> Option<&ItemGradeData> {
+        self.item_grades.get(grade as usize)
     }
 
     pub fn get_item(&self, item: ItemReference) -> Option<ItemData> {

@@ -8,6 +8,8 @@ pub struct AbilityValues {
     pub charm: u16,
     pub sense: u16,
     pub max_health: i32,
+    pub max_mana: i32,
     pub additional_health_recovery: i32,
     pub additional_mana_recovery: i32,
+    pub attack_power: i32,
 }

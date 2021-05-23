@@ -52,29 +52,143 @@ impl ItemType {
     }
 }
 
-#[derive(FromPrimitive)]
+// TODO: The number mappings for this should move to irose stb loading code?
+#[derive(Copy, Clone, FromPrimitive)]
 pub enum ItemClass {
     Unknown = 0,
+
+    FaceMask = 111,
+    FaceGlasses = 112,
+    FaceEtc = 113,
+
+    Helmet = 121,
+    MagicHat = 122,
+    Hat = 123,
+    HairAccessory = 124,
+
+    CombatUniform = 131,
+    MagicClothes = 132,
+    CasualClothes = 133,
+
+    Gauntlet = 141,
+    MagicGlove = 142,
+    Glove = 143,
+
+    Boots = 151,
+    MagicBoots = 152,
+    Shoes = 153,
+
+    BackArmor = 161,
+    Bag = 162,
+    Wings = 163,
+    ArrowBox = 164,
+    BulletBox = 165,
+    ShellBox = 166,
+
     Ring = 171,
     Necklace = 172,
     Earring = 173,
-    Arrow = 231,
-    Arrow2 = 271,
-    Bullet = 232,
-    Throw = 233,
-    Bullet2 = 253,
-    NotUseBullet = 242,
+
+    OneHandedSword = 211,
+    OneHandedBlunt = 212,
+
+    TwoHandedSword = 221,
+    Spear = 222,
+    TwoHandedAxe = 223,
+
+    Bow = 231,
+    Gun = 232,
+    Launcher = 233,
+
+    MagicStaff = 241,
+    MagicWand = 242,
+
+    Katar = 251,
+    DualSwords = 252,
+    DualGuns = 253,
+
     Shield = 261,
-    SkillDoing = 313,
-    SkillLearn = 314,
-    RepairItem = 315,
-    EventItem = 316,
-    Fuel = 317,
+    SupportTool = 262,
+
+    Crossbow = 271,
+
+    Medicine = 311,
+    Food = 312,
+    MagicItem = 313,
+    SkillBook = 314,
+    RepairTool = 315,
+    QuestScroll = 316,
+    EngineFuel = 317,
+    AutomaticConsumption = 320,
+    TimeCoupon = 321,
+
+    Jewel = 411,
+    WorkOfArt = 412,
+
+    Metal = 421,
+    OtherworldlyMetal = 422,
+    StoneMaterial = 423,
+    WoodenMaterial = 424,
+    Leather = 425,
+    Cloth = 426,
+    RefiningMaterial = 427,
+    Chemicals = 428,
+    Material = 429,
+    GatheredGoods = 430,
+
+    Arrow = 431,
+    Bullet = 432,
+    Shell = 433,
+
+    QuestItems = 441,
+    Certification = 442,
+
     CartBody = 511,
-    CastlerGearBody = 512,
+    CastleGearBody = 512,
+
     CartEngine = 521,
     CastleGearEngine = 522,
+
+    CartWheels = 531,
+    CastleGearLeg = 532,
+
+    CartAccessory = 551,
     CastleGearWeapon = 552,
+}
+
+#[derive(Copy, Clone)]
+pub enum ItemWeaponType {
+    OneHanded,
+    TwoHanded,
+    Bow,
+    Gun,
+    Launcher,
+    MagicMelee,
+    MagicRanged,
+    Crossbow,
+    Katar,
+    DualWield,
+}
+
+impl ItemWeaponType {
+    pub fn from(item_class: &ItemClass) -> Option<Self> {
+        match item_class {
+            ItemClass::OneHandedSword | ItemClass::OneHandedBlunt => {
+                Some(ItemWeaponType::OneHanded)
+            }
+            ItemClass::TwoHandedSword | ItemClass::Spear | ItemClass::TwoHandedAxe => {
+                Some(ItemWeaponType::TwoHanded)
+            }
+            ItemClass::Bow | ItemClass::Crossbow => Some(ItemWeaponType::Bow),
+            ItemClass::Gun | ItemClass::DualGuns => Some(ItemWeaponType::Gun),
+            ItemClass::Launcher => Some(ItemWeaponType::Launcher),
+            ItemClass::MagicStaff => Some(ItemWeaponType::MagicMelee),
+            ItemClass::MagicWand => Some(ItemWeaponType::MagicRanged),
+            ItemClass::Katar => Some(ItemWeaponType::Katar),
+            ItemClass::DualSwords => Some(ItemWeaponType::DualWield),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

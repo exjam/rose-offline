@@ -39,7 +39,7 @@ pub trait AbilityValueCalculator {
 pub use character::{CharacterCreator, CharacterCreatorError};
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
-    GemItemData, HandsItemData, HeadItemData, ItemData, ItemDatabase, ItemReference,
+    GemItemData, HandsItemData, HeadItemData, ItemData, ItemDatabase, ItemGradeData, ItemReference,
     JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData,
     WeaponItemData,
 };

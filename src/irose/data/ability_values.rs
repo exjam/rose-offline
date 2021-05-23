@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        item::AbilityType, AbilityValueCalculator, ItemDatabase, ItemReference, SkillAddAbility,
-        SkillDatabase, SkillReference,
+        item::{AbilityType, ItemClass, ItemWeaponType},
+        AbilityValueCalculator, ItemDatabase, ItemReference, SkillAddAbility, SkillDatabase,
+        SkillReference,
     },
     game::components::{
-        AbilityValues, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory, Level,
-        SkillList,
+        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
+        Level, SkillList,
     },
 };
 
@@ -76,8 +77,6 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         /*
         TODO:
-        Cal_MaxMP ();
-        Cal_ATTACK ();
         Cal_HIT ();
         Cal_DEFENCE ();
         Cal_RESIST ();
@@ -105,6 +104,13 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
+            max_mana: calculate_max_mana(
+                character_info,
+                level,
+                &basic_stats,
+                &equipment_ability_values,
+                &passive_ability_values,
+            ),
             strength: basic_stats.strength,
             dexterity: basic_stats.dexterity,
             intelligence: basic_stats.intelligence,
@@ -119,6 +125,14 @@ impl AbilityValueCalculator for AbilityValuesData {
                 + (equipment_ability_values.recover_mana as f32
                     * (passive_ability_values.rate.recover_mana as f32 / 100.0))
                     as i32,
+            attack_power: calculate_attack_power(
+                &self.item_database,
+                &basic_stats,
+                level,
+                &equipment_ability_values,
+                equipment,
+                &passive_ability_values,
+            ),
         }
     }
 }
@@ -339,6 +353,25 @@ struct PassiveSkillAbilities {
     immunity: i32,
 }
 
+impl PassiveSkillAbilities {
+    fn get_passive_weapon_attack_power(&self, weapon_type: Option<ItemWeaponType>) -> i32 {
+        match weapon_type {
+            Some(ItemWeaponType::OneHanded) => self.attack_power_one_handed,
+            Some(ItemWeaponType::TwoHanded) => self.attack_power_two_handed,
+            Some(ItemWeaponType::Bow) => self.attack_power_bow,
+            Some(ItemWeaponType::Gun) | Some(ItemWeaponType::Launcher) => self.attack_power_gun,
+            Some(ItemWeaponType::MagicMelee) | Some(ItemWeaponType::MagicRanged) => {
+                self.attack_power_staff_wand
+            }
+            Some(ItemWeaponType::Crossbow) => self.attack_power_auto_bow,
+            Some(ItemWeaponType::Katar) | Some(ItemWeaponType::DualWield) => {
+                self.attack_power_katar_pair
+            }
+            None => self.attack_power_unarmed,
+        }
+    }
+}
+
 #[derive(Default)]
 struct PassiveSkillAbilityValues {
     pub value: PassiveSkillAbilities,
@@ -348,6 +381,14 @@ struct PassiveSkillAbilityValues {
 impl PassiveSkillAbilityValues {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    fn get_passive_weapon_attack_power_value(&self, weapon_type: Option<ItemWeaponType>) -> i32 {
+        self.value.get_passive_weapon_attack_power(weapon_type)
+    }
+
+    fn get_passive_weapon_attack_power_rate(&self, weapon_type: Option<ItemWeaponType>) -> i32 {
+        self.rate.get_passive_weapon_attack_power(weapon_type)
     }
 
     fn add_ability(abilities: &mut PassiveSkillAbilities, ability_type: AbilityType, value: i32) {
@@ -471,7 +512,7 @@ fn calculate_max_health(
     passive_ability_values: &PassiveSkillAbilityValues,
 ) -> i32 {
     let (level_add, level_multiplier, strength_multipler) = match character_info.job {
-        111 => (7, 12, 1),
+        111 => (7, 12, 2),
         121 => (-3, 14, 2),
         122 => (2, 13, 2),
 
@@ -493,7 +534,156 @@ fn calculate_max_health(
     let max_health = (level.level as i32 + level_add) * level_multiplier
         + (basic_stats.strength as i32) * strength_multipler
         + equipment_ability_values.max_health;
+
     let passive_max_health = passive_ability_values.value.max_health
         + ((max_health as f32) * ((passive_ability_values.rate.max_health as f32) / 100.0)) as i32;
+
     max_health + passive_max_health
+}
+
+fn calculate_max_mana(
+    character_info: &CharacterInfo,
+    level: &Level,
+    basic_stats: &BasicStats,
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let (level_add, level_multiplier, int_multipler) = match character_info.job {
+        111 => (3, 4.0, 4),
+        121 => (0, 4.5, 4),
+        122 => (-6, 5.0, 4),
+
+        211 => (0, 6.0, 4),
+        221 => (-7, 7.0, 4),
+        222 => (-4, 6.5, 4),
+
+        311 => (4, 4.0, 4),
+        321 => (4, 4.0, 4),
+        322 => (0, 4.5, 4),
+
+        411 => (3, 4.0, 4),
+        421 => (3, 4.0, 4),
+        422 => (0, 4.5, 4),
+
+        _ => (4, 3.0, 4),
+    };
+
+    let max_mana = ((level.level as i32 + level_add) as f32 * level_multiplier) as i32
+        + (basic_stats.intelligence as i32) * int_multipler
+        + equipment_ability_values.max_mana;
+
+    let passive_max_mana = passive_ability_values.value.max_mana
+        + ((max_mana as f32) * ((passive_ability_values.rate.max_mana as f32) / 100.0)) as i32;
+
+    max_mana + passive_max_mana
+}
+
+fn calculate_attack_power(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    level: &Level,
+    equipment_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    // TODO: Check if riding cart
+    let dexterity = basic_stats.dexterity as f32;
+    let concentration = basic_stats.concentration as f32;
+    let strength = basic_stats.strength as f32;
+    let intelligence = basic_stats.intelligence as f32;
+    let sense = basic_stats.sense as f32;
+    let level = level.level as f32;
+
+    let get_ammo_quality = |item_database: &ItemDatabase, equipment: &Equipment, ammo_index| {
+        equipment
+            .get_ammo_item(ammo_index)
+            .and_then(|item| item_database.get_material_item(item.item_number as usize))
+            .map(|item| item.item_data.quality)
+            .unwrap_or(0) as f32
+    };
+
+    let weapon = equipment
+        .get_equipment_item(EquipmentIndex::WeaponRight)
+        .filter(|item| !item.is_broken())
+        .and_then(|item| {
+            item_database
+                .get_weapon_item(item.item_number as usize)
+                .map(|item_data| (item, item_data))
+        });
+
+    let weapon_attack = weapon
+        .map(|(weapon, weapon_data)| {
+            weapon_data.attack_power as f32
+                + item_database
+                    .get_item_grade(weapon.grade)
+                    .map(|grade| grade.attack)
+                    .unwrap_or(0) as f32
+        })
+        .unwrap_or(0.0);
+
+    let weapon_type =
+        weapon.and_then(|(_, weapon_data)| ItemWeaponType::from(&weapon_data.item_data.class));
+
+    let attack_power = match weapon_type {
+        Some(ItemWeaponType::Bow) | Some(ItemWeaponType::Crossbow) => {
+            let ammo_quality = get_ammo_quality(item_database, equipment, AmmoIndex::Arrow);
+            dexterity * 0.62
+                + strength * 0.2
+                + level * 0.2
+                + ammo_quality
+                + (weapon_attack + ammo_quality * 0.5 + 8.0)
+                    * ((dexterity * 0.04 + sense * 0.03 + 29.0) / 30.0)
+        }
+        Some(ItemWeaponType::Gun) => {
+            let ammo_quality = get_ammo_quality(item_database, equipment, AmmoIndex::Bullet);
+            dexterity * 0.4
+                + concentration * 0.5
+                + level * 0.2
+                + ammo_quality
+                + (weapon_attack + ammo_quality * 0.6 + 8.0)
+                    * ((concentration * 0.03 + sense * 0.05 + 29.0) / 30.0)
+        }
+        Some(ItemWeaponType::Launcher) => {
+            let ammo_quality = get_ammo_quality(item_database, equipment, AmmoIndex::Throw);
+            strength * 0.52
+                + concentration * 0.5
+                + level * 0.2
+                + ammo_quality
+                + (weapon_attack + ammo_quality + 12.0)
+                    * ((concentration * 0.04 + sense * 0.05 + 29.0) / 30.0)
+        }
+        Some(ItemWeaponType::OneHanded) | Some(ItemWeaponType::TwoHanded) => {
+            strength * 0.75 + level * 0.2 + weapon_attack * ((strength * 0.05 + 29.0) / 30.0)
+        }
+        Some(ItemWeaponType::MagicMelee) => {
+            strength * 0.4
+                + intelligence * 0.4
+                + level * 0.2
+                + weapon_attack * ((intelligence * 0.05 + 29.0) / 30.0)
+        }
+        Some(ItemWeaponType::MagicRanged) => {
+            intelligence * 0.6 + level * 0.2 + weapon_attack * ((sense * 0.1 + 26.0) / 27.0)
+        }
+        Some(ItemWeaponType::DualWield) => {
+            strength * 0.63
+                + dexterity * 0.45
+                + level * 0.2
+                + weapon_attack * ((dexterity * 0.05 + 25.0) / 26.0)
+        }
+        Some(ItemWeaponType::Katar) => {
+            strength * 0.42
+                + dexterity * 0.55
+                + level * 0.2
+                + weapon_attack * ((dexterity * 0.05 + 20.0) / 21.0)
+        }
+        None => strength * 0.5 + dexterity * 0.3 + level * 0.2,
+    } + equipment_ability_values.attack as f32;
+
+    let passive_attack_rate =
+        passive_ability_values.get_passive_weapon_attack_power_rate(weapon_type) as f32 / 100.0;
+    let passive_attack_power = passive_ability_values
+        .get_passive_weapon_attack_power_value(weapon_type) as f32
+        + (attack_power as f32 * passive_attack_rate);
+
+    (attack_power + passive_attack_power) as i32
 }

@@ -5,10 +5,11 @@ use crate::data::{
     formats::{FileReader, StbFile, VfsIndex},
     item::{AbilityType, ItemClass},
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
-    GemItemData, HandsItemData, HeadItemData, ItemDatabase, JewelleryItemData, MaterialItemData,
-    QuestItemData, SubWeaponItemData, VehicleItemData, WeaponItemData,
+    GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData, JewelleryItemData,
+    MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData, WeaponItemData,
 };
 pub struct StbItem(pub StbFile);
+pub struct StbItemGrades(pub StbFile);
 
 use crate::stb_column;
 
@@ -145,6 +146,37 @@ impl StbItem {
     }
 }
 
+#[allow(dead_code)]
+impl StbItemGrades {
+    pub fn rows(&self) -> usize {
+        self.0.rows()
+    }
+
+    stb_column! { 0, get_attack, i32 }
+    stb_column! { 1, get_hit, i32 }
+    stb_column! { 2, get_defence, i32 }
+    stb_column! { 3, get_resistance, i32 }
+    stb_column! { 4, get_avoid, i32 }
+
+    pub fn get_glow_colour(&self, id: usize) -> (f32, f32, f32) {
+        let mut colour = self.0.try_get_int(id, 5).unwrap_or(0);
+
+        let red = colour / 1000000;
+        colour %= 1000000;
+
+        let green = colour / 1000;
+        colour %= 1000;
+
+        let blue = colour;
+
+        (
+            red as f32 / 255.0,
+            green as f32 / 255.0,
+            blue as f32 / 255.0,
+        )
+    }
+}
+
 fn load_base_item(data: &StbItem, id: usize, check_valid: bool) -> Option<BaseItemData> {
     let icon_number = if check_valid {
         data.get_icon_number(id)?
@@ -269,8 +301,38 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
     let vehicle =
         load_item_stb! { vfs, "3DDATA/STB/LIST_PAT.STB", load_base_item, VehicleItemData };
 
+    let mut item_grades = Vec::new();
+    if let Some(file) = vfs.open_file("3DDATA/STB/LIST_GRADE.STB") {
+        if let Ok(data) = StbFile::read(FileReader::from(&file)) {
+            let data = StbItemGrades(data);
+            for i in 0..data.rows() {
+                item_grades.push(ItemGradeData {
+                    attack: data.get_attack(i).unwrap_or(0),
+                    hit: data.get_hit(i).unwrap_or(0),
+                    defence: data.get_defence(i).unwrap_or(0),
+                    resistance: data.get_resistance(i).unwrap_or(0),
+                    avoid: data.get_avoid(i).unwrap_or(0),
+                    glow_colour: data.get_glow_colour(i),
+                });
+            }
+        }
+    }
+
     Some(ItemDatabase::new(
-        face, head, body, hands, feet, back, jewellery, weapon, subweapon, consumable, gem,
-        material, quest, vehicle,
+        face,
+        head,
+        body,
+        hands,
+        feet,
+        back,
+        jewellery,
+        weapon,
+        subweapon,
+        consumable,
+        gem,
+        material,
+        quest,
+        vehicle,
+        item_grades,
     ))
 }

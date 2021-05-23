@@ -31,7 +31,7 @@ pub enum VehiclePartIndex {
 
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
-pub enum AmmoType {
+pub enum AmmoIndex {
     Arrow = 0,
     Bullet = 1,
     Throw = 2,
@@ -41,7 +41,7 @@ pub enum AmmoType {
 pub struct Equipment {
     pub equipped_items: [Option<EquipmentItem>; EquipmentIndex::Earring as usize + 1],
     pub equipped_vehicle: [Option<EquipmentItem>; VehiclePartIndex::Arms as usize + 1],
-    pub equipped_ammo: [Option<StackableItem>; AmmoType::Throw as usize + 1],
+    pub equipped_ammo: [Option<StackableItem>; AmmoIndex::Throw as usize + 1],
 }
 
 impl Equipment {
@@ -51,6 +51,10 @@ impl Equipment {
 
     pub fn get_equipment_item(&self, index: EquipmentIndex) -> Option<&EquipmentItem> {
         self.equipped_items[index as usize].as_ref()
+    }
+
+    pub fn get_ammo_item(&self, index: AmmoIndex) -> Option<&StackableItem> {
+        self.equipped_ammo[index as usize].as_ref()
     }
 
     pub fn get_equipment_slot_mut(&mut self, index: EquipmentIndex) -> &mut Option<EquipmentItem> {
