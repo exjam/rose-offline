@@ -77,7 +77,6 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         /*
         TODO:
-        Cal_HIT ();
         Cal_DEFENCE ();
         Cal_RESIST ();
         Cal_MaxWEIGHT ();
@@ -89,6 +88,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         class based += stats + immunity
         */
 
+        // TODO: If riding cart, most stat calculations are different
         AbilityValues {
             run_speed: calculate_run_speed(
                 &self.item_database,
@@ -129,6 +129,13 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &self.item_database,
                 &basic_stats,
                 level,
+                &equipment_ability_values,
+                equipment,
+                &passive_ability_values,
+            ),
+            hit: calculate_hit(
+                &self.item_database,
+                &basic_stats,
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
@@ -477,7 +484,6 @@ fn calculate_run_speed(
     equipment: &Equipment,
     passive_ability_values: &PassiveSkillAbilityValues,
 ) -> f32 {
-    // TODO: Check if riding cart
     let mut item_speed = 20f32;
 
     item_speed += equipment
@@ -586,7 +592,6 @@ fn calculate_attack_power(
     equipment: &Equipment,
     passive_ability_values: &PassiveSkillAbilityValues,
 ) -> i32 {
-    // TODO: Check if riding cart
     let dexterity = basic_stats.dexterity as f32;
     let concentration = basic_stats.concentration as f32;
     let strength = basic_stats.strength as f32;
@@ -686,4 +691,39 @@ fn calculate_attack_power(
         + (attack_power as f32 * passive_attack_rate);
 
     (attack_power + passive_attack_power) as i32
+}
+
+fn calculate_hit(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    equipment_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let concentration = basic_stats.concentration as f32;
+
+    let hit = if let Some((weapon, weapon_data)) = equipment
+        .get_equipment_item(EquipmentIndex::WeaponRight)
+        .filter(|item| !item.is_broken())
+        .and_then(|item| {
+            item_database
+                .get_weapon_item(item.item_number as usize)
+                .map(|item_data| (item, item_data))
+        }) {
+        let weapon_quality = weapon_data.item_data.quality as f32;
+        let weapon_durability = weapon.durability as f32;
+        let grade_hit = item_database
+            .get_item_grade(weapon.grade)
+            .map(|grade| grade.hit)
+            .unwrap_or(0) as f32;
+
+        (concentration + 10.0) * 0.8 + weapon_quality * 0.6 + grade_hit + weapon_durability * 0.8
+    } else {
+        (concentration + 10.0) * 0.5 + 15.0
+    } + equipment_ability_values.hit as f32;
+
+    let passive_hit_rate = passive_ability_values.rate.hit as f32 / 100.0;
+    let passive_hit = passive_ability_values.value.hit as f32 + (hit as f32 * passive_hit_rate);
+
+    (hit + passive_hit) as i32
 }
