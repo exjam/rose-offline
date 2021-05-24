@@ -345,7 +345,7 @@ pub enum AbilityType {
     Attack = 18,
     Defence = 19,
     Hit = 20,
-    Resistence = 21,
+    Resistance = 21,
     Avoid = 22,
     Speed = 23,
     AttackSpeed = 24,
@@ -423,7 +423,7 @@ pub enum AbilityType {
     StoreSkin = 96,
     VehicleHealth = 97,
 
-    PassiveResistence = 98,
+    PassiveResistance = 98,
     PassiveHit = 99,
     PassiveCritical = 100,
     PassiveAvoid = 101,

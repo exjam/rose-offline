@@ -77,10 +77,9 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         /*
         TODO:
-        Cal_RESIST ();
-        Cal_MaxWEIGHT ();
         Cal_AvoidRATE ();
         Cal_CRITICAL ();
+        Cal_MaxWEIGHT ();
         calculate weight in inventory
         Cal_DropRATE ();
         m_fRateUseMP
@@ -147,6 +146,19 @@ impl AbilityValueCalculator for AbilityValuesData {
                 equipment,
                 &passive_ability_values,
             ),
+            resistance: calculate_resistance(
+                &self.item_database,
+                &basic_stats,
+                &level,
+                &equipment_ability_values,
+                equipment,
+                &passive_ability_values,
+            ),
+            critical: calculate_critical(
+                &basic_stats,
+                &equipment_ability_values,
+                &passive_ability_values,
+            ),
         }
     }
 }
@@ -172,7 +184,7 @@ struct EquipmentAbilityValue {
     pub attack: i32,
     pub defence: i32,
     pub hit: i32,
-    pub resistence: i32,
+    pub resistance: i32,
     pub avoid: i32,
     pub move_speed: i32,
     pub attack_speed: i32,
@@ -245,7 +257,7 @@ impl EquipmentAbilityValue {
             AbilityType::Attack => self.attack += value,
             AbilityType::Defence => self.defence += value,
             AbilityType::Hit => self.hit += value,
-            AbilityType::Resistence => self.resistence += value,
+            AbilityType::Resistance => self.resistance += value,
             AbilityType::Avoid => self.avoid += value,
             AbilityType::Speed => self.move_speed += value,
             AbilityType::AttackSpeed => self.attack_speed += value,
@@ -356,7 +368,7 @@ struct PassiveSkillAbilities {
     save_mana: i32,
     max_summons: i32,
     drop_rate: i32,
-    resistence: i32,
+    resistance: i32,
     hit: i32,
     critical: i32,
     avoid: i32,
@@ -433,7 +445,7 @@ impl PassiveSkillAbilityValues {
             AbilityType::PassiveSaveMana => abilities.save_mana += value,
             AbilityType::PassiveMaxSummons => abilities.max_summons += value,
             AbilityType::PassiveDropRate => abilities.drop_rate += value,
-            AbilityType::PassiveResistence => abilities.resistence += value,
+            AbilityType::PassiveResistance => abilities.resistance += value,
             AbilityType::PassiveHit => abilities.hit += value,
             AbilityType::PassiveCritical => abilities.critical += value,
             AbilityType::PassiveAvoid => abilities.avoid += value,
@@ -786,4 +798,61 @@ fn calculate_defence(
     }
 
     defence
+}
+
+fn calculate_resistance(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    level: &Level,
+    equipment_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let mut item_resistance = 0;
+
+    for item in equipment
+        .equipped_items
+        .iter()
+        .filter_map(|x| x.as_ref())
+        .filter(|x| x.life > 0)
+    {
+        if let Some(item_data) = item_database.get_base_item(item.into()) {
+            if item_data.resistance > 0 {
+                let grade_resistance = item_database
+                    .get_item_grade(item.grade)
+                    .map(|grade| grade.resistance)
+                    .unwrap_or(0);
+                item_resistance += item_data.resistance as i32 + grade_resistance;
+            }
+        }
+    }
+
+    let intelligence = basic_stats.intelligence as f32;
+    let level = level.level as f32;
+    let resistance = item_resistance as f32
+        + (intelligence + 5.0) * 0.6
+        + (level + 15.0) * 0.8
+        + equipment_ability_values.resistance as f32;
+
+    let passive_resistance_rate = passive_ability_values.rate.resistance as f32 / 100.0;
+    let passive_resistance = passive_ability_values.value.resistance as f32
+        + (resistance as f32 * passive_resistance_rate);
+
+    (resistance + passive_resistance) as i32
+}
+
+fn calculate_critical(
+    basic_stats: &BasicStats,
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let concentration = basic_stats.concentration as f32;
+    let sense = basic_stats.sense as f32;
+    let critical = sense + (concentration + 20.0) * 0.2 + equipment_ability_values.critical as f32;
+
+    let passive_critical_rate = passive_ability_values.rate.critical as f32 / 100.0;
+    let passive_critical =
+        passive_ability_values.value.critical as f32 + (critical as f32 * passive_critical_rate);
+
+    (critical + passive_critical) as i32
 }

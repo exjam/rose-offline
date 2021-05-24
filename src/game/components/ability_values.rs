@@ -14,4 +14,6 @@ pub struct AbilityValues {
     pub attack_power: i32,
     pub hit: i32,
     pub defence: i32,
+    pub resistance: i32,
+    pub critical: i32,
 }
