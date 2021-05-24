@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        item::{AbilityType, ItemClass, ItemWeaponType},
+        item::{AbilityType, Item, ItemClass, ItemWeaponType},
         AbilityValueCalculator, ItemDatabase, ItemReference, SkillAddAbility, SkillDatabase,
         SkillReference,
     },
@@ -77,7 +77,6 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         /*
         TODO:
-        Cal_DEFENCE ();
         Cal_RESIST ();
         Cal_MaxWEIGHT ();
         Cal_AvoidRATE ();
@@ -136,6 +135,14 @@ impl AbilityValueCalculator for AbilityValuesData {
             hit: calculate_hit(
                 &self.item_database,
                 &basic_stats,
+                &equipment_ability_values,
+                equipment,
+                &passive_ability_values,
+            ),
+            defence: calculate_defence(
+                &self.item_database,
+                &basic_stats,
+                &level,
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
@@ -356,7 +363,7 @@ struct PassiveSkillAbilities {
     hit: i32,
     critical: i32,
     avoid: i32,
-    shield: i32,
+    shield_defence: i32,
     immunity: i32,
 }
 
@@ -433,7 +440,7 @@ impl PassiveSkillAbilityValues {
             AbilityType::PassiveHit => abilities.hit += value,
             AbilityType::PassiveCritical => abilities.critical += value,
             AbilityType::PassiveAvoid => abilities.avoid += value,
-            AbilityType::PassiveShield => abilities.shield += value,
+            AbilityType::PassiveShieldDefence => abilities.shield_defence += value,
             AbilityType::PassiveImmunity => abilities.immunity += value,
             _ => {
                 println!(
@@ -726,4 +733,66 @@ fn calculate_hit(
     let passive_hit = passive_ability_values.value.hit as f32 + (hit as f32 * passive_hit_rate);
 
     (hit + passive_hit) as i32
+}
+
+fn calculate_defence(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    level: &Level,
+    equipment_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let mut item_defence = 0;
+
+    for item in equipment
+        .equipped_items
+        .iter()
+        .filter_map(|x| x.as_ref())
+        .filter(|x| x.life > 0)
+    {
+        if let Some(item_data) = item_database.get_base_item(ItemReference::new(
+            item.item_type,
+            item.item_number as usize,
+        )) {
+            if item_data.defence > 0 {
+                let grade_defence = item_database
+                    .get_item_grade(item.grade)
+                    .map(|grade| grade.defence)
+                    .unwrap_or(0);
+                item_defence += item_data.defence as i32 + grade_defence;
+            }
+        }
+    }
+
+    let strength = basic_stats.strength as f32;
+    let level = level.level as f32;
+    let defence = item_defence as f32
+        + (strength + 5.0) * 0.35
+        + (level + 15.0) * 0.7
+        + equipment_ability_values.defence as f32;
+
+    let passive_defence_rate = passive_ability_values.rate.defence as f32 / 100.0;
+    let passive_defence =
+        passive_ability_values.value.defence as f32 + (defence as f32 * passive_defence_rate);
+
+    let mut defence = (defence + passive_defence) as i32;
+
+    if let Some(offhand_item) = equipment.get_equipment_item(EquipmentIndex::WeaponLeft) {
+        if let Some(ItemClass::Shield) = item_database
+            .get_base_item(ItemReference::new(
+                offhand_item.item_type,
+                offhand_item.item_number as usize,
+            ))
+            .map(|x| x.class)
+        {
+            let passive_shield_defence_rate =
+                passive_ability_values.rate.shield_defence as f32 / 100.0;
+            let passive_shield_defence = passive_ability_values.value.shield_defence as f32
+                + (defence as f32 * passive_shield_defence_rate);
+            defence += passive_shield_defence as i32;
+        }
+    }
+
+    defence
 }

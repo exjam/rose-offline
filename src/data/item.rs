@@ -426,7 +426,7 @@ pub enum AbilityType {
     PassiveHit = 99,
     PassiveCritical = 100,
     PassiveAvoid = 101,
-    PassiveShield = 102,
+    PassiveShieldDefence = 102,
     PassiveImmunity = 103,
 
     Max = 105,

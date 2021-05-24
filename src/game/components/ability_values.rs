@@ -13,4 +13,5 @@ pub struct AbilityValues {
     pub additional_mana_recovery: i32,
     pub attack_power: i32,
     pub hit: i32,
+    pub defence: i32,
 }
