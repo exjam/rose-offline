@@ -77,8 +77,6 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         /*
         TODO:
-        Cal_AvoidRATE ();
-        Cal_CRITICAL ();
         Cal_MaxWEIGHT ();
         calculate weight in inventory
         Cal_DropRATE ();
@@ -156,6 +154,14 @@ impl AbilityValueCalculator for AbilityValuesData {
             ),
             critical: calculate_critical(
                 &basic_stats,
+                &equipment_ability_values,
+                &passive_ability_values,
+            ),
+            avoid: calculate_avoid(
+                &self.item_database,
+                &basic_stats,
+                level,
+                equipment,
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
@@ -855,4 +861,59 @@ fn calculate_critical(
         passive_ability_values.value.critical as f32 + (critical as f32 * passive_critical_rate);
 
     (critical + passive_critical) as i32
+}
+
+fn calculate_avoid(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    level: &Level,
+    equipment: &Equipment,
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    const AVOID_DURABILITY_ITEMS: [EquipmentIndex; 6] = [
+        EquipmentIndex::Head,
+        EquipmentIndex::Body,
+        EquipmentIndex::Back,
+        EquipmentIndex::Hands,
+        EquipmentIndex::Feet,
+        EquipmentIndex::WeaponLeft,
+    ];
+
+    // Get total durability for specific set of equipment
+    let equipment_durability: i32 = AVOID_DURABILITY_ITEMS
+        .iter()
+        .map(|x| equipment.get_equipment_item(*x))
+        .flatten()
+        .filter(|x| x.life > 0)
+        .map(|item| item.durability as i32)
+        .sum();
+
+    // Count grade on all items which have defence stat > 0
+    let mut equipment_total_grade = 0;
+    for item in equipment
+        .equipped_items
+        .iter()
+        .filter_map(|x| x.as_ref())
+        .filter(|x| x.life > 0)
+    {
+        if let Some(item_data) = item_database.get_base_item(item.into()) {
+            if item_data.defence > 0 {
+                equipment_total_grade += item.grade as i32;
+            }
+        }
+    }
+
+    let dexterity = basic_stats.dexterity as f32;
+    let level = level.level as f32;
+    let avoid = (dexterity * 1.9 + level * 0.3 + 10.0) * 0.4
+        + (equipment_durability as f32) * 0.3
+        + equipment_total_grade as f32
+        + equipment_ability_values.avoid as f32;
+
+    let passive_avoid_rate = passive_ability_values.rate.avoid as f32 / 100.0;
+    let passive_avoid =
+        passive_ability_values.value.avoid as f32 + (avoid as f32 * passive_avoid_rate);
+
+    (avoid + passive_avoid) as i32
 }
