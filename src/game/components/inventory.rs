@@ -223,7 +223,7 @@ impl Inventory {
         &mut self,
         item: EquipmentItem,
     ) -> Result<ItemSlot, EquipmentItem> {
-        let page_type = InventoryPageType::from_item_type(item.item_type);
+        let page_type = InventoryPageType::from_item_type(item.item.item_type);
         self.get_page_mut(page_type).try_add_equipment_item(item)
     }
 
@@ -231,7 +231,7 @@ impl Inventory {
         &mut self,
         item: StackableItem,
     ) -> Result<ItemSlot, StackableItem> {
-        let page_type = InventoryPageType::from_item_type(item.item_type);
+        let page_type = InventoryPageType::from_item_type(item.item.item_type);
         self.get_page_mut(page_type).try_add_stackable_item(item)
     }
 

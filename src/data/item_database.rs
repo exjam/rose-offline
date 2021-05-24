@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
+use serde::{Deserialize, Serialize};
+
 use crate::data::item::{AbilityType, ItemClass, ItemType};
 
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ItemReference {
     pub item_type: ItemType,
     pub item_number: usize,

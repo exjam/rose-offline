@@ -75,7 +75,7 @@ pub struct PacketEquipmentItemPart {
 fn write_equipment_item_part(writer: &mut PacketWriter, item: &Option<EquipmentItem>) {
     if let Some(item) = item {
         let part = PacketEquipmentItemPart::new()
-            .with_item_number(item.item_number)
+            .with_item_number(item.item.item_number as u16)
             .with_gem(item.gem)
             .with_has_socket(item.has_socket)
             .with_grade(item.grade);
@@ -115,8 +115,8 @@ fn write_equipment_item_full(writer: &mut PacketWriter, equipment: Option<&Equip
     match equipment {
         Some(equipment) => {
             let item = PacketEquipmentItemFull::new()
-                .with_item_type(equipment.item_type as u8)
-                .with_item_number(equipment.item_number as u16)
+                .with_item_type(equipment.item.item_type as u8)
+                .with_item_number(equipment.item.item_number as u16)
                 .with_is_crafted(equipment.is_crafted)
                 .with_gem(equipment.gem)
                 .with_durability(equipment.durability)
@@ -150,8 +150,8 @@ fn write_stackable_item_full(writer: &mut PacketWriter, stackable: Option<&Stack
     match stackable {
         Some(stackable) => {
             let item = PacketStackableItemFull::new()
-                .with_item_type(stackable.item_type as u8)
-                .with_item_number(stackable.item_number as u16)
+                .with_item_type(stackable.item.item_type as u8)
+                .with_item_number(stackable.item.item_number as u16)
                 .with_quantity(stackable.quantity);
             writer.write_bytes(&item.into_bytes());
         }

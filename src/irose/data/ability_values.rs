@@ -312,10 +312,7 @@ fn calculate_equipment_ability_values(
             }
         }
 
-        if let Some(item_data) = item_database.get_base_item(ItemReference::new(
-            item.item_type,
-            item.item_number as usize,
-        )) {
+        if let Some(item_data) = item_database.get_base_item(item.into()) {
             // TODO: Check item_stb.get_item_union_requirement(item_number)
             for (ability, value) in item_data.add_ability.iter() {
                 result.add_ability_value(*ability, *value);
@@ -496,7 +493,7 @@ fn calculate_run_speed(
     item_speed += equipment
         .get_equipment_item(EquipmentIndex::Feet)
         .filter(|item| !item.is_broken())
-        .and_then(|item| item_database.get_feet_item(item.item_number as usize))
+        .and_then(|item| item_database.get_feet_item(item.item.item_number))
         .or_else(|| item_database.get_feet_item(0))
         .map(|item_data| item_data.move_speed)
         .unwrap_or(0) as f32;
@@ -504,7 +501,7 @@ fn calculate_run_speed(
     item_speed += equipment
         .get_equipment_item(EquipmentIndex::Back)
         .filter(|item| !item.is_broken())
-        .and_then(|item| item_database.get_back_item(item.item_number as usize))
+        .and_then(|item| item_database.get_back_item(item.item.item_number as usize))
         .map(|item_data| item_data.move_speed)
         .unwrap_or(0) as f32;
 
@@ -609,7 +606,7 @@ fn calculate_attack_power(
     let get_ammo_quality = |item_database: &ItemDatabase, equipment: &Equipment, ammo_index| {
         equipment
             .get_ammo_item(ammo_index)
-            .and_then(|item| item_database.get_material_item(item.item_number as usize))
+            .and_then(|item| item_database.get_material_item(item.item.item_number as usize))
             .map(|item| item.item_data.quality)
             .unwrap_or(0) as f32
     };
@@ -619,7 +616,7 @@ fn calculate_attack_power(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_weapon_item(item.item_number as usize)
+                .get_weapon_item(item.item.item_number as usize)
                 .map(|item_data| (item, item_data))
         });
 
@@ -714,7 +711,7 @@ fn calculate_hit(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_weapon_item(item.item_number as usize)
+                .get_weapon_item(item.item.item_number as usize)
                 .map(|item_data| (item, item_data))
         }) {
         let weapon_quality = weapon_data.item_data.quality as f32;
@@ -751,10 +748,7 @@ fn calculate_defence(
         .filter_map(|x| x.as_ref())
         .filter(|x| x.life > 0)
     {
-        if let Some(item_data) = item_database.get_base_item(ItemReference::new(
-            item.item_type,
-            item.item_number as usize,
-        )) {
+        if let Some(item_data) = item_database.get_base_item(item.into()) {
             if item_data.defence > 0 {
                 let grade_defence = item_database
                     .get_item_grade(item.grade)
@@ -780,10 +774,7 @@ fn calculate_defence(
 
     if let Some(offhand_item) = equipment.get_equipment_item(EquipmentIndex::WeaponLeft) {
         if let Some(ItemClass::Shield) = item_database
-            .get_base_item(ItemReference::new(
-                offhand_item.item_type,
-                offhand_item.item_number as usize,
-            ))
+            .get_base_item(offhand_item.into())
             .map(|x| x.class)
         {
             let passive_shield_defence_rate =

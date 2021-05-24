@@ -86,10 +86,10 @@ impl<'a> From<&'a PacketServerCharacterList<'a>> for Packet {
             .iter()
             {
                 if let Some(EquipmentItem {
-                    item_number, grade, ..
+                    item, grade, ..
                 }) = character.equipment.equipped_items[*index as usize]
                 {
-                    writer.write_u16(item_number);
+                    writer.write_u16(item.item_number as u16);
                     writer.write_u16(grade as u16);
                 } else {
                     writer.write_u16(0);

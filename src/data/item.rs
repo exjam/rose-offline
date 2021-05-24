@@ -193,8 +193,7 @@ impl ItemWeaponType {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct EquipmentItem {
-    pub item_type: ItemType,
-    pub item_number: u16,
+    pub item: ItemReference,
     pub gem: u16,
     pub durability: u8,
     pub life: u16,
@@ -208,8 +207,7 @@ impl EquipmentItem {
     pub fn new(item: &ItemReference) -> Option<EquipmentItem> {
         if item.item_type.is_equipment() {
             Some(EquipmentItem {
-                item_type: item.item_type,
-                item_number: item.item_number as u16,
+                item: *item,
                 gem: 0,
                 durability: 100,
                 life: 1000,
@@ -228,10 +226,15 @@ impl EquipmentItem {
     }
 }
 
+impl From<&EquipmentItem> for ItemReference {
+    fn from(equipment: &EquipmentItem) -> Self {
+        equipment.item
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StackableItem {
-    pub item_type: ItemType,
-    pub item_number: u16,
+    pub item: ItemReference,
     pub quantity: u32,
 }
 
@@ -246,8 +249,7 @@ impl StackableItem {
     pub fn new(item: &ItemReference, quantity: u32) -> Option<StackableItem> {
         if item.item_type.is_stackable_item() {
             Some(StackableItem {
-                item_type: item.item_type,
-                item_number: item.item_number as u16,
+                item: *item,
                 quantity,
             })
         } else {
@@ -256,7 +258,7 @@ impl StackableItem {
     }
 
     pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
-        if self.item_type != stackable.item_type || self.item_number != stackable.item_number {
+        if self.item != stackable.item {
             Err(StackError::NotSameItem)
         } else if self.quantity + stackable.quantity > MAX_STACKABLE_ITEM_QUANTITY {
             Err(StackError::PartialStack(
@@ -271,6 +273,12 @@ impl StackableItem {
         self.can_stack_with(&stackable)?;
         self.quantity += stackable.quantity;
         Ok(())
+    }
+}
+
+impl From<&StackableItem> for ItemReference {
+    fn from(stackable: &StackableItem) -> Self {
+        stackable.item
     }
 }
 
@@ -307,15 +315,8 @@ impl Item {
 
     pub fn get_item_type(&self) -> ItemType {
         match self {
-            Item::Equipment(item) => item.item_type,
-            Item::Stackable(item) => item.item_type,
-        }
-    }
-
-    pub fn get_item_number(&self) -> u16 {
-        match self {
-            Item::Equipment(item) => item.item_number,
-            Item::Stackable(item) => item.item_number,
+            Item::Equipment(item) => item.item.item_type,
+            Item::Stackable(item) => item.item.item_type,
         }
     }
 }

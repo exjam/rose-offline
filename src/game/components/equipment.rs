@@ -66,7 +66,7 @@ impl Equipment {
         item: EquipmentItem,
     ) -> Result<(EquipmentIndex, Option<EquipmentItem>), EquipmentItem> {
         // TODO: Equip ammo, equip vehicles
-        let equipment_index = match item.item_type {
+        let equipment_index = match item.item.item_type {
             ItemType::Face => EquipmentIndex::Face,
             ItemType::Head => EquipmentIndex::Head,
             ItemType::Body => EquipmentIndex::Body,
