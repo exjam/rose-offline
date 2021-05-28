@@ -1,6 +1,8 @@
 use bytes::Buf;
 use encoding_rs::EUC_KR;
 use nalgebra::{Quaternion, Unit, UnitQuaternion, Vector3};
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::str;
 use std::{borrow::Cow, io::Cursor};
 
@@ -70,6 +72,10 @@ impl<'a> FileReader<'a> {
 
     pub fn set_position(&mut self, pos: u64) {
         self.cursor.set_position(pos);
+    }
+
+    pub fn set_position_from_end(&mut self, offset: i64) {
+        self.cursor.seek(SeekFrom::End(offset));
     }
 
     pub fn read_u8(&mut self) -> Result<u8, ReadError> {
