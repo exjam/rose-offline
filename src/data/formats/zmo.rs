@@ -39,7 +39,7 @@ impl ZmoFile {
         let mut frame_events = Vec::new();
         let mut total_attack_frames = 0 as usize;
         reader.set_position_from_end(-4);
-        if let Ok(extended_magic) = reader.read_fixed_length_string( 4) {
+        if let Ok(extended_magic) = reader.read_fixed_length_string(4) {
             if extended_magic == "EZMO" || extended_magic == "3ZMO" {
                 reader.set_position_from_end(-8);
                 let position = reader.read_u32()? as u64;
