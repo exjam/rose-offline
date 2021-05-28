@@ -2,8 +2,7 @@ use std::collections::HashMap;
 
 use super::reader::{FileReader, ReadError};
 
-pub struct NpcModelData
-{
+pub struct NpcModelData {
     pub name: String,
     pub skeleton_index: u16,
     pub mesh_ids: Vec<u16>,
@@ -84,15 +83,23 @@ impl ChrFile {
                 effect_ids.push((action, effect_id));
             }
 
-            npcs.insert(id, NpcModelData {
-                name,
-                skeleton_index,
-                mesh_ids,
-                motion_ids,
-                effect_ids,
-            });
+            npcs.insert(
+                id,
+                NpcModelData {
+                    name,
+                    skeleton_index,
+                    mesh_ids,
+                    motion_ids,
+                    effect_ids,
+                },
+            );
         }
 
-        Ok(Self { mesh_files, motion_files, effect_files, npcs })
+        Ok(Self {
+            mesh_files,
+            motion_files,
+            effect_files,
+            npcs,
+        })
     }
 }
