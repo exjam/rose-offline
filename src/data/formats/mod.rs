@@ -1,5 +1,6 @@
 mod reader;
 
+pub mod chr;
 pub mod ifo;
 pub mod stl;
 pub mod vfs;
@@ -8,6 +9,7 @@ pub mod zon;
 #[macro_use]
 pub mod stb;
 
+pub use chr::{ChrFile, ChrReadError};
 pub use ifo::{IfoFile, IfoReadError};
 pub use reader::FileReader;
 pub use stb::{StbFile, StbReadError};
