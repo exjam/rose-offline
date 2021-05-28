@@ -44,7 +44,8 @@ pub use item_database::{
     WeaponItemData,
 };
 pub use npc_database::{
-    NpcConversationData, NpcConversationReference, NpcData, NpcDatabase, NpcReference,
+    NpcConversationData, NpcConversationReference, NpcData, NpcDatabase, NpcMotionAction,
+    NpcMotionData, NpcReference,
 };
 pub use skill_database::{
     SkillAddAbility, SkillData, SkillDatabase, SkillPage, SkillReference, SkillType,

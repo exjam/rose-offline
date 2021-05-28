@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     data::{
-        formats::{FileReader, StbFile, VfsIndex},
-        NpcConversationData, NpcData, NpcDatabase,
+        formats::{ChrFile, FileReader, StbFile, VfsIndex, ZmoFile},
+        NpcConversationData, NpcData, NpcDatabase, NpcMotionAction, NpcMotionData,
     },
     stb_column,
 };
@@ -109,13 +109,55 @@ impl StbEvent {
     stb_column! { 3, get_filename, &str }
 }
 
+fn get_npc_action(action_index: u16) -> Option<NpcMotionAction> {
+    match action_index {
+        0 => Some(NpcMotionAction::Stop),
+        1 => Some(NpcMotionAction::Move),
+        2 => Some(NpcMotionAction::Attack),
+        3 => Some(NpcMotionAction::Hit),
+        4 => Some(NpcMotionAction::Die),
+        5 => Some(NpcMotionAction::Run),
+        6 => Some(NpcMotionAction::Cast1),
+        7 => Some(NpcMotionAction::SkillAction1),
+        8 => Some(NpcMotionAction::Cast2),
+        9 => Some(NpcMotionAction::SkillAction2),
+        10 => Some(NpcMotionAction::Etc),
+        _ => None,
+    }
+}
+
 pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
+    let file = vfs.open_file("3DDATA/STB/LIST_NPC.CHR")?;
+    let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
+
     let file = vfs.open_file("3DDATA/STB/LIST_NPC.STB")?;
     let data = StbNpc(StbFile::read(FileReader::from(&file)).ok()?);
+
     let mut npcs = HashMap::new();
     for id in 1..data.rows() {
         if data.get_string_id(id).is_none() {
             continue;
+        }
+
+        let mut motion_data = Vec::new();
+        if let Some(npc_model_data) = model_data.npcs.get(&(id as u16)) {
+            for (action, motion_index) in npc_model_data.motion_ids.iter() {
+                if let Some(action) = get_npc_action(*action) {
+                    if let Some(file) = model_data
+                        .motion_files
+                        .get(*motion_index as usize)
+                        .and_then(|path| vfs.open_file(path))
+                    {
+                        if let Ok(zmo) = ZmoFile::read(FileReader::from(&file)) {
+                            motion_data.push(NpcMotionData {
+                                action,
+                                duration: zmo.get_duration(),
+                                total_attack_frames: zmo.total_attack_frames,
+                            });
+                        }
+                    }
+                }
+            }
         }
 
         npcs.insert(
@@ -166,6 +208,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                     .unwrap_or(&"")
                     .to_string(),
                 npc_height: data.get_npc_height(id).unwrap_or(0),
+                motion_data,
             },
         );
     }

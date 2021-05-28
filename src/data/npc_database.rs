@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use crate::data::item_database::ItemReference;
 
@@ -7,6 +7,26 @@ pub struct NpcReference(pub usize);
 
 #[derive(Clone)]
 pub struct NpcConversationReference(pub String);
+
+pub enum NpcMotionAction {
+    Stop,
+    Move,
+    Attack,
+    Hit,
+    Die,
+    Run,
+    Cast1,
+    SkillAction1,
+    Cast2,
+    SkillAction2,
+    Etc,
+}
+
+pub struct NpcMotionData {
+    pub action: NpcMotionAction,
+    pub duration: Duration,
+    pub total_attack_frames: usize,
+}
 
 pub struct NpcData {
     pub walk_speed: u32,
@@ -51,6 +71,7 @@ pub struct NpcData {
     pub create_sound_index: u32,
     pub death_quest_trigger_name: String,
     pub npc_height: u32,
+    pub motion_data: Vec<NpcMotionData>,
 }
 
 pub struct NpcConversationData {
