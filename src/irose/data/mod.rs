@@ -1,6 +1,7 @@
 mod ability_values;
 mod character_creator;
 mod item_database;
+mod motion_database;
 mod npc_database;
 mod skill_database;
 mod zone_database;
@@ -32,6 +33,7 @@ fn decode_item_reference(value: u32) -> Result<ItemReference, DecodeItemReferenc
 pub use ability_values::get_ability_value_calculator;
 pub use character_creator::get_character_creator;
 pub use item_database::get_item_database;
+pub use motion_database::get_motion_database;
 pub use npc_database::get_npc_database;
 pub use skill_database::get_skill_database;
 pub use zone_database::get_zone_database;

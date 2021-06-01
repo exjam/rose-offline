@@ -3,6 +3,7 @@ pub mod character;
 pub mod formats;
 pub mod item;
 mod item_database;
+mod motion_database;
 mod npc_database;
 mod skill_database;
 mod zone_database;
@@ -43,6 +44,7 @@ pub use item_database::{
     JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData,
     WeaponItemData,
 };
+pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData};
 pub use npc_database::{
     NpcConversationData, NpcConversationReference, NpcData, NpcDatabase, NpcMotionAction,
     NpcMotionData, NpcReference,
