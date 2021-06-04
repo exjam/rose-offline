@@ -81,7 +81,6 @@ pub struct GemItemData {
 
 pub struct WeaponItemData {
     pub item_data: BaseItemData,
-    pub weapon_type: u32,
     pub attack_range: u32,
     pub attack_power: u32,
     pub attack_speed: u32,
@@ -90,7 +89,6 @@ pub struct WeaponItemData {
 
 pub struct SubWeaponItemData {
     pub item_data: BaseItemData,
-    pub weapon_type: u32,
 }
 
 pub struct ConsumableItemData {

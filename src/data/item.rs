@@ -171,7 +171,7 @@ pub enum ItemWeaponType {
 }
 
 impl ItemWeaponType {
-    pub fn from(item_class: &ItemClass) -> Option<Self> {
+    pub fn from(item_class: ItemClass) -> Option<Self> {
         match item_class {
             ItemClass::OneHandedSword | ItemClass::OneHandedBlunt => {
                 Some(ItemWeaponType::OneHanded)

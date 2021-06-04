@@ -111,7 +111,6 @@ impl StbItem {
     stb_column! { 33, get_feet_move_speed, u32 }
 
     // LIST_WEAPON
-    stb_column! { 4, get_weapon_type, u32 }
     stb_column! { 33, get_weapon_attack_range, u32 }
     stb_column! { 34, get_weapon_motion_type, u32 }
     stb_column! { 35, get_weapon_attack_power, u32 }
@@ -125,7 +124,6 @@ impl StbItem {
     stb_column! { 43, get_weapon_gem_position, u32 }
 
     // LIST_SUBWEAPON
-    stb_column! { 4, get_subweapon_type, u32 }
     stb_column! { 34, get_subweapon_gem_position, u32 }
 
     // LIST_JEMITEM
@@ -235,22 +233,14 @@ fn load_feet_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<FeetItemDa
 }
 
 fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponItemData> {
-    let base_item_data = load_base_item(data, stl, id, true)?;
+    // Weapon item id == 0 is used for unarmed attack data
+    let base_item_data = load_base_item(data, stl, id, id != 0)?;
     Some(WeaponItemData {
         item_data: base_item_data,
-        weapon_type: data.get_weapon_type(id).unwrap_or(0),
         attack_range: data.get_weapon_attack_range(id).unwrap_or(0),
         attack_power: data.get_weapon_attack_power(id).unwrap_or(0),
         attack_speed: data.get_weapon_attack_speed(id).unwrap_or(0),
         is_magic_damage: data.get_weapon_is_magic_damage(id).unwrap_or(false),
-    })
-}
-
-fn load_subweapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<SubWeaponItemData> {
-    let base_item_data = load_base_item(data, stl, id, true)?;
-    Some(SubWeaponItemData {
-        item_data: base_item_data,
-        weapon_type: data.get_subweapon_type(id).unwrap_or(0),
     })
 }
 

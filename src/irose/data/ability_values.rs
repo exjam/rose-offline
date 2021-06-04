@@ -649,7 +649,7 @@ fn calculate_attack_power(
         .unwrap_or(0.0);
 
     let weapon_type =
-        weapon.and_then(|(_, weapon_data)| ItemWeaponType::from(&weapon_data.item_data.class));
+        weapon.and_then(|(_, weapon_data)| ItemWeaponType::from(weapon_data.item_data.class));
 
     let attack_power = match weapon_type {
         Some(ItemWeaponType::Bow) | Some(ItemWeaponType::Crossbow) => {
