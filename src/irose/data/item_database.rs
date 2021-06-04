@@ -282,20 +282,20 @@ macro_rules! load_items {
 }
 
 pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
-    let face = load_items! { vfs, "3DDATA/STB/LIST_FACEITEM.STB", "3DDATA\\STB\\LIST_FACEITEM_S.STL", load_base_item, FaceItemData };
-    let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA\\STB\\LIST_CAP_S.STL", load_base_item, HeadItemData };
-    let body = load_items! { vfs, "3DDATA/STB/LIST_BODY.STB", "3DDATA\\STB\\LIST_BODY_S.STL", load_base_item, BodyItemData };
-    let hands = load_items! { vfs, "3DDATA/STB/LIST_ARMS.STB", "3DDATA\\STB\\LIST_ARMS_S.STL", load_base_item, HandsItemData };
-    let feet = load_items! { vfs, "3DDATA/STB/LIST_FOOT.STB", "3DDATA\\STB\\LIST_FOOT_S.STL",load_feet_item, FeetItemData };
-    let back = load_items! { vfs, "3DDATA/STB/LIST_BACK.STB", "3DDATA\\STB\\LIST_BACK_S.STL", load_back_item, BackItemData };
-    let jewellery = load_items! { vfs, "3DDATA/STB/LIST_JEWEL.STB", "3DDATA\\STB\\LIST_JEWEL_S.STL", load_base_item, JewelleryItemData };
-    let weapon = load_items! { vfs, "3DDATA/STB/LIST_WEAPON.STB", "3DDATA\\STB\\LIST_WEAPON_S.STL", load_weapon_item, WeaponItemData };
-    let subweapon = load_items! { vfs, "3DDATA/STB/LIST_SUBWPN.STB", "3DDATA\\STB\\LIST_SUBWPN_S.STL", load_subweapon_item, SubWeaponItemData };
-    let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA\\STB\\LIST_USEITEM_S.STL", load_base_item, ConsumableItemData };
-    let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA\\STB\\LIST_JEMITEM_S.STL",load_gem_item, GemItemData };
-    let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA\\STB\\LIST_NATURAL_S.STL", load_base_item, MaterialItemData };
-    let quest = load_items! { vfs, "3DDATA/STB/LIST_QUESTITEM.STB", "3DDATA\\STB\\LIST_QUESTITEM_S.STL", load_base_item, QuestItemData };
-    let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA\\STB\\LIST_PAT_S.STL", load_base_item, VehicleItemData };
+    let face = load_items! { vfs, "3DDATA/STB/LIST_FACEITEM.STB", "3DDATA/STB/LIST_FACEITEM_S.STL", load_base_item, FaceItemData };
+    let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA/STB/LIST_CAP_S.STL", load_base_item, HeadItemData };
+    let body = load_items! { vfs, "3DDATA/STB/LIST_BODY.STB", "3DDATA/STB/LIST_BODY_S.STL", load_base_item, BodyItemData };
+    let hands = load_items! { vfs, "3DDATA/STB/LIST_ARMS.STB", "3DDATA/STB/LIST_ARMS_S.STL", load_base_item, HandsItemData };
+    let feet = load_items! { vfs, "3DDATA/STB/LIST_FOOT.STB", "3DDATA/STB/LIST_FOOT_S.STL",load_feet_item, FeetItemData };
+    let back = load_items! { vfs, "3DDATA/STB/LIST_BACK.STB", "3DDATA/STB/LIST_BACK_S.STL", load_back_item, BackItemData };
+    let jewellery = load_items! { vfs, "3DDATA/STB/LIST_JEWEL.STB", "3DDATA/STB/LIST_JEWEL_S.STL", load_base_item, JewelleryItemData };
+    let weapon = load_items! { vfs, "3DDATA/STB/LIST_WEAPON.STB", "3DDATA/STB/LIST_WEAPON_S.STL", load_weapon_item, WeaponItemData };
+    let subweapon = load_items! { vfs, "3DDATA/STB/LIST_SUBWPN.STB", "3DDATA/STB/LIST_SUBWPN_S.STL", load_base_item, SubWeaponItemData };
+    let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA/STB/LIST_USEITEM_S.STL", load_base_item, ConsumableItemData };
+    let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA/STB/LIST_JEMITEM_S.STL",load_gem_item, GemItemData };
+    let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA/STB/LIST_NATURAL_S.STL", load_base_item, MaterialItemData };
+    let quest = load_items! { vfs, "3DDATA/STB/LIST_QUESTITEM.STB", "3DDATA/STB/LIST_QUESTITEM_S.STL", load_base_item, QuestItemData };
+    let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA/STB/LIST_PAT_S.STL", load_base_item, VehicleItemData };
 
     let mut item_grades = Vec::new();
     if let Some(file) = vfs.open_file("3DDATA/STB/LIST_GRADE.STB") {
