@@ -127,7 +127,7 @@ fn get_npc_action(action_index: u16) -> Option<NpcMotionAction> {
 }
 
 pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
-    let file = vfs.open_file("3DDATA/STB/LIST_NPC.CHR")?;
+    let file = vfs.open_file("3DDATA/NPC/LIST_NPC.CHR")?;
     let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
 
     let file = vfs.open_file("3DDATA/STB/LIST_NPC.STB")?;
