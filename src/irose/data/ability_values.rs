@@ -129,6 +129,8 @@ impl AbilityValueCalculator for AbilityValuesData {
                 equipment,
                 &passive_ability_values,
             ),
+            attack_speed: calculate_attack_speed(&self.item_database, equipment,
+                &equipment_ability_values, &passive_ability_values),
             hit: calculate_hit(
                 &self.item_database,
                 &basic_stats,
@@ -713,6 +715,31 @@ fn calculate_attack_power(
         + (attack_power as f32 * passive_attack_rate);
 
     (attack_power + passive_attack_power) as i32
+}
+
+fn calculate_attack_speed(
+    item_database: &ItemDatabase,
+    equipment: &Equipment,
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let (weapon_attack_speed, weapon_item_class) = item_database.get_weapon_item(equipment
+        .get_equipment_item(EquipmentIndex::WeaponRight)
+        .map(|item| item.item.item_number)
+        .unwrap_or(0)).map(|weapon| (weapon.attack_speed, Some(weapon.item_data.class))).unwrap_or((0, None));
+
+    let attack_speed = 1500.0 / (weapon_attack_speed + 5) as f32;
+
+    let (passive_value, passive_rate) = match weapon_item_class {
+        Some(ItemClass::Bow) => (passive_ability_values.value.attack_speed_bow, passive_ability_values.rate.attack_speed_bow),
+        Some(ItemClass::Gun) | Some(ItemClass::Launcher) => (passive_ability_values.value.attack_speed_gun, passive_ability_values.rate.attack_speed_gun),
+        Some(ItemClass::Katar) | Some(ItemClass::DualSwords) => (passive_ability_values.value.attack_speed_pair, passive_ability_values.rate.attack_speed_pair),
+        _ => (0, 0),
+    };
+
+    let passive_attack_speed = passive_value as f32 + attack_speed * (passive_rate as f32 / 100.0);
+
+    (attack_speed + passive_attack_speed + equipment_ability_values.attack_speed as f32) as i32
 }
 
 fn calculate_hit(
