@@ -140,7 +140,7 @@ impl<'a> FileReader<'a> {
         let mut length = 0usize;
         loop {
             let byte = self.read_u8()?;
-            length = (length << 7) | (byte & 0x7F) as usize;
+            length += (byte & 0x7f) as usize;
             if (byte & 0x80) == 0 {
                 break;
             }
