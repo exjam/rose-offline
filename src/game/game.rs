@@ -1,6 +1,6 @@
 use crossbeam_channel::Receiver;
 use legion::*;
-use std::{sync::Arc, time::Duration};
+use std::{sync::Arc, time::{Duration, Instant}};
 
 use super::{
     components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},
@@ -38,6 +38,7 @@ impl Game {
         skill_database: Arc<SkillDatabase>,
         zone_database: Arc<ZoneDatabase>,
     ) {
+        let started_load = Instant::now();
         let game_data = GameData {
             character_creator,
             ability_value_calculator,
@@ -79,6 +80,7 @@ impl Game {
                 ));
             }
         }
+        println!("Time take to populate zones {:?}", started_load.elapsed());
 
         let mut resources = Resources::default();
         resources.insert(ControlChannel::new(self.control_rx.clone()));

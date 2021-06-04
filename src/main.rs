@@ -3,7 +3,7 @@ mod game;
 mod irose;
 mod protocol;
 
-use std::{path::Path, sync::Arc};
+use std::{path::Path, sync::Arc, time::Instant};
 use tokio::net::TcpListener;
 
 use crate::{
@@ -13,7 +13,7 @@ use crate::{
 
 #[tokio::main]
 async fn main() {
-    let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
+    let started_load = Instant::now();
     let vfs_index = VfsIndex::load(&Path::new("data.idx")).expect("Failed reading data.idx");
     let skill_database = Arc::new(
         irose::data::get_skill_database(&vfs_index).expect("Failed to load skill database"),
@@ -29,7 +29,9 @@ async fn main() {
     let ability_value_calculator =
         irose::data::get_ability_value_calculator(item_database.clone(), skill_database.clone())
             .expect("Failed to get ability value calculator");
+    println!("Time take to read game data {:?}", started_load.elapsed());
 
+    let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
     std::thread::spawn(move || {
         game::Game::new(game_control_rx).run(
             character_creator,
