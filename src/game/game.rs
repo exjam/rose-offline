@@ -1,6 +1,9 @@
 use crossbeam_channel::Receiver;
 use legion::*;
-use std::{sync::Arc, time::{Duration, Instant}};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use super::{
     components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},
@@ -102,6 +105,7 @@ impl Game {
             .add_system(game_server_disconnect_handler_system())
             .add_system(monster_spawn_system())
             .flush()
+            .add_system(command_system())
             .add_system(update_position_system())
             .flush()
             .add_system(client_entity_visibility_system())

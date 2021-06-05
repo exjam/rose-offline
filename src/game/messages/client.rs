@@ -164,6 +164,10 @@ pub struct Move {
     pub z: u16,
 }
 
+pub struct Attack {
+    pub target_entity_id: u16,
+}
+
 pub enum SetHotbarSlotError {
     InvalidSlotIndex,
     InvalidSlot,
@@ -194,6 +198,7 @@ pub enum ClientMessage {
     JoinZoneRequest(JoinZoneRequest),
     Chat(String),
     Move(Move),
+    Attack(Attack),
     SetHotbarSlot(SetHotbarSlot),
     ChangeEquipment(ChangeEquipment),
 }

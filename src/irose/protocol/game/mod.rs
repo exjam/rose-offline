@@ -5,7 +5,8 @@ use tokio::sync::oneshot;
 
 use crate::game::messages::{
     client::{
-        ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest, Move, SetHotbarSlot,
+        Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest, Move,
+        SetHotbarSlot,
     },
     server::{
         LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc,
@@ -133,6 +134,14 @@ impl GameClient {
                     z: packet.z,
                 }))?;
             }
+            Some(ClientPackets::Attack) => {
+                let packet = PacketClientAttack::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::Attack(Attack {
+                        target_entity_id: packet.target_entity_id,
+                    }))?;
+            }
             Some(ClientPackets::SetHotbarSlot) => {
                 let request = PacketClientSetHotbarSlot::try_from(&packet)?;
                 let (response_tx, response_rx) = oneshot::channel();
@@ -180,6 +189,19 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerMoveEntity {
+                        entity_id: message.entity_id,
+                        target_entity_id: message.target_entity_id,
+                        distance: message.distance,
+                        x: message.x,
+                        y: message.y,
+                        z: message.z,
+                    }))
+                    .await?;
+            }
+            ServerMessage::AttackEntity(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerAttackEntity {
                         entity_id: message.entity_id,
                         target_entity_id: message.target_entity_id,
                         distance: message.distance,

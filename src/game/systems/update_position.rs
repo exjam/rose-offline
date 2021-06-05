@@ -16,7 +16,7 @@ pub fn update_position(
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] delta_time: &DeltaTime,
 ) {
-    let direction = destination.position - position.position;
+    let direction = destination.position.xy() - position.position.xy();
     let distance_squared = direction.magnitude_squared();
 
     if distance_squared == 0.0 {
@@ -28,7 +28,8 @@ pub fn update_position(
             position.position = destination.position;
             cmd.remove_component::<Destination>(*entity);
         } else {
-            position.position += move_vector;
+            position.position.x += move_vector.x;
+            position.position.y += move_vector.y;
         }
     }
 

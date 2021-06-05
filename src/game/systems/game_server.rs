@@ -7,8 +7,9 @@ use crate::{
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
-            Destination, Equipment, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
-            ManaPoints, MoveSpeed, Position, SkillList, Target, Team,
+            Command, CommandAttack, CommandData, CommandMove, Destination, Equipment, GameClient,
+            HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand,
+            Position, SkillList, Target, Team,
         },
         messages::{
             client::{
@@ -62,6 +63,7 @@ pub fn game_server_authentication(
                                         speed: ability_values.run_speed,
                                     },
                                 );
+                                cmd.add_component(*entity, Command::new(CommandData::Stop, None));
                                 cmd.add_component(*entity, ability_values);
                                 cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.info.clone());
@@ -284,6 +286,7 @@ fn handle_gm_command(
 
 #[system(for_each)]
 pub fn game_server_main(
+    world: &SubWorld,
     cmd: &mut CommandBuffer,
     entity: &Entity,
     client: &mut GameClient,
@@ -324,46 +327,39 @@ pub fn game_server_main(
                 }
             }
             ClientMessage::Move(message) => {
-                let mut target_entity_id = 0;
+                let mut move_target_entity = None;
                 if message.target_entity_id > 0 {
                     if let Some(target_entity) = client_entity_list
                         .get_zone(position.zone as usize)
                         .and_then(|zone| zone.get_entity(ClientEntityId(message.target_entity_id)))
                     {
-                        target_entity_id = message.target_entity_id;
-                        cmd.add_component(
-                            *entity,
-                            Target {
-                                entity: target_entity,
-                            },
-                        );
-                    } else {
-                        cmd.remove_component::<Target>(*entity);
+                        move_target_entity = Some(target_entity);
                     }
-                } else {
-                    cmd.remove_component::<Target>(*entity);
                 }
 
                 let destination = Point3::new(message.x, message.y, message.z as f32);
                 cmd.add_component(
                     *entity,
-                    Destination {
-                        position: destination,
-                    },
+                    NextCommand(CommandData::Move(CommandMove {
+                        destination,
+                        target: move_target_entity,
+                    })),
                 );
-
-                let distance = (destination - position.position).magnitude();
-                server_messages.send_entity_message(
-                    *entity,
-                    ServerMessage::MoveEntity(server::MoveEntity {
-                        entity_id: entity_id.id.0,
-                        target_entity_id,
-                        distance: distance as u16,
-                        x: message.x,
-                        y: message.y,
-                        z: message.z,
-                    }),
-                );
+            }
+            ClientMessage::Attack(message) => {
+                if let Some(target_entity) = client_entity_list
+                    .get_zone(position.zone as usize)
+                    .and_then(|zone| zone.get_entity(ClientEntityId(message.target_entity_id)))
+                {
+                    cmd.add_component(
+                        *entity,
+                        NextCommand(CommandData::Attack(CommandAttack {
+                            target: target_entity,
+                        })),
+                    );
+                } else {
+                    cmd.add_component(*entity, NextCommand(CommandData::Stop));
+                }
             }
             ClientMessage::SetHotbarSlot(SetHotbarSlot {
                 slot_index,

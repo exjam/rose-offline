@@ -27,6 +27,7 @@ pub enum ServerPackets {
     SpawnEntityCharacter = 0x793,
     RemoveEntities = 0x794,
     StopMoveEntity = 0x796,
+    AttackEntity = 0x798,
     MoveEntity = 0x79a,
     UpdateEquipment = 0x7a5,
     Teleport = 0x7a8,
@@ -369,6 +370,28 @@ impl From<&PacketServerCharacterQuestData> for Packet {
             write_item_full(&mut writer, None); // wish list items
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketServerAttackEntity {
+    pub entity_id: u16,
+    pub target_entity_id: u16,
+    pub distance: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: u16,
+}
+
+impl From<&PacketServerAttackEntity> for Packet {
+    fn from(packet: &PacketServerAttackEntity) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::AttackEntity as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_u16(packet.target_entity_id);
+        writer.write_u16(packet.distance);
+        writer.write_f32(packet.x);
+        writer.write_f32(packet.y);
+        writer.write_u16(packet.z);
         writer.into()
     }
 }

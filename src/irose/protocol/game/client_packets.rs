@@ -101,6 +101,25 @@ impl TryFrom<&Packet> for PacketClientMove {
 }
 
 #[derive(Debug)]
+pub struct PacketClientAttack {
+    pub target_entity_id: u16,
+}
+
+impl TryFrom<&Packet> for PacketClientAttack {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::Attack as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let target_entity_id = reader.read_u16()?;
+        Ok(PacketClientAttack { target_entity_id })
+    }
+}
+
+#[derive(Debug)]
 pub struct PacketClientChat<'a> {
     pub text: &'a str,
 }

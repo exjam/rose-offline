@@ -10,6 +10,16 @@ pub struct LocalChat {
 }
 
 #[derive(Clone)]
+pub struct AttackEntity {
+    pub entity_id: u16,
+    pub target_entity_id: u16,
+    pub distance: u16,
+    pub x: f32,
+    pub y: f32,
+    pub z: u16,
+}
+
+#[derive(Clone)]
 pub struct MoveEntity {
     pub entity_id: u16,
     pub target_entity_id: u16,
@@ -97,6 +107,7 @@ pub enum ServerMessage {
     SpawnEntityNpc(SpawnEntityNpc),
     SpawnEntityMonster(SpawnEntityMonster),
     RemoveEntities(RemoveEntities),
+    AttackEntity(AttackEntity),
     MoveEntity(MoveEntity),
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),

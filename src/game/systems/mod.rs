@@ -1,4 +1,5 @@
 mod client_entity_visibility;
+mod command;
 mod control_server;
 mod game_server;
 mod login_server;
@@ -8,6 +9,7 @@ mod update_position;
 mod world_server;
 
 pub use client_entity_visibility::*;
+pub use command::*;
 pub use control_server::*;
 pub use game_server::*;
 pub use login_server::*;
