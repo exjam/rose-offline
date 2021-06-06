@@ -49,13 +49,13 @@ impl MotionDatabase {
     pub fn get_character_motion(
         &self,
         action: MotionCharacterAction,
-        weapon: usize,
+        weapon_motion_type: usize,
         gender: usize,
     ) -> Option<&MotionFileData> {
         let index = self
             .motion_indices
             .get(&action)
-            .and_then(|x| x.get(weapon))?;
+            .and_then(|x| x.get(weapon_motion_type))?;
 
         self.motion_files.get(gender).and_then(|x| x.get(index))
     }
