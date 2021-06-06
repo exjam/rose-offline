@@ -2,13 +2,13 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        item::{AbilityType, Item, ItemClass, ItemWeaponType},
-        AbilityValueCalculator, ItemDatabase, ItemReference, NpcDatabase, SkillAddAbility,
+        item::{AbilityType, ItemClass, ItemWeaponType},
+        AbilityValueCalculator, ItemDatabase, NpcDatabase, SkillAddAbility,
         SkillDatabase, SkillReference,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
-        Level, Npc, SkillList,
+        Level, SkillList,
     },
 };
 

@@ -10,7 +10,6 @@ use crate::game::components::{
 pub enum CharacterStorageError {
     NotFound,
     IoError,
-    InvalidValue,
 }
 
 impl From<std::io::Error> for CharacterStorageError {
@@ -54,6 +53,7 @@ fn get_character_path(name: &str) -> PathBuf {
     CHARACTER_STORAGE_DIR.join(format!("{}.json", name))
 }
 
+#[allow(dead_code)]
 pub enum CharacterCreatorError {
     InvalidName,
     InvalidGender,

@@ -1,11 +1,10 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap};
 
 use num_traits::FromPrimitive;
 
 use crate::{
     data::{
         formats::{FileReader, StbFile, VfsIndex},
-        item::AbilityType,
         SkillAddAbility, SkillData, SkillDatabase, SkillPage, SkillType,
     },
     stb_column,

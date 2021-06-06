@@ -19,9 +19,9 @@ impl LoginClient {
         Self {}
     }
 
-    async fn handle_packet<'a>(
+    async fn handle_packet(
         &self,
-        client: &mut Client<'a>,
+        client: &mut Client<'_>,
         packet: Packet,
     ) -> Result<(), ProtocolError> {
         match FromPrimitive::from_u16(packet.command) {
@@ -152,9 +152,9 @@ impl LoginClient {
         Ok(())
     }
 
-    async fn handle_server_message<'a>(
+    async fn handle_server_message(
         &self,
-        _client: &mut Client<'a>,
+        _client: &mut Client<'_>,
         message: ServerMessage,
     ) -> Result<(), ProtocolError> {
         match message {

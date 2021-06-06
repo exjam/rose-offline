@@ -22,7 +22,7 @@ lazy_static! {
 }
 
 use crate::game::components::{
-    AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory, Level, Npc, SkillList,
+    AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory, Level, SkillList,
 };
 
 pub trait AbilityValueCalculator {

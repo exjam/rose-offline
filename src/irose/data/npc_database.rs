@@ -17,7 +17,6 @@ impl StbNpc {
         self.0.rows()
     }
 
-    stb_column! { 0, get_name_server, &str }
     stb_column! { 2, get_walk_speed, i32 }
     stb_column! { 3, get_run_speed, i32 }
     stb_column! { 4, get_scale, u32 }
@@ -184,7 +183,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 drop_item: decode_item_reference(data.get_drop_item(id).unwrap_or(0)).ok(),
                 npc_minimap_icon_index: data.get_npc_minimap_icon_index(id).unwrap_or(0),
                 summon_point_requirement: data.get_summon_point_requirement(id).unwrap_or(0),
-                shop_tabs: data.get_shop_tabs(id).unwrap_or(Vec::new()),
+                shop_tabs: data.get_shop_tabs(id).unwrap_or_else(Vec::new),
                 shop_union_number: data.get_shop_union_number(id).unwrap_or(0),
                 is_targetable: data.get_is_targetable(id).unwrap_or(false),
                 attack_range: data.get_attack_range(id).unwrap_or(0),

@@ -1,21 +1,11 @@
-use num_traits::ToPrimitive;
-use std::{collections::HashMap, hash::Hash, time::Duration};
+use std::{collections::HashMap};
 
 use crate::{
     data::{
         formats::{FileReader, StbFile, VfsIndex, ZmoFile},
         MotionCharacterAction, MotionDatabase, MotionFileData,
     },
-    stb_column,
 };
-
-struct StbTypeMotion(StbFile);
-
-impl StbTypeMotion {
-    pub fn rows(&self) -> usize {
-        self.0.rows()
-    }
-}
 
 fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
     let file = vfs.open_file(path)?;

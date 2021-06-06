@@ -75,7 +75,7 @@ impl<'a> FileReader<'a> {
     }
 
     pub fn set_position_from_end(&mut self, offset: i64) {
-        self.cursor.seek(SeekFrom::End(offset));
+        self.cursor.seek(SeekFrom::End(offset)).ok();
     }
 
     pub fn read_u8(&mut self) -> Result<u8, ReadError> {

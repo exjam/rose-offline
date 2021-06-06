@@ -37,7 +37,7 @@ impl ZmoFile {
         // TODO: There is the animation data here, which we do not need for server
 
         let mut frame_events = Vec::new();
-        let mut total_attack_frames = 0 as usize;
+        let mut total_attack_frames = 0;
         reader.set_position_from_end(-4);
         if let Ok(extended_magic) = reader.read_fixed_length_string(4) {
             if extended_magic == "EZMO" || extended_magic == "3ZMO" {
@@ -46,7 +46,7 @@ impl ZmoFile {
                 reader.set_position(position);
 
                 let num_frame_events = reader.read_u16()?;
-                for i in 0..num_frame_events {
+                for _ in 0..num_frame_events {
                     let frame_event = reader.read_u16()?;
                     frame_events.push(frame_event);
 
