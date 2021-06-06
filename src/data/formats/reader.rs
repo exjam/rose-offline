@@ -136,6 +136,18 @@ impl<'a> FileReader<'a> {
         }
     }
 
+    pub fn read_variable_length_bytes(&mut self) -> Result<&'a [u8], ReadError> {
+        let mut length = 0usize;
+        loop {
+            let byte = self.read_u8()?;
+            length = (length << 7) | (byte & 0x7F) as usize;
+            if (byte & 0x80) == 0 {
+                break;
+            }
+        }
+        self.read_fixed_length_bytes(length as usize)
+    }
+
     pub fn read_u8_length_bytes(&mut self) -> Result<&'a [u8], ReadError> {
         let length = self.read_u8()?;
         self.read_fixed_length_bytes(length as usize)
@@ -162,6 +174,10 @@ impl<'a> FileReader<'a> {
 
     pub fn read_fixed_length_string(&mut self, length: usize) -> Result<Cow<'a, str>, ReadError> {
         Ok(decode_string(self.read_fixed_length_bytes(length)?))
+    }
+
+    pub fn read_variable_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
+        Ok(decode_string(self.read_variable_length_bytes()?))
     }
 
     pub fn read_u8_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {

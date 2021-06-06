@@ -65,7 +65,7 @@ enum StlType {
 
 impl StlFile {
     pub fn read(mut reader: FileReader) -> Result<Self, StlReadError> {
-        let stl_type_str = reader.read_u8_length_string()?;
+        let stl_type_str = reader.read_variable_length_string()?;
         let stl_type = if stl_type_str == "ITST01" {
             StlType::Item
         } else if stl_type_str == "NRST01" {
@@ -80,7 +80,7 @@ impl StlFile {
         let mut string_keys = HashMap::new();
         let mut integer_keys = HashMap::new();
         for i in 0..key_count {
-            let key = reader.read_u8_length_string()?;
+            let key = reader.read_variable_length_string()?;
             let index = reader.read_u32()?;
             string_keys.insert(key.to_string(), i);
             integer_keys.insert(index, i);
@@ -91,7 +91,7 @@ impl StlFile {
 
         let read_stl_entry =
             |reader: &mut FileReader, data: &mut Vec<u8>| -> Result<(u32, u32), StlReadError> {
-                let text = reader.read_u8_length_string()?;
+                let text = reader.read_variable_length_string()?;
                 let text_bytes = text.as_bytes();
                 let text_bytes_length = text_bytes.len();
                 let text_offset = data.len();
