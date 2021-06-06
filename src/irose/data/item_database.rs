@@ -111,10 +111,10 @@ impl StbItem {
     stb_column! { 33, get_feet_move_speed, u32 }
 
     // LIST_WEAPON
-    stb_column! { 33, get_weapon_attack_range, u32 }
+    stb_column! { 33, get_weapon_attack_range, i32 }
     stb_column! { 34, get_weapon_motion_type, u32 }
-    stb_column! { 35, get_weapon_attack_power, u32 }
-    stb_column! { 36, get_weapon_attack_speed, u32 }
+    stb_column! { 35, get_weapon_attack_power, i32 }
+    stb_column! { 36, get_weapon_attack_speed, i32 }
     stb_column! { 37, get_weapon_is_magic_damage, bool }
     stb_column! { 38, get_weapon_bullet_effect_index, u32 }
     stb_column! { 39, get_weapon_default_effect_index, u32 }
@@ -240,6 +240,7 @@ fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponIt
         attack_range: data.get_weapon_attack_range(id).unwrap_or(0),
         attack_power: data.get_weapon_attack_power(id).unwrap_or(0),
         attack_speed: data.get_weapon_attack_speed(id).unwrap_or(0),
+        motion_type: data.get_weapon_motion_type(id).unwrap_or(0),
         is_magic_damage: data.get_weapon_is_magic_damage(id).unwrap_or(false),
     })
 }

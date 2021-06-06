@@ -81,9 +81,10 @@ pub struct GemItemData {
 
 pub struct WeaponItemData {
     pub item_data: BaseItemData,
-    pub attack_range: u32,
-    pub attack_power: u32,
-    pub attack_speed: u32,
+    pub attack_range: i32,
+    pub attack_power: i32,
+    pub attack_speed: i32,
+    pub motion_type: u32,
     pub is_magic_damage: bool,
 }
 
