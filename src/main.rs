@@ -29,9 +29,12 @@ async fn main() {
         Arc::new(irose::data::get_zone_database(&vfs_index).expect("Failed to load zone database"));
     let character_creator = irose::data::get_character_creator(&vfs_index, &skill_database)
         .expect("Failed to get character creator");
-    let ability_value_calculator =
-        irose::data::get_ability_value_calculator(item_database.clone(), skill_database.clone())
-            .expect("Failed to get ability value calculator");
+    let ability_value_calculator = irose::data::get_ability_value_calculator(
+        item_database.clone(),
+        skill_database.clone(),
+        npc_database.clone(),
+    )
+    .expect("Failed to get ability value calculator");
     println!("Time take to read game data {:?}", started_load.elapsed());
 
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();

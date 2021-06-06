@@ -3,25 +3,31 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{AbilityType, Item, ItemClass, ItemWeaponType},
-        AbilityValueCalculator, ItemDatabase, ItemReference, SkillAddAbility, SkillDatabase,
-        SkillReference,
+        AbilityValueCalculator, ItemDatabase, ItemReference, NpcDatabase, SkillAddAbility,
+        SkillDatabase, SkillReference,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
-        Level, SkillList,
+        Level, Npc, SkillList,
     },
 };
 
 pub struct AbilityValuesData {
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
+    npc_database: Arc<NpcDatabase>,
 }
 
 impl AbilityValuesData {
-    pub fn new(item_database: Arc<ItemDatabase>, skill_database: Arc<SkillDatabase>) -> Self {
+    pub fn new(
+        item_database: Arc<ItemDatabase>,
+        skill_database: Arc<SkillDatabase>,
+        npc_database: Arc<NpcDatabase>,
+    ) -> Self {
         Self {
             item_database,
             skill_database,
+            npc_database,
         }
     }
 }
@@ -29,14 +35,41 @@ impl AbilityValuesData {
 pub fn get_ability_value_calculator(
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
+    npc_database: Arc<NpcDatabase>,
 ) -> Option<Box<impl AbilityValueCalculator + Send + Sync>> {
     Some(Box::new(AbilityValuesData::new(
         item_database,
         skill_database,
+        npc_database,
     )))
 }
 
 impl AbilityValueCalculator for AbilityValuesData {
+    fn calculate_npc(&self, npc_id: usize) -> Option<AbilityValues> {
+        let npc_data = self.npc_database.get_npc(npc_id)?;
+        Some(AbilityValues {
+            run_speed: npc_data.run_speed as f32,
+            strength: 0,
+            dexterity: 0,
+            intelligence: npc_data.level as u16,
+            concentration: 0,
+            charm: 0,
+            sense: npc_data.level as u16,
+            max_health: npc_data.level * npc_data.health_points,
+            max_mana: 100,
+            additional_health_recovery: 0,
+            additional_mana_recovery: 0,
+            attack_power: npc_data.attack,
+            attack_speed: npc_data.attack_speed,
+            attack_range: npc_data.attack_range,
+            hit: npc_data.hit,
+            defence: npc_data.defence,
+            resistance: npc_data.resistance,
+            critical: (npc_data.level as f32 * 2.5) as i32,
+            avoid: npc_data.avoid,
+        })
+    }
+
     fn calculate(
         &self,
         character_info: &CharacterInfo,

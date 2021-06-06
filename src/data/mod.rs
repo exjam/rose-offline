@@ -22,7 +22,7 @@ lazy_static! {
 }
 
 use crate::game::components::{
-    AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory, Level, SkillList,
+    AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory, Level, Npc, SkillList,
 };
 
 pub trait AbilityValueCalculator {
@@ -35,6 +35,8 @@ pub trait AbilityValueCalculator {
         basic_stats: &BasicStats,
         skill_list: &SkillList,
     ) -> AbilityValues;
+
+    fn calculate_npc(&self, npc_id: usize) -> Option<AbilityValues>;
 }
 
 pub use character::{CharacterCreator, CharacterCreatorError};

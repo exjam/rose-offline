@@ -72,6 +72,14 @@ impl Game {
                     Position::new(npc.position, zone_id),
                     Team::default_npc(),
                 ));
+
+                if let Some(ability_values) = game_data
+                    .ability_value_calculator
+                    .calculate_npc(npc.npc.0 as usize)
+                {
+                    world.entry(entity).unwrap().add_component(ability_values);
+                }
+
                 world
                     .entry(entity)
                     .unwrap()
