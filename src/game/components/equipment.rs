@@ -1,7 +1,10 @@
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use crate::data::item::{EquipmentItem, ItemType, StackableItem};
+use crate::data::{
+    item::{EquipmentItem, ItemType, StackableItem},
+    ItemDatabase, ItemReference, WeaponItemData,
+};
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, FromPrimitive)]
@@ -42,6 +45,39 @@ pub struct Equipment {
     pub equipped_items: [Option<EquipmentItem>; EquipmentIndex::Earring as usize + 1],
     pub equipped_vehicle: [Option<EquipmentItem>; VehiclePartIndex::Arms as usize + 1],
     pub equipped_ammo: [Option<StackableItem>; AmmoIndex::Throw as usize + 1],
+}
+
+pub trait EquipmentItemReference {
+    fn from_equipment(equipment: &Equipment, index: EquipmentIndex) -> Option<ItemReference>;
+}
+
+impl EquipmentItemReference for ItemReference {
+    fn from_equipment(equipment: &Equipment, index: EquipmentIndex) -> Option<ItemReference> {
+        equipment.get_equipment_item(index).map(|item| item.item)
+    }
+}
+
+pub trait EquipmentItemDatabase {
+    fn get_equipped_weapon_item_data(
+        &self,
+        equipment: &Equipment,
+        index: EquipmentIndex,
+    ) -> Option<&WeaponItemData>;
+}
+
+impl EquipmentItemDatabase for ItemDatabase {
+    fn get_equipped_weapon_item_data(
+        &self,
+        equipment: &Equipment,
+        index: EquipmentIndex,
+    ) -> Option<&WeaponItemData> {
+        self.get_weapon_item(
+            equipment
+                .get_equipment_item(index)
+                .map(|item| item.item.item_number)
+                .unwrap_or(0),
+        )
+    }
 }
 
 impl Equipment {
