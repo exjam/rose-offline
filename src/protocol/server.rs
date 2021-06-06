@@ -147,11 +147,15 @@ impl WorldServer {
             };
         }
 
-        self.control_message_tx
-            .send(ControlMessage::RemoveServer {
-                entity: self.entity,
-            })
-            .ok();
+        // TODO: Allow server to exit gracefully
+        #[allow(unreachable_code)]
+        {
+            self.control_message_tx
+                .send(ControlMessage::RemoveServer {
+                    entity: self.entity,
+                })
+                .ok();
+        }
     }
 }
 
@@ -212,10 +216,14 @@ impl GameServer {
             };
         }
 
-        self.control_message_tx
-            .send(ControlMessage::RemoveServer {
-                entity: self.entity,
-            })
-            .ok();
+        // TODO: Allow server to exit gracefully
+        #[allow(unreachable_code)]
+        {
+            self.control_message_tx
+                .send(ControlMessage::RemoveServer {
+                    entity: self.entity,
+                })
+                .ok();
+        }
     }
 }

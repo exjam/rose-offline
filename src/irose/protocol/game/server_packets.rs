@@ -135,6 +135,7 @@ fn write_equipment_item_full(writer: &mut PacketWriter, equipment: Option<&Equip
 }
 
 #[bitfield]
+#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct PacketStackableItemFull {
     #[skip(getters)]

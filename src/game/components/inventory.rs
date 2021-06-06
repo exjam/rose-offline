@@ -179,6 +179,7 @@ impl Default for Inventory {
     }
 }
 
+#[allow(dead_code)]
 impl Inventory {
     pub fn new() -> Self {
         Default::default()

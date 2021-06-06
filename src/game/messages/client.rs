@@ -169,7 +169,6 @@ pub struct Attack {
 }
 
 pub enum SetHotbarSlotError {
-    InvalidSlotIndex,
     InvalidSlot,
 }
 

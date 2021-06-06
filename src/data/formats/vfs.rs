@@ -46,13 +46,15 @@ impl VfsIndex {
         let data = std::fs::read(path)?;
         let mut reader = FileReader::from(&data);
 
-        let mut index = VfsIndex::default();
-        index.root_path = {
-            if let Some(path) = path.parent() {
-                path.to_owned()
-            } else {
-                PathBuf::new()
-            }
+        let mut index = VfsIndex {
+            root_path: {
+                if let Some(path) = path.parent() {
+                    path.to_owned()
+                } else {
+                    PathBuf::new()
+                }
+            },
+            ..Default::default()
         };
         index.base_version = reader.read_u32()?;
         index.current_version = reader.read_u32()?;

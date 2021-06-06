@@ -316,9 +316,6 @@ impl GameClient {
                     }))
                     .await?;
             }
-            _ => {
-                panic!("Unimplemented message for irose game server!")
-            }
         }
         Ok(())
     }

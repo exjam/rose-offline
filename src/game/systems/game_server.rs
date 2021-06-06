@@ -3,16 +3,13 @@ use nalgebra::Point3;
 use std::num::{ParseFloatError, ParseIntError};
 
 use crate::{
-    data::{
-        account::AccountStorage, character::CharacterStorage, item::Item,
-    },
+    data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
-            Command, CommandAttack, CommandData, CommandMove, Equipment,
-            EquipmentIndex, EquipmentItemDatabase, GameClient,
-            HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed,
-            NextCommand, Position, SkillList, Team,
+            Command, CommandAttack, CommandData, CommandMove, Equipment, EquipmentIndex,
+            EquipmentItemDatabase, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
+            ManaPoints, MoveSpeed, NextCommand, Position, SkillList, Team,
         },
         messages::{
             client::{

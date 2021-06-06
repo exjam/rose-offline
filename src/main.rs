@@ -41,7 +41,7 @@ async fn main() {
 
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
     std::thread::spawn(move || {
-        game::Game::new(game_control_rx).run(
+        game::GameWorld::new(game_control_rx).run(
             character_creator,
             ability_value_calculator,
             item_database,

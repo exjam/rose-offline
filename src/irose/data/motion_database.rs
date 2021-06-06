@@ -1,10 +1,8 @@
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use crate::{
-    data::{
-        formats::{FileReader, StbFile, VfsIndex, ZmoFile},
-        MotionCharacterAction, MotionDatabase, MotionFileData,
-    },
+use crate::data::{
+    formats::{FileReader, StbFile, VfsIndex, ZmoFile},
+    MotionCharacterAction, MotionDatabase, MotionFileData,
 };
 
 fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {

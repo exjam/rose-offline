@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{AbilityType, ItemClass, ItemWeaponType},
-        AbilityValueCalculator, ItemDatabase, NpcDatabase, SkillAddAbility,
-        SkillDatabase, SkillReference,
+        AbilityValueCalculator, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
+        SkillReference,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
@@ -75,7 +75,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         character_info: &CharacterInfo,
         level: &Level,
         equipment: &Equipment,
-        inventory: &Inventory,
+        _inventory: &Inventory,
         basic_stats: &BasicStats,
         skill_list: &SkillList,
     ) -> AbilityValues {

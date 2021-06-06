@@ -19,14 +19,14 @@ use crate::data::{
     SkillDatabase, ZoneDatabase,
 };
 
-pub struct Game {
+pub struct GameWorld {
     tick_rate_hz: u64,
     control_rx: Receiver<ControlMessage>,
 }
 
-impl Game {
-    pub fn new(control_rx: Receiver<ControlMessage>) -> Game {
-        Game {
+impl GameWorld {
+    pub fn new(control_rx: Receiver<ControlMessage>) -> Self {
+        Self {
             tick_rate_hz: 30,
             control_rx,
         }

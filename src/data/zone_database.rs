@@ -46,6 +46,7 @@ impl ZoneDatabase {
         self.zones.iter()
     }
 
+    #[allow(dead_code)]
     pub fn get_zone(&self, id: usize) -> Option<&ZoneData> {
         self.zones.get(&(id as u16))
     }

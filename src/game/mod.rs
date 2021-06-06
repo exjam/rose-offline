@@ -1,7 +1,8 @@
-pub mod components;
-mod game;
-pub mod messages;
+mod game_world;
 mod resources;
 mod systems;
 
-pub use game::Game;
+pub mod components;
+pub mod messages;
+
+pub use game_world::GameWorld;

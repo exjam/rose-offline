@@ -32,6 +32,7 @@ impl ItemType {
         )
     }
 
+    #[allow(dead_code)]
     pub fn is_money(self) -> bool {
         matches!(self, ItemType::Money)
     }
@@ -179,11 +180,12 @@ impl ItemWeaponType {
             ItemClass::TwoHandedSword | ItemClass::Spear | ItemClass::TwoHandedAxe => {
                 Some(ItemWeaponType::TwoHanded)
             }
-            ItemClass::Bow | ItemClass::Crossbow => Some(ItemWeaponType::Bow),
+            ItemClass::Bow => Some(ItemWeaponType::Bow),
             ItemClass::Gun | ItemClass::DualGuns => Some(ItemWeaponType::Gun),
             ItemClass::Launcher => Some(ItemWeaponType::Launcher),
             ItemClass::MagicStaff => Some(ItemWeaponType::MagicMelee),
             ItemClass::MagicWand => Some(ItemWeaponType::MagicRanged),
+            ItemClass::Crossbow => Some(ItemWeaponType::Crossbow),
             ItemClass::Katar => Some(ItemWeaponType::Katar),
             ItemClass::DualSwords => Some(ItemWeaponType::DualWield),
             _ => None,

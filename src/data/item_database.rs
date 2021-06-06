@@ -117,6 +117,7 @@ pub struct ItemGradeData {
     pub glow_colour: (f32, f32, f32),
 }
 
+#[allow(dead_code)]
 pub enum ItemData<'a> {
     Face(&'a FaceItemData),
     Head(&'a HeadItemData),
@@ -152,6 +153,7 @@ pub struct ItemDatabase {
     item_grades: Vec<ItemGradeData>,
 }
 
+#[allow(dead_code)]
 impl ItemDatabase {
     pub fn new(
         face: HashMap<u16, FaceItemData>,

@@ -169,13 +169,9 @@ impl WorldClient {
     async fn handle_server_message(
         &self,
         _client: &mut Client<'_>,
-        message: ServerMessage,
+        _message: ServerMessage,
     ) -> Result<(), ProtocolError> {
-        match message {
-            _ => {
-                panic!("Unimplemented message for irose world server!")
-            }
-        }
+        panic!("Unimplemented message for irose world server!")
     }
 }
 
