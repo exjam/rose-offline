@@ -20,6 +20,7 @@ impl ItemReference {
 }
 
 pub struct BaseItemData {
+    pub name: String,
     pub class: ItemClass,
     pub base_price: u32,
     pub price_rate: u32,
