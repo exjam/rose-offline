@@ -3,13 +3,17 @@ use nalgebra::Point3;
 use std::num::{ParseFloatError, ParseIntError};
 
 use crate::{
-    data::{account::AccountStorage, character::CharacterStorage, item::Item},
+    data::{
+        account::AccountStorage, character::CharacterStorage, item::Item, ItemReference,
+        MotionCharacterAction,
+    },
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
-            Command, CommandAttack, CommandData, CommandMove, Destination, Equipment, GameClient,
-            HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand,
-            Position, SkillList, Target, Team,
+            Command, CommandAttack, CommandData, CommandMove, Destination, Equipment,
+            EquipmentIndex, EquipmentItemDatabase, EquipmentItemReference, GameClient,
+            HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, MotionData, MoveSpeed,
+            NextCommand, Position, SkillList, Target, Team,
         },
         messages::{
             client::{
@@ -56,6 +60,24 @@ pub fn game_server_authentication(
                                     &character.inventory,
                                     &character.basic_stats,
                                     &character.skill_list,
+                                );
+
+                                let weapon_motion_type = game_data
+                                    .items
+                                    .get_equipped_weapon_item_data(
+                                        &character.equipment,
+                                        EquipmentIndex::WeaponRight,
+                                    )
+                                    .map(|item_data| item_data.motion_type)
+                                    .unwrap_or(0)
+                                    as usize;
+
+                                cmd.add_component(
+                                    *entity,
+                                    game_data.motions.get_character_motions(
+                                        weapon_motion_type,
+                                        character.info.gender as usize,
+                                    ),
                                 );
                                 cmd.add_component(
                                     *entity,

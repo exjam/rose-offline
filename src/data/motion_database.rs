@@ -2,6 +2,9 @@ use num_derive::ToPrimitive;
 use num_traits::ToPrimitive;
 use std::{collections::HashMap, time::Duration};
 
+use crate::game::components::MotionData;
+
+#[derive(Clone)]
 pub struct MotionFileData {
     pub path: String,
     pub duration: Duration,
@@ -58,5 +61,13 @@ impl MotionDatabase {
             .and_then(|x| x.get(weapon_motion_type))?;
 
         self.motion_files.get(gender).and_then(|x| x.get(index))
+    }
+
+    pub fn get_character_motions(&self, weapon_motion_type: usize, gender: usize) -> MotionData {
+        MotionData {
+            attack: self
+                .get_character_motion(MotionCharacterAction::Attack, weapon_motion_type, gender)
+                .cloned(),
+        }
     }
 }
