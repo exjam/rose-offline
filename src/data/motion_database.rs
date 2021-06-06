@@ -3,6 +3,7 @@ use num_traits::ToPrimitive;
 use std::{collections::HashMap, time::Duration};
 
 pub struct MotionFileData {
+    pub path: String,
     pub duration: Duration,
     pub total_attack_frames: usize,
 }

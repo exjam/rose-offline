@@ -21,6 +21,7 @@ fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
     let file = vfs.open_file(path)?;
     let zmo = ZmoFile::read(FileReader::from(&file)).ok()?;
     Some(MotionFileData {
+        path: path.to_string(),
         duration: zmo.get_duration(),
         total_attack_frames: zmo.total_attack_frames,
     })
