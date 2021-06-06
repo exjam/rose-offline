@@ -135,6 +135,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
+            attack_range: calculate_attack_range(&self.item_database, equipment),
             hit: calculate_hit(
                 &self.item_database,
                 &basic_stats,
@@ -758,6 +759,22 @@ fn calculate_attack_speed(
     let passive_attack_speed = passive_value as f32 + attack_speed * (passive_rate as f32 / 100.0);
 
     (attack_speed + passive_attack_speed + equipment_ability_values.attack_speed as f32) as i32
+}
+
+fn calculate_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -> i32 {
+    let weapon_attack_range = item_database
+        .get_weapon_item(
+            equipment
+                .get_equipment_item(EquipmentIndex::WeaponRight)
+                .map(|item| item.item.item_number)
+                .unwrap_or(0),
+        )
+        .map(|weapon| weapon.attack_range)
+        .unwrap_or(70);
+
+    let scale = 1.0;
+
+    weapon_attack_range as i32 + (scale * 120.0) as i32
 }
 
 fn calculate_hit(
