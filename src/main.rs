@@ -20,6 +20,9 @@ async fn main() {
     );
     let item_database =
         Arc::new(irose::data::get_item_database(&vfs_index).expect("Failed to load item database"));
+    let motion_database = Arc::new(
+        irose::data::get_motion_database(&vfs_index).expect("Failed to load motion database"),
+    );
     let npc_database =
         Arc::new(irose::data::get_npc_database(&vfs_index).expect("Failed to load npc database"));
     let zone_database =
@@ -37,6 +40,7 @@ async fn main() {
             character_creator,
             ability_value_calculator,
             item_database,
+            motion_database,
             npc_database,
             skill_database,
             zone_database,

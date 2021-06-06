@@ -15,8 +15,8 @@ use super::{
     systems::*,
 };
 use crate::data::{
-    AbilityValueCalculator, CharacterCreator, ItemDatabase, NpcDatabase, SkillDatabase,
-    ZoneDatabase,
+    AbilityValueCalculator, CharacterCreator, ItemDatabase, MotionDatabase, NpcDatabase,
+    SkillDatabase, ZoneDatabase,
 };
 
 pub struct Game {
@@ -37,6 +37,7 @@ impl Game {
         character_creator: Box<dyn CharacterCreator + Send + Sync>,
         ability_value_calculator: Box<dyn AbilityValueCalculator + Send + Sync>,
         item_database: Arc<ItemDatabase>,
+        motion_database: Arc<MotionDatabase>,
         npc_database: Arc<NpcDatabase>,
         skill_database: Arc<SkillDatabase>,
         zone_database: Arc<ZoneDatabase>,
@@ -46,6 +47,7 @@ impl Game {
             character_creator,
             ability_value_calculator,
             items: item_database,
+            motions: motion_database,
             npcs: npc_database,
             skills: skill_database,
             zones: zone_database,
