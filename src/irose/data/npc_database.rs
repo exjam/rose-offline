@@ -18,19 +18,19 @@ impl StbNpc {
     }
 
     stb_column! { 0, get_name_server, &str }
-    stb_column! { 2, get_walk_speed, u32 }
-    stb_column! { 3, get_run_speed, u32 }
+    stb_column! { 2, get_walk_speed, i32 }
+    stb_column! { 3, get_run_speed, i32 }
     stb_column! { 4, get_scale, u32 }
     stb_column! { 5, get_right_hand_part_index, u32 }
     stb_column! { 6, get_left_hand_part_index, u32 }
-    stb_column! { 7, get_level, u32 }
-    stb_column! { 8, get_health_points, u32 }
-    stb_column! { 9, get_attack, u32 }
-    stb_column! { 10, get_hit, u32 }
-    stb_column! { 11, get_defence, u32 }
-    stb_column! { 12, get_resistance, u32 }
-    stb_column! { 13, get_avoid, u32 }
-    stb_column! { 14, get_attack_speed, u32 }
+    stb_column! { 7, get_level, i32 }
+    stb_column! { 8, get_health_points, i32 }
+    stb_column! { 9, get_attack, i32 }
+    stb_column! { 10, get_hit, i32 }
+    stb_column! { 11, get_defence, i32 }
+    stb_column! { 12, get_resistance, i32 }
+    stb_column! { 13, get_avoid, i32 }
+    stb_column! { 14, get_attack_speed, i32 }
     stb_column! { 15, get_attack_is_magic_damage, bool }
     stb_column! { 16, get_ai_file_index, u32 }
     stb_column! { 17, get_reward_xp, u32 }
@@ -53,7 +53,7 @@ impl StbNpc {
     }
 
     stb_column! { 25, get_is_targetable, bool }
-    stb_column! { 26, get_attack_range, u32 }
+    stb_column! { 26, get_attack_range, i32 }
     stb_column! { 27, get_npc_type_index, u32 }
     stb_column! { 28, get_hit_sound_index, u32 }
     stb_column! { 29, get_face_icon_index, u32 }
@@ -86,7 +86,7 @@ impl StbNpc {
 
     stb_column! { 40, get_string_id, &str }
     stb_column! { 41, get_death_quest_trigger_name, &str }
-    stb_column! { 42, get_npc_height, u32 }
+    stb_column! { 42, get_npc_height, i32 }
     stb_column! { 44, get_create_effect_index, u32 }
     stb_column! { 45, get_create_sound_index, u32 }
 }
