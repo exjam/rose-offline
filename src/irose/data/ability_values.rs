@@ -1,14 +1,15 @@
+use rand::Rng;
 use std::sync::Arc;
 
 use crate::{
     data::{
         item::{AbilityType, ItemClass, ItemWeaponType},
-        AbilityValueCalculator, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
+        AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
         SkillReference,
     },
     game::components::{
-        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Equipment, EquipmentIndex, Inventory,
-        Level, SkillList,
+        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, DamageCategory, DamageType, Equipment,
+        EquipmentIndex, EquipmentItemDatabase, Inventory, Level, SkillList,
     },
 };
 
@@ -48,7 +49,9 @@ impl AbilityValueCalculator for AbilityValuesData {
     fn calculate_npc(&self, npc_id: usize) -> Option<AbilityValues> {
         let npc_data = self.npc_database.get_npc(npc_id)?;
         Some(AbilityValues {
+            damage_category: DamageCategory::Npc,
             run_speed: npc_data.run_speed as f32,
+            level: npc_data.level,
             strength: 0,
             dexterity: 0,
             intelligence: npc_data.level as u16,
@@ -59,6 +62,11 @@ impl AbilityValueCalculator for AbilityValuesData {
             max_mana: 100,
             additional_health_recovery: 0,
             additional_mana_recovery: 0,
+            attack_damage_type: if npc_data.is_attack_magic_damage {
+                DamageType::Magic
+            } else {
+                DamageType::Physical
+            },
             attack_power: npc_data.attack,
             attack_speed: npc_data.attack_speed,
             attack_range: npc_data.attack_range,
@@ -119,6 +127,7 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         // TODO: If riding cart, most stat calculations are different
         AbilityValues {
+            damage_category: DamageCategory::Character,
             run_speed: calculate_run_speed(
                 &self.item_database,
                 &basic_stats,
@@ -140,6 +149,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
+            level: level.level as i32,
             strength: basic_stats.strength,
             dexterity: basic_stats.dexterity,
             intelligence: basic_stats.intelligence,
@@ -154,6 +164,17 @@ impl AbilityValueCalculator for AbilityValuesData {
                 + (equipment_ability_values.recover_mana as f32
                     * (passive_ability_values.rate.recover_mana as f32 / 100.0))
                     as i32,
+            attack_damage_type: self
+                .item_database
+                .get_equipped_weapon_item_data(equipment, EquipmentIndex::WeaponRight)
+                .map(|item| {
+                    if item.is_magic_damage {
+                        DamageType::Magic
+                    } else {
+                        DamageType::Physical
+                    }
+                })
+                .unwrap_or(DamageType::Physical),
             attack_power: calculate_attack_power(
                 &self.item_database,
                 &basic_stats,
@@ -205,6 +226,234 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
+        }
+    }
+
+    fn calculate_damage(
+        &self,
+        attacker: &AbilityValues,
+        defender: &AbilityValues,
+        hit_count: i32,
+    ) -> Damage {
+        let mut rng = rand::thread_rng();
+        let success_rate = calculate_damage_success_rate(&mut rng, attacker, defender);
+        if success_rate < 20
+            && (rng.gen_range(1..=100) + (0.6 * (attacker.level - defender.level) as f32) as i32)
+                < 94
+        {
+            Damage {
+                amount: 0,
+                apply_hit_stun: false,
+                is_critical: false,
+            }
+        } else {
+            match attacker.attack_damage_type {
+                DamageType::Magic => calculate_attack_damage_magic(
+                    &mut rng,
+                    attacker,
+                    defender,
+                    hit_count,
+                    success_rate,
+                ),
+                DamageType::Physical => calculate_attack_damage_physical(
+                    &mut rng,
+                    attacker,
+                    defender,
+                    hit_count,
+                    success_rate,
+                ),
+            }
+        }
+    }
+}
+
+fn calculate_damage_success_rate(
+    rng: &mut impl Rng,
+    attacker: &AbilityValues,
+    defender: &AbilityValues,
+) -> i32 {
+    if attacker.damage_category == DamageCategory::Character
+        && defender.damage_category == DamageCategory::Character
+    {
+        40 - 60 * ((attacker.hit + defender.avoid) / attacker.avoid) + rng.gen_range(1..=100)
+    } else {
+        let value =
+            (attacker.level + 10) - (defender.level as f32 * 1.1) as i32 + rng.gen_range(1..=50);
+        if value <= 0 {
+            0
+        } else {
+            (value as f32
+                * ((attacker.hit as f32 * 1.1 - defender.avoid as f32 * 0.93
+                    + rng.gen_range(1..=60) as f32
+                    + 5.0
+                    + attacker.level as f32 * 0.2)
+                    / 80.0)) as i32
+        }
+    }
+}
+
+fn calculate_attack_damage_physical(
+    rng: &mut impl Rng,
+    attacker: &AbilityValues,
+    defender: &AbilityValues,
+    hit_count: i32,
+    success_rate: i32,
+) -> Damage {
+    let crit_success_rate =
+        16 * (3 * rng.gen_range(1..=100) + attacker.level + 30) / (attacker.critical + 70);
+    let apply_hit_stun =
+        ((28 - crit_success_rate) * (attacker.attack_power + 20) / (defender.defence + 5)) >= 10;
+
+    if crit_success_rate < 20 {
+        // Critical physical damage
+        let mut damage = if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.05 + 35.0)
+                * ((attacker.attack_power - defender.defence + 430) as f32
+                    / (300.0 * (defender.defence as f32 + defender.avoid as f32 * 0.4 + 10.0)))
+                + 25.0
+        } else {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.05 + 29.0)
+                * ((attacker.attack_power - defender.defence + 230) as f32
+                    / (100.0 * (defender.defence as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+        };
+
+        // TODO: Add damage from +additional damage buffs
+
+        damage = f32::max(damage * hit_count as f32, 10.0);
+
+        if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            damage = f32::min(damage, defender.max_health as f32 * 0.35);
+        }
+
+        damage = f32::min(damage, 2047.0);
+
+        Damage {
+            amount: damage as u32,
+            is_critical: true,
+            apply_hit_stun,
+        }
+    } else {
+        // Normal physical damage
+        let mut damage = if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.05 + 25.0)
+                * ((attacker.attack_power - defender.defence + 400) as f32
+                    / (420.0 * (defender.defence as f32 + defender.avoid as f32 * 0.4 + 5.0)))
+                + 20.0
+        } else {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.03 + 26.0)
+                * ((attacker.attack_power - defender.defence + 250) as f32
+                    / (145.0 * (defender.defence as f32 + defender.avoid as f32 * 0.4 + 5.0)))
+        };
+
+        // TODO: Add damage from +additional damage buffs
+
+        damage = f32::max(damage * hit_count as f32, 5.0);
+
+        if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            damage = f32::min(damage, defender.max_health as f32 * 0.25);
+        }
+
+        damage = f32::min(damage, 2047.0);
+
+        Damage {
+            amount: damage as u32,
+            is_critical: false,
+            apply_hit_stun,
+        }
+    }
+}
+
+fn calculate_attack_damage_magic(
+    rng: &mut impl Rng,
+    attacker: &AbilityValues,
+    defender: &AbilityValues,
+    hit_count: i32,
+    success_rate: i32,
+) -> Damage {
+    let crit_success_rate =
+        16 * (3 * rng.gen_range(1..=100) + attacker.level + 30) / (attacker.critical + 70);
+    let apply_hit_stun =
+        ((28 - crit_success_rate) * (attacker.attack_power + 20) / (defender.defence + 5)) >= 10;
+
+    if crit_success_rate < 20 {
+        // Critical magic damage
+        let mut damage = if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.05 + 33.0)
+                * ((attacker.attack_power - defender.defence + 340) as f32
+                    / (360.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 20.0)))
+                + 25.0
+        } else {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.05 + 33.0)
+                * ((attacker.attack_power as f32 - defender.defence as f32 * 0.8 + 310.0)
+                    / (200.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+        };
+
+        // TODO: Add damage from +additional damage buffs
+
+        damage = f32::max(damage * hit_count as f32, 10.0);
+
+        if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            damage = f32::min(damage, defender.max_health as f32 * 0.35);
+        }
+
+        damage = f32::min(damage, 2047.0);
+
+        Damage {
+            amount: damage as u32,
+            is_critical: true,
+            apply_hit_stun,
+        }
+    } else {
+        // Normal magic damage
+        let mut damage = if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.06 + 29.0)
+                * ((attacker.attack_power as f32 - defender.defence as f32 * 0.8 + 350.0)
+                    / (640.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+                + 20.0
+        } else {
+            attacker.attack_power as f32
+                * (success_rate as f32 * 0.03 + 30.0)
+                * ((attacker.attack_power as f32 - defender.defence as f32 * 0.8 + 280.0)
+                    / (280.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+        };
+
+        // TODO: Add damage from +additional damage buffs
+
+        damage = f32::max(damage * hit_count as f32, 5.0);
+
+        if attacker.damage_category == DamageCategory::Character
+            && defender.damage_category == DamageCategory::Character
+        {
+            damage = f32::min(damage, defender.max_health as f32 * 0.25);
+        }
+
+        damage = f32::min(damage, 2047.0);
+
+        Damage {
+            amount: damage as u32,
+            is_critical: false,
+            apply_hit_stun,
         }
     }
 }

@@ -13,7 +13,7 @@ pub struct MonsterSpawnPoint {
 
     pub time_since_last_check: Duration,
     pub current_tactics_value: u32,
-    pub monsters: Vec<Entity>,
+    pub num_alive_monsters: u32,
 }
 
 impl From<&ZoneMonsterSpawnPoint> for MonsterSpawnPoint {
@@ -28,7 +28,17 @@ impl From<&ZoneMonsterSpawnPoint> for MonsterSpawnPoint {
 
             time_since_last_check: Duration::from_millis(0),
             current_tactics_value: 0,
-            monsters: Vec::new(),
+            num_alive_monsters: 0,
         }
+    }
+}
+
+pub struct MonsterSpawn {
+    pub spawn_point_entity: Entity,
+}
+
+impl MonsterSpawn {
+    pub fn new(spawn_point_entity: Entity) -> Self {
+        MonsterSpawn { spawn_point_entity }
     }
 }

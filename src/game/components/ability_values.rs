@@ -1,5 +1,19 @@
+#[derive(Debug, PartialEq)]
+pub enum DamageCategory {
+    Character,
+    Npc,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DamageType {
+    Physical,
+    Magic,
+}
+
 #[derive(Debug)]
 pub struct AbilityValues {
+    pub damage_category: DamageCategory,
+    pub level: i32,
     pub run_speed: f32,
     pub strength: u16,
     pub dexterity: u16,
@@ -11,6 +25,7 @@ pub struct AbilityValues {
     pub max_mana: i32,
     pub additional_health_recovery: i32,
     pub additional_mana_recovery: i32,
+    pub attack_damage_type: DamageType,
     pub attack_power: i32,
     pub attack_speed: i32,
     pub attack_range: i32,

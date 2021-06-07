@@ -211,6 +211,17 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::DamageEntity(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerDamageEntity {
+                        attacker_entity_id: message.attacker_entity_id,
+                        defender_entity_id: message.defender_entity_id,
+                        damage: message.damage,
+                        is_killed: message.is_killed,
+                    }))
+                    .await?;
+            }
             ServerMessage::StopMoveEntity(message) => {
                 client
                     .connection

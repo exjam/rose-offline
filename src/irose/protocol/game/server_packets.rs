@@ -3,7 +3,10 @@ use num_derive::FromPrimitive;
 
 use super::common_packets::write_hotbar_slot;
 use crate::{
-    data::item::{EquipmentItem, Item, StackableItem},
+    data::{
+        item::{EquipmentItem, Item, StackableItem},
+        Damage,
+    },
     game::components::{
         BasicStats, CharacterInfo, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot,
         Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
@@ -28,6 +31,7 @@ pub enum ServerPackets {
     RemoveEntities = 0x794,
     StopMoveEntity = 0x796,
     AttackEntity = 0x798,
+    DamageEntity = 0x799,
     MoveEntity = 0x79a,
     UpdateEquipment = 0x7a5,
     Teleport = 0x7a8,
@@ -393,6 +397,51 @@ impl From<&PacketServerAttackEntity> for Packet {
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
         writer.write_u16(packet.z);
+        writer.into()
+    }
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct PacketServerDamage {
+    #[skip(getters)]
+    amount: B11,
+    #[skip(getters)]
+    action: B5,
+}
+
+pub struct PacketServerDamageEntity {
+    pub attacker_entity_id: u16,
+    pub defender_entity_id: u16,
+    pub damage: Damage,
+    pub is_killed: bool,
+    // TODO: Optional item drop with damage
+}
+
+impl From<&PacketServerDamageEntity> for Packet {
+    fn from(packet: &PacketServerDamageEntity) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::DamageEntity as u16);
+        writer.write_u16(packet.attacker_entity_id);
+        writer.write_u16(packet.defender_entity_id);
+
+        let mut action = 0u8;
+        if packet.damage.is_critical {
+            action |= 0x08;
+        }
+        if packet.damage.apply_hit_stun {
+            action |= 0x04;
+        }
+        if packet.is_killed {
+            action |= 0x10;
+        }
+
+        let damage = PacketServerDamage::new()
+            .with_amount(packet.damage.amount as u16)
+            .with_action(action);
+
+        for b in damage.into_bytes().iter() {
+            writer.write_u8(*b);
+        }
         writer.into()
     }
 }

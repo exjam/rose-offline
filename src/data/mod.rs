@@ -25,6 +25,13 @@ use crate::game::components::{
     AbilityValues, BasicStats, CharacterInfo, Equipment, Inventory, Level, SkillList,
 };
 
+#[derive(Clone, Copy)]
+pub struct Damage {
+    pub amount: u32,
+    pub is_critical: bool,
+    pub apply_hit_stun: bool,
+}
+
 pub trait AbilityValueCalculator {
     fn calculate(
         &self,
@@ -37,6 +44,13 @@ pub trait AbilityValueCalculator {
     ) -> AbilityValues;
 
     fn calculate_npc(&self, npc_id: usize) -> Option<AbilityValues>;
+
+    fn calculate_damage(
+        &self,
+        attacker: &AbilityValues,
+        defender: &AbilityValues,
+        hit_count: i32,
+    ) -> Damage;
 }
 
 pub use character::{CharacterCreator, CharacterCreatorError};

@@ -1,22 +1,26 @@
-use legion::{system, systems::CommandBuffer};
+use legion::{system, systems::CommandBuffer, Entity};
 use nalgebra::Point3;
 use rand::Rng;
 
 use crate::{
     data::NpcReference,
     game::{
-        components::{MonsterSpawnPoint, Npc, Position, Team},
-        resources::{ClientEntityList, DeltaTime},
+        components::{
+            DamageSources, HealthPoints, MonsterSpawn, MonsterSpawnPoint, Npc, Position, Team,
+        },
+        resources::{ClientEntityList, DeltaTime, GameData},
     },
 };
 
 #[system(for_each)]
 pub fn monster_spawn(
     cmd: &mut CommandBuffer,
+    spawn_point_entity: &Entity,
     spawn_point: &mut MonsterSpawnPoint,
     spawn_point_position: &Position,
     #[resource] delta_time: &DeltaTime,
     #[resource] client_entity_list: &mut ClientEntityList,
+    #[resource] game_data: &GameData,
 ) {
     spawn_point.time_since_last_check += delta_time.delta;
     if spawn_point.time_since_last_check < spawn_point.interval {
@@ -24,7 +28,7 @@ pub fn monster_spawn(
     }
     spawn_point.time_since_last_check -= spawn_point.interval;
 
-    let live_count = spawn_point.monsters.len() as u32;
+    let live_count = spawn_point.num_alive_monsters;
     if live_count >= spawn_point.limit_count {
         spawn_point.current_tactics_value = spawn_point.current_tactics_value.saturating_sub(1);
         return;
@@ -172,12 +176,28 @@ pub fn monster_spawn(
                 Npc::new(id.0 as u32, 0),
                 Position::new(position, spawn_point_zone),
                 Team::default_monster(),
+                DamageSources::new(),
+                MonsterSpawn::new(*spawn_point_entity),
             ));
             cmd.add_component(
                 entity,
                 client_entity_zone.allocate(entity, position).unwrap(),
             );
-            spawn_point.monsters.push(entity);
+
+            if let Some(ability_values) = game_data
+                .ability_value_calculator
+                .calculate_npc(id.0 as usize)
+            {
+                cmd.add_component(
+                    entity,
+                    HealthPoints {
+                        hp: ability_values.max_health as u32,
+                    },
+                );
+                cmd.add_component(entity, ability_values);
+            }
+
+            spawn_point.num_alive_monsters += 1;
         }
     }
 }

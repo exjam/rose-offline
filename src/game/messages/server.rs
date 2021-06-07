@@ -1,5 +1,8 @@
 use crate::{
-    data::item::{EquipmentItem, Item},
+    data::{
+        item::{EquipmentItem, Item},
+        Damage,
+    },
     game::components::{EquipmentIndex, ItemSlot, Npc, NpcStandingDirection, Position, Team},
 };
 
@@ -74,6 +77,14 @@ pub struct StopMoveEntity {
 }
 
 #[derive(Clone)]
+pub struct DamageEntity {
+    pub attacker_entity_id: u16,
+    pub defender_entity_id: u16,
+    pub damage: Damage,
+    pub is_killed: bool,
+}
+
+#[derive(Clone)]
 pub struct Whisper {
     pub from: String,
     pub text: String,
@@ -108,6 +119,7 @@ pub enum ServerMessage {
     SpawnEntityMonster(SpawnEntityMonster),
     RemoveEntities(RemoveEntities),
     AttackEntity(AttackEntity),
+    DamageEntity(DamageEntity),
     MoveEntity(MoveEntity),
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),

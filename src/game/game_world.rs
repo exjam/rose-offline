@@ -116,7 +116,9 @@ impl GameWorld {
             .add_system(monster_spawn_system())
             .flush()
             .add_system(command_system())
+            .flush()
             .add_system(update_position_system())
+            .add_system(apply_damage_system())
             .flush()
             .add_system(client_entity_visibility_system())
             .add_system(server_messages_sender_system())
@@ -129,6 +131,7 @@ impl GameWorld {
             let current_tick = std::time::Instant::now();
             resources.insert(DeltaTime {
                 delta: current_tick - last_tick,
+                now: current_tick,
             });
             schedule.execute(&mut world, &mut resources);
             last_tick = current_tick;

@@ -1,3 +1,4 @@
+mod apply_damage;
 mod client_entity_visibility;
 mod command;
 mod control_server;
@@ -8,6 +9,7 @@ mod server_messages;
 mod update_position;
 mod world_server;
 
+pub use apply_damage::*;
 pub use client_entity_visibility::*;
 pub use command::*;
 pub use control_server::*;
