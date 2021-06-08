@@ -6,3 +6,5 @@ pub struct PendingDamage {
     pub defender: Entity,
     pub damage: Damage,
 }
+
+pub type PendingDamageList = Vec::<PendingDamage>;

@@ -10,7 +10,7 @@ use super::{
     messages::control::ControlMessage,
     resources::{
         ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, ServerList,
-        ServerMessages,
+        ServerMessages, PendingDamageList,
     },
     systems::*,
 };
@@ -102,6 +102,7 @@ impl GameWorld {
         resources.insert(ServerMessages::new());
         resources.insert(client_entity_list);
         resources.insert(game_data);
+        resources.insert(PendingDamageList::new());
 
         let mut schedule = Schedule::builder()
             .add_system(control_server_system())

@@ -5,10 +5,10 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, EntityStor
 use crate::game::{
     components::{
         AbilityValues, ClientEntity, Command, CommandAttack, CommandData, CommandMove, Destination,
-        HealthPoints, MotionData, NextCommand, PendingDamage, Position,
+        HealthPoints, MotionData, NextCommand, Position,
     },
     messages::server::{self, ServerMessage},
-    resources::{DeltaTime, GameData, ServerMessages},
+    resources::{DeltaTime, GameData, ServerMessages, PendingDamage, PendingDamageList},
 };
 
 fn set_command_stop(
@@ -51,6 +51,7 @@ pub fn command(
     ability_values: &AbilityValues,
     next_command: Option<&NextCommand>,
     #[resource] delta_time: &DeltaTime,
+    #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
@@ -179,7 +180,7 @@ pub fn command(
                             cmd.remove_component::<Destination>(*entity);
 
                             // Spawn an entity for DamageSystem to apply damage
-                            cmd.push((PendingDamage {
+                            pending_damage_list.push(PendingDamage {
                                 attacker: *entity,
                                 defender: target,
                                 damage: game_data.ability_value_calculator.calculate_damage(
@@ -187,7 +188,7 @@ pub fn command(
                                     target_ability_values,
                                     hit_count as i32,
                                 ),
-                            },));
+                            });
                         } else {
                             // Not in range, set current command to move
                             *command = Command::new(
