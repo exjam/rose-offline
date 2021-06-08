@@ -11,7 +11,7 @@ pub use client_entity_list::{ClientEntityId, ClientEntityList};
 pub use control_channel::ControlChannel;
 pub use delta_time::DeltaTime;
 pub use game_data::GameData;
-pub use pending_damage_list::{PendingDamage, PendingDamageList};
 pub use login_tokens::{LoginToken, LoginTokens};
+pub use pending_damage_list::{PendingDamage, PendingDamageList};
 pub use server_list::{GameServer, ServerList, WorldServer};
 pub use server_messages::ServerMessages;

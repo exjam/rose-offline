@@ -7,4 +7,4 @@ pub struct PendingDamage {
     pub damage: Damage,
 }
 
-pub type PendingDamageList = Vec::<PendingDamage>;
+pub type PendingDamageList = Vec<PendingDamage>;

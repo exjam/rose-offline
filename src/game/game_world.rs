@@ -9,8 +9,8 @@ use super::{
     components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},
     messages::control::ControlMessage,
     resources::{
-        ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, ServerList,
-        ServerMessages, PendingDamageList,
+        ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, PendingDamageList,
+        ServerList, ServerMessages,
     },
     systems::*,
 };
@@ -115,6 +115,7 @@ impl GameWorld {
             .add_system(game_server_main_system())
             .add_system(game_server_disconnect_handler_system())
             .add_system(monster_spawn_system())
+            .add_system(npc_ai_system())
             .flush()
             .add_system(command_system())
             .flush()

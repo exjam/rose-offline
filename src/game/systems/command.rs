@@ -8,7 +8,7 @@ use crate::game::{
         HealthPoints, MotionData, NextCommand, Position,
     },
     messages::server::{self, ServerMessage},
-    resources::{DeltaTime, GameData, ServerMessages, PendingDamage, PendingDamageList},
+    resources::{DeltaTime, GameData, PendingDamage, PendingDamageList, ServerMessages},
 };
 
 fn set_command_stop(
@@ -32,7 +32,7 @@ fn set_command_stop(
         }),
     );
 
-    *command = Command::new(CommandData::Stop, None);
+    *command = Command::with_stop();
 }
 
 #[system(for_each)]
@@ -117,13 +117,7 @@ pub fn command(
                 }),
             );
 
-            *command = Command::new(
-                CommandData::Move(CommandMove {
-                    destination,
-                    target,
-                }),
-                None,
-            );
+            *command = Command::with_move(destination, target);
             cmd.remove_component::<NextCommand>(*entity);
         }
         CommandData::Attack(CommandAttack { target }) => {
@@ -171,10 +165,7 @@ pub fn command(
                                 .unwrap_or_else(|| (Duration::from_secs(1), 1));
 
                             // In range, set current command to attack
-                            *command = Command::new(
-                                CommandData::Attack(CommandAttack { target }),
-                                Some(attack_duration),
-                            );
+                            *command = Command::with_attack(target, attack_duration);
 
                             // Remove our destination component, as we have reached it!
                             cmd.remove_component::<Destination>(*entity);
@@ -191,13 +182,7 @@ pub fn command(
                             });
                         } else {
                             // Not in range, set current command to move
-                            *command = Command::new(
-                                CommandData::Move(CommandMove {
-                                    destination: target_position.position,
-                                    target: Some(target),
-                                }),
-                                None,
-                            );
+                            *command = Command::with_move(target_position.position, Some(target));
 
                             // Set destination to move towards
                             cmd.add_component(
@@ -232,5 +217,6 @@ pub fn command(
                 cmd.remove_component::<NextCommand>(*entity);
             }
         }
+        _ => {}
     }
 }

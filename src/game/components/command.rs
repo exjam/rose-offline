@@ -13,6 +13,7 @@ pub struct CommandAttack {
 }
 
 pub enum CommandData {
+    Die,
     Stop,
     Move(CommandMove),
     Attack(CommandAttack),
@@ -43,5 +44,34 @@ impl Command {
             duration: Duration::new(0, 0),
             required_duration,
         }
+    }
+
+    pub fn default() -> Self {
+        Self::with_stop()
+    }
+
+    pub fn with_die() -> Self {
+        Self::new(CommandData::Die, Some(Duration::new(u64::MAX, 0)))
+    }
+
+    pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {
+        Self::new(
+            CommandData::Move(CommandMove {
+                destination,
+                target,
+            }),
+            None,
+        )
+    }
+
+    pub fn with_attack(target: Entity, duration: Duration) -> Self {
+        Self::new(
+            CommandData::Attack(CommandAttack { target }),
+            Some(duration),
+        )
+    }
+
+    pub fn with_stop() -> Self {
+        Self::new(CommandData::Stop, None)
     }
 }
