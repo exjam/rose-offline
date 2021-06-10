@@ -204,6 +204,11 @@ impl<'a> FileReader<'a> {
         self.read_fixed_length_bytes(length as usize)
     }
 
+    pub fn read_u32_length_bytes(&mut self) -> Result<&'a [u8], ReadError> {
+        let length = self.read_u32()?;
+        self.read_fixed_length_bytes(length as usize)
+    }
+
     pub fn read_null_terminated_bytes(&mut self) -> Result<&'a [u8], ReadError> {
         let start = self.cursor.position() as usize;
         let end = self.cursor.get_ref().len() - 1;
@@ -242,6 +247,13 @@ impl<'a> FileReader<'a> {
     pub fn read_u16_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
         Ok(decode_string(
             self.read_u16_length_bytes()?,
+            self.use_wide_strings,
+        ))
+    }
+
+    pub fn read_u32_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
+        Ok(decode_string(
+            self.read_u32_length_bytes()?,
             self.use_wide_strings,
         ))
     }
