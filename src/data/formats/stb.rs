@@ -30,12 +30,26 @@ impl From<ReadError> for StbReadError {
 
 #[allow(dead_code)]
 impl StbFile {
+    pub fn read_wide(mut reader: FileReader) -> Result<Self, StbReadError> {
+        let magic = reader.read_fixed_length_string(3)?;
+        if magic != "STB" {
+            return Err(StbReadError::InvalidMagic);
+        }
+
+        reader.use_wide_strings = true;
+        Self::read_data(reader)
+    }
+
     pub fn read(mut reader: FileReader) -> Result<Self, StbReadError> {
         let magic = reader.read_fixed_length_string(3)?;
         if magic != "STB" {
             return Err(StbReadError::InvalidMagic);
         }
 
+        Self::read_data(reader)
+    }
+
+    fn read_data(mut reader: FileReader) -> Result<Self, StbReadError> {
         let version = {
             let version = reader.read_u8()?;
             if version == b'0' {
