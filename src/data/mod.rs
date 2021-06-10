@@ -1,12 +1,14 @@
-pub mod account;
-pub mod character;
-pub mod formats;
-pub mod item;
+mod ai_database;
 mod item_database;
 mod motion_database;
 mod npc_database;
 mod skill_database;
 mod zone_database;
+
+pub mod account;
+pub mod character;
+pub mod formats;
+pub mod item;
 
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
@@ -53,6 +55,7 @@ pub trait AbilityValueCalculator {
     ) -> Damage;
 }
 
+pub use ai_database::AiDatabase;
 pub use character::{CharacterCreator, CharacterCreatorError};
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
@@ -63,7 +66,7 @@ pub use item_database::{
 pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData};
 pub use npc_database::{
     NpcConversationData, NpcConversationReference, NpcData, NpcDatabase, NpcMotionAction,
-    NpcMotionData, NpcReference,
+    NpcReference,
 };
 pub use skill_database::{
     SkillAddAbility, SkillData, SkillDatabase, SkillPage, SkillReference, SkillType,

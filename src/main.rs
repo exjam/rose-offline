@@ -10,6 +10,7 @@ use tokio::net::TcpListener;
 
 use crate::{
     data::formats::VfsIndex,
+    game::GameData,
     protocol::server::{GameServer, LoginServer, WorldServer},
 };
 
@@ -17,6 +18,8 @@ use crate::{
 async fn main() {
     let started_load = Instant::now();
     let vfs_index = VfsIndex::load(&Path::new("data.idx")).expect("Failed reading data.idx");
+    let ai_database =
+        Arc::new(irose::data::get_ai_database(&vfs_index).expect("Failed to load AI database"));
     let skill_database = Arc::new(
         irose::data::get_skill_database(&vfs_index).expect("Failed to load skill database"),
     );
@@ -41,15 +44,16 @@ async fn main() {
 
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
     std::thread::spawn(move || {
-        game::GameWorld::new(game_control_rx).run(
+        game::GameWorld::new(game_control_rx).run(GameData {
             character_creator,
             ability_value_calculator,
-            item_database,
-            motion_database,
-            npc_database,
-            skill_database,
-            zone_database,
-        );
+            ai: ai_database,
+            items: item_database,
+            motions: motion_database,
+            npcs: npc_database,
+            skills: skill_database,
+            zones: zone_database,
+        });
     });
 
     let mut login_server = LoginServer::new(

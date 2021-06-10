@@ -1,9 +1,6 @@
 use crossbeam_channel::Receiver;
 use legion::*;
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use super::{
     components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},
@@ -13,10 +10,6 @@ use super::{
         ServerList, ServerMessages,
     },
     systems::*,
-};
-use crate::data::{
-    AbilityValueCalculator, CharacterCreator, ItemDatabase, MotionDatabase, NpcDatabase,
-    SkillDatabase, ZoneDatabase,
 };
 
 pub struct GameWorld {
@@ -32,26 +25,8 @@ impl GameWorld {
         }
     }
 
-    pub fn run(
-        &mut self,
-        character_creator: Box<dyn CharacterCreator + Send + Sync>,
-        ability_value_calculator: Box<dyn AbilityValueCalculator + Send + Sync>,
-        item_database: Arc<ItemDatabase>,
-        motion_database: Arc<MotionDatabase>,
-        npc_database: Arc<NpcDatabase>,
-        skill_database: Arc<SkillDatabase>,
-        zone_database: Arc<ZoneDatabase>,
-    ) {
+    pub fn run(&mut self, game_data: GameData) {
         let started_load = Instant::now();
-        let game_data = GameData {
-            character_creator,
-            ability_value_calculator,
-            items: item_database,
-            motions: motion_database,
-            npcs: npc_database,
-            skills: skill_database,
-            zones: zone_database,
-        };
         let mut client_entity_list = ClientEntityList::new(&game_data.zones);
         let mut world = World::default();
 
