@@ -102,6 +102,30 @@ impl<'a> FileReader<'a> {
         }
     }
 
+    pub fn read_i8(&mut self) -> Result<i8, ReadError> {
+        if self.cursor.remaining() < 1 {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_i8())
+        }
+    }
+
+    pub fn read_i16(&mut self) -> Result<i16, ReadError> {
+        if self.cursor.remaining() < 2 {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_i16_le())
+        }
+    }
+
+    pub fn read_i32(&mut self) -> Result<i32, ReadError> {
+        if self.cursor.remaining() < 4 {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_i32_le())
+        }
+    }
+
     pub fn read_f32(&mut self) -> Result<f32, ReadError> {
         if self.cursor.remaining() < 4 {
             Err(ReadError::UnexpectedEof)
