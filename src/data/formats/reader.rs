@@ -1,5 +1,5 @@
 use bytes::Buf;
-use encoding_rs::EUC_KR;
+use encoding_rs::{EUC_KR, UTF_16LE};
 use nalgebra::{Quaternion, Unit, UnitQuaternion, Vector3};
 use std::io::Seek;
 use std::io::SeekFrom;
@@ -20,12 +20,14 @@ impl From<ReadError> for std::io::Error {
 
 pub struct FileReader<'a> {
     pub cursor: Cursor<&'a [u8]>,
+    pub use_wide_strings: bool,
 }
 
 impl<'a> From<&'a Vec<u8>> for FileReader<'a> {
     fn from(vec: &'a Vec<u8>) -> Self {
         Self {
             cursor: Cursor::new(vec),
+            use_wide_strings: false,
         }
     }
 }
@@ -34,24 +36,44 @@ impl<'a> From<&'a [u8]> for FileReader<'a> {
     fn from(slice: &'a [u8]) -> Self {
         Self {
             cursor: Cursor::new(slice),
+            use_wide_strings: false,
         }
     }
 }
 
-fn decode_string(mut bytes: &[u8]) -> Cow<'_, str> {
-    // Some fixed length strings include a null terminator, so we should trim it.
-    for (i, c) in bytes.iter().enumerate() {
-        if *c == 0 {
-            bytes = &bytes[0..i];
-            break;
-        }
+fn decode_string(mut bytes: &[u8], use_wide_strings: bool) -> Cow<'_, str> {
+    if bytes.is_empty() {
+        return Cow::default();
     }
 
-    match str::from_utf8(bytes) {
-        Ok(s) => Cow::from(s),
-        Err(_) => {
-            let (decoded, _, _) = EUC_KR.decode(bytes);
-            decoded
+    if use_wide_strings {
+        // Some fixed length strings include a null terminator, so we should trim it.
+        for i in (0..(bytes.len() - 1)).step_by(2) {
+            if bytes[i] == 0 && bytes[i + 1] == 0 {
+                bytes = &bytes[0..i];
+                break;
+            }
+        }
+
+        // Decode utf16le to utf8
+        let (decoded, _, _) = UTF_16LE.decode(bytes);
+        decoded
+    } else {
+        // Some fixed length strings include a null terminator, so we should trim it.
+        for (i, c) in bytes.iter().enumerate() {
+            if *c == 0 {
+                bytes = &bytes[0..i];
+                break;
+            }
+        }
+
+        // Decode EUC-KR to utf8
+        match str::from_utf8(bytes) {
+            Ok(s) => Cow::from(s),
+            Err(_) => {
+                let (decoded, _, _) = EUC_KR.decode(bytes);
+                decoded
+            }
         }
     }
 }
@@ -197,22 +219,37 @@ impl<'a> FileReader<'a> {
     }
 
     pub fn read_fixed_length_string(&mut self, length: usize) -> Result<Cow<'a, str>, ReadError> {
-        Ok(decode_string(self.read_fixed_length_bytes(length)?))
+        Ok(decode_string(
+            self.read_fixed_length_bytes(length)?,
+            self.use_wide_strings,
+        ))
     }
 
     pub fn read_variable_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
-        Ok(decode_string(self.read_variable_length_bytes()?))
+        Ok(decode_string(
+            self.read_variable_length_bytes()?,
+            self.use_wide_strings,
+        ))
     }
 
     pub fn read_u8_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
-        Ok(decode_string(self.read_u8_length_bytes()?))
+        Ok(decode_string(
+            self.read_u8_length_bytes()?,
+            self.use_wide_strings,
+        ))
     }
 
     pub fn read_u16_length_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
-        Ok(decode_string(self.read_u16_length_bytes()?))
+        Ok(decode_string(
+            self.read_u16_length_bytes()?,
+            self.use_wide_strings,
+        ))
     }
 
     pub fn read_null_terminated_string(&mut self) -> Result<Cow<'a, str>, ReadError> {
-        Ok(decode_string(self.read_null_terminated_bytes()?))
+        Ok(decode_string(
+            self.read_null_terminated_bytes()?,
+            self.use_wide_strings,
+        ))
     }
 }
