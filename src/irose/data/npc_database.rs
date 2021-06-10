@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     data::{
         formats::{ChrFile, FileReader, StbFile, VfsIndex, ZmoFile},
-        NpcConversationData, NpcData, NpcDatabase, NpcMotionAction, NpcMotionData,
+        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcMotionAction,
     },
     stb_column,
 };
@@ -125,6 +125,16 @@ fn get_npc_action(action_index: u16) -> Option<NpcMotionAction> {
     }
 }
 
+fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
+    let file = vfs.open_file(path)?;
+    let zmo = ZmoFile::read(FileReader::from(&file)).ok()?;
+    Some(MotionFileData {
+        path: path.to_string(),
+        duration: zmo.get_duration(),
+        total_attack_frames: zmo.total_attack_frames,
+    })
+}
+
 pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
     let file = vfs.open_file("3DDATA/NPC/LIST_NPC.CHR")?;
     let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
@@ -138,22 +148,16 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
             continue;
         }
 
-        let mut motion_data = Vec::new();
+        let mut motion_data = HashMap::new();
         if let Some(npc_model_data) = model_data.npcs.get(&(id as u16)) {
             for (action, motion_index) in npc_model_data.motion_ids.iter() {
                 if let Some(action) = get_npc_action(*action) {
                     if let Some(file) = model_data
                         .motion_files
                         .get(*motion_index as usize)
-                        .and_then(|path| vfs.open_file(path))
+                        .and_then(|path| load_zmo(vfs, path.as_str()))
                     {
-                        if let Ok(zmo) = ZmoFile::read(FileReader::from(&file)) {
-                            motion_data.push(NpcMotionData {
-                                action,
-                                duration: zmo.get_duration(),
-                                total_attack_frames: zmo.total_attack_frames,
-                            });
-                        }
+                        motion_data.insert(action, file);
                     }
                 }
             }

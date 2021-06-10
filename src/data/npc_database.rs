@@ -1,6 +1,8 @@
 use std::{collections::HashMap, time::Duration};
 
-use crate::data::item_database::ItemReference;
+use crate::{data::item_database::ItemReference, game::components::MotionData};
+
+use super::MotionFileData;
 
 #[derive(Clone, Copy)]
 pub struct NpcReference(pub usize);
@@ -8,6 +10,7 @@ pub struct NpcReference(pub usize);
 #[derive(Clone)]
 pub struct NpcConversationReference(pub String);
 
+#[derive(Hash, PartialEq, Eq)]
 pub enum NpcMotionAction {
     Stop,
     Move,
@@ -20,12 +23,6 @@ pub enum NpcMotionAction {
     Cast2,
     SkillAction2,
     Etc,
-}
-
-pub struct NpcMotionData {
-    pub action: NpcMotionAction,
-    pub duration: Duration,
-    pub total_attack_frames: usize,
 }
 
 pub struct NpcData {
@@ -71,7 +68,7 @@ pub struct NpcData {
     pub create_sound_index: u32,
     pub death_quest_trigger_name: String,
     pub npc_height: i32,
-    pub motion_data: Vec<NpcMotionData>,
+    pub motion_data: HashMap<NpcMotionAction, MotionFileData>,
 }
 
 pub struct NpcConversationData {
@@ -104,5 +101,15 @@ impl NpcDatabase {
 
     pub fn get_conversation(&self, key: &NpcConversationReference) -> Option<&NpcConversationData> {
         self.conversation_files.get(&key.0)
+    }
+
+    pub fn get_npc_motions(&self, id: usize) -> MotionData {
+        if let Some(npc) = self.get_npc(id) {
+            MotionData {
+                attack: npc.motion_data.get(&NpcMotionAction::Attack).cloned(),
+            }
+        } else {
+            MotionData::default()
+        }
     }
 }
