@@ -6,8 +6,8 @@ use crate::{
     data::NpcReference,
     game::{
         components::{
-            Command, DamageSources, HealthPoints, MonsterSpawn, MonsterSpawnPoint, Npc, Position,
-            Team,
+            Command, DamageSources, HealthPoints, MonsterSpawnPoint, NextCommand, Npc, Position,
+            SpawnOrigin, Team,
         },
         resources::{ClientEntityList, DeltaTime, GameData},
     },
@@ -178,7 +178,7 @@ pub fn monster_spawn(
                 Position::new(position, spawn_point_zone),
                 Team::default_monster(),
                 DamageSources::new(),
-                MonsterSpawn::new(*spawn_point_entity),
+                SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),
                 Command::default(),
             ));
             cmd.add_component(

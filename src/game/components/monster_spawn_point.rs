@@ -32,13 +32,3 @@ impl From<&ZoneMonsterSpawnPoint> for MonsterSpawnPoint {
         }
     }
 }
-
-pub struct MonsterSpawn {
-    pub spawn_point_entity: Entity,
-}
-
-impl MonsterSpawn {
-    pub fn new(spawn_point_entity: Entity) -> Self {
-        MonsterSpawn { spawn_point_entity }
-    }
-}
