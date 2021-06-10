@@ -49,7 +49,7 @@ pub fn command(
     motion_data: &MotionData,
     command: &mut Command,
     ability_values: &AbilityValues,
-    next_command: Option<&NextCommand>,
+    next_command: &NextCommand,
     #[resource] delta_time: &DeltaTime,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
@@ -74,15 +74,15 @@ pub fn command(
         return;
     }
 
-    if next_command.is_none() {
+    if next_command.0.is_none() {
         // No next command
         return;
     }
 
-    match next_command.unwrap().0 {
+    match *next_command.0.as_ref().unwrap() {
         CommandData::Stop => {
             set_command_stop(command, cmd, entity, entity_id, position, server_messages);
-            cmd.remove_component::<NextCommand>(*entity);
+            cmd.add_component(*entity, NextCommand::default());
         }
         CommandData::Move(CommandMove {
             destination,
@@ -118,7 +118,7 @@ pub fn command(
             );
 
             *command = Command::with_move(destination, target);
-            cmd.remove_component::<NextCommand>(*entity);
+            cmd.add_component(*entity, NextCommand::default());
         }
         CommandData::Attack(CommandAttack { target }) => {
             let mut valid_attack_target = false;
@@ -214,7 +214,7 @@ pub fn command(
 
             if !valid_attack_target {
                 set_command_stop(command, cmd, entity, entity_id, position, server_messages);
-                cmd.remove_component::<NextCommand>(*entity);
+                cmd.add_component(*entity, NextCommand::default());
             }
         }
         _ => {}

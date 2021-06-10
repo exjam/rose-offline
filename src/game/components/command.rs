@@ -35,7 +35,32 @@ pub struct Command {
     pub required_duration: Option<Duration>,
 }
 
-pub struct NextCommand(pub CommandData);
+pub struct NextCommand(pub Option<CommandData>);
+
+impl NextCommand {
+    pub fn default() -> Self {
+        Self(None)
+    }
+
+    pub fn with_die() -> Self {
+        Self(Some(CommandData::Die))
+    }
+
+    pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {
+        Self(Some(CommandData::Move(CommandMove {
+            destination,
+            target,
+        })))
+    }
+
+    pub fn with_attack(target: Entity) -> Self {
+        Self(Some(CommandData::Attack(CommandAttack { target })))
+    }
+
+    pub fn with_stop() -> Self {
+        Self(Some(CommandData::Stop))
+    }
+}
 
 impl Command {
     pub fn new(command: CommandData, required_duration: Option<Duration>) -> Self {

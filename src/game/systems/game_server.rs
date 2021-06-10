@@ -82,6 +82,7 @@ pub fn game_server_authentication(
                                     },
                                 );
                                 cmd.add_component(*entity, Command::default());
+                                cmd.add_component(*entity, NextCommand::default());
                                 cmd.add_component(*entity, ability_values);
                                 cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.info.clone());
@@ -357,10 +358,7 @@ pub fn game_server_main(
                 let destination = Point3::new(message.x, message.y, message.z as f32);
                 cmd.add_component(
                     *entity,
-                    NextCommand(CommandData::Move(CommandMove {
-                        destination,
-                        target: move_target_entity,
-                    })),
+                    NextCommand::with_move(destination, move_target_entity),
                 );
             }
             ClientMessage::Attack(message) => {
@@ -368,14 +366,9 @@ pub fn game_server_main(
                     .get_zone(position.zone as usize)
                     .and_then(|zone| zone.get_entity(ClientEntityId(message.target_entity_id)))
                 {
-                    cmd.add_component(
-                        *entity,
-                        NextCommand(CommandData::Attack(CommandAttack {
-                            target: target_entity,
-                        })),
-                    );
+                    cmd.add_component(*entity, NextCommand::with_attack(target_entity));
                 } else {
-                    cmd.add_component(*entity, NextCommand(CommandData::Stop));
+                    cmd.add_component(*entity, NextCommand::with_stop());
                 }
             }
             ClientMessage::SetHotbarSlot(SetHotbarSlot {

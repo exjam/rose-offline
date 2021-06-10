@@ -180,6 +180,7 @@ pub fn monster_spawn(
                 DamageSources::new(),
                 SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),
                 Command::default(),
+                NextCommand::default(),
             ));
             cmd.add_component(
                 entity,
