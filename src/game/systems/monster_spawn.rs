@@ -181,6 +181,7 @@ pub fn monster_spawn(
                 SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),
                 Command::default(),
                 NextCommand::default(),
+                game_data.npcs.get_npc_motions(id.0),
             ));
             cmd.add_component(
                 entity,
