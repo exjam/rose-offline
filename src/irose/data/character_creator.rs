@@ -2,7 +2,7 @@ use nalgebra::Point3;
 
 use crate::data::{
     formats::{FileReader, VfsIndex},
-    SkillDatabase,
+    ItemReference, SkillDatabase,
 };
 
 use crate::{
@@ -18,8 +18,6 @@ use crate::{
     },
     stb_column,
 };
-
-use super::decode_item_reference;
 
 struct CharacterGenderData {
     basic_stats: BasicStats,
@@ -69,7 +67,7 @@ impl StbInitAvatar {
         let mut items = Vec::new();
         for i in 6..=13 {
             let item = self.0.try_get_int(row, i).unwrap_or(0) as u32;
-            if let Some(item) = decode_item_reference(item)
+            if let Some(item) = ItemReference::from_base1000(item)
                 .ok()
                 .and_then(|item| EquipmentItem::new(&item))
             {
@@ -83,7 +81,7 @@ impl StbInitAvatar {
         let mut items = Vec::new();
         for i in 0..10 {
             let item = self.0.try_get_int(row, 14 + i).unwrap_or(0) as u32;
-            if let Some(item) = decode_item_reference(item)
+            if let Some(item) = ItemReference::from_base1000(item)
                 .ok()
                 .and_then(|item| Item::new(&item, 1))
             {
@@ -98,7 +96,7 @@ impl StbInitAvatar {
         for i in 0..5 {
             let item = self.0.try_get_int(row, 24 + i * 2).unwrap_or(0) as u32;
             let quantity = self.0.try_get_int(row, 25 + i * 2).unwrap_or(0) as u32;
-            if let Some(item) = decode_item_reference(item)
+            if let Some(item) = ItemReference::from_base1000(item)
                 .ok()
                 .and_then(|item| Item::new(&item, quantity))
             {
@@ -113,7 +111,7 @@ impl StbInitAvatar {
         for i in 0..5 {
             let item = self.0.try_get_int(row, 34 + i * 2).unwrap_or(0) as u32;
             let quantity = self.0.try_get_int(row, 35 + i * 2).unwrap_or(0) as u32;
-            if let Some(item) = decode_item_reference(item)
+            if let Some(item) = ItemReference::from_base1000(item)
                 .ok()
                 .and_then(|item| Item::new(&item, quantity))
             {

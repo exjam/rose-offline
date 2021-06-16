@@ -3,12 +3,10 @@ use std::collections::HashMap;
 use crate::{
     data::{
         formats::{ChrFile, FileReader, StbFile, VfsIndex, ZmoFile},
-        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcMotionAction,
+        ItemReference, MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcMotionAction,
     },
     stb_column,
 };
-
-use super::decode_item_reference;
 
 struct StbNpc(StbFile);
 
@@ -184,7 +182,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 reward_xp: data.get_reward_xp(id).unwrap_or(0),
                 drop_table_index: data.get_drop_table_index(id).unwrap_or(0),
                 drop_money: data.get_drop_money(id).unwrap_or(0),
-                drop_item: decode_item_reference(data.get_drop_item(id).unwrap_or(0)).ok(),
+                drop_item: ItemReference::from_base1000(data.get_drop_item(id).unwrap_or(0)).ok(),
                 npc_minimap_icon_index: data.get_npc_minimap_icon_index(id).unwrap_or(0),
                 summon_point_requirement: data.get_summon_point_requirement(id).unwrap_or(0),
                 shop_tabs: data.get_shop_tabs(id).unwrap_or_else(Vec::new),
