@@ -133,7 +133,8 @@ fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn
 }
 
 fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, LoadZoneError> {
-    let zone_file = data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?;
+    let zone_file =
+        VfsIndex::normalise_path(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?);
     let zone_base_directory = Path::new(&zone_file)
         .parent()
         .ok_or(LoadZoneError::ZonFileInvalidPath)?;
