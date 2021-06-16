@@ -1,5 +1,5 @@
 use nalgebra::{Point2, Vector3};
-use std::{collections::HashMap, path::Path};
+use std::{cmp::max, collections::HashMap, path::Path};
 
 use crate::{
     data::{
@@ -148,10 +148,10 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
     let mut npcs = Vec::new();
     let mut ifo_count = 0;
 
-    let mut min_x = 64u32;
-    let mut min_y = 64u32;
-    let mut max_x = 0u32;
-    let mut max_y = 0u32;
+    let mut min_x = None;
+    let mut min_y = None;
+    let mut max_x = None;
+    let mut max_y = None;
 
     let objects_offset = Vector3::new(
         (64.0 / 2.0) * (zon_file.grid_size * zon_file.grid_per_patch * 16.0)
@@ -180,13 +180,22 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
                 );
                 ifo_count += 1;
 
-                min_x = u32::min(min_x, x);
-                min_y = u32::min(min_y, y);
-                max_x = u32::max(max_x, x);
-                max_y = u32::max(max_y, y);
+                min_x = Some(min_x.map_or(x, |value| u32::min(value, x)));
+                min_y = Some(min_y.map_or(y, |value| u32::min(value, y)));
+                max_x = Some(max_x.map_or(x, |value| u32::max(value, x)));
+                max_y = Some(max_y.map_or(y, |value| u32::max(value, y)));
             }
         }
     }
+
+    if min_x.is_none() || min_y.is_none() || max_x.is_none() || max_y.is_none() {
+        return Err(LoadZoneError::NotExists);
+    }
+
+    let min_x = min_x.unwrap();
+    let min_y = min_y.unwrap();
+    let max_x = max_x.unwrap();
+    let max_y = max_y.unwrap();
 
     let sector_size = data
         .get_zone_sector_size(id)
