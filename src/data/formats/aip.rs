@@ -1,4 +1,9 @@
-use std::{collections::HashMap, ops::Range, time::Duration};
+use std::{
+    ops::{Range, RangeInclusive},
+    time::Duration,
+};
+
+use crate::data::ItemReference;
 
 use super::reader::{FileReader, ReadError};
 
@@ -11,15 +16,15 @@ pub enum AipAbilityType {
     Charm,
 }
 
-fn decode_ability_type(value: u32) -> Option<AipAbilityType> {
+fn decode_ability_type(value: u8) -> Result<AipAbilityType, AipReadError> {
     match value {
-        0 => Some(AipAbilityType::Level),
-        1 => Some(AipAbilityType::Attack),
-        2 => Some(AipAbilityType::Defence),
-        3 => Some(AipAbilityType::Resistance),
-        4 => Some(AipAbilityType::HealthPoints),
-        5 => Some(AipAbilityType::Charm),
-        _ => None,
+        0 => Ok(AipAbilityType::Level),
+        1 => Ok(AipAbilityType::Attack),
+        2 => Ok(AipAbilityType::Defence),
+        3 => Ok(AipAbilityType::Resistance),
+        4 => Ok(AipAbilityType::HealthPoints),
+        5 => Ok(AipAbilityType::Charm),
+        _ => Err(AipReadError::InvalidValue),
     }
 }
 
@@ -31,6 +36,34 @@ pub enum AipOperatorType {
     LessThan,
     LessThanEqual,
     NotEqual,
+}
+
+fn decode_operator_type(value: u8) -> Result<AipOperatorType, AipReadError> {
+    match value {
+        0 => Ok(AipOperatorType::Equals),
+        1 => Ok(AipOperatorType::GreaterThan),
+        2 => Ok(AipOperatorType::GreaterThanEqual),
+        3 => Ok(AipOperatorType::LessThan),
+        4 => Ok(AipOperatorType::LessThanEqual),
+        10 => Ok(AipOperatorType::NotEqual),
+        _ => Err(AipReadError::InvalidValue),
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum AipResultOperator {
+    Set,
+    Add,
+    Subtract,
+}
+
+fn decode_result_operator_type(value: u8) -> Result<AipResultOperator, AipReadError> {
+    match value {
+        5 => Ok(AipResultOperator::Set),
+        6 => Ok(AipResultOperator::Add),
+        7 => Ok(AipResultOperator::Subtract),
+        _ => Err(AipReadError::InvalidValue),
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -47,33 +80,29 @@ pub enum AipHaveStatusType {
 }
 
 pub struct AipConditionCountNearbyEntities {
-    pub distance: u32,
+    pub distance: AipDistance,
     pub is_allied: bool,
     pub level_diff_range: Range<i32>,
-    pub count: u32,
+    pub count_operator_type: AipOperatorType,
+    pub count: usize,
 }
 
-pub struct AipConditionTargetNearbyEntity {
-    pub distance: u32,
+pub struct AipConditionFindNearbyEntity {
+    pub distance: AipDistance,
     pub is_allied: bool,
     pub level_diff_range: Range<i32>,
 }
 
-pub enum AipCondition {
-    DamageReceived(AipOperatorType, u32),
-    DamageGiven(AipOperatorType, u32),
-    CountNearbyEntities(AipConditionCountNearbyEntities),
-    DistanceFromSpawn(AipOperatorType, u32),
-    DistanceFromTarget(AipOperatorType, u32),
-    TargetAbilityValue(AipOperatorType, AipAbilityType, u32),
-    HealthPercent(AipOperatorType, u32),
-    Random(AipOperatorType, Range<i32>, i32),
-    TargetNearbyEntity(AipConditionTargetNearbyEntity),
-    IsAttackerCurrentTarget,
-    CompareAttackerAndTargetAbilityValue(AipOperatorType, AipAbilityType),
-    NoTargetAndCompareAttackerAbilityValue(AipOperatorType, AipAbilityType, i32),
-    IsDaytime(bool),
-    HasStatusEffect(AipHaveStatusTarget, AipHaveStatusType, bool),
+pub struct AipConditionMonthDayTime {
+    pub month_day: u8,                          // 1 - 31
+    pub hour_range: Option<RangeInclusive<u8>>, // 1 - 24
+    pub minute_range: RangeInclusive<u8>,       // 1 - 60
+}
+
+pub struct AipConditionWeekDayTime {
+    pub week_day: u8,                     // 0 - 6
+    pub hour_range: RangeInclusive<u8>,   // 1 - 24
+    pub minute_range: RangeInclusive<u8>, // 1 - 60
 }
 
 #[derive(Clone, Copy)]
@@ -92,15 +121,110 @@ pub enum AipAttackNearbyStat {
 pub enum AipMoveOrigin {
     Spawn,
     CurrentPosition,
+    FindChar,
+}
+
+#[derive(Clone, Copy)]
+pub enum AipSpawnNpcOrigin {
+    CurrentPosition,
+    AttackerPosition,
+    TargetPosition,
+}
+
+#[derive(Clone, Copy)]
+pub enum AipSkillTarget {
+    FindChar,
+    Target,
+    This,
+    NearChar,
+}
+
+#[derive(Clone, Copy)]
+pub enum AipVariableType {
+    LocalNpcObject,
+    Ai,
+    World,
+    Economy,
+}
+
+#[derive(Clone, Copy)]
+pub enum AipMessageType {
+    Say,
+    Shout,
+    Announce,
+}
+
+#[derive(Clone, Copy)]
+pub enum AipMonsterSpawnState {
+    Disabled,
+    Enabled,
+    Toggle,
+}
+
+pub type AipDistance = i32;
+pub type AipNpcId = i32;
+pub type AipSkillId = i32;
+pub type AipMotionId = i32;
+pub type AipZoneId = usize;
+pub type AipIsSpawnOwner = bool;
+
+pub enum AipCondition {
+    DamageReceived(AipOperatorType, i32),
+    DamageGiven(AipOperatorType, i32),
+    CountNearbyEntities(AipConditionCountNearbyEntities), // Updates find char, near char
+    DistanceFromSpawn(AipOperatorType, AipDistance),
+    DistanceFromTarget(AipOperatorType, AipDistance),
+    TargetAbilityValue(AipOperatorType, AipAbilityType, i32),
+    HealthPercent(AipOperatorType, i32),
+    Random(AipOperatorType, Range<i32>, i32),
+    FindNearbyEntity(AipConditionFindNearbyEntity), // Updates find char, near char
+    IsAttackerCurrentTarget,
+    CompareAttackerAndTargetAbilityValue(AipOperatorType, AipAbilityType),
+    NoTargetAndCompareAttackerAbilityValue(AipOperatorType, AipAbilityType, i32),
+    IsDaytime(bool),
+    HasStatusEffect(AipHaveStatusTarget, AipHaveStatusType, bool),
+    CheckVariable(AipVariableType, usize, AipOperatorType, i32),
+    SelectLocalNpc(usize),
+    DistanceFromOwner(AipOperatorType, AipDistance),
+    CheckZoneTime(RangeInclusive<u32>),
+    SelfAbilityValue(AipOperatorType, AipAbilityType, i32),
+    HasOwner,
+    OwnerHasTarget,
+    CheckWorldTime(RangeInclusive<u32>),
+    MonthDay(AipConditionMonthDayTime),
+    WeekDay(AipConditionWeekDayTime),
+    ServerChannelNumber(RangeInclusive<u16>),
+    IsAttackerClanMaster,
+    IsTargetClanMaster,
 }
 
 pub enum AipAction {
     Stop,
     Emote(u8),
     Say(usize),
-    MoveRandomDistance(AipMoveOrigin, AipMoveMode, i32),
-    AttackNearbyEntityByStat(i32, AipAbilityType, AipAttackNearbyStat),
+    MoveRandomDistance(AipMoveOrigin, AipMoveMode, AipDistance),
+    AttackNearbyEntityByStat(AipDistance, AipAbilityType, AipAttackNearbyStat),
     SpecialAttack,
+    MoveDistanceFromTarget(AipMoveMode, AipDistance),
+    TransformNpc(AipNpcId),
+    SpawnNpc(AipNpcId, AipDistance, AipSpawnNpcOrigin, AipIsSpawnOwner),
+    NearbyAlliesAttackTarget(usize, AipDistance, Option<AipNpcId>),
+    AttackNearChar,
+    AttackFindChar,
+    NearbyAlliesSameNpcAttackTarget(AipDistance), // Nearby allies with same npc id attack target
+    AttackAttacker,
+    RunAway(AipDistance),
+    DropRandomItem(Vec<ItemReference>),
+    KillSelf,
+    UseSkill(AipSkillTarget, AipSkillId, AipMotionId),
+    SetVariable(AipVariableType, usize, AipResultOperator, i32),
+    Message(AipMessageType, usize),
+    MoveNearOwner,
+    DoQuestTrigger(String),
+    AttackOwnerTarget,
+    SetPvpFlag(Option<AipZoneId>, bool),
+    SetMonsterSpawnState(Option<AipZoneId>, AipMonsterSpawnState),
+    GiveItemToOwner(ItemReference, usize),
 }
 
 pub struct AipEvent {
@@ -128,6 +252,7 @@ pub struct AipFile {
 #[derive(Debug)]
 pub enum AipReadError {
     UnexpectedEof,
+    InvalidValue,
 }
 
 impl From<ReadError> for AipReadError {
@@ -161,11 +286,10 @@ impl AipFile {
                     let condition_start_position = reader.position();
                     let size_bytes = reader.read_u32()? as u64;
                     let opcode = reader.read_u32()?;
-                    println!("AIP condition opcode: {:#X}", opcode);
 
                     match opcode ^ 0x04000000 {
                         2 => {
-                            let damage = reader.read_u32()?;
+                            let damage = reader.read_i32()?;
                             let is_give_damage = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
@@ -182,31 +306,32 @@ impl AipFile {
                             }
                         }
                         3 => {
-                            let distance = reader.read_u32()?;
+                            let distance = reader.read_i32()?;
                             let is_allied = reader.read_u8()? > 0;
                             reader.skip(1); // padding
                             let min_level_diff = reader.read_i16()? as i32;
                             let max_level_diff = reader.read_i16()? as i32;
-                            let count = reader.read_u16()? as u32;
+                            let count = reader.read_u16()? as usize;
 
                             conditions.push(AipCondition::CountNearbyEntities(
                                 AipConditionCountNearbyEntities {
-                                    distance,
+                                    distance: distance * 100,
                                     is_allied,
                                     level_diff_range: min_level_diff..max_level_diff,
+                                    count_operator_type: AipOperatorType::GreaterThanEqual,
                                     count,
                                 },
                             ))
                         }
                         4 => {
-                            let distance = reader.read_u32()?;
+                            let distance = reader.read_i32()?;
                             conditions.push(AipCondition::DistanceFromSpawn(
                                 AipOperatorType::GreaterThanEqual,
                                 distance * 100,
                             ));
                         }
                         5 => {
-                            let distance = reader.read_u32()?;
+                            let distance = reader.read_i32()?;
                             let is_lte = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
@@ -223,29 +348,27 @@ impl AipFile {
                             }
                         }
                         6 => {
-                            let ability_type = reader.read_u32()?;
-                            let value = reader.read_u32()?;
+                            let ability_type = decode_ability_type(reader.read_u32()? as u8)?;
+                            let value = reader.read_i32()?;
                             let is_lte = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
-                            if let Some(ability_type) = decode_ability_type(ability_type) {
-                                if is_lte {
-                                    conditions.push(AipCondition::TargetAbilityValue(
-                                        AipOperatorType::LessThanEqual,
-                                        ability_type,
-                                        value,
-                                    ));
-                                } else {
-                                    conditions.push(AipCondition::TargetAbilityValue(
-                                        AipOperatorType::GreaterThanEqual,
-                                        ability_type,
-                                        value,
-                                    ));
-                                }
+                            if is_lte {
+                                conditions.push(AipCondition::TargetAbilityValue(
+                                    AipOperatorType::LessThanEqual,
+                                    ability_type,
+                                    value,
+                                ));
+                            } else {
+                                conditions.push(AipCondition::TargetAbilityValue(
+                                    AipOperatorType::GreaterThanEqual,
+                                    ability_type,
+                                    value,
+                                ));
                             }
                         }
                         7 => {
-                            let value = reader.read_u32()?;
+                            let value = reader.read_i32()?;
                             let is_lte = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
@@ -272,14 +395,14 @@ impl AipFile {
                             ));
                         }
                         9 => {
-                            let distance = reader.read_u32()?;
+                            let distance = reader.read_i32()?;
                             let min_level_diff = reader.read_i16()? as i32;
                             let max_level_diff = reader.read_i16()? as i32;
                             let is_allied = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
-                            conditions.push(AipCondition::TargetNearbyEntity(
-                                AipConditionTargetNearbyEntity {
+                            conditions.push(AipCondition::FindNearbyEntity(
+                                AipConditionFindNearbyEntity {
                                     distance: distance * 100,
                                     is_allied,
                                     level_diff_range: min_level_diff..max_level_diff,
@@ -290,53 +413,49 @@ impl AipFile {
                             conditions.push(AipCondition::IsAttackerCurrentTarget);
                         }
                         11 => {
-                            let ability_type = reader.read_u8()? as u32;
+                            let ability_type = decode_ability_type(reader.read_u8()?)?;
                             let is_lt = reader.read_u8()? != 0;
                             reader.skip(2); // padding
 
-                            if let Some(ability_type) = decode_ability_type(ability_type) {
-                                if is_lt {
-                                    conditions.push(
-                                        AipCondition::CompareAttackerAndTargetAbilityValue(
-                                            AipOperatorType::LessThan,
-                                            ability_type,
-                                        ),
-                                    );
-                                } else {
-                                    conditions.push(
-                                        AipCondition::CompareAttackerAndTargetAbilityValue(
-                                            AipOperatorType::GreaterThan,
-                                            ability_type,
-                                        ),
-                                    );
-                                }
+                            if is_lt {
+                                conditions.push(
+                                    AipCondition::CompareAttackerAndTargetAbilityValue(
+                                        AipOperatorType::LessThan,
+                                        ability_type,
+                                    ),
+                                );
+                            } else {
+                                conditions.push(
+                                    AipCondition::CompareAttackerAndTargetAbilityValue(
+                                        AipOperatorType::GreaterThan,
+                                        ability_type,
+                                    ),
+                                );
                             }
                         }
                         12 => {
-                            let ability_type = reader.read_u8()? as u32;
+                            let ability_type = decode_ability_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
                             let value = reader.read_i32()?;
                             let is_lte = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
-                            if let Some(ability_type) = decode_ability_type(ability_type) {
-                                if is_lte {
-                                    conditions.push(
-                                        AipCondition::NoTargetAndCompareAttackerAbilityValue(
-                                            AipOperatorType::LessThanEqual,
-                                            ability_type,
-                                            value,
-                                        ),
-                                    );
-                                } else {
-                                    conditions.push(
-                                        AipCondition::NoTargetAndCompareAttackerAbilityValue(
-                                            AipOperatorType::GreaterThanEqual,
-                                            ability_type,
-                                            value,
-                                        ),
-                                    );
-                                }
+                            if is_lte {
+                                conditions.push(
+                                    AipCondition::NoTargetAndCompareAttackerAbilityValue(
+                                        AipOperatorType::LessThanEqual,
+                                        ability_type,
+                                        value,
+                                    ),
+                                );
+                            } else {
+                                conditions.push(
+                                    AipCondition::NoTargetAndCompareAttackerAbilityValue(
+                                        AipOperatorType::GreaterThanEqual,
+                                        ability_type,
+                                        value,
+                                    ),
+                                );
                             }
                         }
                         13 => {
@@ -363,7 +482,163 @@ impl AipFile {
                                 have,
                             ));
                         }
-                        // 18 and 27 have distance *= 100
+                        15 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let opcode = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            conditions.push(AipCondition::CheckVariable(
+                                AipVariableType::LocalNpcObject,
+                                variable,
+                                opcode,
+                                value,
+                            ));
+                        }
+                        16 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let opcode = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            conditions.push(AipCondition::CheckVariable(
+                                AipVariableType::World,
+                                variable,
+                                opcode,
+                                value,
+                            ));
+                        }
+                        17 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let opcode = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            conditions.push(AipCondition::CheckVariable(
+                                AipVariableType::Economy,
+                                variable,
+                                opcode,
+                                value,
+                            ));
+                        }
+                        18 => {
+                            let npc_id = reader.read_u32()? as usize;
+                            conditions.push(AipCondition::SelectLocalNpc(npc_id));
+                        }
+                        19 => {
+                            let distance = reader.read_i32()?;
+                            let opcode = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            conditions.push(AipCondition::DistanceFromOwner(opcode, distance));
+                        }
+                        20 => {
+                            let start_time = reader.read_u32()?;
+                            let end_time = reader.read_u32()?;
+                            conditions.push(AipCondition::CheckZoneTime(start_time..=end_time));
+                        }
+                        21 => {
+                            let ability_type = decode_ability_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            let value = reader.read_i32()?;
+                            let opcode = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            conditions.push(AipCondition::SelfAbilityValue(
+                                opcode,
+                                ability_type,
+                                value,
+                            ));
+                        }
+                        22 => conditions.push(AipCondition::HasOwner),
+                        23 => conditions.push(AipCondition::OwnerHasTarget),
+                        24 => {
+                            let start_time = reader.read_u32()?;
+                            let end_time = reader.read_u32()?;
+                            conditions.push(AipCondition::CheckWorldTime(start_time..=end_time));
+                        }
+                        25 => {
+                            let day = reader.read_u8()?;
+                            let hour_min = reader.read_u8()?;
+                            let minute_min = reader.read_u8()?;
+                            let hour_max = reader.read_u8()?;
+                            let minute_max = reader.read_u8()?;
+                            reader.skip(3); // padding
+
+                            conditions.push(AipCondition::MonthDay(AipConditionMonthDayTime {
+                                month_day: day,
+                                hour_range: if hour_min > 100 || hour_max > 100 {
+                                    None
+                                } else {
+                                    Some(hour_min..=hour_max)
+                                },
+                                minute_range: minute_min..=minute_max,
+                            }));
+                        }
+                        26 => {
+                            let day = reader.read_u8()?;
+                            let hour_min = reader.read_u8()?;
+                            let minute_min = reader.read_u8()?;
+                            let hour_max = reader.read_u8()?;
+                            let minute_max = reader.read_u8()?;
+                            reader.skip(3); // padding
+
+                            conditions.push(AipCondition::WeekDay(AipConditionWeekDayTime {
+                                week_day: day,
+                                hour_range: hour_min..=hour_max,
+                                minute_range: minute_min..=minute_max,
+                            }));
+                        }
+                        27 => {
+                            let channel_no_min = reader.read_u16()?;
+                            let channel_no_max = reader.read_u16()?;
+                            conditions.push(AipCondition::ServerChannelNumber(
+                                channel_no_min..=channel_no_max,
+                            ));
+                        }
+                        28 => {
+                            let distance = reader.read_i32()?;
+                            let is_allied = reader.read_u8()? > 0;
+                            reader.skip(1); // padding
+                            let min_level_diff = reader.read_i16()? as i32;
+                            let max_level_diff = reader.read_i16()? as i32;
+                            let count = reader.read_u16()? as usize;
+                            let count_operator_type = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+
+                            conditions.push(AipCondition::CountNearbyEntities(
+                                AipConditionCountNearbyEntities {
+                                    distance: distance * 100,
+                                    is_allied,
+                                    level_diff_range: min_level_diff..max_level_diff,
+                                    count_operator_type,
+                                    count,
+                                },
+                            ))
+                        }
+                        29 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let opcode = decode_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+                            conditions.push(AipCondition::CheckVariable(
+                                AipVariableType::Ai,
+                                variable,
+                                opcode,
+                                value,
+                            ));
+                        }
+                        30 => {
+                            let target = reader.read_u8()?;
+                            reader.skip(3); // padding
+
+                            if target == 0 {
+                                conditions.push(AipCondition::IsAttackerClanMaster);
+                            } else if target == 1 {
+                                conditions.push(AipCondition::IsTargetClanMaster);
+                            } else {
+                                return Err(AipReadError::InvalidValue);
+                            }
+                        }
                         _ => {
                             println!("Unimplemented AIP condition opcode: {:X}", opcode);
                             reader.skip(size_bytes - 8);
@@ -384,7 +659,7 @@ impl AipFile {
                     let action_start_position = reader.position();
                     let size_bytes = reader.read_u32()? as u64;
                     let opcode = reader.read_u32()?;
-                    println!("AIP action opcode: {:#X}", opcode);
+
                     match opcode ^ 0x0B000000 {
                         1 => {
                             actions.push(AipAction::Stop);
@@ -406,6 +681,7 @@ impl AipFile {
                                 AipMoveMode::Walk
                             };
                             reader.skip(3); // padding
+
                             actions.push(AipAction::MoveRandomDistance(
                                 AipMoveOrigin::CurrentPosition,
                                 move_mode,
@@ -420,6 +696,7 @@ impl AipFile {
                                 AipMoveMode::Walk
                             };
                             reader.skip(3); // padding
+
                             actions.push(AipAction::MoveRandomDistance(
                                 AipMoveOrigin::Spawn,
                                 move_mode,
@@ -433,15 +710,16 @@ impl AipFile {
                                 AipMoveMode::Walk
                             };
                             reader.skip(3); // padding
+
                             actions.push(AipAction::MoveRandomDistance(
-                                AipMoveOrigin::CurrentPosition,
+                                AipMoveOrigin::FindChar,
                                 move_mode,
                                 200,
                             ));
                         }
                         7 => {
                             let distance = reader.read_i32()?;
-                            let ability_type = reader.read_u8()? as u32;
+                            let ability_type = decode_ability_type(reader.read_u8()?)?;
                             let stat_amount = if reader.read_u8()? != 0 {
                                 AipAttackNearbyStat::Lowest
                             } else {
@@ -449,16 +727,250 @@ impl AipFile {
                             };
                             reader.skip(2); // padding
 
-                            if let Some(ability_type) = decode_ability_type(ability_type) {
-                                actions.push(AipAction::AttackNearbyEntityByStat(
-                                    distance * 100,
-                                    ability_type,
-                                    stat_amount,
-                                ));
-                            }
+                            actions.push(AipAction::AttackNearbyEntityByStat(
+                                distance * 100,
+                                ability_type,
+                                stat_amount,
+                            ));
                         }
                         8 => {
                             actions.push(AipAction::SpecialAttack);
+                        }
+                        9 => {
+                            let distance = reader.read_i32()?;
+                            let move_mode = if reader.read_u8()? != 0 {
+                                AipMoveMode::Run
+                            } else {
+                                AipMoveMode::Walk
+                            };
+                            reader.skip(3); // padding
+
+                            actions
+                                .push(AipAction::MoveDistanceFromTarget(move_mode, distance * 100));
+                        }
+                        10 => {
+                            let npc_id = reader.read_u16()? as i32;
+                            reader.skip(2); // padding
+
+                            actions.push(AipAction::TransformNpc(npc_id));
+                        }
+                        11 => {
+                            let npc_id = reader.read_u16()? as i32;
+                            reader.skip(2); // padding
+
+                            actions.push(AipAction::SpawnNpc(
+                                npc_id,
+                                150,
+                                AipSpawnNpcOrigin::CurrentPosition,
+                                false,
+                            ));
+                        }
+                        12 => {
+                            let distance = reader.read_i32()?;
+                            let count = reader.read_i32()? as usize;
+                            actions
+                                .push(AipAction::NearbyAlliesAttackTarget(count, distance, None));
+                        }
+                        13 => actions.push(AipAction::AttackNearChar),
+                        14 => actions.push(AipAction::AttackFindChar),
+                        15 => {
+                            let distance = reader.read_i32()?;
+                            actions.push(AipAction::NearbyAlliesSameNpcAttackTarget(distance));
+                        }
+                        16 => actions.push(AipAction::AttackAttacker),
+                        17 => {
+                            let distance = reader.read_i32()?;
+                            actions.push(AipAction::RunAway(distance));
+                        }
+                        18 => {
+                            let mut items = Vec::new();
+                            for _ in 0..5 {
+                                let value = reader.read_u16()? as u32;
+                                if let Ok(item) = ItemReference::from_base1000(value) {
+                                    items.push(item);
+                                }
+                            }
+                            reader.skip(2); // padding
+
+                            actions.push(AipAction::DropRandomItem(items));
+                        }
+                        19 => {
+                            let npc_id = reader.read_u16()? as AipNpcId;
+                            let count = reader.read_u16()? as usize;
+                            let distance = reader.read_i32()?;
+
+                            actions.push(AipAction::NearbyAlliesAttackTarget(
+                                count,
+                                distance,
+                                Some(npc_id),
+                            ));
+                        }
+                        20 => actions.push(AipAction::AttackNearChar),
+                        21 => {
+                            let npc_id = reader.read_u16()? as i32;
+                            let position = match reader.read_u8()? {
+                                0 => AipSpawnNpcOrigin::CurrentPosition,
+                                1 => AipSpawnNpcOrigin::AttackerPosition,
+                                2 => AipSpawnNpcOrigin::TargetPosition,
+                                _ => return Err(AipReadError::InvalidValue),
+                            };
+                            reader.skip(1); // padding
+                            let distance = reader.read_i32()?;
+
+                            actions.push(AipAction::SpawnNpc(npc_id, distance, position, false));
+                        }
+                        22 => { /* no-op */ }
+                        23 => { /* no-op */ }
+                        24 => actions.push(AipAction::KillSelf),
+                        25 => {
+                            let target = match reader.read_u8()? {
+                                0 => AipSkillTarget::FindChar,
+                                1 => AipSkillTarget::Target,
+                                2 => AipSkillTarget::This,
+                                3 => AipSkillTarget::NearChar,
+                                _ => return Err(AipReadError::InvalidValue),
+                            };
+                            reader.skip(1); // padding
+                            let skill_id = reader.read_u16()? as i32;
+                            let motion_id = reader.read_u16()? as i32;
+                            reader.skip(2); // padding
+
+                            actions.push(AipAction::UseSkill(target, skill_id, motion_id));
+                        }
+                        26 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let operator = decode_result_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+
+                            actions.push(AipAction::SetVariable(
+                                AipVariableType::LocalNpcObject,
+                                variable,
+                                operator,
+                                value,
+                            ));
+                        }
+                        27 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let operator = decode_result_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+
+                            actions.push(AipAction::SetVariable(
+                                AipVariableType::World,
+                                variable,
+                                operator,
+                                value,
+                            ));
+                        }
+                        28 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let operator = decode_result_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+
+                            actions.push(AipAction::SetVariable(
+                                AipVariableType::Economy,
+                                variable,
+                                operator,
+                                value,
+                            ));
+                        }
+                        29 => {
+                            let message_type = match reader.read_u8()? {
+                                0 => AipMessageType::Say,
+                                1 => AipMessageType::Shout,
+                                2 => AipMessageType::Announce,
+                                _ => return Err(AipReadError::InvalidValue),
+                            };
+                            reader.skip(3); // padding
+                            let string_id = reader.read_u32()? as usize;
+
+                            actions.push(AipAction::Message(message_type, string_id));
+                        }
+                        30 => actions.push(AipAction::MoveNearOwner),
+                        31 => {
+                            let quest_trigger = reader.read_u16_length_string()?;
+                            reader.set_position(action_start_position + size_bytes); // padding
+
+                            actions.push(AipAction::DoQuestTrigger(quest_trigger.to_string()));
+                        }
+                        32 => actions.push(AipAction::AttackOwnerTarget),
+                        33 => {
+                            let zone_id = reader.read_u16()? as AipZoneId;
+                            let value = reader.read_u8()? != 0;
+                            reader.skip(1); // padding
+
+                            actions.push(AipAction::SetPvpFlag(
+                                if zone_id == 0 { None } else { Some(zone_id) },
+                                value,
+                            ));
+                        }
+                        34 => {
+                            let zone_id = reader.read_u16()? as AipZoneId;
+                            let value = match reader.read_u8()? {
+                                0 => AipMonsterSpawnState::Disabled,
+                                1 => AipMonsterSpawnState::Enabled,
+                                2 => AipMonsterSpawnState::Toggle,
+                                _ => return Err(AipReadError::InvalidValue),
+                            };
+                            reader.skip(1); // padding
+
+                            actions.push(AipAction::SetMonsterSpawnState(
+                                if zone_id == 0 { None } else { Some(zone_id) },
+                                value,
+                            ));
+                        }
+                        35 => {
+                            let item = ItemReference::from_base1000(reader.read_u16()? as u32)
+                                .map_err(|_| AipReadError::InvalidValue)?;
+                            let count = reader.read_u16()? as usize;
+
+                            actions.push(AipAction::GiveItemToOwner(item, count));
+                        }
+                        36 => {
+                            let variable = reader.read_u16()? as usize;
+                            reader.skip(2); // padding
+                            let value = reader.read_i32()?;
+                            let operator = decode_result_operator_type(reader.read_u8()?)?;
+                            reader.skip(3); // padding
+
+                            actions.push(AipAction::SetVariable(
+                                AipVariableType::Ai,
+                                variable,
+                                operator,
+                                value,
+                            ));
+                        }
+                        37 => {
+                            let npc_id = reader.read_u16()? as i32;
+                            let is_owner = reader.read_u8()? != 0;
+                            reader.skip(1); // padding
+
+                            actions.push(AipAction::SpawnNpc(
+                                npc_id,
+                                150,
+                                AipSpawnNpcOrigin::CurrentPosition,
+                                is_owner,
+                            ));
+                        }
+                        38 => {
+                            let npc_id = reader.read_u16()? as i32;
+                            let position = match reader.read_u8()? {
+                                0 => AipSpawnNpcOrigin::CurrentPosition,
+                                1 => AipSpawnNpcOrigin::AttackerPosition,
+                                2 => AipSpawnNpcOrigin::TargetPosition,
+                                _ => return Err(AipReadError::InvalidValue),
+                            };
+                            reader.skip(1); // padding
+                            let distance = reader.read_i32()?;
+                            let is_owner = reader.read_u8()? != 0;
+                            reader.skip(3); // padding
+
+                            actions.push(AipAction::SpawnNpc(npc_id, distance, position, is_owner));
                         }
                         _ => {
                             println!("Unimplemented AIP action opcode: {:#X}", opcode);

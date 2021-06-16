@@ -65,6 +65,7 @@ fn npc_ai_do_actions(
                         Some(&SpawnOrigin::MonsterSpawnPoint(_, spawn_position)) => spawn_position,
                         None => position.position,
                     },
+                    AipMoveOrigin::FindChar => unimplemented!("Move to find char"),
                 };
                 let destination = move_origin + Vector3::new(dx as f32, dy as f32, 0.0);
                 cmd.add_component(*entity, NextCommand::with_move(destination, None))
