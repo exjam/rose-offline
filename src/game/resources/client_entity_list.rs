@@ -15,7 +15,7 @@ pub struct ClientEntityId(pub u16);
 #[derive(Clone, Default)]
 pub struct ClientEntitySector {
     // The list of entities currently inside this sector
-    entities: HashSet<Entity>,
+    entities: HashMap<Entity, Point3<f32>>,
 
     // The list of entities visible from this sector, this is a union of the entities of all adjacent sectors
     visible_entities: HashSet<Entity>,
@@ -26,12 +26,12 @@ impl ClientEntitySector {
         &self.visible_entities
     }
 
-    fn add_entity(&mut self, entity: Entity) {
-        self.entities.insert(entity);
+    fn add_entity(&mut self, entity: Entity, position: Point3<f32>) {
+        self.entities.insert(entity, position);
     }
 
     fn remove_entity(&mut self, entity: &Entity) {
-        assert_eq!(self.entities.remove(entity), true);
+        assert_eq!(self.entities.remove(entity).is_some(), true);
     }
 
     fn add_visible_entity(&mut self, entity: Entity) {
@@ -93,9 +93,9 @@ impl ClientEntityZone {
             + Vector2::new(sector[0] as f32 + 0.5, sector[1] as f32 + 0.5) * self.sector_size
     }
 
-    fn add_sector_entity(&mut self, sector: Point2<u32>, entity: &Entity) {
+    fn add_sector_entity(&mut self, sector: Point2<u32>, entity: &Entity, position: Point3<f32>) {
         // Add to the sector
-        self.get_sector_mut(sector).add_entity(*entity);
+        self.get_sector_mut(sector).add_entity(*entity, position);
 
         // Add to visible list in all adjacent sectors
         let min_sector_x = sector.x.saturating_sub(1);
@@ -109,6 +109,10 @@ impl ClientEntityZone {
                     .add_visible_entity(*entity);
             }
         }
+    }
+
+    fn update_entity_position(&mut self, sector: Point2<u32>, entity: &Entity, position: Point3<f32>) {
+        self.get_sector_mut(sector).add_entity(*entity, position);
     }
 
     fn remove_sector_entity(&mut self, sector: Point2<u32>, entity: &Entity) {
@@ -142,7 +146,7 @@ impl ClientEntityZone {
                 .map(|(index, _)| index);
 
             let sector = self.calculate_sector(position);
-            self.add_sector_entity(sector, &entity);
+            self.add_sector_entity(sector, &entity, position);
             Some(ClientEntity::new(id, sector))
         } else {
             None
@@ -172,8 +176,10 @@ impl ClientEntityZone {
             let previous_sector = client_entity.sector;
             let new_sector = self.calculate_sector(position);
             self.remove_sector_entity(previous_sector, &entity);
-            self.add_sector_entity(new_sector, &entity);
+            self.add_sector_entity(new_sector, &entity, position);
             client_entity.sector = new_sector;
+        } else {
+            self.update_entity_position(client_entity.sector, &entity, position);
         }
     }
 
