@@ -1,9 +1,8 @@
 use crossbeam_channel::Receiver;
-use legion::*;
+use legion::{World, Resources, Schedule};
 use std::time::{Duration, Instant};
 
 use super::{
-    components::{MonsterSpawnPoint, Npc, NpcStandingDirection, Position, Team, Zone},
     messages::control::ControlMessage,
     resources::{
         ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, PendingDamageList,
@@ -26,58 +25,26 @@ impl GameWorld {
     }
 
     pub fn run(&mut self, game_data: GameData) {
-        let started_load = Instant::now();
-        let mut client_entity_list = ClientEntityList::new(&game_data.zones);
         let mut world = World::default();
-
-        for (zone_id, zone_data) in game_data.zones.iter() {
-            let zone_id = *zone_id;
-            let client_entity_zone = client_entity_list.get_zone_mut(zone_id as usize).unwrap();
-            world.push((Zone { id: zone_id },));
-
-            for npc in &zone_data.npcs {
-                let conversation_index = game_data
-                    .npcs
-                    .get_conversation(&npc.conversation)
-                    .map(|x| x.index)
-                    .unwrap_or(0);
-                let entity = world.push((
-                    Npc::new(npc.npc.0 as u32, conversation_index as u16),
-                    NpcStandingDirection::new(npc.direction),
-                    Position::new(npc.position, zone_id),
-                    Team::default_npc(),
-                ));
-
-                if let Some(ability_values) = game_data
-                    .ability_value_calculator
-                    .calculate_npc(npc.npc.0 as usize)
-                {
-                    world.entry(entity).unwrap().add_component(ability_values);
-                }
-
-                world
-                    .entry(entity)
-                    .unwrap()
-                    .add_component(client_entity_zone.allocate(entity, npc.position).unwrap());
-            }
-
-            for spawn in &zone_data.monster_spawns {
-                world.push((
-                    MonsterSpawnPoint::from(spawn),
-                    Position::new(spawn.position, zone_id),
-                ));
-            }
-        }
-        println!("Time take to populate zones {:?}", started_load.elapsed());
 
         let mut resources = Resources::default();
         resources.insert(ControlChannel::new(self.control_rx.clone()));
         resources.insert(ServerList::new());
         resources.insert(LoginTokens::new());
         resources.insert(ServerMessages::new());
-        resources.insert(client_entity_list);
-        resources.insert(game_data);
+        resources.insert(ClientEntityList::new(&game_data.zones));
         resources.insert(PendingDamageList::new());
+        resources.insert(game_data);
+
+        let started_load = Instant::now();
+        let mut startup_schedule = Schedule::builder()
+            .add_system(startup_zones_system())
+            .build();
+        startup_schedule.execute(&mut world, &mut resources);
+        println!(
+            "Time taken to populate game world: {:?}",
+            started_load.elapsed()
+        );
 
         let mut schedule = Schedule::builder()
             .add_system(control_server_system())

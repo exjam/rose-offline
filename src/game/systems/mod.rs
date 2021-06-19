@@ -7,6 +7,7 @@ mod login_server;
 mod monster_spawn;
 mod npc_ai;
 mod server_messages;
+mod startup_zones;
 mod update_position;
 mod world_server;
 
@@ -19,5 +20,6 @@ pub use login_server::*;
 pub use monster_spawn::*;
 pub use npc_ai::*;
 pub use server_messages::*;
+pub use startup_zones::*;
 pub use update_position::*;
 pub use world_server::*;
