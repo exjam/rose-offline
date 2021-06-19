@@ -111,7 +111,12 @@ impl ClientEntityZone {
         }
     }
 
-    fn update_entity_position(&mut self, sector: Point2<u32>, entity: &Entity, position: Point3<f32>) {
+    fn update_entity_position(
+        &mut self,
+        sector: Point2<u32>,
+        entity: &Entity,
+        position: Point3<f32>,
+    ) {
         self.get_sector_mut(sector).add_entity(*entity, position);
     }
 
