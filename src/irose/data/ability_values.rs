@@ -50,6 +50,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         let npc_data = self.npc_database.get_npc(npc_id)?;
         Some(AbilityValues {
             damage_category: DamageCategory::Npc,
+            walk_speed: npc_data.walk_speed as f32,
             run_speed: npc_data.run_speed as f32,
             level: npc_data.level,
             strength: 0,
@@ -128,6 +129,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         // TODO: If riding cart, most stat calculations are different
         AbilityValues {
             damage_category: DamageCategory::Character,
+            walk_speed: 200.0,
             run_speed: calculate_run_speed(
                 &self.item_database,
                 &basic_stats,

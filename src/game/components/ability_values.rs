@@ -14,6 +14,7 @@ pub enum DamageType {
 pub struct AbilityValues {
     pub damage_category: DamageCategory,
     pub level: i32,
+    pub walk_speed: f32,
     pub run_speed: f32,
     pub strength: u16,
     pub dexterity: u16,
