@@ -78,8 +78,12 @@ impl GameWorld {
                 now: current_tick,
             });
             schedule.execute(&mut world, &mut resources);
+
+            let tick_duration = std::time::Instant::now() - current_tick;
+            if tick_duration < min_tick_duration {
+                std::thread::sleep(min_tick_duration - tick_duration);
+            }
             last_tick = current_tick;
-            std::thread::sleep(min_tick_duration); // TODO: This should account for duration of execution
         }
     }
 }
