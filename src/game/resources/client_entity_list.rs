@@ -204,6 +204,63 @@ impl ClientEntityZone {
                 Some(usize::min(index, last_free_index))
             });
     }
+
+    pub fn iter_entities_within_distance(
+        &self,
+        origin: Point2<f32>,
+        distance: f32,
+    ) -> ClientEntityZoneEntityIterator<'_> {
+        let min_sector = self.calculate_sector(origin - Vector2::new(distance, distance));
+        let max_sector = self.calculate_sector(origin + Vector2::new(distance, distance));
+
+        ClientEntityZoneEntityIterator {
+            zone: &self,
+            min_sector,
+            max_sector,
+            current_sector: min_sector,
+            current_iter: self.get_sector(min_sector).entities.iter(),
+            origin,
+            max_distance_squared: distance * distance,
+        }
+    }
+}
+
+pub struct ClientEntityZoneEntityIterator<'a> {
+    zone: &'a ClientEntityZone,
+    min_sector: Point2<u32>,
+    max_sector: Point2<u32>,
+    current_sector: Point2<u32>,
+    current_iter: std::collections::hash_map::Iter<'a, Entity, Point3<f32>>,
+    origin: Point2<f32>,
+    max_distance_squared: f32,
+}
+
+impl Iterator for ClientEntityZoneEntityIterator<'_> {
+    type Item = (Entity, Point3<f32>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some((entity, position)) = self.current_iter.next() {
+                let distance_squared = (position.xy() - self.origin).magnitude_squared();
+                if distance_squared <= self.max_distance_squared {
+                    break Some((*entity, *position));
+                }
+            }
+
+            self.current_sector.x += 1;
+
+            if self.current_sector.x > self.max_sector.x {
+                self.current_sector.x = self.min_sector.x;
+                self.current_sector.y += 1;
+            }
+
+            if self.current_sector.y > self.max_sector.y {
+                break None;
+            }
+
+            self.current_iter = self.zone.get_sector(self.current_sector).entities.iter();
+        }
+    }
 }
 
 pub struct ClientEntityList {
