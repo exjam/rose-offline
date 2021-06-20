@@ -161,6 +161,19 @@ pub enum AipMonsterSpawnState {
     Toggle,
 }
 
+#[derive(Clone, Copy)]
+pub enum AipDamageType {
+    Received,
+    Given,
+}
+
+#[derive(Clone, Copy)]
+pub enum AipDistanceOrigin {
+    Spawn,
+    Owner,
+    Target,
+}
+
 pub type AipDistance = i32;
 pub type AipNpcId = i32;
 pub type AipSkillId = i32;
@@ -169,33 +182,30 @@ pub type AipZoneId = usize;
 pub type AipIsSpawnOwner = bool;
 
 pub enum AipCondition {
-    DamageReceived(AipOperatorType, i32),
-    DamageGiven(AipOperatorType, i32),
-    CountNearbyEntities(AipConditionCountNearbyEntities), // Updates find char, near char
-    DistanceFromSpawn(AipOperatorType, AipDistance),
-    DistanceFromTarget(AipOperatorType, AipDistance),
-    TargetAbilityValue(AipOperatorType, AipAbilityType, i32),
-    HealthPercent(AipOperatorType, i32),
-    Random(AipOperatorType, Range<i32>, i32),
-    FindNearbyEntity(AipConditionFindNearbyEntity), // Updates find char, near char
-    IsAttackerCurrentTarget,
     CompareAttackerAndTargetAbilityValue(AipOperatorType, AipAbilityType),
-    NoTargetAndCompareAttackerAbilityValue(AipOperatorType, AipAbilityType, i32),
-    IsDaytime(bool),
-    HasStatusEffect(AipHaveStatusTarget, AipHaveStatusType, bool),
-    CheckVariable(AipVariableType, usize, AipOperatorType, i32),
-    SelectLocalNpc(usize),
-    DistanceFromOwner(AipOperatorType, AipDistance),
-    CheckZoneTime(RangeInclusive<u32>),
-    SelfAbilityValue(AipOperatorType, AipAbilityType, i32),
+    CountNearbyEntities(AipConditionCountNearbyEntities), // Updates find char, near char
+    Damage(AipDamageType, AipOperatorType, i32),
+    Distance(AipDistanceOrigin, AipOperatorType, AipDistance),
+    FindNearbyEntity(AipConditionFindNearbyEntity), // Updates find char, near char
     HasOwner,
-    OwnerHasTarget,
-    CheckWorldTime(RangeInclusive<u32>),
-    MonthDay(AipConditionMonthDayTime),
-    WeekDay(AipConditionWeekDayTime),
-    ServerChannelNumber(RangeInclusive<u16>),
+    HasStatusEffect(AipHaveStatusTarget, AipHaveStatusType, bool),
+    HealthPercent(AipOperatorType, i32),
     IsAttackerClanMaster,
+    IsAttackerCurrentTarget,
+    IsDaytime(bool),
     IsTargetClanMaster,
+    MonthDay(AipConditionMonthDayTime),
+    NoTargetAndCompareAttackerAbilityValue(AipOperatorType, AipAbilityType, i32),
+    OwnerHasTarget,
+    Random(AipOperatorType, Range<i32>, i32),
+    SelectLocalNpc(usize),
+    SelfAbilityValue(AipOperatorType, AipAbilityType, i32),
+    ServerChannelNumber(RangeInclusive<u16>),
+    TargetAbilityValue(AipOperatorType, AipAbilityType, i32),
+    Variable(AipVariableType, usize, AipOperatorType, i32),
+    WeekDay(AipConditionWeekDayTime),
+    WorldTime(RangeInclusive<u32>),
+    ZoneTime(RangeInclusive<u32>),
 }
 
 pub enum AipAction {
@@ -290,20 +300,18 @@ impl AipFile {
                     match opcode ^ 0x04000000 {
                         2 => {
                             let damage = reader.read_i32()?;
-                            let is_give_damage = reader.read_u8()? != 0;
+                            let damage_type = if reader.read_u8()? != 0 {
+                                AipDamageType::Given
+                            } else {
+                                AipDamageType::Received
+                            };
                             reader.skip(3); // padding
 
-                            if is_give_damage {
-                                conditions.push(AipCondition::DamageGiven(
-                                    AipOperatorType::GreaterThanEqual,
-                                    damage,
-                                ));
-                            } else {
-                                conditions.push(AipCondition::DamageReceived(
-                                    AipOperatorType::GreaterThanEqual,
-                                    damage,
-                                ));
-                            }
+                            conditions.push(AipCondition::Damage(
+                                damage_type,
+                                AipOperatorType::GreaterThanEqual,
+                                damage,
+                            ));
                         }
                         3 => {
                             let distance = reader.read_i32()?;
@@ -325,7 +333,8 @@ impl AipFile {
                         }
                         4 => {
                             let distance = reader.read_i32()?;
-                            conditions.push(AipCondition::DistanceFromSpawn(
+                            conditions.push(AipCondition::Distance(
+                                AipDistanceOrigin::Spawn,
                                 AipOperatorType::GreaterThanEqual,
                                 distance * 100,
                             ));
@@ -336,12 +345,14 @@ impl AipFile {
                             reader.skip(3); // padding
 
                             if is_lte {
-                                conditions.push(AipCondition::DistanceFromTarget(
+                                conditions.push(AipCondition::Distance(
+                                    AipDistanceOrigin::Target,
                                     AipOperatorType::LessThanEqual,
                                     distance * 100,
                                 ));
                             } else {
-                                conditions.push(AipCondition::DistanceFromTarget(
+                                conditions.push(AipCondition::Distance(
+                                    AipDistanceOrigin::Target,
                                     AipOperatorType::GreaterThanEqual,
                                     distance * 100,
                                 ));
@@ -488,7 +499,7 @@ impl AipFile {
                             let value = reader.read_i32()?;
                             let opcode = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
-                            conditions.push(AipCondition::CheckVariable(
+                            conditions.push(AipCondition::Variable(
                                 AipVariableType::LocalNpcObject,
                                 variable,
                                 opcode,
@@ -501,7 +512,7 @@ impl AipFile {
                             let value = reader.read_i32()?;
                             let opcode = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
-                            conditions.push(AipCondition::CheckVariable(
+                            conditions.push(AipCondition::Variable(
                                 AipVariableType::World,
                                 variable,
                                 opcode,
@@ -514,7 +525,7 @@ impl AipFile {
                             let value = reader.read_i32()?;
                             let opcode = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
-                            conditions.push(AipCondition::CheckVariable(
+                            conditions.push(AipCondition::Variable(
                                 AipVariableType::Economy,
                                 variable,
                                 opcode,
@@ -529,12 +540,16 @@ impl AipFile {
                             let distance = reader.read_i32()?;
                             let opcode = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
-                            conditions.push(AipCondition::DistanceFromOwner(opcode, distance));
+                            conditions.push(AipCondition::Distance(
+                                AipDistanceOrigin::Owner,
+                                opcode,
+                                distance,
+                            ));
                         }
                         20 => {
                             let start_time = reader.read_u32()?;
                             let end_time = reader.read_u32()?;
-                            conditions.push(AipCondition::CheckZoneTime(start_time..=end_time));
+                            conditions.push(AipCondition::ZoneTime(start_time..=end_time));
                         }
                         21 => {
                             let ability_type = decode_ability_type(reader.read_u8()?)?;
@@ -553,7 +568,7 @@ impl AipFile {
                         24 => {
                             let start_time = reader.read_u32()?;
                             let end_time = reader.read_u32()?;
-                            conditions.push(AipCondition::CheckWorldTime(start_time..=end_time));
+                            conditions.push(AipCondition::WorldTime(start_time..=end_time));
                         }
                         25 => {
                             let day = reader.read_u8()?;
@@ -620,7 +635,7 @@ impl AipFile {
                             let value = reader.read_i32()?;
                             let opcode = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
-                            conditions.push(AipCondition::CheckVariable(
+                            conditions.push(AipCondition::Variable(
                                 AipVariableType::Ai,
                                 variable,
                                 opcode,
