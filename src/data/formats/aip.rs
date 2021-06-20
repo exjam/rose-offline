@@ -82,15 +82,15 @@ pub enum AipHaveStatusType {
 pub struct AipConditionCountNearbyEntities {
     pub distance: AipDistance,
     pub is_allied: bool,
-    pub level_diff_range: Range<i32>,
+    pub level_diff_range: RangeInclusive<i32>,
     pub count_operator_type: AipOperatorType,
-    pub count: usize,
+    pub count: i32,
 }
 
 pub struct AipConditionFindNearbyEntity {
     pub distance: AipDistance,
     pub is_allied: bool,
-    pub level_diff_range: Range<i32>,
+    pub level_diff_range: RangeInclusive<i32>,
 }
 
 pub struct AipConditionMonthDayTime {
@@ -311,13 +311,13 @@ impl AipFile {
                             reader.skip(1); // padding
                             let min_level_diff = reader.read_i16()? as i32;
                             let max_level_diff = reader.read_i16()? as i32;
-                            let count = reader.read_u16()? as usize;
+                            let count = reader.read_u16()? as i32;
 
                             conditions.push(AipCondition::CountNearbyEntities(
                                 AipConditionCountNearbyEntities {
                                     distance: distance * 100,
                                     is_allied,
-                                    level_diff_range: min_level_diff..max_level_diff,
+                                    level_diff_range: min_level_diff..=max_level_diff,
                                     count_operator_type: AipOperatorType::GreaterThanEqual,
                                     count,
                                 },
@@ -405,7 +405,7 @@ impl AipFile {
                                 AipConditionFindNearbyEntity {
                                     distance: distance * 100,
                                     is_allied,
-                                    level_diff_range: min_level_diff..max_level_diff,
+                                    level_diff_range: min_level_diff..=max_level_diff,
                                 },
                             ))
                         }
@@ -600,7 +600,7 @@ impl AipFile {
                             reader.skip(1); // padding
                             let min_level_diff = reader.read_i16()? as i32;
                             let max_level_diff = reader.read_i16()? as i32;
-                            let count = reader.read_u16()? as usize;
+                            let count = reader.read_u16()? as i32;
                             let count_operator_type = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
 
@@ -608,7 +608,7 @@ impl AipFile {
                                 AipConditionCountNearbyEntities {
                                     distance: distance * 100,
                                     is_allied,
-                                    level_diff_range: min_level_diff..max_level_diff,
+                                    level_diff_range: min_level_diff..=max_level_diff,
                                     count_operator_type,
                                     count,
                                 },
