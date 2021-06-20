@@ -1,5 +1,5 @@
 use crossbeam_channel::Receiver;
-use legion::{World, Resources, Schedule};
+use legion::{Resources, Schedule, World};
 use std::time::{Duration, Instant};
 
 use super::{
@@ -71,6 +71,10 @@ impl GameWorld {
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);
         let mut last_tick = std::time::Instant::now();
 
+        let mut tick_counter = 0;
+        let mut tick_counter_duration = Duration::from_secs(0);
+        let mut tick_counter_last_print = std::time::Instant::now();
+
         loop {
             let current_tick = std::time::Instant::now();
             resources.insert(DeltaTime {
@@ -79,7 +83,25 @@ impl GameWorld {
             });
             schedule.execute(&mut world, &mut resources);
 
-            let tick_duration = std::time::Instant::now() - current_tick;
+            let now = std::time::Instant::now();
+            let tick_duration = now - current_tick;
+
+            tick_counter += 1;
+            tick_counter_duration += tick_duration;
+
+            if now - tick_counter_last_print > Duration::from_secs(60) {
+                let average_tick_duration =
+                    tick_counter_duration.as_secs_f64() / (tick_counter as f64);
+                println!(
+                    "Average tick duration: {:?}",
+                    Duration::from_secs_f64(average_tick_duration)
+                );
+
+                tick_counter = 0;
+                tick_counter_duration = Duration::from_secs(0);
+                tick_counter_last_print = now;
+            }
+
             if tick_duration < min_tick_duration {
                 std::thread::sleep(min_tick_duration - tick_duration);
             }
