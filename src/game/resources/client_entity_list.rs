@@ -74,8 +74,8 @@ impl ClientEntityZone {
         }
     }
 
-    fn calculate_sector(&self, position: Point3<f32>) -> Point2<u32> {
-        let sector = (position.xy() - self.sectors_base_position) / self.sector_size;
+    fn calculate_sector(&self, position: Point2<f32>) -> Point2<u32> {
+        let sector = (position - self.sectors_base_position) / self.sector_size;
         Point2::new(
             u32::min(
                 i32::max(0i32, sector[0] as i32) as u32,
@@ -150,7 +150,7 @@ impl ClientEntityZone {
                 .find(|(_, entity)| entity.is_none())
                 .map(|(index, _)| index);
 
-            let sector = self.calculate_sector(position);
+            let sector = self.calculate_sector(position.xy());
             self.add_sector_entity(sector, &entity, position);
             Some(ClientEntity::new(id, sector))
         } else {
@@ -179,7 +179,7 @@ impl ClientEntityZone {
         let midpoint = self.calculate_sector_midpoint(client_entity.sector);
         if (midpoint - position.xy()).magnitude_squared() > self.sector_limit_squared {
             let previous_sector = client_entity.sector;
-            let new_sector = self.calculate_sector(position);
+            let new_sector = self.calculate_sector(position.xy());
             self.remove_sector_entity(previous_sector, &entity);
             self.add_sector_entity(new_sector, &entity, position);
             client_entity.sector = new_sector;
