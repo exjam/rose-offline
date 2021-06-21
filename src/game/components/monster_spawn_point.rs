@@ -1,4 +1,3 @@
-use legion::Entity;
 use std::time::Duration;
 
 use crate::data::{NpcReference, ZoneMonsterSpawnPoint};

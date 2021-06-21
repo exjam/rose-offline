@@ -1,5 +1,5 @@
 use nalgebra::{Point2, Vector3};
-use std::{cmp::max, collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path};
 
 use crate::{
     data::{
