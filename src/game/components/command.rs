@@ -75,6 +75,14 @@ impl Command {
         Self::with_stop()
     }
 
+    pub fn get_target(&self) -> Option<Entity> {
+        match self.command {
+            CommandData::Attack(CommandAttack { target, .. }) => Some(target),
+            CommandData::Move(CommandMove { target, .. }) => target,
+            _ => None,
+        }
+    }
+
     pub fn with_die() -> Self {
         Self::new(CommandData::Die, Some(Duration::new(u64::MAX, 0)))
     }

@@ -7,9 +7,9 @@ use crate::{
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
-            Command, CommandAttack, CommandData, CommandMove, Equipment, EquipmentIndex,
-            EquipmentItemDatabase, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
-            ManaPoints, MoveSpeed, NextCommand, Position, SkillList, Team,
+            Command, Equipment, EquipmentIndex, EquipmentItemDatabase, GameClient, HealthPoints,
+            Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position,
+            SkillList, Team,
         },
         messages::{
             client::{

@@ -7,6 +7,7 @@ use crate::data::ItemReference;
 
 use super::reader::{FileReader, ReadError};
 
+#[derive(Copy, Clone)]
 pub enum AipAbilityType {
     Level,
     Attack,
@@ -79,18 +80,12 @@ pub enum AipHaveStatusType {
     Any,
 }
 
-pub struct AipConditionCountNearbyEntities {
+pub struct AipConditionFindNearbyEntities {
     pub distance: AipDistance,
     pub is_allied: bool,
     pub level_diff_range: RangeInclusive<i32>,
-    pub count_operator_type: AipOperatorType,
+    pub count_operator_type: Option<AipOperatorType>,
     pub count: i32,
-}
-
-pub struct AipConditionFindNearbyEntity {
-    pub distance: AipDistance,
-    pub is_allied: bool,
-    pub level_diff_range: RangeInclusive<i32>,
 }
 
 pub struct AipConditionMonthDayTime {
@@ -183,10 +178,9 @@ pub type AipIsSpawnOwner = bool;
 
 pub enum AipCondition {
     CompareAttackerAndTargetAbilityValue(AipOperatorType, AipAbilityType),
-    CountNearbyEntities(AipConditionCountNearbyEntities), // Updates find char, near char
+    FindNearbyEntities(AipConditionFindNearbyEntities),
     Damage(AipDamageType, AipOperatorType, i32),
     Distance(AipDistanceOrigin, AipOperatorType, AipDistance),
-    FindNearbyEntity(AipConditionFindNearbyEntity), // Updates find char, near char
     HasOwner,
     HasStatusEffect(AipHaveStatusTarget, AipHaveStatusType, bool),
     HealthPercent(AipOperatorType, i32),
@@ -321,12 +315,12 @@ impl AipFile {
                             let max_level_diff = reader.read_i16()? as i32;
                             let count = reader.read_u16()? as i32;
 
-                            conditions.push(AipCondition::CountNearbyEntities(
-                                AipConditionCountNearbyEntities {
+                            conditions.push(AipCondition::FindNearbyEntities(
+                                AipConditionFindNearbyEntities {
                                     distance: distance * 100,
                                     is_allied,
                                     level_diff_range: min_level_diff..=max_level_diff,
-                                    count_operator_type: AipOperatorType::GreaterThanEqual,
+                                    count_operator_type: None,
                                     count,
                                 },
                             ))
@@ -412,11 +406,13 @@ impl AipFile {
                             let is_allied = reader.read_u8()? != 0;
                             reader.skip(3); // padding
 
-                            conditions.push(AipCondition::FindNearbyEntity(
-                                AipConditionFindNearbyEntity {
+                            conditions.push(AipCondition::FindNearbyEntities(
+                                AipConditionFindNearbyEntities {
                                     distance: distance * 100,
                                     is_allied,
                                     level_diff_range: min_level_diff..=max_level_diff,
+                                    count_operator_type: None,
+                                    count: 1,
                                 },
                             ))
                         }
@@ -619,12 +615,12 @@ impl AipFile {
                             let count_operator_type = decode_operator_type(reader.read_u8()?)?;
                             reader.skip(3); // padding
 
-                            conditions.push(AipCondition::CountNearbyEntities(
-                                AipConditionCountNearbyEntities {
+                            conditions.push(AipCondition::FindNearbyEntities(
+                                AipConditionFindNearbyEntities {
                                     distance: distance * 100,
                                     is_allied,
                                     level_diff_range: min_level_diff..=max_level_diff,
-                                    count_operator_type,
+                                    count_operator_type: Some(count_operator_type),
                                     count,
                                 },
                             ))
