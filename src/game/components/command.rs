@@ -24,6 +24,39 @@ pub enum CommandData {
     // Sit
 }
 
+impl CommandData {
+    pub fn is_move(&self, target: Option<&Entity>, destination: &Point3<f32>) -> bool {
+        if target.is_some() {
+            self.is_move_to_target(target.unwrap())
+        } else {
+            self.is_move_to_destination(destination)
+        }
+    }
+
+    pub fn is_move_to_destination(&self, position: &Point3<f32>) -> bool {
+        match self {
+            CommandData::Move(CommandMove { destination, .. }) => destination == position,
+            _ => false,
+        }
+    }
+
+    pub fn is_move_to_target(&self, entity: &Entity) -> bool {
+        match self {
+            CommandData::Move(CommandMove { target, .. }) => {
+                target.as_ref().map_or(false, |target| target == entity)
+            }
+            _ => false,
+        }
+    }
+
+    pub fn is_attack_target(&self, entity: &Entity) -> bool {
+        match self {
+            CommandData::Attack(CommandAttack { target, .. }) => target == entity,
+            _ => false,
+        }
+    }
+}
+
 pub struct Command {
     // Current command that is executing
     pub command: CommandData,
@@ -35,30 +68,48 @@ pub struct Command {
     pub required_duration: Option<Duration>,
 }
 
-pub struct NextCommand(pub Option<CommandData>);
+pub struct NextCommand {
+    pub command: Option<CommandData>,
+    pub has_sent_server_message: bool,
+}
 
 impl NextCommand {
     pub fn default() -> Self {
-        Self(None)
+        Self {
+            command: None,
+            has_sent_server_message: false,
+        }
     }
 
     pub fn with_die() -> Self {
-        Self(Some(CommandData::Die))
+        Self {
+            command: Some(CommandData::Die),
+            has_sent_server_message: false,
+        }
     }
 
     pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {
-        Self(Some(CommandData::Move(CommandMove {
-            destination,
-            target,
-        })))
+        Self {
+            command: Some(CommandData::Move(CommandMove {
+                destination,
+                target,
+            })),
+            has_sent_server_message: false,
+        }
     }
 
     pub fn with_attack(target: Entity) -> Self {
-        Self(Some(CommandData::Attack(CommandAttack { target })))
+        Self {
+            command: Some(CommandData::Attack(CommandAttack { target })),
+            has_sent_server_message: false,
+        }
     }
 
     pub fn with_stop() -> Self {
-        Self(Some(CommandData::Stop))
+        Self {
+            command: Some(CommandData::Stop),
+            has_sent_server_message: false,
+        }
     }
 }
 

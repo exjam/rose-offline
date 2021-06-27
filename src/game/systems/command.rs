@@ -49,7 +49,7 @@ pub fn command(
     motion_data: &MotionData,
     command: &mut Command,
     ability_values: &AbilityValues,
-    next_command: &NextCommand,
+    next_command: &mut NextCommand,
     #[resource] delta_time: &DeltaTime,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
@@ -74,12 +74,12 @@ pub fn command(
         return;
     }
 
-    if next_command.0.is_none() {
+    if next_command.command.is_none() {
         // No next command
         return;
     }
 
-    match *next_command.0.as_ref().unwrap() {
+    match *next_command.command.as_ref().unwrap() {
         CommandData::Stop => {
             set_command_stop(command, cmd, entity, entity_id, position, server_messages);
             cmd.add_component(*entity, NextCommand::default());
