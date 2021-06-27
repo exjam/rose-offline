@@ -35,6 +35,40 @@ fn set_command_stop(
     *command = Command::with_stop();
 }
 
+fn is_valid_move_target<'a>(
+    position: &Position,
+    target_entity: &Entity,
+    target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    target_query_world: &'a SubWorld,
+) -> Option<(&'a ClientEntity, &'a Position)> {
+    if let Ok((target_client_entity, target_position, _, _)) =
+        target_query.get(target_query_world, *target_entity)
+    {
+        if target_position.zone == position.zone {
+            return Some((target_client_entity, target_position));
+        }
+    }
+
+    None
+}
+
+fn is_valid_attack_target<'a>(
+    position: &Position,
+    target_entity: &Entity,
+    target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    target_query_world: &'a SubWorld,
+) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
+    if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
+        target_query.get(target_query_world, *target_entity)
+    {
+        if target_position.zone == position.zone && target_health.hp > 0 {
+            return Some((target_client_entity, target_position, target_ability_values));
+        }
+    }
+
+    None
+}
+
 #[system]
 pub fn command(
     world: &mut SubWorld,
@@ -54,7 +88,7 @@ pub fn command(
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
-    let (mut target_query_world, mut query_world) = world.split_for_query(&target_query);
+    let (target_query_world, mut query_world) = world.split_for_query(&target_query);
 
     query.for_each_mut(
         &mut query_world,
@@ -83,7 +117,7 @@ pub fn command(
                 return;
             }
 
-            match *next_command.command.as_ref().unwrap() {
+            match next_command.command.as_mut().unwrap() {
                 CommandData::Stop => {
                     set_command_stop(
                         command,
@@ -96,7 +130,7 @@ pub fn command(
                     cmd.add_component(*entity, NextCommand::default());
                 }
                 CommandData::Move(CommandMove {
-                    destination,
+                    mut destination,
                     target,
                 }) => {
                     cmd.add_component(
@@ -108,10 +142,16 @@ pub fn command(
 
                     let mut target_entity_id = 0;
                     if let Some(target_entity) = target {
-                        if let Ok((target_client_entity, target_position, _, _)) =
-                            target_query.get(&target_query_world, target_entity)
-                        {
+                        if let Some((target_client_entity, target_position)) = is_valid_move_target(
+                            position,
+                            target_entity,
+                            target_query,
+                            &target_query_world,
+                        ) {
+                            destination = target_position.position;
                             target_entity_id = target_client_entity.id.0;
+                        } else {
+                            *target = None;
                         }
                     }
 
@@ -128,100 +168,91 @@ pub fn command(
                         }),
                     );
 
-                    *command = Command::with_move(destination, target);
+                    *command = Command::with_move(destination, *target);
                     cmd.add_component(*entity, NextCommand::default());
                 }
                 CommandData::Attack(CommandAttack {
                     target: target_entity,
                 }) => {
-                    let mut valid_attack_target = false;
-
-                    if let Ok((
-                        target_client_entity,
-                        target_position,
-                        target_ability_values,
-                        target_health,
-                    )) = target_query.get(&target_query_world, target_entity)
+                    if let Some((target_client_entity, target_position, target_ability_values)) =
+                        is_valid_attack_target(
+                            position,
+                            target_entity,
+                            target_query,
+                            &target_query_world,
+                        )
                     {
-                        if target_position.zone == position.zone && target_health.hp > 0 {
-                            let distance = (target_position.position.xy() - position.position.xy())
-                                .magnitude();
+                        let distance =
+                            (target_position.position.xy() - position.position.xy()).magnitude();
 
-                            // Check if we have just started attacking this target
-                            let attack_started = match command.command {
-                                CommandData::Attack(CommandAttack {
-                                    target: current_attack_target,
-                                    ..
-                                }) => current_attack_target != target_entity,
-                                CommandData::Move(CommandMove {
-                                    target: Some(current_attack_target),
-                                    ..
-                                }) => current_attack_target != target_entity,
-                                _ => true,
-                            };
+                        // Check if we have just started attacking this target
+                        let attack_started = match &command.command {
+                            CommandData::Attack(CommandAttack {
+                                target: current_attack_target,
+                                ..
+                            }) => current_attack_target != target_entity,
+                            CommandData::Move(CommandMove {
+                                target: Some(current_attack_target),
+                                ..
+                            }) => current_attack_target != target_entity,
+                            _ => true,
+                        };
 
-                            // Check if we are in attack range
-                            let attack_range = ability_values.attack_range as f32;
-                            if distance < attack_range {
-                                let (attack_duration, hit_count) = motion_data
-                                    .attack
-                                    .as_ref()
-                                    .map(|attack_motion| {
-                                        (attack_motion.duration, attack_motion.total_attack_frames)
-                                    })
-                                    .unwrap_or_else(|| (Duration::from_secs(1), 1));
+                        // Check if we are in attack range
+                        let attack_range = ability_values.attack_range as f32;
+                        if distance < attack_range {
+                            let (attack_duration, hit_count) = motion_data
+                                .attack
+                                .as_ref()
+                                .map(|attack_motion| {
+                                    (attack_motion.duration, attack_motion.total_attack_frames)
+                                })
+                                .unwrap_or_else(|| (Duration::from_secs(1), 1));
 
-                                // In range, set current command to attack
-                                *command = Command::with_attack(target_entity, attack_duration);
+                            // In range, set current command to attack
+                            *command = Command::with_attack(*target_entity, attack_duration);
 
-                                // Remove our destination component, as we have reached it!
-                                cmd.remove_component::<Destination>(*entity);
+                            // Remove our destination component, as we have reached it!
+                            cmd.remove_component::<Destination>(*entity);
 
-                                // Spawn an entity for DamageSystem to apply damage
-                                pending_damage_list.push(PendingDamage {
-                                    attacker: *entity,
-                                    defender: target_entity,
-                                    damage: game_data.ability_value_calculator.calculate_damage(
-                                        ability_values,
-                                        target_ability_values,
-                                        hit_count as i32,
-                                    ),
-                                });
-                            } else {
-                                // Not in range, set current command to move
-                                *command = Command::with_move(
-                                    target_position.position,
-                                    Some(target_entity),
-                                );
+                            // Spawn an entity for DamageSystem to apply damage
+                            pending_damage_list.push(PendingDamage {
+                                attacker: *entity,
+                                defender: *target_entity,
+                                damage: game_data.ability_value_calculator.calculate_damage(
+                                    ability_values,
+                                    target_ability_values,
+                                    hit_count as i32,
+                                ),
+                            });
+                        } else {
+                            // Not in range, set current command to move
+                            *command =
+                                Command::with_move(target_position.position, Some(*target_entity));
 
-                                // Set destination to move towards
-                                cmd.add_component(
-                                    *entity,
-                                    Destination {
-                                        position: target_position.position,
-                                    },
-                                );
-                            }
-
-                            if attack_started {
-                                server_messages.send_entity_message(
-                                    *entity,
-                                    ServerMessage::AttackEntity(server::AttackEntity {
-                                        entity_id: client_entity.id.0,
-                                        target_entity_id: target_client_entity.id.0,
-                                        distance: distance as u16,
-                                        x: target_position.position.x,
-                                        y: target_position.position.y,
-                                        z: target_position.position.z as u16,
-                                    }),
-                                );
-                            }
-
-                            valid_attack_target = true;
+                            // Set destination to move towards
+                            cmd.add_component(
+                                *entity,
+                                Destination {
+                                    position: target_position.position,
+                                },
+                            );
                         }
-                    }
 
-                    if !valid_attack_target {
+                        if attack_started {
+                            server_messages.send_entity_message(
+                                *entity,
+                                ServerMessage::AttackEntity(server::AttackEntity {
+                                    entity_id: client_entity.id.0,
+                                    target_entity_id: target_client_entity.id.0,
+                                    distance: distance as u16,
+                                    x: target_position.position.x,
+                                    y: target_position.position.y,
+                                    z: target_position.position.z as u16,
+                                }),
+                            );
+                        }
+                    } else {
                         set_command_stop(
                             command,
                             cmd,
