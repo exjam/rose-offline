@@ -1,7 +1,9 @@
 use legion::{system, systems::CommandBuffer, world::SubWorld, Query};
 
 use crate::game::{
-    components::{ClientEntity, Command, DamageSource, DamageSources, HealthPoints, Position},
+    components::{
+        ClientEntity, Command, DamageSource, DamageSources, HealthPoints, NpcAi, Position,
+    },
     messages::server::{DamageEntity, ServerMessage},
     resources::{DeltaTime, PendingDamageList, ServerMessages},
 };
@@ -17,6 +19,7 @@ pub fn apply_damage(
         &Position,
         &mut HealthPoints,
         Option<&mut DamageSources>,
+        Option<&mut NpcAi>,
     )>,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
@@ -28,7 +31,7 @@ pub fn apply_damage(
             .map(|client_entity| Some(client_entity.id.0))
             .unwrap_or(None);
 
-        if let Ok((client_entity, position, health_points, damage_sources)) =
+        if let Ok((client_entity, position, health_points, damage_sources, npc_ai)) =
             defender_query.get_mut(world, pending_damage.defender)
         {
             if pending_damage.damage.apply_hit_stun {
@@ -72,6 +75,12 @@ pub fn apply_damage(
                         last_damage_time: delta_time.now,
                     });
                 }
+            }
+
+            if let Some(npc_ai) = npc_ai {
+                npc_ai
+                    .pending_damage
+                    .push((pending_damage.attacker, pending_damage.damage));
             }
 
             if health_points.hp == 0 {

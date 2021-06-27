@@ -5,9 +5,12 @@ use nalgebra::{Point3, Vector3};
 use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
-    data::formats::{
-        AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
-        AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
+    data::{
+        formats::{
+            AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
+            AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
+        },
+        Damage,
     },
     game::{
         components::{
@@ -31,12 +34,13 @@ struct AiSourceEntity<'a> {
     spawn_origin: Option<&'a SpawnOrigin>,
 }
 
-struct AiAttackerEntity {
-    entity: Entity,
-    position: Position,
-    level: Level,
-    team: Team,
-    ability_values: AbilityValues,
+struct AiAttackerEntity<'a> {
+    entity: &'a Entity,
+    position: &'a Position,
+    level: &'a Level,
+    team: &'a Team,
+    ability_values: &'a AbilityValues,
+    health_points: &'a HealthPoints,
     // TODO: Missing data on if clan master
 }
 
@@ -53,10 +57,10 @@ fn compare_aip_value(operator: AipOperatorType, value1: i32, value2: i32) -> boo
 
 struct AiParameters<'a, 'b> {
     source: &'a AiSourceEntity<'b>,
-    attacker: Option<AiAttackerEntity>,
+    attacker: Option<&'a AiAttackerEntity<'b>>,
     find_char: Option<(Entity, Point3<f32>)>,
     near_char: Option<(Entity, Point3<f32>)>,
-    damage_received: i32,
+    damage_received: Option<Damage>,
     is_dead: bool,
 }
 
@@ -151,9 +155,13 @@ fn ai_condition_damage(
 ) -> bool {
     match damage_type {
         AipDamageType::Given => false,
-        AipDamageType::Received => {
-            compare_aip_value(operator, ai_parameters.damage_received, value)
-        }
+        AipDamageType::Received => compare_aip_value(
+            operator,
+            ai_parameters
+                .damage_received
+                .map_or(0, |damage| damage.amount as i32),
+            value,
+        ),
     }
 }
 
@@ -209,13 +217,40 @@ fn ai_condition_is_attacker_current_target(
     _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
 ) -> bool {
-    if let Some(attacker) = &ai_parameters.attacker {
+    if let Some(attacker) = ai_parameters.attacker {
         if let Some(target) = ai_parameters.source.target {
-            return attacker.entity == *target;
+            return attacker.entity == target;
         }
     }
 
     false
+}
+
+fn ai_condition_no_target_and_compare_attacker_ability_value(
+    ai_world: &mut AiWorld,
+    ai_parameters: &mut AiParameters,
+    operator: AipOperatorType,
+    ability: AipAbilityType,
+    value: i32,
+) -> bool {
+    if ai_parameters.source.target.is_some() {
+        return false;
+    }
+
+    if let Some(attacker) = ai_parameters.attacker {
+        let ability_value = match ability {
+            AipAbilityType::Level => attacker.level.level as i32,
+            AipAbilityType::Attack => attacker.ability_values.attack_power,
+            AipAbilityType::Defence => attacker.ability_values.defence,
+            AipAbilityType::Resistance => attacker.ability_values.resistance,
+            AipAbilityType::HealthPoints => attacker.health_points.hp as i32,
+            AipAbilityType::Charm => attacker.ability_values.charm as i32,
+        };
+
+        compare_aip_value(operator, ability_value, value)
+    } else {
+        false
+    }
 }
 
 fn ai_condition_random(
@@ -289,7 +324,15 @@ fn npc_ai_check_conditions(
             AipCondition::IsDaytime(_) => false,
             AipCondition::IsTargetClanMaster => false,
             AipCondition::MonthDay(_) => false,
-            AipCondition::NoTargetAndCompareAttackerAbilityValue(_, _, _) => false,
+            &AipCondition::NoTargetAndCompareAttackerAbilityValue(operator, ability, value) => {
+                ai_condition_no_target_and_compare_attacker_ability_value(
+                    ai_world,
+                    ai_parameters,
+                    operator,
+                    ability,
+                    value,
+                )
+            }
             AipCondition::OwnerHasTarget => false,
             AipCondition::Random(operator, range, value) => {
                 ai_condition_random(ai_world, ai_parameters, *operator, range.clone(), *value)
@@ -366,30 +409,55 @@ fn npc_ai_do_actions(
                     distance,
                 )
             }
-            AipAction::Emote(_) => {},
-            AipAction::Say(_) => {},
-            AipAction::AttackNearbyEntityByStat(_, _, _) => {},
-            AipAction::SpecialAttack => {},
-            AipAction::MoveDistanceFromTarget(_, _) => {},
-            AipAction::TransformNpc(_) => {},
-            AipAction::SpawnNpc(_, _, _, _) => {},
-            AipAction::NearbyAlliesAttackTarget(_, _, _) => {},
-            AipAction::AttackNearChar => {},
-            AipAction::AttackFindChar => {},
-            AipAction::NearbyAlliesSameNpcAttackTarget(_) => {},
-            AipAction::AttackAttacker => {},
-            AipAction::RunAway(_) => {},
-            AipAction::DropRandomItem(_) => {},
-            AipAction::KillSelf => {},
-            AipAction::UseSkill(_, _, _) => {},
-            AipAction::SetVariable(_, _, _, _) => {},
-            AipAction::Message(_, _) => {},
-            AipAction::MoveNearOwner => {},
-            AipAction::DoQuestTrigger(_) => {},
-            AipAction::AttackOwnerTarget => {},
-            AipAction::SetPvpFlag(_, _) => {},
-            AipAction::SetMonsterSpawnState(_, _) => {},
-            AipAction::GiveItemToOwner(_, _) => {},
+            AipAction::Emote(_) => {}
+            AipAction::Say(_) => {}
+            AipAction::AttackNearbyEntityByStat(_, _, _) => {}
+            AipAction::SpecialAttack => {}
+            AipAction::MoveDistanceFromTarget(_, _) => {}
+            AipAction::TransformNpc(_) => {}
+            AipAction::SpawnNpc(_, _, _, _) => {}
+            AipAction::NearbyAlliesAttackTarget(_, _, _) => {}
+            AipAction::AttackNearChar => {
+                if let Some((near_char, _)) = &ai_parameters.near_char {
+                    ai_world.cmd.add_component(
+                        *ai_parameters.source.entity,
+                        NextCommand::with_attack(*near_char),
+                    );
+                }
+            }
+            AipAction::AttackFindChar => {
+                if let Some((find_char, _)) = &ai_parameters.find_char {
+                    ai_world.cmd.add_component(
+                        *ai_parameters.source.entity,
+                        NextCommand::with_attack(*find_char),
+                    );
+                }
+            }
+            AipAction::NearbyAlliesSameNpcAttackTarget(_) => {}
+            AipAction::AttackAttacker => {
+                if let Some(attacker) = ai_parameters.attacker {
+                    ai_world.cmd.add_component(
+                        *ai_parameters.source.entity,
+                        NextCommand::with_attack(*attacker.entity),
+                    );
+                }
+            }
+            AipAction::RunAway(_) => {}
+            AipAction::DropRandomItem(_) => {}
+            AipAction::KillSelf => {
+                ai_world
+                    .cmd
+                    .add_component(*ai_parameters.source.entity, NextCommand::with_die());
+            }
+            AipAction::UseSkill(_, _, _) => {}
+            AipAction::SetVariable(_, _, _, _) => {}
+            AipAction::Message(_, _) => {}
+            AipAction::MoveNearOwner => {}
+            AipAction::DoQuestTrigger(_) => {}
+            AipAction::AttackOwnerTarget => {}
+            AipAction::SetPvpFlag(_, _) => {}
+            AipAction::SetMonsterSpawnState(_, _) => {}
+            AipAction::GiveItemToOwner(_, _) => {}
         }
     }
 }
@@ -398,6 +466,9 @@ fn npc_ai_run_trigger(
     ai_trigger: &AipTrigger,
     cmd: &mut CommandBuffer,
     source: &AiSourceEntity,
+    attacker: Option<AiAttackerEntity>,
+    damage: Option<Damage>,
+    is_dead: bool,
     client_entity_list: &ClientEntityList,
     nearby_query: &mut Query<(&Level, &Team)>,
     nearby_query_world: &mut SubWorld,
@@ -411,11 +482,11 @@ fn npc_ai_run_trigger(
     };
     let mut ai_parameters = AiParameters {
         source,
-        attacker: None,
+        attacker: attacker.as_ref(),
         find_char: None,
         near_char: None,
-        damage_received: 0,
-        is_dead: false,
+        damage_received: damage,
+        is_dead,
     };
 
     // Do actions for only the first event with valid conditions
@@ -446,11 +517,13 @@ pub fn npc_ai(
     )>,
     spawn_point_query: &mut Query<&mut MonsterSpawnPoint>,
     nearby_query: &mut Query<(&Level, &Team)>,
+    attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     #[resource] client_entity_list: &ClientEntityList,
     #[resource] delta_time: &DeltaTime,
     #[resource] game_data: &GameData,
 ) {
     let (mut spawn_point_world, mut npc_world) = world.split_for_query(&spawn_point_query);
+    let (mut attacker_query_world, mut npc_world) = npc_world.split_for_query(&attacker_query);
     let (mut nearby_query_world, mut npc_world) = npc_world.split_for_query(&nearby_query);
 
     npc_query.for_each_mut(
@@ -486,6 +559,9 @@ pub fn npc_ai(
                                     owner,
                                     spawn_origin,
                                 },
+                                None,
+                                None,
+                                false,
                                 client_entity_list,
                                 nearby_query,
                                 &mut nearby_query_world,
@@ -495,7 +571,62 @@ pub fn npc_ai(
 
                     (*npc_ai).has_run_created_trigger = true;
                 }
+
+                if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
+                    if let Some(trigger_on_damaged) = ai_program.trigger_on_damaged.as_ref() {
+                        let mut rng = rand::thread_rng();
+                        for (attacker, damage) in npc_ai.pending_damage.iter() {
+                            if command.get_target().is_some()
+                                && ai_program.damage_trigger_new_target_chance
+                                    < rng.gen_range(0..100)
+                            {
+                                continue;
+                            }
+
+                            if let Ok((
+                                attacker_position,
+                                attacker_level,
+                                attacker_team,
+                                attacker_ability_values,
+                                attacker_health_points,
+                            )) = attacker_query.get(&mut attacker_query_world, *attacker)
+                            {
+                                npc_ai_run_trigger(
+                                    trigger_on_damaged,
+                                    cmd,
+                                    &AiSourceEntity {
+                                        entity,
+                                        position,
+                                        level,
+                                        ability_values,
+                                        target: None,
+                                        team,
+                                        health_points,
+                                        owner,
+                                        spawn_origin,
+                                    },
+                                    Some(AiAttackerEntity {
+                                        entity: attacker,
+                                        position: attacker_position,
+                                        level: attacker_level,
+                                        team: attacker_team,
+                                        ability_values: attacker_ability_values,
+                                        health_points: attacker_health_points,
+                                    }),
+                                    Some(*damage),
+                                    false,
+                                    client_entity_list,
+                                    nearby_query,
+                                    &mut nearby_query_world,
+                                );
+                            }
+                        }
+                    }
+                }
+
+                npc_ai.pending_damage.clear();
             }
+
             match command.command {
                 CommandData::Stop => {
                     if let Some(npc_ai) = npc_ai {
@@ -518,6 +649,9 @@ pub fn npc_ai(
                                             owner,
                                             spawn_origin,
                                         },
+                                        None,
+                                        None,
+                                        false,
                                         client_entity_list,
                                         nearby_query,
                                         &mut nearby_query_world,
@@ -558,6 +692,9 @@ pub fn npc_ai(
                                 owner,
                                 spawn_origin,
                             },
+                            None,
+                            None,
+                            true,
                             client_entity_list,
                             nearby_query,
                             &mut nearby_query_world,
