@@ -74,7 +74,7 @@ pub fn command(
     world: &mut SubWorld,
     cmd: &mut CommandBuffer,
     query: &mut Query<(
-        &Entity,
+        Entity,
         &ClientEntity,
         &Position,
         &MotionData,
@@ -93,6 +93,70 @@ pub fn command(
     query.for_each_mut(
         &mut query_world,
         |(entity, client_entity, position, motion_data, ability_values, command, next_command)| {
+            if !next_command.has_sent_server_message && next_command.command.is_some() {
+                match next_command.command.as_mut().unwrap() {
+                    CommandData::Die => { },
+                    CommandData::Stop => { },
+                    CommandData::Move(CommandMove { destination, target }) => {
+                        let mut target_entity_id = 0;
+                        if let Some(target_entity) = target {
+                            if let Some((target_client_entity, target_position)) = is_valid_move_target(
+                                position,
+                                target_entity,
+                                target_query,
+                                &target_query_world,
+                            ) {
+                                *destination = target_position.position;
+                                target_entity_id = target_client_entity.id.0;
+                            } else {
+                                *target = None;
+                            }
+                        }
+
+                        let distance = (destination.xy() - position.position.xy()).magnitude();
+                        server_messages.send_entity_message(
+                            *entity,
+                            ServerMessage::MoveEntity(server::MoveEntity {
+                                entity_id: client_entity.id.0,
+                                target_entity_id,
+                                distance: distance as u16,
+                                x: destination.x,
+                                y: destination.y,
+                                z: destination.z as u16,
+                            }),
+                        );
+                    },
+                    CommandData::Attack(CommandAttack { target: target_entity }) => {
+                        if let Some((target_client_entity, target_position, target_ability_values)) =
+                            is_valid_attack_target(
+                                position,
+                                target_entity,
+                                target_query,
+                                &target_query_world,
+                            )
+                        {
+                            let distance = (target_position.position.xy() - position.position.xy()).magnitude();
+
+                            server_messages.send_entity_message(
+                                *entity,
+                                ServerMessage::AttackEntity(server::AttackEntity {
+                                    entity_id: client_entity.id.0,
+                                    target_entity_id: target_client_entity.id.0,
+                                    distance: distance as u16,
+                                    x: target_position.position.x,
+                                    y: target_position.position.y,
+                                    z: target_position.position.z as u16,
+                                }),
+                            );
+                        } else {
+                            next_command.command = Some(CommandData::Stop);
+                        }
+                    },
+                }
+
+                next_command.has_sent_server_message = true;
+            }
+
             command.duration += delta_time.delta;
 
             let required_duration = match command.command {
@@ -127,54 +191,37 @@ pub fn command(
                         position,
                         server_messages,
                     );
-                    cmd.add_component(*entity, NextCommand::default());
+                    *next_command = NextCommand::default();
                 }
                 CommandData::Move(CommandMove {
                     mut destination,
                     target,
                 }) => {
-                    cmd.add_component(
-                        *entity,
-                        Destination {
-                            position: destination,
-                        },
-                    );
-
-                    let mut target_entity_id = 0;
                     if let Some(target_entity) = target {
-                        if let Some((target_client_entity, target_position)) = is_valid_move_target(
+                        if let Some((_, target_position)) = is_valid_move_target(
                             position,
                             target_entity,
                             target_query,
                             &target_query_world,
                         ) {
                             destination = target_position.position;
-                            target_entity_id = target_client_entity.id.0;
                         } else {
                             *target = None;
                         }
                     }
 
-                    let distance = (destination.xy() - position.position.xy()).magnitude();
-                    server_messages.send_entity_message(
-                        *entity,
-                        ServerMessage::MoveEntity(server::MoveEntity {
-                            entity_id: client_entity.id.0,
-                            target_entity_id,
-                            distance: distance as u16,
-                            x: destination.x,
-                            y: destination.y,
-                            z: destination.z as u16,
-                        }),
-                    );
-
                     *command = Command::with_move(destination, *target);
-                    cmd.add_component(*entity, NextCommand::default());
+                    cmd.add_component(
+                        *entity,
+                        Destination {
+                            position: destination,
+                        },
+                    );
                 }
                 CommandData::Attack(CommandAttack {
                     target: target_entity,
                 }) => {
-                    if let Some((target_client_entity, target_position, target_ability_values)) =
+                    if let Some((_, target_position, target_ability_values)) =
                         is_valid_attack_target(
                             position,
                             target_entity,
@@ -184,19 +231,6 @@ pub fn command(
                     {
                         let distance =
                             (target_position.position.xy() - position.position.xy()).magnitude();
-
-                        // Check if we have just started attacking this target
-                        let attack_started = match &command.command {
-                            CommandData::Attack(CommandAttack {
-                                target: current_attack_target,
-                                ..
-                            }) => current_attack_target != target_entity,
-                            CommandData::Move(CommandMove {
-                                target: Some(current_attack_target),
-                                ..
-                            }) => current_attack_target != target_entity,
-                            _ => true,
-                        };
 
                         // Check if we are in attack range
                         let attack_range = ability_values.attack_range as f32;
@@ -238,20 +272,6 @@ pub fn command(
                                 },
                             );
                         }
-
-                        if attack_started {
-                            server_messages.send_entity_message(
-                                *entity,
-                                ServerMessage::AttackEntity(server::AttackEntity {
-                                    entity_id: client_entity.id.0,
-                                    target_entity_id: target_client_entity.id.0,
-                                    distance: distance as u16,
-                                    x: target_position.position.x,
-                                    y: target_position.position.y,
-                                    z: target_position.position.z as u16,
-                                }),
-                            );
-                        }
                     } else {
                         set_command_stop(
                             command,
@@ -261,7 +281,7 @@ pub fn command(
                             position,
                             server_messages,
                         );
-                        cmd.add_component(*entity, NextCommand::default());
+                        *next_command = NextCommand::default();
                     }
                 }
                 _ => {}
