@@ -227,7 +227,7 @@ fn ai_condition_is_attacker_current_target(
 }
 
 fn ai_condition_no_target_and_compare_attacker_ability_value(
-    ai_world: &mut AiWorld,
+    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     ability: AipAbilityType,
@@ -264,7 +264,7 @@ fn ai_condition_random(
 }
 
 fn ai_condition_source_ability_value(
-    ai_world: &mut AiWorld,
+    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     ability: AipAbilityType,

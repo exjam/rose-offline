@@ -3,7 +3,10 @@ use crate::{
         item::{EquipmentItem, Item},
         Damage,
     },
-    game::components::{EquipmentIndex, ItemSlot, Npc, NpcStandingDirection, Position, Team},
+    game::components::{
+        Destination, EquipmentIndex, HealthPoints, ItemSlot, Npc, NpcStandingDirection, Position,
+        Team,
+    },
 };
 
 #[derive(Clone)]
@@ -66,6 +69,8 @@ pub struct SpawnEntityMonster {
     pub npc: Npc,
     pub position: Position,
     pub team: Team,
+    pub health: HealthPoints,
+    pub destination: Option<Destination>,
 }
 
 #[derive(Clone)]

@@ -8,9 +8,9 @@ use crate::{
         Damage,
     },
     game::components::{
-        BasicStats, CharacterInfo, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot,
-        Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
-        Position, SkillList, Team, INVENTORY_PAGE_SIZE,
+        BasicStats, CharacterInfo, Destination, Equipment, EquipmentIndex, HealthPoints, Hotbar,
+        HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc,
+        NpcStandingDirection, Position, SkillList, Team, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -619,7 +619,9 @@ pub struct PacketServerSpawnEntityMonster<'a> {
     pub entity_id: u16,
     pub npc: &'a Npc,
     pub position: &'a Position,
+    pub destination: Option<&'a Destination>,
     pub team: &'a Team,
+    pub health: &'a HealthPoints,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
@@ -628,12 +630,12 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_u16(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
-        writer.write_f32(0.0); // destination x
-        writer.write_f32(0.0); // destination y
+        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
+        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
         writer.write_u16(0); // action
         writer.write_u16(0); // target entity id
         writer.write_u8(0); // move mode
-        writer.write_u32(100); // hp
+        writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u16(packet.npc.id as u16);

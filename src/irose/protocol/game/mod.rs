@@ -287,6 +287,8 @@ impl GameClient {
                 npc,
                 position,
                 team,
+                health,
+                destination,
             }) => {
                 client
                     .connection
@@ -295,6 +297,8 @@ impl GameClient {
                         npc: &npc,
                         position: &position,
                         team: &team,
+                        health: &health,
+                        destination: destination.as_ref(),
                     }))
                     .await?;
             }
