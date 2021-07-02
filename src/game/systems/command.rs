@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, Query};
+use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 
 use crate::game::{
     components::{
@@ -95,17 +95,22 @@ pub fn command(
         |(entity, client_entity, position, motion_data, ability_values, command, next_command)| {
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 match next_command.command.as_mut().unwrap() {
-                    CommandData::Die => { },
-                    CommandData::Stop => { },
-                    CommandData::Move(CommandMove { destination, target }) => {
+                    CommandData::Die => {}
+                    CommandData::Stop => {}
+                    CommandData::Move(CommandMove {
+                        destination,
+                        target,
+                    }) => {
                         let mut target_entity_id = 0;
                         if let Some(target_entity) = target {
-                            if let Some((target_client_entity, target_position)) = is_valid_move_target(
-                                position,
-                                target_entity,
-                                target_query,
-                                &target_query_world,
-                            ) {
+                            if let Some((target_client_entity, target_position)) =
+                                is_valid_move_target(
+                                    position,
+                                    target_entity,
+                                    target_query,
+                                    &target_query_world,
+                                )
+                            {
                                 *destination = target_position.position;
                                 target_entity_id = target_client_entity.id.0;
                             } else {
@@ -125,9 +130,11 @@ pub fn command(
                                 z: destination.z as u16,
                             }),
                         );
-                    },
-                    CommandData::Attack(CommandAttack { target: target_entity }) => {
-                        if let Some((target_client_entity, target_position, target_ability_values)) =
+                    }
+                    CommandData::Attack(CommandAttack {
+                        target: target_entity,
+                    }) => {
+                        if let Some((target_client_entity, target_position, _)) =
                             is_valid_attack_target(
                                 position,
                                 target_entity,
@@ -135,7 +142,8 @@ pub fn command(
                                 &target_query_world,
                             )
                         {
-                            let distance = (target_position.position.xy() - position.position.xy()).magnitude();
+                            let distance = (target_position.position.xy() - position.position.xy())
+                                .magnitude();
 
                             server_messages.send_entity_message(
                                 *entity,
@@ -151,7 +159,7 @@ pub fn command(
                         } else {
                             next_command.command = Some(CommandData::Stop);
                         }
-                    },
+                    }
                 }
 
                 next_command.has_sent_server_message = true;
