@@ -270,6 +270,10 @@ impl GameClient {
                 direction,
                 position,
                 team,
+                health,
+                destination,
+                command,
+                target_entity_id,
             }) => {
                 client
                     .connection
@@ -279,6 +283,10 @@ impl GameClient {
                         direction: &direction,
                         position: &position,
                         team: &team,
+                        health: &health,
+                        destination: destination.as_ref(),
+                        command: &command,
+                        target_entity_id,
                     }))
                     .await?;
             }
@@ -289,6 +297,8 @@ impl GameClient {
                 team,
                 health,
                 destination,
+                command,
+                target_entity_id,
             }) => {
                 client
                     .connection
@@ -299,6 +309,8 @@ impl GameClient {
                         team: &team,
                         health: &health,
                         destination: destination.as_ref(),
+                        command: &command,
+                        target_entity_id,
                     }))
                     .await?;
             }

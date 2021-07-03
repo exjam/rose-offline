@@ -8,9 +8,10 @@ use crate::{
         Damage,
     },
     game::components::{
-        BasicStats, CharacterInfo, Destination, Equipment, EquipmentIndex, HealthPoints, Hotbar,
-        HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc,
-        NpcStandingDirection, Position, SkillList, Team, INVENTORY_PAGE_SIZE,
+        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Command, CommandData, CommandMove,
+        Destination, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot, Inventory,
+        InventoryPageType, ItemSlot, Level, ManaPoints, MoveSpeed, Npc, NpcStandingDirection,
+        Position, SkillList, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -66,6 +67,30 @@ impl From<&PacketConnectionReply> for Packet {
 
 #[bitfield]
 #[derive(Clone, Copy)]
+pub struct PacketEquipmentAmmoPart {
+    #[skip(getters)]
+    item_type: B5,
+    #[skip(getters)]
+    item_number: B10,
+    #[skip]
+    __: B1,
+}
+
+fn write_equipment_ammo_part(writer: &mut PacketWriter, item: Option<&StackableItem>) {
+    if let Some(item) = item {
+        let part = PacketEquipmentAmmoPart::new()
+            .with_item_number(item.item.item_number as u16)
+            .with_item_type(item.item.item_type as u8);
+        for b in part.into_bytes().iter() {
+            writer.write_u8(*b);
+        }
+    } else {
+        writer.write_u16(0);
+    }
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
 pub struct PacketEquipmentItemPart {
     #[skip(getters)]
     item_number: B10,
@@ -77,7 +102,7 @@ pub struct PacketEquipmentItemPart {
     grade: B4,
 }
 
-fn write_equipment_item_part(writer: &mut PacketWriter, item: &Option<EquipmentItem>) {
+fn write_equipment_item_part(writer: &mut PacketWriter, item: Option<&EquipmentItem>) {
     if let Some(item) = item {
         let part = PacketEquipmentItemPart::new()
             .with_item_number(item.item.item_number as u16)
@@ -90,6 +115,21 @@ fn write_equipment_item_part(writer: &mut PacketWriter, item: &Option<EquipmentI
         writer.write_u8(0);
     } else {
         writer.write_u32(0);
+    }
+}
+
+fn write_equipment_part_items(mut writer: &mut PacketWriter, equipment: &Equipment) {
+    for index in &[
+        EquipmentIndex::Head,
+        EquipmentIndex::Body,
+        EquipmentIndex::Hands,
+        EquipmentIndex::Feet,
+        EquipmentIndex::Face,
+        EquipmentIndex::Back,
+        EquipmentIndex::WeaponRight,
+        EquipmentIndex::WeaponLeft,
+    ] {
+        write_equipment_item_part(&mut writer, equipment.get_equipment_item(*index));
     }
 }
 
@@ -207,23 +247,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
 
         writer.write_u32(character_info.face as u32);
         writer.write_u32(character_info.hair as u32);
-
-        // tagPartITEM * N
-        let equipped_items = &packet.equipment.equipped_items;
-        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Head as usize]);
-        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Body as usize]);
-        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Hands as usize]);
-        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Feet as usize]);
-        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Face as usize]);
-        write_equipment_item_part(&mut writer, &equipped_items[EquipmentIndex::Back as usize]);
-        write_equipment_item_part(
-            &mut writer,
-            &equipped_items[EquipmentIndex::WeaponRight as usize],
-        );
-        write_equipment_item_part(
-            &mut writer,
-            &equipped_items[EquipmentIndex::WeaponLeft as usize],
-        );
+        write_equipment_part_items(&mut writer, &packet.equipment);
 
         // tagBasicInfo
         writer.write_u8(character_info.birth_stone);
@@ -591,6 +615,10 @@ pub struct PacketServerSpawnEntityNpc<'a> {
     pub direction: &'a NpcStandingDirection,
     pub position: &'a Position,
     pub team: &'a Team,
+    pub destination: Option<&'a Destination>,
+    pub command: &'a Command,
+    pub target_entity_id: u16,
+    pub health: &'a HealthPoints,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
@@ -599,12 +627,12 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_u16(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
-        writer.write_f32(0.0); // destination x
-        writer.write_f32(0.0); // destination y
-        writer.write_u16(0); // action
-        writer.write_u16(0); // target entity id
+        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
+        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
+        write_command_id(&mut writer, packet.command);
+        writer.write_u16(packet.target_entity_id);
         writer.write_u8(0); // move mode
-        writer.write_u32(100); // hp
+        writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u16(packet.npc.id as u16);
@@ -622,6 +650,8 @@ pub struct PacketServerSpawnEntityMonster<'a> {
     pub destination: Option<&'a Destination>,
     pub team: &'a Team,
     pub health: &'a HealthPoints,
+    pub command: &'a Command,
+    pub target_entity_id: u16,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
@@ -632,14 +662,88 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_f32(packet.position.position.y);
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        writer.write_u16(0); // action
-        writer.write_u16(0); // target entity id
+        write_command_id(&mut writer, packet.command);
+        writer.write_u16(packet.target_entity_id);
         writer.write_u8(0); // move mode
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u16(packet.npc.id as u16);
         writer.write_u16(packet.npc.quest_index);
+        writer.into()
+    }
+}
+
+pub struct PacketServerSpawnEntityCharacter<'a> {
+    pub entity_id: u16,
+    pub character_info: &'a CharacterInfo,
+    pub position: &'a Position,
+    pub destination: Option<&'a Destination>,
+    pub health: &'a HealthPoints,
+    pub team: &'a Team,
+    pub equipment: &'a Equipment,
+    pub level: &'a Level,
+    pub ability_values: &'a AbilityValues,
+    pub command: &'a Command,
+    pub target_entity_id: u16,
+}
+
+fn write_command_id(writer: &mut PacketWriter, command: &Command) {
+    let command_id = match command.command {
+        CommandData::Die => 3,
+        CommandData::Stop => 0,
+        CommandData::Move(_) => 1,
+        CommandData::Attack(_) => 2,
+    };
+    writer.write_u16(command_id);
+}
+
+impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
+    fn from(packet: &'a PacketServerSpawnEntityCharacter<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::SpawnEntityCharacter as u16);
+        writer.write_u16(packet.entity_id);
+        writer.write_f32(packet.position.position.x);
+        writer.write_f32(packet.position.position.y);
+        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
+        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
+        write_command_id(&mut writer, packet.command);
+        writer.write_u16(packet.target_entity_id);
+        writer.write_u8(0); // move mode
+        writer.write_u32(packet.health.hp);
+        writer.write_u32(packet.team.id);
+        writer.write_u32(0); // status flag
+        writer.write_u8(packet.character_info.gender);
+        writer.write_u16(packet.ability_values.run_speed as u16);
+        writer.write_u16(packet.ability_values.passive_attack_speed as u16);
+        writer.write_u8(0); // weight rate
+
+        writer.write_u32(packet.character_info.face as u32);
+        writer.write_u32(packet.character_info.hair as u32);
+        write_equipment_part_items(&mut writer, &packet.equipment);
+
+        for index in &[AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
+            write_equipment_ammo_part(&mut writer, packet.equipment.get_ammo_item(*index));
+        }
+
+        writer.write_u16(packet.character_info.job as u16);
+        writer.write_u8(packet.level.level as u8);
+
+        for index in &[
+            VehiclePartIndex::Body,
+            VehiclePartIndex::Engine,
+            VehiclePartIndex::Leg,
+            VehiclePartIndex::Ability,
+            VehiclePartIndex::Arms,
+        ] {
+            write_equipment_item_part(&mut writer, packet.equipment.get_vehicle_item(*index));
+        }
+
+        writer.write_u16(packet.position.position.z as u16); // z
+        writer.write_u32(0); // sub flag
+        writer.write_null_terminated_utf8(&packet.character_info.name);
+        // if status flag != 0 then u16[] of endurace things
+        // if sub flag == store then u16 type, str shop name
+        // optional clan info of u32 clan id, u32 clan mark, u8 clan level, u8 clan rank
         writer.into()
     }
 }
@@ -698,7 +802,7 @@ impl From<&PacketServerUpdateEquipment> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
         writer.write_u16(packet.entity_id);
         writer.write_u16(packet.equipment_index as u16);
-        write_equipment_item_part(&mut writer, &packet.item);
+        write_equipment_item_part(&mut writer, packet.item.as_ref());
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed);
         }

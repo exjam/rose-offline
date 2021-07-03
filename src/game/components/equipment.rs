@@ -89,6 +89,10 @@ impl Equipment {
         self.equipped_items[index as usize].as_ref()
     }
 
+    pub fn get_vehicle_item(&self, index: VehiclePartIndex) -> Option<&EquipmentItem> {
+        self.equipped_vehicle[index as usize].as_ref()
+    }
+
     pub fn get_ammo_item(&self, index: AmmoIndex) -> Option<&StackableItem> {
         self.equipped_ammo[index as usize].as_ref()
     }

@@ -4,7 +4,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::game::{
     components::{
-        ClientEntity, ClientEntityVisibility, Destination, GameClient, HealthPoints, Npc,
+        ClientEntity, ClientEntityVisibility, Command, Destination, GameClient, HealthPoints, Npc,
         NpcStandingDirection, Position, Team,
     },
     messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
@@ -28,7 +28,16 @@ pub fn client_entity_visibility(
         &Position,
     )>,
     entity_id_query: &mut Query<&ClientEntity>,
-    npcs_query: &mut Query<(&ClientEntity, &Npc, &NpcStandingDirection, &Position, &Team)>,
+    npcs_query: &mut Query<(
+        &ClientEntity,
+        &Npc,
+        &NpcStandingDirection,
+        &Position,
+        &Team,
+        &HealthPoints,
+        Option<&Destination>,
+        &Command,
+    )>,
     monsters_query: &mut Query<(
         &ClientEntity,
         &Npc,
@@ -36,6 +45,7 @@ pub fn client_entity_visibility(
         &Team,
         &HealthPoints,
         Option<&Destination>,
+        &Command,
     )>,
     #[resource] client_entity_list: &ClientEntityList,
 ) {
@@ -103,18 +113,33 @@ pub fn client_entity_visibility(
                 // Try read the entity as an NPC
                 if npcs_query
                     .get(world, *entity)
-                    .map(|(client_entity, npc, direction, position, team)| {
-                        visibility_change
-                            .client
-                            .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
-                                entity_id: client_entity.id.0,
-                                npc: npc.clone(),
-                                direction: direction.clone(),
-                                position: position.clone(),
-                                team: team.clone(),
-                            }))
-                            .ok();
-                    })
+                    .map(
+                        |(
+                            client_entity,
+                            npc,
+                            direction,
+                            position,
+                            team,
+                            health,
+                            destination,
+                            command,
+                        )| {
+                            visibility_change
+                                .client
+                                .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
+                                    entity_id: client_entity.id.0,
+                                    npc: npc.clone(),
+                                    direction: direction.clone(),
+                                    position: position.clone(),
+                                    team: team.clone(),
+                                    health: health.clone(),
+                                    destination: destination.cloned(),
+                                    command: command.clone(),
+                                    target_entity_id: 0, // TODO: Target entity id !
+                                }))
+                                .ok();
+                        },
+                    )
                     .ok()
                     .is_some()
                 {
@@ -125,7 +150,7 @@ pub fn client_entity_visibility(
                 if monsters_query
                     .get(world, *entity)
                     .map(
-                        |(client_entity, npc, position, team, health, destination)| {
+                        |(client_entity, npc, position, team, health, destination, command)| {
                             visibility_change
                                 .client
                                 .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
@@ -135,6 +160,8 @@ pub fn client_entity_visibility(
                                     team: team.clone(),
                                     health: health.clone(),
                                     destination: destination.cloned(),
+                                    command: command.clone(),
+                                    target_entity_id: 0, // TODO: Target entity id !
                                 }))
                                 .ok();
                         },

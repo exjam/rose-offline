@@ -4,8 +4,8 @@ use crate::{
         Damage,
     },
     game::components::{
-        Destination, EquipmentIndex, HealthPoints, ItemSlot, Npc, NpcStandingDirection, Position,
-        Team,
+        Command, Destination, EquipmentIndex, HealthPoints, ItemSlot, Npc, NpcStandingDirection,
+        Position, Team,
     },
 };
 
@@ -61,6 +61,10 @@ pub struct SpawnEntityNpc {
     pub direction: NpcStandingDirection,
     pub position: Position,
     pub team: Team,
+    pub health: HealthPoints,
+    pub destination: Option<Destination>,
+    pub command: Command,
+    pub target_entity_id: u16,
 }
 
 #[derive(Clone)]
@@ -71,6 +75,8 @@ pub struct SpawnEntityMonster {
     pub team: Team,
     pub health: HealthPoints,
     pub destination: Option<Destination>,
+    pub command: Command,
+    pub target_entity_id: u16,
 }
 
 #[derive(Clone)]

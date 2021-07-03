@@ -3,15 +3,18 @@ use std::time::Duration;
 use legion::Entity;
 use nalgebra::Point3;
 
+#[derive(Clone)]
 pub struct CommandMove {
     pub destination: Point3<f32>,
     pub target: Option<Entity>,
 }
 
+#[derive(Clone)]
 pub struct CommandAttack {
     pub target: Entity,
 }
 
+#[derive(Clone)]
 pub enum CommandData {
     Die,
     Stop,
@@ -57,6 +60,7 @@ impl CommandData {
     }
 }
 
+#[derive(Clone)]
 pub struct Command {
     // Current command that is executing
     pub command: CommandData,
