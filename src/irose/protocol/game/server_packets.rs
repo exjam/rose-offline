@@ -8,10 +8,10 @@ use crate::{
         Damage,
     },
     game::components::{
-        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Command, CommandData, CommandMove,
-        Destination, Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot, Inventory,
-        InventoryPageType, ItemSlot, Level, ManaPoints, MoveSpeed, Npc, NpcStandingDirection,
-        Position, SkillList, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Command, CommandData, Destination,
+        Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType,
+        ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection, Position, SkillList, Team,
+        VehiclePartIndex, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -690,10 +690,17 @@ pub struct PacketServerSpawnEntityCharacter<'a> {
 
 fn write_command_id(writer: &mut PacketWriter, command: &Command) {
     let command_id = match command.command {
-        CommandData::Die => 3,
         CommandData::Stop => 0,
         CommandData::Move(_) => 1,
         CommandData::Attack(_) => 2,
+        CommandData::Die => 3,
+        // 4 = Pickup item
+        // 6 = Cast skill on self
+        // 7 = Skill on entity
+        // 8 = Skill on position
+        // 9 = Run away
+        // 10 = Sit
+        // 11 = Vending Shop
     };
     writer.write_u16(command_id);
 }

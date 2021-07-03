@@ -198,7 +198,7 @@ fn ai_condition_distance(
 }
 
 fn ai_condition_health_percent(
-    ai_world: &mut AiWorld,
+    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     value: i32,
