@@ -202,7 +202,7 @@ pub fn command(
                     *next_command = NextCommand::default();
                 }
                 CommandData::Move(CommandMove {
-                    mut destination,
+                    destination,
                     target,
                 }) => {
                     if let Some(target_entity) = target {
@@ -212,19 +212,23 @@ pub fn command(
                             target_query,
                             &target_query_world,
                         ) {
-                            destination = target_position.position;
+                            *destination = target_position.position;
                         } else {
                             *target = None;
                         }
                     }
 
-                    *command = Command::with_move(destination, *target);
-                    cmd.add_component(
-                        *entity,
-                        Destination {
-                            position: destination,
-                        },
-                    );
+                    let distance = (destination.xy() - position.position.xy()).magnitude_squared();
+                    if distance < 0.1 {
+                        *command = Command::with_stop();
+                    } else {
+                        cmd.add_component(
+                            *entity,
+                            Destination {
+                                position: *destination,
+                            },
+                        );
+                    }
                 }
                 CommandData::Attack(CommandAttack {
                     target: target_entity,
