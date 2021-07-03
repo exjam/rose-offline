@@ -29,6 +29,7 @@ pub struct AbilityValues {
     pub attack_damage_type: DamageType,
     pub attack_power: i32,
     pub attack_speed: i32,
+    pub passive_attack_speed: i32,
     pub attack_range: i32,
     pub hit: i32,
     pub defence: i32,
