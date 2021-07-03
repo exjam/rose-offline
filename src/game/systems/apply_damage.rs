@@ -75,6 +75,10 @@ pub fn apply_damage(
                         last_damage_time: delta_time.now,
                     });
                 }
+
+                if health_points.hp == 0 {
+                    damage_sources.killer = Some(pending_damage.attacker);
+                }
             }
 
             if let Some(npc_ai) = npc_ai {

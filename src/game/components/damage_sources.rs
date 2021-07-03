@@ -11,6 +11,7 @@ pub struct DamageSource {
 
 #[derive(Default)]
 pub struct DamageSources {
+    pub killer: Option<Entity>,
     pub damage_sources: Vec<DamageSource>,
 }
 
