@@ -2,6 +2,8 @@ use crossbeam_channel::Receiver;
 use legion::{Resources, Schedule, World};
 use std::time::{Duration, Instant};
 
+use crate::game::resources::{PendingXpList, WorldRates};
+
 use super::{
     messages::control::ControlMessage,
     resources::{
@@ -34,6 +36,8 @@ impl GameWorld {
         resources.insert(ServerMessages::new());
         resources.insert(ClientEntityList::new(&game_data.zones));
         resources.insert(PendingDamageList::new());
+        resources.insert(PendingXpList::new());
+        resources.insert(WorldRates::new());
         resources.insert(game_data);
 
         let started_load = Instant::now();
@@ -63,6 +67,8 @@ impl GameWorld {
             .flush()
             .add_system(update_position_system())
             .add_system(apply_damage_system())
+            .flush()
+            .add_system(apply_pending_xp_system())
             .flush()
             .add_system(client_entity_visibility_system())
             .add_system(server_messages_sender_system())

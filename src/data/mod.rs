@@ -53,6 +53,16 @@ pub trait AbilityValueCalculator {
         defender: &AbilityValues,
         hit_count: i32,
     ) -> Damage;
+
+    fn calculate_give_xp(
+        &self,
+        attacker_level: i32,
+        attacker_damage: i32,
+        defender_level: i32,
+        defender_max_hp: i32,
+        defender_reward_xp: i32,
+        world_xp_rate: i32,
+    ) -> i32;
 }
 
 pub use ai_database::AiDatabase;

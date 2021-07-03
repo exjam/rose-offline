@@ -1,3 +1,4 @@
+use core::f32;
 use rand::Rng;
 use std::sync::Arc;
 
@@ -271,6 +272,40 @@ impl AbilityValueCalculator for AbilityValuesData {
                 ),
             }
         }
+    }
+
+    fn calculate_give_xp(
+        &self,
+        attacker_level: i32,
+        attacker_damage: i32,
+        defender_level: i32,
+        defender_max_hp: i32,
+        defender_reward_xp: i32,
+        world_xp_rate: i32,
+    ) -> i32 {
+        let level_difference = attacker_level - defender_level;
+        let attacker_damage = attacker_damage as f32;
+        let defender_level = defender_level as f32;
+        let defender_max_hp = defender_max_hp as f32;
+        let defender_reward_xp = defender_reward_xp as f32;
+        let world_xp_rate = world_xp_rate as f32;
+
+        (if level_difference < 3 {
+            ((defender_level + 3.0)
+                * defender_reward_xp
+                * (attacker_damage + defender_max_hp / 15.0 + 30.0)
+                * world_xp_rate)
+                / defender_max_hp
+                / 370.0
+        } else {
+            ((defender_level + 3.0)
+                * defender_reward_xp
+                * (attacker_damage + defender_max_hp / 15.0 + 30.0)
+                * world_xp_rate)
+                / defender_max_hp
+                / (level_difference + 3) as f32
+                / 60.0
+        }) as i32
     }
 }
 

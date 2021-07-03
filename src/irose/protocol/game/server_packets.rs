@@ -34,6 +34,7 @@ pub enum ServerPackets {
     AttackEntity = 0x798,
     DamageEntity = 0x799,
     MoveEntity = 0x79a,
+    UpdateXpStamina = 0x79b,
     UpdateEquipment = 0x7a5,
     Teleport = 0x7a8,
     SetHotbarSlot = 0x7aa,
@@ -813,6 +814,22 @@ impl From<&PacketServerUpdateEquipment> for Packet {
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed);
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateXpStamina {
+    pub xp: u64,
+    pub stamina: u32,
+    pub source_entity_id: Option<u16>,
+}
+
+impl From<&PacketServerUpdateXpStamina> for Packet {
+    fn from(packet: &PacketServerUpdateXpStamina) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateXpStamina as u16);
+        writer.write_u32(packet.xp as u32);
+        writer.write_u16(packet.stamina as u16);
+        writer.write_u16(packet.source_entity_id.unwrap_or(0));
         writer.into()
     }
 }

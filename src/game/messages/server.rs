@@ -124,6 +124,13 @@ pub struct UpdateEquipment {
 }
 
 #[derive(Clone)]
+pub struct UpdateXpStamina {
+    pub xp: u64,
+    pub stamina: u32,
+    pub source_entity_id: Option<u16>,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     LocalChat(LocalChat),
     SpawnEntityNpc(SpawnEntityNpc),
@@ -137,4 +144,5 @@ pub enum ServerMessage {
     Whisper(Whisper),
     UpdateInventory(UpdateInventory),
     UpdateEquipment(UpdateEquipment),
+    UpdateXpStamina(UpdateXpStamina),
 }

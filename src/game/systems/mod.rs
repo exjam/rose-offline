@@ -1,4 +1,5 @@
 mod apply_damage;
+mod apply_pending_xp;
 mod client_entity_visibility;
 mod command;
 mod control_server;
@@ -12,6 +13,7 @@ mod update_position;
 mod world_server;
 
 pub use apply_damage::*;
+pub use apply_pending_xp::apply_pending_xp_system;
 pub use client_entity_visibility::*;
 pub use command::*;
 pub use control_server::*;

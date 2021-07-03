@@ -1,4 +1,7 @@
-use std::ops::{Range, RangeInclusive};
+use std::{
+    ops::{Range, RangeInclusive},
+    time::Duration,
+};
 
 use legion::{systems::CommandBuffer, world::SubWorld, Entity, Query};
 use nalgebra::{Point3, Vector3};
@@ -14,10 +17,10 @@ use crate::{
     },
     game::{
         components::{
-            AbilityValues, Command, CommandData, HealthPoints, Level, MonsterSpawnPoint,
-            NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, Team,
+            AbilityValues, Command, CommandData, DamageSources, HealthPoints, Level,
+            MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, Team,
         },
-        resources::{ClientEntityList, DeltaTime},
+        resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
         GameData,
     },
 };
@@ -498,6 +501,7 @@ fn npc_ai_run_trigger(
     }
 }
 
+#[allow(clippy::type_complexity)]
 #[legion::system]
 pub fn npc_ai(
     world: &mut SubWorld,
@@ -513,24 +517,30 @@ pub fn npc_ai(
         &AbilityValues,
         Option<&Owner>,
         Option<&SpawnOrigin>,
+        Option<&DamageSources>,
         Option<&mut NpcAi>,
     )>,
     spawn_point_query: &mut Query<&mut MonsterSpawnPoint>,
     nearby_query: &mut Query<(&Level, &Team)>,
     attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
+    level_query: &mut Query<&Level>,
     #[resource] client_entity_list: &ClientEntityList,
     #[resource] delta_time: &DeltaTime,
     #[resource] game_data: &GameData,
+    #[resource] world_rates: &WorldRates,
+    #[resource] pending_xp_list: &mut PendingXpList,
 ) {
-    let (mut spawn_point_world, mut npc_world) = world.split_for_query(&spawn_point_query);
-    let (mut attacker_query_world, mut npc_world) = npc_world.split_for_query(&attacker_query);
-    let (mut nearby_query_world, mut npc_world) = npc_world.split_for_query(&nearby_query);
+    let (mut spawn_point_world, mut world) = world.split_for_query(&spawn_point_query);
+    let (mut attacker_query_world, mut world) = world.split_for_query(&attacker_query);
+    let (mut nearby_query_world, mut world) = world.split_for_query(&nearby_query);
+    let (mut level_query_world, mut world) = world.split_for_query(&level_query);
+    let mut npc_world = world;
 
     npc_query.for_each_mut(
         &mut npc_world,
         |(
             entity,
-            _npc,
+            npc,
             command,
             position,
             level,
@@ -539,6 +549,7 @@ pub fn npc_ai(
             ability_values,
             owner,
             spawn_origin,
+            damage_sources,
             mut npc_ai,
         )| {
             if let Some(npc_ai) = &mut npc_ai {
@@ -692,8 +703,8 @@ pub fn npc_ai(
                                 owner,
                                 spawn_origin,
                             },
-                            None,
-                            None,
+                            None, // TODO: Pass in killer entity
+                            None, // TODO: Pass in killer damage
                             true,
                             client_entity_list,
                             nearby_query,
@@ -701,7 +712,43 @@ pub fn npc_ai(
                         );
                     }
 
-                    // TODO: Maybe drop item
+                    if let Some(damage_sources) = damage_sources {
+                        if let Some(npc_data) = game_data.npcs.get_npc(npc.id as usize) {
+                            // Reward XP to all attackers
+                            for damage_source in damage_sources.damage_sources.iter() {
+                                let time_since_damage =
+                                    delta_time.now - damage_source.last_damage_time;
+                                if time_since_damage > Duration::from_secs(5 * 60) {
+                                    // Damage expired, ignore.
+                                    continue;
+                                }
+
+                                if let Ok(damage_source_level) =
+                                    level_query.get(&level_query_world, damage_source.entity)
+                                {
+                                    let reward_xp =
+                                        game_data.ability_value_calculator.calculate_give_xp(
+                                            damage_source_level.level as i32,
+                                            damage_source.total_damage as i32,
+                                            level.level as i32,
+                                            ability_values.max_health,
+                                            npc_data.reward_xp as i32,
+                                            world_rates.xp_rate,
+                                        );
+                                    if reward_xp > 0 {
+                                        pending_xp_list.push(PendingXp::new(
+                                            damage_source.entity,
+                                            reward_xp,
+                                            Some(*entity),
+                                        ));
+                                    }
+                                }
+                            }
+
+                            // TODO: Reward item drop to killer
+                        }
+                    }
+
                     cmd.remove(*entity);
                 }
                 CommandData::Move(_) => {}

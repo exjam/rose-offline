@@ -10,7 +10,7 @@ use crate::game::messages::{
     },
     server::{
         LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc,
-        UpdateEquipment, UpdateInventory, Whisper,
+        UpdateEquipment, UpdateInventory, UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -340,6 +340,20 @@ impl GameClient {
                         equipment_index,
                         item,
                         run_speed: None,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UpdateXpStamina(UpdateXpStamina {
+                xp,
+                stamina,
+                source_entity_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateXpStamina {
+                        xp,
+                        stamina,
+                        source_entity_id,
                     }))
                     .await?;
             }
