@@ -177,7 +177,6 @@ pub fn monster_spawn(
                 Npc::new(id.0 as u32, 0),
                 Position::new(position, spawn_point_zone),
                 Team::default_monster(),
-                DamageSources::new(),
                 SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),
                 Command::default(),
                 NextCommand::default(),
@@ -214,6 +213,14 @@ pub fn monster_spawn(
                         hp: ability_values.max_health as u32,
                     },
                 );
+
+                if ability_values.max_damage_sources > 0 {
+                    cmd.add_component(
+                        entity,
+                        DamageSources::new(ability_values.max_damage_sources),
+                    );
+                }
+
                 cmd.add_component(entity, ability_values);
             }
 

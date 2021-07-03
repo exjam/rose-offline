@@ -77,6 +77,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             resistance: npc_data.resistance,
             critical: (npc_data.level as f32 * 2.5) as i32,
             avoid: npc_data.avoid,
+            max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
         })
     }
 
@@ -231,6 +232,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
+            max_damage_sources: 0,
         }
     }
 

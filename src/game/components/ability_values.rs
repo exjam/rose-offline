@@ -36,4 +36,5 @@ pub struct AbilityValues {
     pub resistance: i32,
     pub critical: i32,
     pub avoid: i32,
+    pub max_damage_sources: usize,
 }

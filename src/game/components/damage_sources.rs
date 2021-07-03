@@ -11,12 +11,17 @@ pub struct DamageSource {
 
 #[derive(Default)]
 pub struct DamageSources {
+    pub max_damage_sources: usize,
     pub killer: Option<Entity>,
     pub damage_sources: Vec<DamageSource>,
 }
 
 impl DamageSources {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(max_damage_sources: usize) -> Self {
+        Self {
+            max_damage_sources,
+            killer: None,
+            damage_sources: Vec::with_capacity(max_damage_sources),
+        }
     }
 }

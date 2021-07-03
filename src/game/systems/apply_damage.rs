@@ -68,6 +68,24 @@ pub fn apply_damage(
                     source.last_damage_time = delta_time.now;
                     source.total_damage += pending_damage.damage.amount as usize;
                 } else {
+                    // If we have a full list of damage sources, remove the oldest
+                    if damage_sources.damage_sources.len() == damage_sources.max_damage_sources {
+                        let mut oldest_time = delta_time.now;
+                        let mut oldest_index = None;
+
+                        for i in 0..damage_sources.damage_sources.len() {
+                            let damage_source = &damage_sources.damage_sources[i];
+                            if damage_source.last_damage_time < oldest_time {
+                                oldest_time = damage_source.last_damage_time;
+                                oldest_index = Some(i);
+                            }
+                        }
+
+                        damage_sources.damage_sources.remove(
+                            oldest_index.unwrap_or(damage_sources.damage_sources.len() - 1),
+                        );
+                    }
+
                     damage_sources.damage_sources.push(DamageSource {
                         entity: pending_damage.attacker,
                         total_damage: pending_damage.damage.amount as usize,
