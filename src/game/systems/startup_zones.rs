@@ -2,8 +2,8 @@ use legion::{system, systems::CommandBuffer};
 
 use crate::game::{
     components::{
-        Command, HealthPoints, Level, MonsterSpawnPoint, MoveSpeed, NextCommand, Npc, NpcAi,
-        NpcStandingDirection, Position, Team, Zone,
+        ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveSpeed, NextCommand,
+        Npc, NpcAi, NpcStandingDirection, Position, Team, Zone,
     },
     resources::{ClientEntityList, GameData},
 };
@@ -70,7 +70,9 @@ pub fn startup_zones(
 
             cmd.add_component(
                 entity,
-                client_entity_zone.allocate(entity, npc.position).unwrap(),
+                client_entity_zone
+                    .allocate(ClientEntityType::Npc, entity, npc.position)
+                    .unwrap(),
             );
         }
     }

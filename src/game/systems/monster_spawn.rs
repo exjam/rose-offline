@@ -6,8 +6,8 @@ use crate::{
     data::NpcReference,
     game::{
         components::{
-            Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint, MoveSpeed, NextCommand,
-            Npc, NpcAi, Position, SpawnOrigin, Team,
+            ClientEntityType, Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint,
+            MoveSpeed, NextCommand, Npc, NpcAi, Position, SpawnOrigin, Team,
         },
         resources::{ClientEntityList, DeltaTime, GameData},
     },
@@ -185,7 +185,9 @@ pub fn monster_spawn(
             ));
             cmd.add_component(
                 entity,
-                client_entity_zone.allocate(entity, position).unwrap(),
+                client_entity_zone
+                    .allocate(ClientEntityType::Monster, entity, position)
+                    .unwrap(),
             );
 
             if let Some(npc_data) = game_data.npcs.get_npc(id.0) {

@@ -1,26 +1,18 @@
 use legion::{system, world::SubWorld, Entity, Query};
-use std::collections::HashSet;
-use tokio::sync::mpsc::UnboundedSender;
 
 use crate::game::{
     components::{
-        ClientEntity, ClientEntityVisibility, Command, Destination, GameClient, HealthPoints, Npc,
-        NpcStandingDirection, Position, Team,
+        ClientEntity, ClientEntityType, ClientEntityVisibility, Command, Destination, GameClient,
+        HealthPoints, Npc, NpcStandingDirection, Position, Team,
     },
     messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
     resources::ClientEntityList,
 };
 
-pub struct VisibilityChange {
-    client: UnboundedSender<ServerMessage>,
-    remove_entities: HashSet<Entity>,
-    spawn_entities: HashSet<Entity>,
-}
-
 #[system]
 pub fn client_entity_visibility(
     world: &mut SubWorld,
-    clients: &mut Query<(
+    clients_query: &mut Query<(
         Entity,
         &GameClient,
         &ClientEntity,
@@ -29,31 +21,32 @@ pub fn client_entity_visibility(
     )>,
     entity_id_query: &mut Query<&ClientEntity>,
     npcs_query: &mut Query<(
-        &ClientEntity,
         &Npc,
         &NpcStandingDirection,
         &Position,
         &Team,
         &HealthPoints,
-        Option<&Destination>,
         &Command,
+        Option<&Destination>,
     )>,
     monsters_query: &mut Query<(
-        &ClientEntity,
         &Npc,
         &Position,
         &Team,
         &HealthPoints,
-        Option<&Destination>,
         &Command,
+        Option<&Destination>,
     )>,
     #[resource] client_entity_list: &ClientEntityList,
 ) {
-    let mut visibility_changes = Vec::new();
+    let (mut clients_query_world, mut world) = world.split_for_query(clients_query);
+    let (entity_id_query_world, mut world) = world.split_for_query(entity_id_query);
+    let (npc_query_world, mut world) = world.split_for_query(npcs_query);
+    let (monster_query_world, mut _world) = world.split_for_query(monsters_query);
 
     // First loop through all client entities and generate visibility changes that need to be sent
-    clients.for_each_mut(
-        world,
+    clients_query.for_each_mut(
+        &mut clients_query_world,
         |(entity, client, client_entity, client_visibility, position)| {
             if let Some(zone) = client_entity_list.get_zone(position.zone as usize) {
                 let sector_visible_entities =
@@ -66,112 +59,97 @@ pub fn client_entity_visibility(
                 remove_entities.remove(entity);
                 spawn_entities.remove(entity);
 
-                if !remove_entities.is_empty() || !spawn_entities.is_empty() {
-                    visibility_changes.push(VisibilityChange {
-                        client: client.server_message_tx.clone(),
-                        remove_entities,
-                        spawn_entities,
-                    });
-                    client_visibility.entities = sector_visible_entities.clone();
+                if remove_entities.is_empty() && spawn_entities.is_empty() {
+                    return;
+                }
+
+                client_visibility.entities = sector_visible_entities.clone();
+
+                // Send remove entity message
+                if !remove_entities.is_empty() {
+                    client
+                        .server_message_tx
+                        .send(ServerMessage::RemoveEntities(RemoveEntities::new(
+                            remove_entities
+                                .iter()
+                                .filter_map(|remove_entity| {
+                                    entity_id_query
+                                        .get(&entity_id_query_world, *remove_entity)
+                                        .ok()
+                                })
+                                .map(|remove_client_entity| remove_client_entity.id.0)
+                                .collect(),
+                        )))
+                        .ok();
+                }
+
+                // Send spawn entity messages
+                for spawn_entity in spawn_entities {
+                    if let Ok(spawn_client_entity) =
+                        entity_id_query.get(&entity_id_query_world, spawn_entity)
+                    {
+                        match spawn_client_entity.entity_type {
+                            ClientEntityType::Character => {
+                                todo!();
+                            }
+                            ClientEntityType::Monster => {
+                                if let Ok((
+                                    spawn_npc,
+                                    spawn_position,
+                                    spawn_team,
+                                    spawn_health,
+                                    spawn_command,
+                                    spawn_destination,
+                                )) = monsters_query.get(&monster_query_world, spawn_entity)
+                                {
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::SpawnEntityMonster(
+                                            SpawnEntityMonster {
+                                                entity_id: spawn_client_entity.id.0,
+                                                npc: spawn_npc.clone(),
+                                                position: spawn_position.clone(),
+                                                team: spawn_team.clone(),
+                                                health: spawn_health.clone(),
+                                                destination: spawn_destination.cloned(),
+                                                command: spawn_command.clone(),
+                                                target_entity_id: 0, // TODO: Target entity id !
+                                            },
+                                        ))
+                                        .ok();
+                                }
+                            }
+                            ClientEntityType::Npc => {
+                                if let Ok((
+                                    spawn_npc,
+                                    spawn_direction,
+                                    spawn_position,
+                                    spawn_team,
+                                    spawn_health,
+                                    spawn_command,
+                                    spawn_destination,
+                                )) = npcs_query.get(&npc_query_world, spawn_entity)
+                                {
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
+                                            entity_id: spawn_client_entity.id.0,
+                                            npc: spawn_npc.clone(),
+                                            direction: spawn_direction.clone(),
+                                            position: spawn_position.clone(),
+                                            team: spawn_team.clone(),
+                                            health: spawn_health.clone(),
+                                            destination: spawn_destination.cloned(),
+                                            command: spawn_command.clone(),
+                                            target_entity_id: 0, // TODO: Target entity id !
+                                        }))
+                                        .ok();
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
     );
-
-    // Now process the visibility changes into server messages
-    for visibility_change in visibility_changes.into_iter() {
-        // Collect list of client entity id we should remove
-        if !visibility_change.remove_entities.is_empty() {
-            let remove_entities: Vec<u16> = visibility_change
-                .remove_entities
-                .iter()
-                .map(|entity| {
-                    entity_id_query
-                        .get(world, *entity)
-                        .ok()
-                        .map(|client_entity| client_entity.id.0)
-                })
-                .flatten()
-                .collect();
-
-            if !remove_entities.is_empty() {
-                visibility_change
-                    .client
-                    .send(ServerMessage::RemoveEntities(RemoveEntities::new(
-                        remove_entities,
-                    )))
-                    .ok();
-            }
-        }
-
-        // Now send spawn messages
-        if !visibility_change.spawn_entities.is_empty() {
-            for entity in visibility_change.spawn_entities.iter() {
-                // TODO: Try read the entity as a character
-                // TODO: Try read the entity as a dropped item
-
-                // Try read the entity as an NPC
-                if npcs_query
-                    .get(world, *entity)
-                    .map(
-                        |(
-                            client_entity,
-                            npc,
-                            direction,
-                            position,
-                            team,
-                            health,
-                            destination,
-                            command,
-                        )| {
-                            visibility_change
-                                .client
-                                .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
-                                    entity_id: client_entity.id.0,
-                                    npc: npc.clone(),
-                                    direction: direction.clone(),
-                                    position: position.clone(),
-                                    team: team.clone(),
-                                    health: health.clone(),
-                                    destination: destination.cloned(),
-                                    command: command.clone(),
-                                    target_entity_id: 0, // TODO: Target entity id !
-                                }))
-                                .ok();
-                        },
-                    )
-                    .ok()
-                    .is_some()
-                {
-                    continue;
-                }
-
-                // Try read the entity as a monster
-                if monsters_query
-                    .get(world, *entity)
-                    .map(
-                        |(client_entity, npc, position, team, health, destination, command)| {
-                            visibility_change
-                                .client
-                                .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
-                                    entity_id: client_entity.id.0,
-                                    npc: npc.clone(),
-                                    position: position.clone(),
-                                    team: team.clone(),
-                                    health: health.clone(),
-                                    destination: destination.cloned(),
-                                    command: command.clone(),
-                                    target_entity_id: 0, // TODO: Target entity id !
-                                }))
-                                .ok();
-                        },
-                    )
-                    .ok()
-                    .is_some()
-                {
-                    continue;
-                }
-            }
-        }
-    }
 }

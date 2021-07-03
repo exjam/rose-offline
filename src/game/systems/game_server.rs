@@ -6,10 +6,10 @@ use crate::{
     data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
         components::{
-            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityVisibility,
-            Command, Equipment, EquipmentIndex, EquipmentItemDatabase, GameClient, HealthPoints,
-            Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position,
-            SkillList, Team,
+            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType,
+            ClientEntityVisibility, Command, Equipment, EquipmentIndex, EquipmentItemDatabase,
+            GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed,
+            NextCommand, Position, SkillList, Team,
         },
         messages::{
             client::{
@@ -135,7 +135,9 @@ pub fn game_server_join(
         match message {
             ClientMessage::JoinZoneRequest(message) => {
                 if let Some(zone) = client_entity_list.get_zone_mut(position.zone as usize) {
-                    if let Some(client_entity) = zone.allocate(*entity, position.position) {
+                    if let Some(client_entity) =
+                        zone.allocate(ClientEntityType::Character, *entity, position.position)
+                    {
                         let entity_id = client_entity.id;
                         cmd.add_component(*entity, client_entity);
                         cmd.add_component(*entity, ClientEntityVisibility::new());

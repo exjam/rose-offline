@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     data::{ZoneData, ZoneDatabase},
-    game::components::ClientEntity,
+    game::components::{ClientEntity, ClientEntityType},
 };
 
 const MAX_CLIENT_ENTITY_ID: usize = 4096;
@@ -138,7 +138,12 @@ impl ClientEntityZone {
         }
     }
 
-    pub fn allocate(&mut self, entity: Entity, position: Point3<f32>) -> Option<ClientEntity> {
+    pub fn allocate(
+        &mut self,
+        entity_type: ClientEntityType,
+        entity: Entity,
+        position: Point3<f32>,
+    ) -> Option<ClientEntity> {
         if let Some(last_free_entity_index) = self.last_free_entity_index {
             let id = ClientEntityId(last_free_entity_index as u16);
             self.entity_list_by_id[last_free_entity_index] = Some(entity);
@@ -152,7 +157,7 @@ impl ClientEntityZone {
 
             let sector = self.calculate_sector(position.xy());
             self.add_sector_entity(sector, &entity, position);
-            Some(ClientEntity::new(id, sector))
+            Some(ClientEntity::new(entity_type, id, sector))
         } else {
             None
         }
