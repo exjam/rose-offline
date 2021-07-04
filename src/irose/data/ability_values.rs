@@ -1,10 +1,9 @@
 use core::f32;
 use rand::Rng;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     data::{
-        formats::{FileReader, StbFile, VfsIndex},
         item::{AbilityType, ItemClass, ItemWeaponType},
         AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
         SkillReference,
@@ -15,44 +14,21 @@ use crate::{
     },
 };
 
-pub struct LevelRewards {
-    pub skill_points: u32,
-}
-
 pub struct AbilityValuesData {
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     npc_database: Arc<NpcDatabase>,
-    level_rewards: HashMap<u32, LevelRewards>,
 }
 
 pub fn get_ability_value_calculator(
-    vfs: &VfsIndex,
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     npc_database: Arc<NpcDatabase>,
 ) -> Option<Box<impl AbilityValueCalculator + Send + Sync>> {
-    let mut level_rewards = HashMap::new();
-    let file = vfs.open_file("3DDATA/STB/LIST_SKILL_P.STB")?;
-    let data = StbFile::read(FileReader::from(&file)).ok()?;
-    for i in 0..data.rows() {
-        let level = data.get_int(i, 0) as u32;
-        let points = data.get_int(i, 1) as u32;
-        if level != 0 && points != 0 {
-            level_rewards.insert(
-                level,
-                LevelRewards {
-                    skill_points: points,
-                },
-            );
-        }
-    }
-
     Some(Box::new(AbilityValuesData {
         item_database,
         skill_database,
         npc_database,
-        level_rewards,
     }))
 }
 
@@ -332,10 +308,7 @@ impl AbilityValueCalculator for AbilityValuesData {
     }
 
     fn calculate_levelup_reward_skill_points(&self, level: u32) -> u32 {
-        self.level_rewards
-            .get(&level)
-            .map(|rewards| rewards.skill_points)
-            .unwrap_or(0)
+        (level + 2) / 2
     }
 
     fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32 {

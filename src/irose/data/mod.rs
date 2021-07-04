@@ -22,14 +22,13 @@ use std::{path::Path, sync::Arc};
 pub fn get_game_data() -> GameData {
     let vfs_index = VfsIndex::load(&Path::new("data.idx")).expect("Failed reading data.idx");
 
-    let skill_database =
-        Arc::new(get_skill_database(&vfs_index).expect("Failed to load skill database"));
     let item_database =
         Arc::new(get_item_database(&vfs_index).expect("Failed to load item database"));
     let npc_database = Arc::new(get_npc_database(&vfs_index).expect("Failed to load npc database"));
+    let skill_database =
+        Arc::new(get_skill_database(&vfs_index).expect("Failed to load skill database"));
 
     let ability_value_calculator = get_ability_value_calculator(
-        &vfs_index,
         item_database.clone(),
         skill_database.clone(),
         npc_database.clone(),
