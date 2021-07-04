@@ -67,6 +67,7 @@ impl GameClient {
                                 equipment: &response.equipment,
                                 basic_stats: &response.basic_stats,
                                 level: &response.level,
+                                experience_points: &response.experience_points,
                                 skill_list: &response.skill_list,
                                 hotbar: &response.hotbar,
                                 health_points: &response.health_points,
@@ -113,6 +114,7 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerJoinZone {
                         entity_id: response.entity_id,
                         level: &response.level,
+                        experience_points: &response.experience_points,
                         team: &response.team,
                         health_points: &response.health_points,
                         mana_points: &response.mana_points,

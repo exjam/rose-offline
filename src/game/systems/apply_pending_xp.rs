@@ -1,32 +1,32 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Query};
+use legion::{system, world::SubWorld, Query};
 
 use crate::game::{
-    components::{
-        ClientEntity, Command, DamageSource, DamageSources, GameClient, HealthPoints, Level, NpcAi,
-        Position,
-    },
-    messages::server::{DamageEntity, ServerMessage, UpdateXpStamina},
-    resources::{DeltaTime, PendingXpList, ServerMessages},
+    components::{ClientEntity, ExperiencePoints, GameClient, Level},
+    messages::server::{ServerMessage, UpdateXpStamina},
+    resources::PendingXpList,
 };
 
 #[allow(clippy::type_complexity)]
 #[system]
 pub fn apply_pending_xp(
     world: &mut SubWorld,
-    cmd: &mut CommandBuffer,
-    entity_query: &mut Query<(Option<&GameClient>, &ClientEntity, &mut Level)>,
-    source_entity_query: &mut Query<(&ClientEntity)>,
+    entity_query: &mut Query<(
+        Option<&GameClient>,
+        &ClientEntity,
+        &mut Level,
+        &mut ExperiencePoints,
+    )>,
+    source_entity_query: &mut Query<&ClientEntity>,
     #[resource] pending_xp_list: &mut PendingXpList,
-    #[resource] server_messages: &mut ServerMessages,
 ) {
     let (source_entity_query_world, world) = world.split_for_query(source_entity_query);
     let mut entity_query_world = world;
 
     for pending_xp in pending_xp_list.iter() {
-        if let Ok((client, client_entity, level)) =
+        if let Ok((client, _client_entity, _level, experience_points)) =
             entity_query.get_mut(&mut entity_query_world, pending_xp.entity)
         {
-            level.xp = level.xp.saturating_add(pending_xp.xp as u64);
+            experience_points.xp = experience_points.xp.saturating_add(pending_xp.xp as u64);
 
             // TODO: Reward stamina
 
@@ -46,7 +46,7 @@ pub fn apply_pending_xp(
                 client
                     .server_message_tx
                     .send(ServerMessage::UpdateXpStamina(UpdateXpStamina {
-                        xp: level.xp,
+                        xp: experience_points.xp,
                         stamina: 0,
                         source_entity_id,
                     }))

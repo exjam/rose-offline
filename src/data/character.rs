@@ -3,8 +3,8 @@ use std::{io::Write, path::PathBuf};
 
 use crate::data::CHARACTER_STORAGE_DIR;
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, HealthPoints, Hotbar, Inventory,
-    Level, ManaPoints, Position, SkillList,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, ExperiencePoints, HealthPoints,
+    Hotbar, Inventory, Level, ManaPoints, Position, SkillList,
 };
 
 pub enum CharacterStorageError {
@@ -41,6 +41,7 @@ pub struct CharacterStorage {
     pub inventory: Inventory,
     pub equipment: Equipment,
     pub level: Level,
+    pub experience_points: ExperiencePoints,
     pub position: Position,
     pub skill_list: SkillList,
     pub hotbar: Hotbar,

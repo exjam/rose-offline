@@ -10,6 +10,7 @@ mod command;
 mod damage_sources;
 mod destination;
 mod equipment;
+mod experience_points;
 mod game_client;
 mod health_points;
 mod hotbar;
@@ -44,6 +45,7 @@ pub use command::{Command, CommandAttack, CommandData, CommandMove, NextCommand}
 pub use damage_sources::{DamageSource, DamageSources};
 pub use destination::Destination;
 pub use equipment::*;
+pub use experience_points::ExperiencePoints;
 pub use game_client::*;
 pub use health_points::HealthPoints;
 pub use hotbar::{Hotbar, HotbarSlot};

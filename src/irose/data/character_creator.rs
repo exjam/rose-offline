@@ -1,8 +1,11 @@
 use nalgebra::Point3;
 
-use crate::data::{
-    formats::{FileReader, VfsIndex},
-    ItemReference, SkillDatabase,
+use crate::{
+    data::{
+        formats::{FileReader, VfsIndex},
+        ItemReference, SkillDatabase,
+    },
+    game::components::ExperiencePoints,
 };
 
 use crate::{
@@ -157,6 +160,7 @@ impl CharacterCreator for CharacterCreatorData {
             equipment: Equipment::new(),
             inventory: Inventory::new(),
             level: Level::new(1),
+            experience_points: ExperiencePoints::new(),
             position: Position::new(Point3::new(530500.0, 539500.0, 0.0), 20),
             skill_list: SkillList::new(),
             hotbar: Hotbar::new(),

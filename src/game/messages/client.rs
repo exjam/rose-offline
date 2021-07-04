@@ -2,8 +2,9 @@ use tokio::sync::oneshot;
 
 use crate::data::character::CharacterStorage;
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, EquipmentIndex, HealthPoints,
-    Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Position, SkillList, Team,
+    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, EquipmentIndex, ExperiencePoints,
+    HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Position, SkillList,
+    Team,
 };
 
 pub enum ConnectionRequestError {
@@ -132,6 +133,7 @@ pub struct GameConnectionResponse {
     pub equipment: Equipment,
     pub basic_stats: BasicStats,
     pub level: Level,
+    pub experience_points: ExperiencePoints,
     pub inventory: Inventory,
     pub skill_list: SkillList,
     pub hotbar: Hotbar,
@@ -148,6 +150,7 @@ pub struct GameConnectionRequest {
 pub struct JoinZoneResponse {
     pub entity_id: u16,
     pub level: Level,
+    pub experience_points: ExperiencePoints,
     pub team: Team,
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,

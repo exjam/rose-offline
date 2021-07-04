@@ -48,7 +48,7 @@ pub fn startup_zones(
 
             if let Some(npc_data) = game_data.npcs.get_npc(npc.npc.0) {
                 cmd.add_component(entity, HealthPoints::new(npc_data.health_points as u32));
-                cmd.add_component(entity, Level::new(npc_data.level as u16));
+                cmd.add_component(entity, Level::new(npc_data.level as u32));
                 cmd.add_component(entity, MoveSpeed::new(npc_data.walk_speed as f32));
             }
 

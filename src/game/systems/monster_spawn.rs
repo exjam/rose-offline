@@ -190,7 +190,7 @@ pub fn monster_spawn(
             );
 
             if let Some(npc_data) = game_data.npcs.get_npc(id.0) {
-                cmd.add_component(entity, Level::new(npc_data.level as u16));
+                cmd.add_component(entity, Level::new(npc_data.level as u32));
                 cmd.add_component(entity, MoveSpeed::new(npc_data.walk_speed as f32));
             }
 

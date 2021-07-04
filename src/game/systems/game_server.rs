@@ -8,8 +8,8 @@ use crate::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType,
             ClientEntityVisibility, Command, Equipment, EquipmentIndex, EquipmentItemDatabase,
-            GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed,
-            NextCommand, Position, SkillList, Team,
+            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
+            ManaPoints, MoveSpeed, NextCommand, Position, SkillList, Team,
         },
         messages::{
             client::{
@@ -87,7 +87,8 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.info.clone());
                                 cmd.add_component(*entity, character.equipment.clone());
-                                cmd.add_component(*entity, character.inventory.clone());
+                                cmd.add_component(*entity, character.experience_points.clone());
+                                cmd.add_component(*entity, character.level.clone());
                                 cmd.add_component(*entity, character.level.clone());
                                 cmd.add_component(*entity, character.position.clone());
                                 cmd.add_component(*entity, character.skill_list.clone());
@@ -103,6 +104,7 @@ pub fn game_server_authentication(
                                     equipment: character.equipment,
                                     basic_stats: character.basic_stats,
                                     level: character.level,
+                                    experience_points: character.experience_points,
                                     inventory: character.inventory,
                                     skill_list: character.skill_list,
                                     hotbar: character.hotbar,
@@ -125,6 +127,7 @@ pub fn game_server_join(
     client: &mut GameClient,
     entity: &Entity,
     level: &Level,
+    experience_points: &ExperiencePoints,
     team: &Team,
     health_points: &HealthPoints,
     mana_points: &ManaPoints,
@@ -147,6 +150,7 @@ pub fn game_server_join(
                             .send(JoinZoneResponse {
                                 entity_id: entity_id.0,
                                 level: level.clone(),
+                                experience_points: experience_points.clone(),
                                 team: team.clone(),
                                 health_points: health_points.clone(),
                                 mana_points: mana_points.clone(),
@@ -471,6 +475,7 @@ pub fn game_server_main(
 #[read_component(Inventory)]
 #[read_component(Equipment)]
 #[read_component(Level)]
+#[read_component(ExperiencePoints)]
 #[read_component(Position)]
 #[read_component(SkillList)]
 #[read_component(Hotbar)]
@@ -491,6 +496,7 @@ pub fn game_server_disconnect_handler(
         let inventory = entry.get_component::<Inventory>();
         let equipment = entry.get_component::<Equipment>();
         let level = entry.get_component::<Level>();
+        let experience_points = entry.get_component::<ExperiencePoints>();
         let position = entry.get_component::<Position>();
         let skill_list = entry.get_component::<SkillList>();
         let hotbar = entry.get_component::<Hotbar>();
@@ -502,6 +508,7 @@ pub fn game_server_disconnect_handler(
             inventory: inventory.unwrap().clone(),
             equipment: equipment.unwrap().clone(),
             level: level.unwrap().clone(),
+            experience_points: experience_points.unwrap().clone(),
             position: position.unwrap().clone(),
             skill_list: skill_list.unwrap().clone(),
             hotbar: hotbar.unwrap().clone(),

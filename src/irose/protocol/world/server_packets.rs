@@ -53,7 +53,7 @@ impl<'a> From<&'a PacketServerCharacterList<'a>> for Packet {
         for (slot, character) in packet.characters.iter().enumerate() {
             writer.write_null_terminated_utf8(&character.info.name);
             writer.write_u8(character.info.gender as u8);
-            writer.write_u16(character.level.level);
+            writer.write_u16(character.level.level as u16);
             writer.write_u16(character.info.job);
             match &character.delete_time {
                 Some(delete_time) => {

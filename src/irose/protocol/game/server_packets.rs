@@ -9,9 +9,9 @@ use crate::{
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Command, CommandData, Destination,
-        Equipment, EquipmentIndex, HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType,
-        ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection, Position, SkillList, Team,
-        VehiclePartIndex, INVENTORY_PAGE_SIZE,
+        Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
+        InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection, Position,
+        SkillList, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -230,6 +230,7 @@ pub struct PacketServerSelectCharacter<'a> {
     pub equipment: &'a Equipment,
     pub basic_stats: &'a BasicStats,
     pub level: &'a Level,
+    pub experience_points: &'a ExperiencePoints,
     pub skill_list: &'a SkillList,
     pub hotbar: &'a Hotbar,
     pub health_points: &'a HealthPoints,
@@ -271,8 +272,8 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         // tagGrowAbility
         writer.write_u16(packet.health_points.hp as u16);
         writer.write_u16(packet.mana_points.mp as u16);
-        writer.write_u32(packet.level.xp as u32);
-        writer.write_u16(packet.level.level);
+        writer.write_u32(packet.experience_points.xp as u32);
+        writer.write_u16(packet.level.level as u16);
         writer.write_u16(0); // Stat points
         writer.write_u16(0); // Skill points
         writer.write_u8(100); // Body Size
@@ -496,6 +497,7 @@ impl From<&PacketServerMoveEntity> for Packet {
 pub struct PacketServerJoinZone<'a> {
     pub entity_id: u16,
     pub level: &'a Level,
+    pub experience_points: &'a ExperiencePoints,
     pub team: &'a Team,
     pub health_points: &'a HealthPoints,
     pub mana_points: &'a ManaPoints,
@@ -508,7 +510,7 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
         writer.write_u16(packet.health_points.hp as u16);
         writer.write_u16(packet.mana_points.mp as u16);
 
-        writer.write_u32(packet.level.xp as u32);
+        writer.write_u32(packet.experience_points.xp as u32);
         writer.write_u32(0); // penalty xp
 
         // tagVAR_GLOBAL
