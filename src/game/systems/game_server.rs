@@ -84,12 +84,12 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, Command::default());
                                 cmd.add_component(*entity, NextCommand::default());
                                 cmd.add_component(*entity, ability_values);
-                                cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.info.clone());
+                                cmd.add_component(*entity, character.basic_stats.clone());
+                                cmd.add_component(*entity, character.inventory.clone());
                                 cmd.add_component(*entity, character.equipment.clone());
+                                cmd.add_component(*entity, character.level.clone());
                                 cmd.add_component(*entity, character.experience_points.clone());
-                                cmd.add_component(*entity, character.level.clone());
-                                cmd.add_component(*entity, character.level.clone());
                                 cmd.add_component(*entity, character.position.clone());
                                 cmd.add_component(*entity, character.skill_list.clone());
                                 cmd.add_component(*entity, character.hotbar.clone());
