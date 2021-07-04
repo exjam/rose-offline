@@ -8,10 +8,10 @@ use crate::{
         Damage,
     },
     game::components::{
-        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, Command, CommandData, Destination,
-        Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
-        InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection, Position,
-        SkillList, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, ClientEntityId, Command, CommandData,
+        Destination, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
+        Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
+        Position, SkillList, SkillPoints, StatPoints, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -35,9 +35,194 @@ pub enum ServerPackets {
     DamageEntity = 0x799,
     MoveEntity = 0x79a,
     UpdateXpStamina = 0x79b,
+    UpdateLevel = 0x79e,
     UpdateEquipment = 0x7a5,
     Teleport = 0x7a8,
     SetHotbarSlot = 0x7aa,
+}
+
+trait PacketWriteEntityId {
+    fn write_entity_id(&mut self, entity_id: ClientEntityId);
+    fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>);
+}
+
+impl PacketWriteEntityId for PacketWriter {
+    fn write_entity_id(&mut self, entity_id: ClientEntityId) {
+        self.write_u16(entity_id.0 as u16);
+    }
+
+    fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>) {
+        self.write_u16(entity_id.map_or(0, |x| x.0) as u16);
+    }
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct PacketEquipmentAmmoPart {
+    #[skip(getters)]
+    item_type: B5,
+    #[skip(getters)]
+    item_number: B10,
+    #[skip]
+    __: B1,
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct PacketEquipmentItemPart {
+    #[skip(getters)]
+    item_number: B10,
+    #[skip(getters)]
+    gem: B9,
+    #[skip(getters)]
+    has_socket: bool,
+    #[skip(getters)]
+    grade: B4,
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct PacketEquipmentItemFull {
+    #[skip(getters)]
+    item_type: B5,
+    #[skip(getters)]
+    item_number: B10,
+    #[skip(getters)]
+    is_crafted: bool,
+    #[skip(getters)]
+    gem: B9,
+    #[skip(getters)]
+    durability: B7,
+    #[skip(getters)]
+    life: B10,
+    #[skip(getters)]
+    has_socket: bool,
+    #[skip(getters)]
+    is_appraised: bool,
+    #[skip(getters)]
+    grade: B4,
+}
+
+#[bitfield]
+#[allow(dead_code)]
+#[derive(Clone, Copy)]
+pub struct PacketStackableItemFull {
+    #[skip(getters)]
+    item_type: B5,
+    #[skip(getters)]
+    item_number: B10,
+    #[skip]
+    __: B1,
+    #[skip(getters)]
+    quantity: B32,
+}
+
+trait PacketWriteItems {
+    fn write_equipment_ammo_part(&mut self, item: Option<&StackableItem>);
+    fn write_equipment_item_part(&mut self, item: Option<&EquipmentItem>);
+    fn write_equipment_item_full(&mut self, equipment: Option<&EquipmentItem>);
+    fn write_equipment_visible_part(&mut self, equipment: &Equipment);
+    fn write_stackable_item_full(&mut self, stackable: Option<&StackableItem>);
+    fn write_item_full(&mut self, item: Option<&Item>);
+}
+
+impl PacketWriteItems for PacketWriter {
+    fn write_equipment_ammo_part(&mut self, item: Option<&StackableItem>) {
+        if let Some(item) = item {
+            let part = PacketEquipmentAmmoPart::new()
+                .with_item_number(item.item.item_number as u16)
+                .with_item_type(item.item.item_type as u8);
+            for b in part.into_bytes().iter() {
+                self.write_u8(*b);
+            }
+        } else {
+            self.write_u16(0);
+        }
+    }
+
+    fn write_equipment_item_part(&mut self, item: Option<&EquipmentItem>) {
+        if let Some(item) = item {
+            let part = PacketEquipmentItemPart::new()
+                .with_item_number(item.item.item_number as u16)
+                .with_gem(item.gem)
+                .with_has_socket(item.has_socket)
+                .with_grade(item.grade);
+            for b in part.into_bytes().iter() {
+                self.write_u8(*b);
+            }
+            self.write_u8(0);
+        } else {
+            self.write_u32(0);
+        }
+    }
+
+    fn write_equipment_visible_part(&mut self, equipment: &Equipment) {
+        for index in &[
+            EquipmentIndex::Head,
+            EquipmentIndex::Body,
+            EquipmentIndex::Hands,
+            EquipmentIndex::Feet,
+            EquipmentIndex::Face,
+            EquipmentIndex::Back,
+            EquipmentIndex::WeaponRight,
+            EquipmentIndex::WeaponLeft,
+        ] {
+            self.write_equipment_item_part(equipment.get_equipment_item(*index));
+        }
+    }
+
+    fn write_equipment_item_full(&mut self, equipment: Option<&EquipmentItem>) {
+        match equipment {
+            Some(equipment) => {
+                let item = PacketEquipmentItemFull::new()
+                    .with_item_type(equipment.item.item_type as u8)
+                    .with_item_number(equipment.item.item_number as u16)
+                    .with_is_crafted(equipment.is_crafted)
+                    .with_gem(equipment.gem)
+                    .with_durability(equipment.durability)
+                    .with_life(equipment.life)
+                    .with_has_socket(equipment.has_socket)
+                    .with_is_appraised(equipment.is_appraised)
+                    .with_grade(equipment.grade);
+                self.write_bytes(&item.into_bytes());
+            }
+            _ => {
+                self.write_u16(0);
+                self.write_u32(0);
+            }
+        }
+    }
+
+    fn write_stackable_item_full(&mut self, stackable: Option<&StackableItem>) {
+        match stackable {
+            Some(stackable) => {
+                let item = PacketStackableItemFull::new()
+                    .with_item_type(stackable.item.item_type as u8)
+                    .with_item_number(stackable.item.item_number as u16)
+                    .with_quantity(stackable.quantity);
+                self.write_bytes(&item.into_bytes());
+            }
+            _ => {
+                self.write_u16(0);
+                self.write_u32(0);
+            }
+        }
+    }
+
+    fn write_item_full(&mut self, item: Option<&Item>) {
+        match item {
+            Some(Item::Equipment(equipment)) => {
+                self.write_equipment_item_full(Some(equipment));
+            }
+            Some(Item::Stackable(stackable)) => {
+                self.write_stackable_item_full(Some(stackable));
+            }
+            _ => {
+                self.write_u16(0);
+                self.write_u32(0);
+            }
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -66,164 +251,6 @@ impl From<&PacketConnectionReply> for Packet {
     }
 }
 
-#[bitfield]
-#[derive(Clone, Copy)]
-pub struct PacketEquipmentAmmoPart {
-    #[skip(getters)]
-    item_type: B5,
-    #[skip(getters)]
-    item_number: B10,
-    #[skip]
-    __: B1,
-}
-
-fn write_equipment_ammo_part(writer: &mut PacketWriter, item: Option<&StackableItem>) {
-    if let Some(item) = item {
-        let part = PacketEquipmentAmmoPart::new()
-            .with_item_number(item.item.item_number as u16)
-            .with_item_type(item.item.item_type as u8);
-        for b in part.into_bytes().iter() {
-            writer.write_u8(*b);
-        }
-    } else {
-        writer.write_u16(0);
-    }
-}
-
-#[bitfield]
-#[derive(Clone, Copy)]
-pub struct PacketEquipmentItemPart {
-    #[skip(getters)]
-    item_number: B10,
-    #[skip(getters)]
-    gem: B9,
-    #[skip(getters)]
-    has_socket: bool,
-    #[skip(getters)]
-    grade: B4,
-}
-
-fn write_equipment_item_part(writer: &mut PacketWriter, item: Option<&EquipmentItem>) {
-    if let Some(item) = item {
-        let part = PacketEquipmentItemPart::new()
-            .with_item_number(item.item.item_number as u16)
-            .with_gem(item.gem)
-            .with_has_socket(item.has_socket)
-            .with_grade(item.grade);
-        for b in part.into_bytes().iter() {
-            writer.write_u8(*b);
-        }
-        writer.write_u8(0);
-    } else {
-        writer.write_u32(0);
-    }
-}
-
-fn write_equipment_part_items(mut writer: &mut PacketWriter, equipment: &Equipment) {
-    for index in &[
-        EquipmentIndex::Head,
-        EquipmentIndex::Body,
-        EquipmentIndex::Hands,
-        EquipmentIndex::Feet,
-        EquipmentIndex::Face,
-        EquipmentIndex::Back,
-        EquipmentIndex::WeaponRight,
-        EquipmentIndex::WeaponLeft,
-    ] {
-        write_equipment_item_part(&mut writer, equipment.get_equipment_item(*index));
-    }
-}
-
-#[bitfield]
-#[derive(Clone, Copy)]
-pub struct PacketEquipmentItemFull {
-    #[skip(getters)]
-    item_type: B5,
-    #[skip(getters)]
-    item_number: B10,
-    #[skip(getters)]
-    is_crafted: bool,
-    #[skip(getters)]
-    gem: B9,
-    #[skip(getters)]
-    durability: B7,
-    #[skip(getters)]
-    life: B10,
-    #[skip(getters)]
-    has_socket: bool,
-    #[skip(getters)]
-    is_appraised: bool,
-    #[skip(getters)]
-    grade: B4,
-}
-
-fn write_equipment_item_full(writer: &mut PacketWriter, equipment: Option<&EquipmentItem>) {
-    match equipment {
-        Some(equipment) => {
-            let item = PacketEquipmentItemFull::new()
-                .with_item_type(equipment.item.item_type as u8)
-                .with_item_number(equipment.item.item_number as u16)
-                .with_is_crafted(equipment.is_crafted)
-                .with_gem(equipment.gem)
-                .with_durability(equipment.durability)
-                .with_life(equipment.life)
-                .with_has_socket(equipment.has_socket)
-                .with_is_appraised(equipment.is_appraised)
-                .with_grade(equipment.grade);
-            writer.write_bytes(&item.into_bytes());
-        }
-        _ => {
-            writer.write_u16(0);
-            writer.write_u32(0);
-        }
-    }
-}
-
-#[bitfield]
-#[allow(dead_code)]
-#[derive(Clone, Copy)]
-pub struct PacketStackableItemFull {
-    #[skip(getters)]
-    item_type: B5,
-    #[skip(getters)]
-    item_number: B10,
-    #[skip]
-    __: B1,
-    #[skip(getters)]
-    quantity: B32,
-}
-
-fn write_stackable_item_full(writer: &mut PacketWriter, stackable: Option<&StackableItem>) {
-    match stackable {
-        Some(stackable) => {
-            let item = PacketStackableItemFull::new()
-                .with_item_type(stackable.item.item_type as u8)
-                .with_item_number(stackable.item.item_number as u16)
-                .with_quantity(stackable.quantity);
-            writer.write_bytes(&item.into_bytes());
-        }
-        _ => {
-            writer.write_u16(0);
-            writer.write_u32(0);
-        }
-    }
-}
-
-fn write_item_full(writer: &mut PacketWriter, item: Option<&Item>) {
-    match item {
-        Some(Item::Equipment(equipment)) => {
-            write_equipment_item_full(writer, Some(equipment));
-        }
-        Some(Item::Stackable(stackable)) => {
-            write_stackable_item_full(writer, Some(stackable));
-        }
-        _ => {
-            writer.write_u16(0);
-            writer.write_u32(0);
-        }
-    }
-}
-
 pub struct PacketServerSelectCharacter<'a> {
     pub character_info: &'a CharacterInfo,
     pub position: &'a Position,
@@ -235,6 +262,8 @@ pub struct PacketServerSelectCharacter<'a> {
     pub hotbar: &'a Hotbar,
     pub health_points: &'a HealthPoints,
     pub mana_points: &'a ManaPoints,
+    pub stat_points: StatPoints,
+    pub skill_points: SkillPoints,
 }
 
 impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
@@ -249,7 +278,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
 
         writer.write_u32(character_info.face as u32);
         writer.write_u32(character_info.hair as u32);
-        write_equipment_part_items(&mut writer, &packet.equipment);
+        writer.write_equipment_visible_part(&packet.equipment);
 
         // tagBasicInfo
         writer.write_u8(character_info.birth_stone);
@@ -274,10 +303,10 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u16(packet.mana_points.mp as u16);
         writer.write_u32(packet.experience_points.xp as u32);
         writer.write_u16(packet.level.level as u16);
-        writer.write_u16(0); // Stat points
-        writer.write_u16(0); // Skill points
+        writer.write_u16(packet.stat_points.points as u16);
+        writer.write_u16(packet.skill_points.points as u16);
         writer.write_u8(100); // Body Size
-        writer.write_u8(100); // Head Size
+        writer.write_u8(200); // Head Size
         writer.write_u32(0); // Penalty XP
         writer.write_u16(0); // Fame G
         writer.write_u16(0); // Fame B
@@ -300,7 +329,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         assert!(packet.skill_list.pages.len() * packet.skill_list.pages[0].len() == 120);
         for page in &packet.skill_list.pages {
             for slot in page {
-                writer.write_u16(slot.map(|x| x.0).unwrap_or(0) as u16);
+                writer.write_u16(slot.map_or(0, |x| x.0) as u16);
             }
         }
 
@@ -331,31 +360,31 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
         writer.write_i64(inventory.money.0);
 
         for item in &equipment.equipped_items {
-            write_equipment_item_full(&mut writer, item.as_ref());
+            writer.write_equipment_item_full(item.as_ref());
         }
 
         for item in &inventory.equipment.slots {
-            write_item_full(&mut writer, item.as_ref());
+            writer.write_item_full(item.as_ref());
         }
 
         for item in &inventory.consumables.slots {
-            write_item_full(&mut writer, item.as_ref());
+            writer.write_item_full(item.as_ref());
         }
 
         for item in &inventory.materials.slots {
-            write_item_full(&mut writer, item.as_ref());
+            writer.write_item_full(item.as_ref());
         }
 
         for item in &inventory.vehicles.slots {
-            write_item_full(&mut writer, item.as_ref());
+            writer.write_item_full(item.as_ref());
         }
 
         for item in &equipment.equipped_ammo {
-            write_stackable_item_full(&mut writer, item.as_ref());
+            writer.write_stackable_item_full(item.as_ref());
         }
 
         for item in &equipment.equipped_vehicle {
-            write_equipment_item_full(&mut writer, item.as_ref());
+            writer.write_equipment_item_full(item.as_ref());
         }
 
         writer.into()
@@ -393,12 +422,12 @@ impl From<&PacketServerCharacterQuestData> for Packet {
             }
             writer.write_u32(0); // switches bitvec
             for _ in 0..6 {
-                write_item_full(&mut writer, None); // quest items
+                writer.write_item_full(None); // quest items
             }
         }
 
         for _ in 0..30 {
-            write_item_full(&mut writer, None); // wish list items
+            writer.write_item_full(None); // wish list items
         }
 
         writer.into()
@@ -406,8 +435,8 @@ impl From<&PacketServerCharacterQuestData> for Packet {
 }
 
 pub struct PacketServerAttackEntity {
-    pub entity_id: u16,
-    pub target_entity_id: u16,
+    pub entity_id: ClientEntityId,
+    pub target_entity_id: ClientEntityId,
     pub distance: u16,
     pub x: f32,
     pub y: f32,
@@ -417,8 +446,8 @@ pub struct PacketServerAttackEntity {
 impl From<&PacketServerAttackEntity> for Packet {
     fn from(packet: &PacketServerAttackEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::AttackEntity as u16);
-        writer.write_u16(packet.entity_id);
-        writer.write_u16(packet.target_entity_id);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_entity_id(packet.target_entity_id);
         writer.write_u16(packet.distance);
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
@@ -437,8 +466,8 @@ pub struct PacketServerDamage {
 }
 
 pub struct PacketServerDamageEntity {
-    pub attacker_entity_id: u16,
-    pub defender_entity_id: u16,
+    pub attacker_entity_id: ClientEntityId,
+    pub defender_entity_id: ClientEntityId,
     pub damage: Damage,
     pub is_killed: bool,
     // TODO: Optional item drop with damage
@@ -447,8 +476,8 @@ pub struct PacketServerDamageEntity {
 impl From<&PacketServerDamageEntity> for Packet {
     fn from(packet: &PacketServerDamageEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::DamageEntity as u16);
-        writer.write_u16(packet.attacker_entity_id);
-        writer.write_u16(packet.defender_entity_id);
+        writer.write_entity_id(packet.attacker_entity_id);
+        writer.write_entity_id(packet.defender_entity_id);
 
         let mut action = 0u8;
         if packet.damage.is_critical {
@@ -473,8 +502,8 @@ impl From<&PacketServerDamageEntity> for Packet {
 }
 
 pub struct PacketServerMoveEntity {
-    pub entity_id: u16,
-    pub target_entity_id: u16,
+    pub entity_id: ClientEntityId,
+    pub target_entity_id: Option<ClientEntityId>,
     pub distance: u16,
     pub x: f32,
     pub y: f32,
@@ -484,8 +513,8 @@ pub struct PacketServerMoveEntity {
 impl From<&PacketServerMoveEntity> for Packet {
     fn from(packet: &PacketServerMoveEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::MoveEntity as u16);
-        writer.write_u16(packet.entity_id);
-        writer.write_u16(packet.target_entity_id);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_option_entity_id(packet.target_entity_id);
         writer.write_u16(packet.distance);
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
@@ -495,7 +524,7 @@ impl From<&PacketServerMoveEntity> for Packet {
 }
 
 pub struct PacketServerJoinZone<'a> {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub level: &'a Level,
     pub experience_points: &'a ExperiencePoints,
     pub team: &'a Team,
@@ -506,7 +535,7 @@ pub struct PacketServerJoinZone<'a> {
 impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
     fn from(packet: &'a PacketServerJoinZone<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::JoinZone as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.health_points.hp as u16);
         writer.write_u16(packet.mana_points.mp as u16);
 
@@ -530,14 +559,14 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
 }
 
 pub struct PacketServerLocalChat<'a> {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub text: &'a str,
 }
 
 impl<'a> From<&'a PacketServerLocalChat<'a>> for Packet {
     fn from(packet: &'a PacketServerLocalChat<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::LocalChat as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_null_terminated_utf8(packet.text);
         writer.into()
     }
@@ -558,7 +587,7 @@ impl<'a> From<&'a PacketServerWhisper<'a>> for Packet {
 }
 
 pub struct PacketServerStopMoveEntity {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub x: f32,
     pub y: f32,
     pub z: u16,
@@ -567,7 +596,7 @@ pub struct PacketServerStopMoveEntity {
 impl From<&PacketServerStopMoveEntity> for Packet {
     fn from(packet: &PacketServerStopMoveEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::StopMoveEntity as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
         writer.write_u16(packet.z);
@@ -576,7 +605,7 @@ impl From<&PacketServerStopMoveEntity> for Packet {
 }
 
 pub struct PacketServerTeleport {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub zone_no: u16,
     pub x: f32,
     pub y: f32,
@@ -587,7 +616,7 @@ pub struct PacketServerTeleport {
 impl From<&PacketServerTeleport> for Packet {
     fn from(packet: &PacketServerTeleport) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::Teleport as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.zone_no);
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
@@ -612,28 +641,51 @@ impl From<&PacketServerSetHotbarSlot> for Packet {
     }
 }
 
+trait PacketWriteCommand {
+    fn write_command_id(&mut self, command: &Command);
+}
+
+impl PacketWriteCommand for PacketWriter {
+    fn write_command_id(&mut self, command: &Command) {
+        let command_id = match command.command {
+            CommandData::Stop => 0,
+            CommandData::Move(_) => 1,
+            CommandData::Attack(_) => 2,
+            CommandData::Die => 3,
+            // 4 = Pickup item
+            // 6 = Cast skill on self
+            // 7 = Skill on entity
+            // 8 = Skill on position
+            // 9 = Run away
+            // 10 = Sit
+            // 11 = Vending Shop
+        };
+        self.write_u16(command_id);
+    }
+}
+
 pub struct PacketServerSpawnEntityNpc<'a> {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub npc: &'a Npc,
     pub direction: &'a NpcStandingDirection,
     pub position: &'a Position,
     pub team: &'a Team,
     pub destination: Option<&'a Destination>,
     pub command: &'a Command,
-    pub target_entity_id: u16,
+    pub target_entity_id: Option<ClientEntityId>,
     pub health: &'a HealthPoints,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
     fn from(packet: &'a PacketServerSpawnEntityNpc<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityNpc as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        write_command_id(&mut writer, packet.command);
-        writer.write_u16(packet.target_entity_id);
+        writer.write_command_id(packet.command);
+        writer.write_option_entity_id(packet.target_entity_id);
         writer.write_u8(0); // move mode
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
@@ -647,26 +699,26 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
 }
 
 pub struct PacketServerSpawnEntityMonster<'a> {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub npc: &'a Npc,
     pub position: &'a Position,
     pub destination: Option<&'a Destination>,
     pub team: &'a Team,
     pub health: &'a HealthPoints,
     pub command: &'a Command,
-    pub target_entity_id: u16,
+    pub target_entity_id: Option<ClientEntityId>,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
     fn from(packet: &'a PacketServerSpawnEntityMonster<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityMonster as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        write_command_id(&mut writer, packet.command);
-        writer.write_u16(packet.target_entity_id);
+        writer.write_command_id(packet.command);
+        writer.write_option_entity_id(packet.target_entity_id);
         writer.write_u8(0); // move mode
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
@@ -678,7 +730,7 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
 }
 
 pub struct PacketServerSpawnEntityCharacter<'a> {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub character_info: &'a CharacterInfo,
     pub position: &'a Position,
     pub destination: Option<&'a Destination>,
@@ -688,36 +740,19 @@ pub struct PacketServerSpawnEntityCharacter<'a> {
     pub level: &'a Level,
     pub ability_values: &'a AbilityValues,
     pub command: &'a Command,
-    pub target_entity_id: u16,
-}
-
-fn write_command_id(writer: &mut PacketWriter, command: &Command) {
-    let command_id = match command.command {
-        CommandData::Stop => 0,
-        CommandData::Move(_) => 1,
-        CommandData::Attack(_) => 2,
-        CommandData::Die => 3,
-        // 4 = Pickup item
-        // 6 = Cast skill on self
-        // 7 = Skill on entity
-        // 8 = Skill on position
-        // 9 = Run away
-        // 10 = Sit
-        // 11 = Vending Shop
-    };
-    writer.write_u16(command_id);
+    pub target_entity_id: Option<ClientEntityId>,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
     fn from(packet: &'a PacketServerSpawnEntityCharacter<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityCharacter as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        write_command_id(&mut writer, packet.command);
-        writer.write_u16(packet.target_entity_id);
+        writer.write_command_id(packet.command);
+        writer.write_option_entity_id(packet.target_entity_id);
         writer.write_u8(0); // move mode
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
@@ -729,10 +764,10 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
 
         writer.write_u32(packet.character_info.face as u32);
         writer.write_u32(packet.character_info.hair as u32);
-        write_equipment_part_items(&mut writer, &packet.equipment);
+        writer.write_equipment_visible_part(&packet.equipment);
 
         for index in &[AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
-            write_equipment_ammo_part(&mut writer, packet.equipment.get_ammo_item(*index));
+            writer.write_equipment_ammo_part(packet.equipment.get_ammo_item(*index));
         }
 
         writer.write_u16(packet.character_info.job as u16);
@@ -745,7 +780,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
             VehiclePartIndex::Ability,
             VehiclePartIndex::Arms,
         ] {
-            write_equipment_item_part(&mut writer, packet.equipment.get_vehicle_item(*index));
+            writer.write_equipment_item_part(packet.equipment.get_vehicle_item(*index));
         }
 
         writer.write_u16(packet.position.position.z as u16); // z
@@ -759,14 +794,14 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
 }
 
 pub struct PacketServerRemoveEntities<'a> {
-    pub entity_ids: &'a [u16],
+    pub entity_ids: &'a [ClientEntityId],
 }
 
 impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
     fn from(packet: &'a PacketServerRemoveEntities<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::RemoveEntities as u16);
         for entity_id in packet.entity_ids {
-            writer.write_u16(*entity_id);
+            writer.write_entity_id(*entity_id);
         }
         writer.into()
     }
@@ -794,14 +829,14 @@ impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
         writer.write_u8(packet.items.len() as u8);
         for (slot, item) in packet.items {
             writer.write_u8(item_slot_to_index(slot) as u8);
-            write_item_full(&mut writer, item.as_ref());
+            writer.write_item_full(item.as_ref());
         }
         writer.into()
     }
 }
 
 pub struct PacketServerUpdateEquipment {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub equipment_index: EquipmentIndex,
     pub item: Option<EquipmentItem>,
     pub run_speed: Option<u16>,
@@ -810,9 +845,9 @@ pub struct PacketServerUpdateEquipment {
 impl From<&PacketServerUpdateEquipment> for Packet {
     fn from(packet: &PacketServerUpdateEquipment) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
-        writer.write_u16(packet.entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.equipment_index as u16);
-        write_equipment_item_part(&mut writer, packet.item.as_ref());
+        writer.write_equipment_item_part(packet.item.as_ref());
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed);
         }
@@ -820,10 +855,30 @@ impl From<&PacketServerUpdateEquipment> for Packet {
     }
 }
 
+pub struct PacketServerUpdateLevel {
+    pub entity_id: ClientEntityId,
+    pub level: Level,
+    pub experience_points: ExperiencePoints,
+    pub stat_points: StatPoints,
+    pub skill_points: SkillPoints,
+}
+
+impl From<&PacketServerUpdateLevel> for Packet {
+    fn from(packet: &PacketServerUpdateLevel) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateLevel as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.level.level as u16);
+        writer.write_u32(packet.experience_points.xp as u32);
+        writer.write_u16(packet.stat_points.points as u16);
+        writer.write_u16(packet.skill_points.points as u16);
+        writer.into()
+    }
+}
+
 pub struct PacketServerUpdateXpStamina {
     pub xp: u64,
     pub stamina: u32,
-    pub source_entity_id: Option<u16>,
+    pub source_entity_id: Option<ClientEntityId>,
 }
 
 impl From<&PacketServerUpdateXpStamina> for Packet {
@@ -831,7 +886,7 @@ impl From<&PacketServerUpdateXpStamina> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::UpdateXpStamina as u16);
         writer.write_u32(packet.xp as u32);
         writer.write_u16(packet.stamina as u16);
-        writer.write_u16(packet.source_entity_id.unwrap_or(0));
+        writer.write_option_entity_id(packet.source_entity_id);
         writer.into()
     }
 }

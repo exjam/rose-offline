@@ -41,7 +41,7 @@ pub use basic_stats::*;
 pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::*;
 pub use character_list::CharacterList;
-pub use client_entity::{ClientEntity, ClientEntityType};
+pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_visibility::ClientEntityVisibility;
 pub use command::{Command, CommandAttack, CommandData, CommandMove, NextCommand};
 pub use damage_sources::{DamageSource, DamageSources};

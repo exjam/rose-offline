@@ -63,6 +63,10 @@ pub trait AbilityValueCalculator {
         defender_reward_xp: i32,
         world_xp_rate: i32,
     ) -> i32;
+
+    fn calculate_levelup_require_xp(&self, level: u32) -> u64;
+    fn calculate_levelup_reward_skill_points(&self, level: u32) -> u32;
+    fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32;
 }
 
 pub use ai_database::AiDatabase;

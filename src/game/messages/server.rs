@@ -4,21 +4,21 @@ use crate::{
         Damage,
     },
     game::components::{
-        Command, Destination, EquipmentIndex, HealthPoints, ItemSlot, Npc, NpcStandingDirection,
-        Position, Team,
+        ClientEntityId, Command, Destination, EquipmentIndex, ExperiencePoints, HealthPoints,
+        ItemSlot, Level, Npc, NpcStandingDirection, Position, SkillPoints, StatPoints, Team,
     },
 };
 
 #[derive(Clone)]
 pub struct LocalChat {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub text: String,
 }
 
 #[derive(Clone)]
 pub struct AttackEntity {
-    pub entity_id: u16,
-    pub target_entity_id: u16,
+    pub entity_id: ClientEntityId,
+    pub target_entity_id: ClientEntityId,
     pub distance: u16,
     pub x: f32,
     pub y: f32,
@@ -27,8 +27,8 @@ pub struct AttackEntity {
 
 #[derive(Clone)]
 pub struct MoveEntity {
-    pub entity_id: u16,
-    pub target_entity_id: u16,
+    pub entity_id: ClientEntityId,
+    pub target_entity_id: Option<ClientEntityId>,
     pub distance: u16,
     pub x: f32,
     pub y: f32,
@@ -37,11 +37,11 @@ pub struct MoveEntity {
 
 #[derive(Clone)]
 pub struct RemoveEntities {
-    pub entity_ids: Vec<u16>,
+    pub entity_ids: Vec<ClientEntityId>,
 }
 
-impl From<u16> for RemoveEntities {
-    fn from(entity_id: u16) -> Self {
+impl From<ClientEntityId> for RemoveEntities {
+    fn from(entity_id: ClientEntityId) -> Self {
         Self {
             entity_ids: vec![entity_id],
         }
@@ -49,14 +49,14 @@ impl From<u16> for RemoveEntities {
 }
 
 impl RemoveEntities {
-    pub fn new(entity_ids: Vec<u16>) -> Self {
+    pub fn new(entity_ids: Vec<ClientEntityId>) -> Self {
         Self { entity_ids }
     }
 }
 
 #[derive(Clone)]
 pub struct SpawnEntityNpc {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub npc: Npc,
     pub direction: NpcStandingDirection,
     pub position: Position,
@@ -64,24 +64,24 @@ pub struct SpawnEntityNpc {
     pub health: HealthPoints,
     pub destination: Option<Destination>,
     pub command: Command,
-    pub target_entity_id: u16,
+    pub target_entity_id: Option<ClientEntityId>,
 }
 
 #[derive(Clone)]
 pub struct SpawnEntityMonster {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub npc: Npc,
     pub position: Position,
     pub team: Team,
     pub health: HealthPoints,
     pub destination: Option<Destination>,
     pub command: Command,
-    pub target_entity_id: u16,
+    pub target_entity_id: Option<ClientEntityId>,
 }
 
 #[derive(Clone)]
 pub struct StopMoveEntity {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub x: f32,
     pub y: f32,
     pub z: u16,
@@ -89,8 +89,8 @@ pub struct StopMoveEntity {
 
 #[derive(Clone)]
 pub struct DamageEntity {
-    pub attacker_entity_id: u16,
-    pub defender_entity_id: u16,
+    pub attacker_entity_id: ClientEntityId,
+    pub defender_entity_id: ClientEntityId,
     pub damage: Damage,
     pub is_killed: bool,
 }
@@ -103,7 +103,7 @@ pub struct Whisper {
 
 #[derive(Clone)]
 pub struct Teleport {
-    pub entity_id: u16,
+    pub entity_id: ClientEntityId,
     pub zone_no: u16,
     pub x: f32,
     pub y: f32,
@@ -112,22 +112,31 @@ pub struct Teleport {
 }
 
 #[derive(Clone)]
+pub struct UpdateEquipment {
+    pub entity_id: ClientEntityId,
+    pub equipment_index: EquipmentIndex,
+    pub item: Option<EquipmentItem>,
+}
+
+#[derive(Clone)]
 pub struct UpdateInventory {
     pub items: Vec<(ItemSlot, Option<Item>)>,
 }
 
 #[derive(Clone)]
-pub struct UpdateEquipment {
-    pub entity_id: u16,
-    pub equipment_index: EquipmentIndex,
-    pub item: Option<EquipmentItem>,
+pub struct UpdateLevel {
+    pub entity_id: ClientEntityId,
+    pub level: Level,
+    pub experience_points: ExperiencePoints,
+    pub stat_points: StatPoints,
+    pub skill_points: SkillPoints,
 }
 
 #[derive(Clone)]
 pub struct UpdateXpStamina {
     pub xp: u64,
     pub stamina: u32,
-    pub source_entity_id: Option<u16>,
+    pub source_entity_id: Option<ClientEntityId>,
 }
 
 #[derive(Clone)]
@@ -142,7 +151,8 @@ pub enum ServerMessage {
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
     Whisper(Whisper),
-    UpdateInventory(UpdateInventory),
     UpdateEquipment(UpdateEquipment),
+    UpdateInventory(UpdateInventory),
+    UpdateLevel(UpdateLevel),
     UpdateXpStamina(UpdateXpStamina),
 }

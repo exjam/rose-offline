@@ -4,13 +4,10 @@ use std::collections::{HashMap, HashSet};
 
 use crate::{
     data::{ZoneData, ZoneDatabase},
-    game::components::{ClientEntity, ClientEntityType},
+    game::components::{ClientEntity, ClientEntityId, ClientEntityType},
 };
 
 const MAX_CLIENT_ENTITY_ID: usize = 4096;
-
-#[derive(Clone, Copy)]
-pub struct ClientEntityId(pub u16);
 
 #[derive(Clone, Default)]
 pub struct ClientEntitySector {
@@ -145,7 +142,7 @@ impl ClientEntityZone {
         position: Point3<f32>,
     ) -> Option<ClientEntity> {
         if let Some(last_free_entity_index) = self.last_free_entity_index {
-            let id = ClientEntityId(last_free_entity_index as u16);
+            let id = ClientEntityId(last_free_entity_index);
             self.entity_list_by_id[last_free_entity_index] = Some(entity);
             self.last_free_entity_index = self
                 .entity_list_by_id

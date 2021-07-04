@@ -148,7 +148,7 @@ pub fn game_server_join(
                         message
                             .response_tx
                             .send(JoinZoneResponse {
-                                entity_id: entity_id.0,
+                                entity_id,
                                 level: level.clone(),
                                 experience_points: experience_points.clone(),
                                 team: team.clone(),
@@ -291,7 +291,7 @@ fn handle_gm_command(
             client
                 .server_message_tx
                 .send(ServerMessage::Teleport(server::Teleport {
-                    entity_id: entity_id.id.0,
+                    entity_id: entity_id.id,
                     zone_no: zone,
                     x,
                     y,
@@ -344,7 +344,7 @@ pub fn game_server_main(
                     server_messages.send_entity_message(
                         *entity,
                         ServerMessage::LocalChat(server::LocalChat {
-                            entity_id: entity_id.id.0,
+                            entity_id: entity_id.id,
                             text,
                         }),
                     );
@@ -352,10 +352,10 @@ pub fn game_server_main(
             }
             ClientMessage::Move(message) => {
                 let mut move_target_entity = None;
-                if message.target_entity_id > 0 {
+                if let Some(target_entity_id) = message.target_entity_id {
                     if let Some(target_entity) = client_entity_list
                         .get_zone(position.zone as usize)
-                        .and_then(|zone| zone.get_entity(ClientEntityId(message.target_entity_id)))
+                        .and_then(|zone| zone.get_entity(target_entity_id))
                     {
                         move_target_entity = Some(target_entity);
                     }
@@ -370,7 +370,7 @@ pub fn game_server_main(
             ClientMessage::Attack(message) => {
                 if let Some(target_entity) = client_entity_list
                     .get_zone(position.zone as usize)
-                    .and_then(|zone| zone.get_entity(ClientEntityId(message.target_entity_id)))
+                    .and_then(|zone| zone.get_entity(message.target_entity_id))
                 {
                     cmd.add_component(*entity, NextCommand::with_attack(target_entity));
                 } else {
@@ -423,7 +423,7 @@ pub fn game_server_main(
                             server_messages.send_entity_message(
                                 *entity,
                                 ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                    entity_id: entity_id.id.0,
+                                    entity_id: entity_id.id,
                                     equipment_index,
                                     item: equipment_slot.clone(),
                                 }),
@@ -452,7 +452,7 @@ pub fn game_server_main(
                                 server_messages.send_entity_message(
                                     *entity,
                                     ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                        entity_id: entity_id.id.0,
+                                        entity_id: entity_id.id,
                                         equipment_index,
                                         item: equipment_slot.clone(),
                                     }),
@@ -523,7 +523,7 @@ pub fn game_server_disconnect_handler(
         client_entity_list
             .get_zone_mut(position.zone as usize)
             .unwrap()
-            .free(ClientEntityId(client_entity.id.0));
+            .free(client_entity.id);
     }
 
     cmd.remove(*entity);

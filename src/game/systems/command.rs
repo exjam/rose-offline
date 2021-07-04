@@ -25,7 +25,7 @@ fn set_command_stop(
     server_messages.send_entity_message(
         *entity,
         ServerMessage::StopMoveEntity(server::StopMoveEntity {
-            entity_id: entity_id.id.0,
+            entity_id: entity_id.id,
             x: position.position.x,
             y: position.position.y,
             z: position.position.z as u16,
@@ -101,7 +101,7 @@ pub fn command(
                         destination,
                         target,
                     }) => {
-                        let mut target_entity_id = 0;
+                        let mut target_entity_id = None;
                         if let Some(target_entity) = target {
                             if let Some((target_client_entity, target_position)) =
                                 is_valid_move_target(
@@ -112,7 +112,7 @@ pub fn command(
                                 )
                             {
                                 *destination = target_position.position;
-                                target_entity_id = target_client_entity.id.0;
+                                target_entity_id = Some(target_client_entity.id);
                             } else {
                                 *target = None;
                             }
@@ -122,7 +122,7 @@ pub fn command(
                         server_messages.send_entity_message(
                             *entity,
                             ServerMessage::MoveEntity(server::MoveEntity {
-                                entity_id: client_entity.id.0,
+                                entity_id: client_entity.id,
                                 target_entity_id,
                                 distance: distance as u16,
                                 x: destination.x,
@@ -148,8 +148,8 @@ pub fn command(
                             server_messages.send_entity_message(
                                 *entity,
                                 ServerMessage::AttackEntity(server::AttackEntity {
-                                    entity_id: client_entity.id.0,
-                                    target_entity_id: target_client_entity.id.0,
+                                    entity_id: client_entity.id,
+                                    target_entity_id: target_client_entity.id,
                                     distance: distance as u16,
                                     x: target_position.position.x,
                                     y: target_position.position.y,

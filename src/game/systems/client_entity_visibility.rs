@@ -78,7 +78,7 @@ pub fn client_entity_visibility(
                                         .get(&entity_id_query_world, *remove_entity)
                                         .ok()
                                 })
-                                .map(|remove_client_entity| remove_client_entity.id.0)
+                                .map(|remove_client_entity| remove_client_entity.id)
                                 .collect(),
                         )))
                         .ok();
@@ -107,14 +107,14 @@ pub fn client_entity_visibility(
                                         .server_message_tx
                                         .send(ServerMessage::SpawnEntityMonster(
                                             SpawnEntityMonster {
-                                                entity_id: spawn_client_entity.id.0,
+                                                entity_id: spawn_client_entity.id,
                                                 npc: spawn_npc.clone(),
                                                 position: spawn_position.clone(),
                                                 team: spawn_team.clone(),
                                                 health: spawn_health.clone(),
                                                 destination: spawn_destination.cloned(),
                                                 command: spawn_command.clone(),
-                                                target_entity_id: 0, // TODO: Target entity id !
+                                                target_entity_id: None, // TODO: Target entity id !
                                             },
                                         ))
                                         .ok();
@@ -134,7 +134,7 @@ pub fn client_entity_visibility(
                                     client
                                         .server_message_tx
                                         .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
-                                            entity_id: spawn_client_entity.id.0,
+                                            entity_id: spawn_client_entity.id,
                                             npc: spawn_npc.clone(),
                                             direction: spawn_direction.clone(),
                                             position: spawn_position.clone(),
@@ -142,7 +142,7 @@ pub fn client_entity_visibility(
                                             health: spawn_health.clone(),
                                             destination: spawn_destination.cloned(),
                                             command: spawn_command.clone(),
-                                            target_entity_id: 0, // TODO: Target entity id !
+                                            target_entity_id: None, // TODO: Target entity id !
                                         }))
                                         .ok();
                                 }

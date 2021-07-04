@@ -5,14 +5,10 @@ mod game;
 mod irose;
 mod protocol;
 
-use std::{path::Path, sync::Arc, time::Instant};
+use std::time::Instant;
 use tokio::net::TcpListener;
 
-use crate::{
-    data::formats::VfsIndex,
-    game::GameData,
-    protocol::server::{GameServer, LoginServer, WorldServer},
-};
+use crate::protocol::server::{GameServer, LoginServer, WorldServer};
 
 #[tokio::main]
 async fn main() {

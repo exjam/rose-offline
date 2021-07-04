@@ -28,7 +28,7 @@ pub fn apply_damage(
     for pending_damage in pending_damage_list.iter() {
         let attacker_entity_id = attacker_query
             .get(world, pending_damage.attacker)
-            .map(|client_entity| Some(client_entity.id.0))
+            .map(|client_entity| Some(client_entity.id))
             .unwrap_or(None);
 
         if let Ok((client_entity, position, health_points, damage_sources, npc_ai)) =
@@ -52,7 +52,7 @@ pub fn apply_damage(
                     position.zone,
                     ServerMessage::DamageEntity(DamageEntity {
                         attacker_entity_id,
-                        defender_entity_id: client_entity.id.0,
+                        defender_entity_id: client_entity.id,
                         damage: pending_damage.damage,
                         is_killed: health_points.hp == 0,
                     }),

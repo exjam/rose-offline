@@ -5,7 +5,8 @@ use num_traits::FromPrimitive;
 
 use crate::{
     game::components::{
-        EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, INVENTORY_PAGE_SIZE,
+        ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
+        INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };
@@ -72,7 +73,7 @@ impl TryFrom<&Packet> for PacketClientJoinZone {
 
 #[derive(Debug)]
 pub struct PacketClientMove {
-    pub target_entity_id: u16,
+    pub target_entity_id: Option<ClientEntityId>,
     pub x: f32,
     pub y: f32,
     pub z: u16,
@@ -92,7 +93,11 @@ impl TryFrom<&Packet> for PacketClientMove {
         let y = reader.read_f32()?;
         let z = reader.read_u16()?;
         Ok(PacketClientMove {
-            target_entity_id,
+            target_entity_id: if target_entity_id == 0 {
+                None
+            } else {
+                Some(ClientEntityId(target_entity_id as usize))
+            },
             x,
             y,
             z,
@@ -102,7 +107,7 @@ impl TryFrom<&Packet> for PacketClientMove {
 
 #[derive(Debug)]
 pub struct PacketClientAttack {
-    pub target_entity_id: u16,
+    pub target_entity_id: ClientEntityId,
 }
 
 impl TryFrom<&Packet> for PacketClientAttack {
@@ -114,7 +119,7 @@ impl TryFrom<&Packet> for PacketClientAttack {
         }
 
         let mut reader = PacketReader::from(packet);
-        let target_entity_id = reader.read_u16()?;
+        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
         Ok(PacketClientAttack { target_entity_id })
     }
 }

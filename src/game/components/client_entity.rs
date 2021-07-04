@@ -1,4 +1,3 @@
-use crate::game::resources::ClientEntityId;
 use nalgebra::Point2;
 
 pub enum ClientEntityType {
@@ -7,6 +6,9 @@ pub enum ClientEntityType {
     Npc,
     // TODO: Dropped Item
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct ClientEntityId(pub usize);
 
 pub struct ClientEntity {
     pub id: ClientEntityId,

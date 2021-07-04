@@ -9,7 +9,7 @@ mod server_list;
 mod server_messages;
 mod world_rates;
 
-pub use client_entity_list::{ClientEntityId, ClientEntityList};
+pub use client_entity_list::ClientEntityList;
 pub use control_channel::ControlChannel;
 pub use delta_time::DeltaTime;
 pub use game_data::GameData;
