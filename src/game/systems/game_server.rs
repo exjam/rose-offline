@@ -6,17 +6,18 @@ use crate::{
     data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
         components::{
-            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType,
-            ClientEntityVisibility, Command, Equipment, EquipmentIndex, EquipmentItemDatabase,
-            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
-            ManaPoints, MoveSpeed, NextCommand, Position, SkillList, SkillPoints, StatPoints, Team,
+            AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
+            ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
+            EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
+            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, SkillList, SkillPoints,
+            StatPoints, Team,
         },
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
                 JoinZoneResponse, SetHotbarSlot, SetHotbarSlotError,
             },
-            server::{self, ServerMessage, UpdateInventory, Whisper},
+            server::{self, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
         },
         resources::{ClientEntityList, GameData, LoginTokens, ServerMessages},
     },
@@ -320,12 +321,15 @@ pub fn game_server_main(
     client: &mut GameClient,
     entity_id: &ClientEntity,
     position: &Position,
+    basic_stats: &mut BasicStats,
+    stat_points: &mut StatPoints,
     hotbar: &mut Hotbar,
     equipment: &mut Equipment,
     inventory: &mut Inventory,
     ability_values: &AbilityValues,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] server_messages: &mut ServerMessages,
+    #[resource] game_data: &GameData,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
@@ -466,6 +470,34 @@ pub fn game_server_main(
                                 *equipment_slot = Some(item);
                             }
                         }
+                    }
+                }
+            }
+            ClientMessage::IncreaseBasicStat(basic_stat_type) => {
+                if let Some(cost) = game_data
+                    .ability_value_calculator
+                    .calculate_basic_stat_increase_cost(basic_stats, basic_stat_type)
+                {
+                    if cost < stat_points.points {
+                        let value = match basic_stat_type {
+                            BasicStatType::Strength => &mut basic_stats.strength,
+                            BasicStatType::Dexterity => &mut basic_stats.dexterity,
+                            BasicStatType::Intelligence => &mut basic_stats.intelligence,
+                            BasicStatType::Concentration => &mut basic_stats.concentration,
+                            BasicStatType::Charm => &mut basic_stats.charm,
+                            BasicStatType::Sense => &mut basic_stats.sense,
+                        };
+
+                        stat_points.points -= cost;
+                        *value += 1;
+
+                        client
+                            .server_message_tx
+                            .send(ServerMessage::UpdateBasicStat(UpdateBasicStat {
+                                basic_stat_type,
+                                value: *value,
+                            }))
+                            .ok();
                     }
                 }
             }

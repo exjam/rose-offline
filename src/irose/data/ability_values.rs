@@ -9,10 +9,12 @@ use crate::{
         SkillReference,
     },
     game::components::{
-        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, DamageCategory, DamageType, Equipment,
-        EquipmentIndex, EquipmentItemDatabase, Inventory, Level, SkillList,
+        AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
+        DamageType, Equipment, EquipmentIndex, EquipmentItemDatabase, Inventory, Level, SkillList,
     },
 };
+
+const MAX_BASIC_STAT_VALUE: u16 = 300;
 
 pub struct AbilityValuesData {
     item_database: Arc<ItemDatabase>,
@@ -292,6 +294,27 @@ impl AbilityValueCalculator for AbilityValuesData {
                 / (level_difference + 3) as f32
                 / 60.0
         }) as i32
+    }
+
+    fn calculate_basic_stat_increase_cost(
+        &self,
+        basic_stats: &BasicStats,
+        basic_stat_type: BasicStatType,
+    ) -> Option<u32> {
+        let current = match basic_stat_type {
+            BasicStatType::Strength => basic_stats.strength,
+            BasicStatType::Dexterity => basic_stats.dexterity,
+            BasicStatType::Intelligence => basic_stats.intelligence,
+            BasicStatType::Concentration => basic_stats.concentration,
+            BasicStatType::Charm => basic_stats.charm,
+            BasicStatType::Sense => basic_stats.sense,
+        };
+
+        if current > MAX_BASIC_STAT_VALUE {
+            None
+        } else {
+            Some((current as f32 * 0.2) as u32)
+        }
     }
 
     fn calculate_levelup_require_xp(&self, level: u32) -> u64 {

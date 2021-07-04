@@ -5,7 +5,7 @@ use num_traits::FromPrimitive;
 
 use crate::{
     game::components::{
-        ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
+        BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
         INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketReader, ProtocolError},
@@ -23,6 +23,7 @@ pub enum ClientPackets {
     Move = 0x79a,
     DropItem = 0x7a4,
     ChangeEquipment = 0x7a5,
+    IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
 }
 
@@ -204,5 +205,31 @@ impl TryFrom<&Packet> for PacketClientChangeEquipment {
             equipment_index,
             item_slot: item_slot_from_index(inventory_index),
         })
+    }
+}
+
+pub struct PacketClientIncreaseBasicStat {
+    pub basic_stat_type: BasicStatType,
+}
+
+impl TryFrom<&Packet> for PacketClientIncreaseBasicStat {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::IncreaseBasicStat as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let basic_stat_type = match reader.read_u8()? {
+            0 => BasicStatType::Strength,
+            1 => BasicStatType::Dexterity,
+            2 => BasicStatType::Intelligence,
+            3 => BasicStatType::Concentration,
+            4 => BasicStatType::Charm,
+            5 => BasicStatType::Sense,
+            _ => return Err(ProtocolError::InvalidPacket),
+        };
+        Ok(PacketClientIncreaseBasicStat { basic_stat_type })
     }
 }

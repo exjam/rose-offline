@@ -10,7 +10,7 @@ use crate::game::messages::{
     },
     server::{
         LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc,
-        UpdateEquipment, UpdateInventory, UpdateLevel, UpdateXpStamina, Whisper,
+        UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel, UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -177,6 +177,13 @@ impl GameClient {
                         equipment_index,
                         item_slot,
                     }))?;
+            }
+            Some(ClientPackets::IncreaseBasicStat) => {
+                let PacketClientIncreaseBasicStat { basic_stat_type } =
+                    PacketClientIncreaseBasicStat::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::IncreaseBasicStat(basic_stat_type))?;
             }
             _ => println!("Unhandled packet 0x{:#03X}", packet.command),
         }
@@ -376,6 +383,18 @@ impl GameClient {
                         xp,
                         stamina,
                         source_entity_id,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UpdateBasicStat(UpdateBasicStat {
+                basic_stat_type,
+                value,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateBasicStat {
+                        basic_stat_type,
+                        value,
                     }))
                     .await?;
             }

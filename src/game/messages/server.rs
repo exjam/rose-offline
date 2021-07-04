@@ -4,8 +4,9 @@ use crate::{
         Damage,
     },
     game::components::{
-        ClientEntityId, Command, Destination, EquipmentIndex, ExperiencePoints, HealthPoints,
-        ItemSlot, Level, Npc, NpcStandingDirection, Position, SkillPoints, StatPoints, Team,
+        BasicStatType, ClientEntityId, Command, Destination, EquipmentIndex, ExperiencePoints,
+        HealthPoints, ItemSlot, Level, Npc, NpcStandingDirection, Position, SkillPoints,
+        StatPoints, Team,
     },
 };
 
@@ -112,6 +113,12 @@ pub struct Teleport {
 }
 
 #[derive(Clone)]
+pub struct UpdateBasicStat {
+    pub basic_stat_type: BasicStatType,
+    pub value: u16,
+}
+
+#[derive(Clone)]
 pub struct UpdateEquipment {
     pub entity_id: ClientEntityId,
     pub equipment_index: EquipmentIndex,
@@ -151,6 +158,7 @@ pub enum ServerMessage {
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
     Whisper(Whisper),
+    UpdateBasicStat(UpdateBasicStat),
     UpdateEquipment(UpdateEquipment),
     UpdateInventory(UpdateInventory),
     UpdateLevel(UpdateLevel),

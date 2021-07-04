@@ -8,10 +8,11 @@ use crate::{
         Damage,
     },
     game::components::{
-        AbilityValues, AmmoIndex, BasicStats, CharacterInfo, ClientEntityId, Command, CommandData,
-        Destination, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-        Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc, NpcStandingDirection,
-        Position, SkillList, SkillPoints, StatPoints, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+        AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId,
+        Command, CommandData, Destination, Equipment, EquipmentIndex, ExperiencePoints,
+        HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
+        ManaPoints, Npc, NpcStandingDirection, Position, SkillList, SkillPoints, StatPoints, Team,
+        VehiclePartIndex, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -34,6 +35,7 @@ pub enum ServerPackets {
     AttackEntity = 0x798,
     DamageEntity = 0x799,
     MoveEntity = 0x79a,
+    UpdateBasicStat = 0x7a9,
     UpdateXpStamina = 0x79b,
     UpdateLevel = 0x79e,
     UpdateEquipment = 0x7a5,
@@ -887,6 +889,28 @@ impl From<&PacketServerUpdateXpStamina> for Packet {
         writer.write_u32(packet.xp as u32);
         writer.write_u16(packet.stamina as u16);
         writer.write_option_entity_id(packet.source_entity_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateBasicStat {
+    pub basic_stat_type: BasicStatType,
+    pub value: u16,
+}
+
+impl From<&PacketServerUpdateBasicStat> for Packet {
+    fn from(packet: &PacketServerUpdateBasicStat) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateBasicStat as u16);
+        let id = match packet.basic_stat_type {
+            BasicStatType::Strength => 0,
+            BasicStatType::Dexterity => 1,
+            BasicStatType::Intelligence => 2,
+            BasicStatType::Concentration => 3,
+            BasicStatType::Charm => 4,
+            BasicStatType::Sense => 5,
+        };
+        writer.write_u8(id);
+        writer.write_u16(packet.value);
         writer.into()
     }
 }

@@ -1,5 +1,15 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Copy, Clone)]
+pub enum BasicStatType {
+    Strength,
+    Dexterity,
+    Intelligence,
+    Concentration,
+    Charm,
+    Sense,
+}
+
 #[derive(Clone, Deserialize, Serialize)]
 pub struct BasicStats {
     pub strength: u16,

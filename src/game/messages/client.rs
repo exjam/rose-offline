@@ -2,9 +2,9 @@ use tokio::sync::oneshot;
 
 use crate::data::character::CharacterStorage;
 use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment, EquipmentIndex,
-    ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
-    Position, SkillList, SkillPoints, StatPoints, Team,
+    BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
+    EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
+    ManaPoints, Position, SkillList, SkillPoints, StatPoints, Team,
 };
 
 pub enum ConnectionRequestError {
@@ -205,4 +205,5 @@ pub enum ClientMessage {
     Attack(Attack),
     SetHotbarSlot(SetHotbarSlot),
     ChangeEquipment(ChangeEquipment),
+    IncreaseBasicStat(BasicStatType),
 }
