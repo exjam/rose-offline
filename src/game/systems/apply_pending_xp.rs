@@ -1,7 +1,10 @@
 use legion::{system, world::SubWorld, Entity, Query};
 
 use crate::game::{
-    components::{ClientEntity, ExperiencePoints, GameClient, Level, SkillPoints, StatPoints},
+    components::{
+        AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
+        GameClient, HealthPoints, Inventory, Level, ManaPoints, SkillList, SkillPoints, StatPoints,
+    },
     messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
     resources::{PendingXpList, ServerMessages},
     GameData,
@@ -16,15 +19,26 @@ pub fn apply_pending_xp(
         &ClientEntity,
         &mut Level,
         &mut ExperiencePoints,
-        Option<&mut SkillPoints>,
-        Option<&mut StatPoints>,
+        &mut SkillPoints,
+        &mut StatPoints,
         Option<&GameClient>,
+    )>,
+    ability_values_query: &mut Query<(
+        &mut AbilityValues,
+        &mut HealthPoints,
+        &mut ManaPoints,
+        &CharacterInfo,
+        &Equipment,
+        &Inventory,
+        &BasicStats,
+        &SkillList,
     )>,
     source_entity_query: &mut Query<&ClientEntity>,
     #[resource] game_data: &GameData,
     #[resource] pending_xp_list: &mut PendingXpList,
     #[resource] server_messages: &mut ServerMessages,
 ) {
+    let (mut ability_values_query_world, mut world) = world.split_for_query(ability_values_query);
     let (source_entity_query_world, world) = world.split_for_query(source_entity_query);
     let mut entity_query_world = world;
 
@@ -54,37 +68,54 @@ pub fn apply_pending_xp(
                     break;
                 }
 
-                experience_points.xp -= need_xp;
                 level.level += 1;
+                experience_points.xp -= need_xp;
 
-                if let Some(&mut ref mut skill_points) = skill_points {
-                    (*skill_points).points += game_data
-                        .ability_value_calculator
-                        .calculate_levelup_reward_skill_points(level.level);
-                }
+                skill_points.points += game_data
+                    .ability_value_calculator
+                    .calculate_levelup_reward_skill_points(level.level);
 
-                if let Some(&mut ref mut stat_points) = stat_points {
-                    (*stat_points).points += game_data
-                        .ability_value_calculator
-                        .calculate_levelup_reward_stat_points(level.level);
-                }
+                stat_points.points += game_data
+                    .ability_value_calculator
+                    .calculate_levelup_reward_stat_points(level.level);
             }
 
             if level.level != level_before {
-                // Send level up packet
-
-                // TODO: Update ability values
-                // TODO: Restore hp / mp
                 // TODO: Call level up quest trigger
 
+                // Update ability values and restore hp / mp
+                if let Ok((
+                    ability_values,
+                    health_points,
+                    mana_points,
+                    character_info,
+                    equipment,
+                    inventory,
+                    basic_stats,
+                    skill_list,
+                )) = ability_values_query.get_mut(&mut ability_values_query_world, *entity)
+                {
+                    *ability_values = game_data.ability_value_calculator.calculate(
+                        character_info,
+                        level,
+                        equipment,
+                        inventory,
+                        basic_stats,
+                        skill_list,
+                    );
+                    health_points.hp = ability_values.max_health as u32;
+                    mana_points.mp = ability_values.max_mana as u32;
+                }
+
+                // Send level up packet
                 server_messages.send_entity_message(
                     *entity,
                     ServerMessage::UpdateLevel(UpdateLevel {
                         entity_id: client_entity.id,
                         level: level.clone(),
                         experience_points: experience_points.clone(),
-                        stat_points: stat_points.cloned().unwrap_or_else(StatPoints::new),
-                        skill_points: skill_points.cloned().unwrap_or_else(SkillPoints::new),
+                        stat_points: stat_points.clone(),
+                        skill_points: skill_points.clone(),
                     }),
                 );
             } else if let Some(game_client) = game_client {
