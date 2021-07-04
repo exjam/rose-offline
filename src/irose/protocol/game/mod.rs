@@ -347,6 +347,24 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::UpdateLevel(UpdateLevel {
+                entity_id,
+                level,
+                experience_points,
+                stat_points,
+                skill_points,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateLevel {
+                        entity_id,
+                        level,
+                        experience_points,
+                        stat_points,
+                        skill_points,
+                    }))
+                    .await?;
+            }
             ServerMessage::UpdateXpStamina(UpdateXpStamina {
                 xp,
                 stamina,
