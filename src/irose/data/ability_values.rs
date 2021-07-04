@@ -1,9 +1,10 @@
 use core::f32;
 use rand::Rng;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     data::{
+        formats::{FileReader, StbFile, VfsIndex},
         item::{AbilityType, ItemClass, ItemWeaponType},
         AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
         SkillReference,
@@ -14,36 +15,45 @@ use crate::{
     },
 };
 
+pub struct LevelRewards {
+    pub skill_points: u32,
+}
+
 pub struct AbilityValuesData {
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     npc_database: Arc<NpcDatabase>,
-}
-
-impl AbilityValuesData {
-    pub fn new(
-        item_database: Arc<ItemDatabase>,
-        skill_database: Arc<SkillDatabase>,
-        npc_database: Arc<NpcDatabase>,
-    ) -> Self {
-        Self {
-            item_database,
-            skill_database,
-            npc_database,
-        }
-    }
+    level_rewards: HashMap<u32, LevelRewards>,
 }
 
 pub fn get_ability_value_calculator(
+    vfs: &VfsIndex,
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     npc_database: Arc<NpcDatabase>,
 ) -> Option<Box<impl AbilityValueCalculator + Send + Sync>> {
-    Some(Box::new(AbilityValuesData::new(
+    let mut level_rewards = HashMap::new();
+    let file = vfs.open_file("3DDATA/STB/LIST_SKILL_P.STB")?;
+    let data = StbFile::read(FileReader::from(&file)).ok()?;
+    for i in 0..data.rows() {
+        let level = data.get_int(i, 0) as u32;
+        let points = data.get_int(i, 1) as u32;
+        if level != 0 && points != 0 {
+            level_rewards.insert(
+                level,
+                LevelRewards {
+                    skill_points: points,
+                },
+            );
+        }
+    }
+
+    Some(Box::new(AbilityValuesData {
         item_database,
         skill_database,
         npc_database,
-    )))
+        level_rewards,
+    }))
 }
 
 impl AbilityValueCalculator for AbilityValuesData {
@@ -306,6 +316,30 @@ impl AbilityValueCalculator for AbilityValuesData {
                 / (level_difference + 3) as f32
                 / 60.0
         }) as i32
+    }
+
+    fn calculate_levelup_require_xp(&self, level: u32) -> u64 {
+        match level as u64 {
+            0..=15 => (((level + 3) * (level + 5) * (level + 10)) as f64 * 0.7) as u64,
+            16..=60 => (((level - 5) * (level + 2) * (level + 2)) as f64 * 2.2) as u64,
+            61..=113 => (((level - 11) * (level) * (level + 4)) as f64 * 2.5) as u64,
+            114..=150 => (((level - 31) * (level - 20) * (level + 4)) as f64 * 3.8) as u64,
+            151..=189 => (((level - 67) * (level - 20) * (level - 10)) as f64 * 6.0) as u64,
+            190..=u64::MAX => {
+                ((level - 90) * (level - 120) * (level - 60) * (level - 170) * (level - 188)) as u64
+            }
+        }
+    }
+
+    fn calculate_levelup_reward_skill_points(&self, level: u32) -> u32 {
+        self.level_rewards
+            .get(&level)
+            .map(|rewards| rewards.skill_points)
+            .unwrap_or(0)
+    }
+
+    fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32 {
+        (level as f32 * 0.8) as u32 + 10
     }
 }
 
