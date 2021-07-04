@@ -4,7 +4,7 @@ use std::{io::Write, path::PathBuf};
 use crate::data::CHARACTER_STORAGE_DIR;
 use crate::game::components::{
     BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, ExperiencePoints, HealthPoints,
-    Hotbar, Inventory, Level, ManaPoints, Position, SkillList,
+    Hotbar, Inventory, Level, ManaPoints, Position, SkillList, SkillPoints, StatPoints,
 };
 
 pub enum CharacterStorageError {
@@ -48,6 +48,8 @@ pub struct CharacterStorage {
     pub delete_time: Option<CharacterDeleteTime>,
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,
+    pub skill_points: SkillPoints,
+    pub stat_points: StatPoints,
 }
 
 fn get_character_path(name: &str) -> PathBuf {

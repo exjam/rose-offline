@@ -5,7 +5,7 @@ use crate::{
         formats::{FileReader, VfsIndex},
         ItemReference, SkillDatabase,
     },
-    game::components::ExperiencePoints,
+    game::components::{ExperiencePoints, SkillPoints, StatPoints},
 };
 
 use crate::{
@@ -167,6 +167,8 @@ impl CharacterCreator for CharacterCreatorData {
             delete_time: None,
             health_points: HealthPoints::new(50),
             mana_points: ManaPoints::new(40),
+            stat_points: StatPoints::new(),
+            skill_points: SkillPoints::new(),
         };
 
         for (skill, page) in &self.skills {

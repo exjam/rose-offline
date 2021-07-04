@@ -10,7 +10,7 @@ use crate::game::messages::{
     },
     server::{
         LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc,
-        UpdateEquipment, UpdateInventory, UpdateXpStamina, Whisper,
+        UpdateEquipment, UpdateInventory, UpdateLevel, UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -72,6 +72,8 @@ impl GameClient {
                                 hotbar: &response.hotbar,
                                 health_points: &response.health_points,
                                 mana_points: &response.mana_points,
+                                stat_points: response.stat_points,
+                                skill_points: response.skill_points,
                             }))
                             .await?;
 

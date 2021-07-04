@@ -9,7 +9,7 @@ use crate::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType,
             ClientEntityVisibility, Command, Equipment, EquipmentIndex, EquipmentItemDatabase,
             ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
-            ManaPoints, MoveSpeed, NextCommand, Position, SkillList, Team,
+            ManaPoints, MoveSpeed, NextCommand, Position, SkillList, SkillPoints, StatPoints, Team,
         },
         messages::{
             client::{
@@ -18,7 +18,7 @@ use crate::{
             },
             server::{self, ServerMessage, UpdateInventory, Whisper},
         },
-        resources::{ClientEntityId, ClientEntityList, GameData, LoginTokens, ServerMessages},
+        resources::{ClientEntityList, GameData, LoginTokens, ServerMessages},
     },
 };
 
@@ -95,6 +95,8 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.hotbar.clone());
                                 cmd.add_component(*entity, character.health_points.clone());
                                 cmd.add_component(*entity, character.mana_points.clone());
+                                cmd.add_component(*entity, character.skill_points.clone());
+                                cmd.add_component(*entity, character.stat_points.clone());
                                 cmd.add_component(*entity, Team::default_character());
 
                                 GameConnectionResponse {
@@ -110,6 +112,8 @@ pub fn game_server_authentication(
                                     hotbar: character.hotbar,
                                     health_points: character.health_points,
                                     mana_points: character.mana_points,
+                                    stat_points: character.stat_points,
+                                    skill_points: character.skill_points,
                                 }
                             })
                     });
@@ -481,6 +485,8 @@ pub fn game_server_main(
 #[read_component(Hotbar)]
 #[read_component(HealthPoints)]
 #[read_component(ManaPoints)]
+#[read_component(StatPoints)]
+#[read_component(SkillPoints)]
 #[filter(!component::<GameClient>())]
 pub fn game_server_disconnect_handler(
     world: &SubWorld,
@@ -502,6 +508,8 @@ pub fn game_server_disconnect_handler(
         let hotbar = entry.get_component::<Hotbar>();
         let health_points = entry.get_component::<HealthPoints>();
         let mana_points = entry.get_component::<ManaPoints>();
+        let stat_points = entry.get_component::<StatPoints>();
+        let skill_points = entry.get_component::<SkillPoints>();
         let storage = CharacterStorage {
             info: info.clone(),
             basic_stats: basic_stats.unwrap().clone(),
@@ -515,6 +523,8 @@ pub fn game_server_disconnect_handler(
             delete_time: None,
             health_points: health_points.unwrap().clone(),
             mana_points: mana_points.unwrap().clone(),
+            stat_points: stat_points.unwrap().clone(),
+            skill_points: skill_points.unwrap().clone(),
         };
         storage.save().ok();
     }
