@@ -25,6 +25,8 @@ use crate::{
     },
 };
 
+const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
+
 struct AiSourceEntity<'a> {
     entity: &'a Entity,
     position: &'a Position,
@@ -380,7 +382,7 @@ fn ai_action_move_random_distance(
         AipMoveOrigin::Spawn => ai_parameters
             .source
             .spawn_origin
-            .map(|SpawnOrigin::MonsterSpawnPoint(_, spawn_position)| spawn_position.clone()),
+            .map(|SpawnOrigin::MonsterSpawnPoint(_, spawn_position)| *spawn_position),
         AipMoveOrigin::FindChar => ai_parameters.find_char.map(|(_, position)| position),
     };
 
@@ -531,9 +533,9 @@ pub fn npc_ai(
     #[resource] pending_xp_list: &mut PendingXpList,
 ) {
     let (mut spawn_point_world, mut world) = world.split_for_query(&spawn_point_query);
-    let (mut attacker_query_world, mut world) = world.split_for_query(&attacker_query);
+    let (attacker_query_world, mut world) = world.split_for_query(&attacker_query);
     let (mut nearby_query_world, mut world) = world.split_for_query(&nearby_query);
-    let (mut level_query_world, mut world) = world.split_for_query(&level_query);
+    let (level_query_world, world) = world.split_for_query(&level_query);
     let mut npc_world = world;
 
     npc_query.for_each_mut(
@@ -600,7 +602,7 @@ pub fn npc_ai(
                                 attacker_team,
                                 attacker_ability_values,
                                 attacker_health_points,
-                            )) = attacker_query.get(&mut attacker_query_world, *attacker)
+                            )) = attacker_query.get(&attacker_query_world, *attacker)
                             {
                                 npc_ai_run_trigger(
                                     trigger_on_damaged,
@@ -718,7 +720,7 @@ pub fn npc_ai(
                             for damage_source in damage_sources.damage_sources.iter() {
                                 let time_since_damage =
                                     delta_time.now - damage_source.last_damage_time;
-                                if time_since_damage > Duration::from_secs(5 * 60) {
+                                if time_since_damage > DAMAGE_REWARD_EXPIRE_TIME {
                                     // Damage expired, ignore.
                                     continue;
                                 }

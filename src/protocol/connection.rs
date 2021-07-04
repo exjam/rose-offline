@@ -8,11 +8,11 @@ use super::ProtocolError;
 pub struct Connection<'a> {
     stream: BufWriter<TcpStream>,
     buffer: BytesMut,
-    packet_codec: &'a Box<dyn PacketCodec + Send + Sync>,
+    packet_codec: &'a (dyn PacketCodec + Send + Sync),
 }
 
 impl<'a> Connection<'a> {
-    pub fn new(socket: TcpStream, packet_codec: &'a Box<dyn PacketCodec + Send + Sync>) -> Self {
+    pub fn new(socket: TcpStream, packet_codec: &'a (dyn PacketCodec + Send + Sync)) -> Self {
         Self {
             stream: BufWriter::new(socket),
             buffer: BytesMut::with_capacity(4 * 1024),

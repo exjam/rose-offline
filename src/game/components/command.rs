@@ -27,39 +27,6 @@ pub enum CommandData {
     // Sit
 }
 
-impl CommandData {
-    pub fn is_move(&self, target: Option<&Entity>, destination: &Point3<f32>) -> bool {
-        if target.is_some() {
-            self.is_move_to_target(target.unwrap())
-        } else {
-            self.is_move_to_destination(destination)
-        }
-    }
-
-    pub fn is_move_to_destination(&self, position: &Point3<f32>) -> bool {
-        match self {
-            CommandData::Move(CommandMove { destination, .. }) => destination == position,
-            _ => false,
-        }
-    }
-
-    pub fn is_move_to_target(&self, entity: &Entity) -> bool {
-        match self {
-            CommandData::Move(CommandMove { target, .. }) => {
-                target.as_ref().map_or(false, |target| target == entity)
-            }
-            _ => false,
-        }
-    }
-
-    pub fn is_attack_target(&self, entity: &Entity) -> bool {
-        match self {
-            CommandData::Attack(CommandAttack { target, .. }) => target == entity,
-            _ => false,
-        }
-    }
-}
-
 #[derive(Clone)]
 pub struct Command {
     // Current command that is executing

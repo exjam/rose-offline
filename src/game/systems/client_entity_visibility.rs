@@ -9,6 +9,7 @@ use crate::game::{
     resources::ClientEntityList,
 };
 
+#[allow(clippy::type_complexity)]
 #[system]
 pub fn client_entity_visibility(
     world: &mut SubWorld,

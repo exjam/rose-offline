@@ -30,7 +30,7 @@ async fn run_connection(
     let entity = response_rx.await?;
     let mut client = Client {
         entity,
-        connection: Connection::new(stream, &protocol.packet_codec),
+        connection: Connection::new(stream, protocol.packet_codec.deref()),
         client_message_tx,
         server_message_rx,
     };
