@@ -1,0 +1,19 @@
+use super::{item::Item, NpcReference, ZoneReference};
+
+pub enum DropItem {
+    Item(Item),
+    Money(usize),
+}
+
+pub trait DropTable {
+    fn get_drop(
+        &self,
+        world_drop_item_rate: i32,
+        world_drop_money_rate: i32,
+        npc: NpcReference,
+        zone: ZoneReference,
+        level_difference: i32,
+        character_drop_rate: i32,
+        character_charm: i32,
+    ) -> Option<DropItem>;
+}

@@ -1,4 +1,5 @@
 mod ai_database;
+mod drop_table;
 mod item_database;
 mod motion_database;
 mod npc_database;
@@ -77,6 +78,7 @@ pub trait AbilityValueCalculator {
 
 pub use ai_database::AiDatabase;
 pub use character::{CharacterCreator, CharacterCreatorError};
+pub use drop_table::{DropItem, DropTable};
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
     GemItemData, HandsItemData, HeadItemData, ItemData, ItemDatabase, ItemGradeData, ItemReference,
