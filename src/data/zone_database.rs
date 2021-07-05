@@ -4,6 +4,9 @@ use nalgebra::{Point2, Point3};
 
 use super::npc_database::{NpcConversationReference, NpcReference};
 
+#[derive(Clone, Copy)]
+pub struct ZoneReference(pub usize);
+
 pub struct ZoneMonsterSpawnPoint {
     pub position: Point3<f32>,
     pub basic_spawns: Vec<(NpcReference, usize)>,

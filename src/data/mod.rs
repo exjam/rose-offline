@@ -91,4 +91,6 @@ pub use npc_database::{
 pub use skill_database::{
     SkillAddAbility, SkillData, SkillDatabase, SkillPage, SkillReference, SkillType,
 };
-pub use zone_database::{ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint, ZoneNpcSpawn};
+pub use zone_database::{
+    ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint, ZoneNpcSpawn, ZoneReference,
+};
