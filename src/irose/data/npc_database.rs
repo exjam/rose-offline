@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     data::{
         formats::{ChrFile, FileReader, StbFile, VfsIndex, ZmoFile},
-        ItemReference, MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcMotionAction,
+        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcMotionAction,
     },
     stb_column,
 };
@@ -33,8 +33,8 @@ impl StbNpc {
     stb_column! { 17, get_reward_xp, u32 }
     stb_column! { 18, get_drop_table_index, u32 }
     stb_column! { 18, get_npc_minimap_icon_index, u32 }
-    stb_column! { 19, get_drop_money, u32 }
-    stb_column! { 20, get_drop_item, u32 }
+    stb_column! { 19, get_drop_money_rate, i32 }
+    stb_column! { 20, get_drop_item_rate, i32 }
     stb_column! { 20, get_shop_union_number, u32 }
     stb_column! { 21, get_summon_point_requirement, u32 }
 
@@ -181,8 +181,8 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 ai_file_index: data.get_ai_file_index(id).unwrap_or(0),
                 reward_xp: data.get_reward_xp(id).unwrap_or(0),
                 drop_table_index: data.get_drop_table_index(id).unwrap_or(0),
-                drop_money: data.get_drop_money(id).unwrap_or(0),
-                drop_item: ItemReference::from_base1000(data.get_drop_item(id).unwrap_or(0)).ok(),
+                drop_money_rate: data.get_drop_money_rate(id).unwrap_or(0),
+                drop_item_rate: data.get_drop_item_rate(id).unwrap_or(0),
                 npc_minimap_icon_index: data.get_npc_minimap_icon_index(id).unwrap_or(0),
                 summon_point_requirement: data.get_summon_point_requirement(id).unwrap_or(0),
                 shop_tabs: data.get_shop_tabs(id).unwrap_or_else(Vec::new),
