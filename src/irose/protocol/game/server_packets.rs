@@ -696,7 +696,7 @@ impl<'a> From<&'a PacketServerSpawnEntityDroppedItem<'a>> for Packet {
         }
         writer.write_entity_id(packet.entity_id);
         writer.write_option_entity_id(packet.owner_entity_id);
-        writer.write_u16(packet.remaining_time.as_secs() as u16);
+        writer.write_u16(packet.remaining_time.as_millis() as u16);
         writer.into()
     }
 }
