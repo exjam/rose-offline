@@ -28,6 +28,7 @@ use crate::{
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
+const DROP_ITEM_RADIUS: i32 = 200;
 
 struct AiSourceEntity<'a> {
     entity: &'a Entity,
@@ -767,8 +768,8 @@ pub fn npc_ai(
                                         .get_zone_mut(position.zone as usize)
                                         .unwrap();
                                     let drop_position = Point3::new(
-                                        position.position.x + rng.gen_range(-500..=500) as f32,
-                                        position.position.y + rng.gen_range(-500..=500) as f32,
+                                        position.position.x + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
+                                        position.position.y + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
                                         position.position.z,
                                     );
                                     let drop_entity = cmd.push((
