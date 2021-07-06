@@ -224,9 +224,7 @@ pub fn command(
                     } else {
                         cmd.add_component(
                             *entity,
-                            Destination {
-                                position: *destination,
-                            },
+                            Destination::new(*destination),
                         );
                     }
                 }
@@ -279,9 +277,7 @@ pub fn command(
                             // Set destination to move towards
                             cmd.add_component(
                                 *entity,
-                                Destination {
-                                    position: target_position.position,
-                                },
+                                Destination::new(target_position.position),
                             );
                         }
                     } else {
