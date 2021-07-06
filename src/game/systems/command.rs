@@ -4,8 +4,8 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 
 use crate::game::{
     components::{
-        AbilityValues, ClientEntity, Command, CommandAttack, CommandData, CommandMove, Destination,
-        HealthPoints, MotionData, NextCommand, Position,
+        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandData,
+        CommandMove, Destination, HealthPoints, MotionData, NextCommand, Position, Target,
     },
     messages::server::{self, ServerMessage},
     resources::{DeltaTime, GameData, PendingDamage, PendingDamageList, ServerMessages},
@@ -21,6 +21,7 @@ fn set_command_stop(
 ) {
     // Remove all components associated with other actions
     cmd.remove_component::<Destination>(*entity);
+    cmd.remove_component::<Target>(*entity);
 
     server_messages.send_entity_message(
         *entity,
@@ -217,17 +218,21 @@ pub fn command(
                             *destination = target_position.position;
                         } else {
                             *target = None;
+                            cmd.remove_component::<Target>(*entity);
                         }
                     }
 
                     let distance = (destination.xy() - position.position.xy()).magnitude_squared();
                     if distance < 0.1 {
                         *command = Command::with_stop();
+                        cmd.remove_component::<Destination>(*entity);
+                        cmd.remove_component::<Target>(*entity);
                     } else {
-                        cmd.add_component(
-                            *entity,
-                            Destination::new(*destination),
-                        );
+                        cmd.add_component(*entity, Destination::new(*destination));
+
+                        if let Some(target_entity) = target {
+                            cmd.add_component(*entity, Target::new(*target_entity));
+                        }
                     }
                 }
                 CommandData::Attack(CommandAttack {
@@ -261,6 +266,9 @@ pub fn command(
                             // Remove our destination component, as we have reached it!
                             cmd.remove_component::<Destination>(*entity);
 
+                            // Update target
+                            cmd.add_component(*entity, Target::new(*target_entity));
+
                             // Spawn an entity for DamageSystem to apply damage
                             pending_damage_list.push(PendingDamage {
                                 attacker: *entity,
@@ -277,10 +285,10 @@ pub fn command(
                                 Command::with_move(target_position.position, Some(*target_entity));
 
                             // Set destination to move towards
-                            cmd.add_component(
-                                *entity,
-                                Destination::new(target_position.position),
-                            );
+                            cmd.add_component(*entity, Destination::new(target_position.position));
+
+                            // Update target
+                            cmd.add_component(*entity, Target::new(*target_entity));
                         }
                     } else {
                         set_command_stop(
