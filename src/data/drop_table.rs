@@ -1,9 +1,7 @@
-use super::{item::Item, NpcReference, ZoneReference};
-
-pub enum DropItem {
-    Item(Item),
-    Money(usize),
-}
+use crate::{
+    data::{NpcReference, ZoneReference},
+    game::components::DroppedItem,
+};
 
 pub trait DropTable {
     fn get_drop(
@@ -15,5 +13,5 @@ pub trait DropTable {
         level_difference: i32,
         character_drop_rate: i32,
         character_charm: i32,
-    ) -> Option<DropItem>;
+    ) -> Option<DroppedItem>;
 }

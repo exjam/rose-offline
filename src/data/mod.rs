@@ -78,7 +78,7 @@ pub trait AbilityValueCalculator {
 
 pub use ai_database::AiDatabase;
 pub use character::{CharacterCreator, CharacterCreatorError};
-pub use drop_table::{DropItem, DropTable};
+pub use drop_table::DropTable;
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
     GemItemData, HandsItemData, HeadItemData, ItemData, ItemDatabase, ItemGradeData, ItemReference,

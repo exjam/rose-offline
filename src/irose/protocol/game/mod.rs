@@ -9,8 +9,9 @@ use crate::game::messages::{
         SetHotbarSlot,
     },
     server::{
-        LocalChat, RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc,
-        UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel, UpdateXpStamina, Whisper,
+        LocalChat, RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
+        SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
+        UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -272,6 +273,24 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerWhisper {
                         from: &from,
                         text: &text,
+                    }))
+                    .await?;
+            }
+            ServerMessage::SpawnEntityDroppedItem(SpawnEntityDroppedItem {
+                entity_id,
+                ref dropped_item,
+                ref position,
+                ref remaining_time,
+                owner_entity_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerSpawnEntityDroppedItem {
+                        entity_id,
+                        dropped_item,
+                        position,
+                        owner_entity_id,
+                        remaining_time,
                     }))
                     .await?;
             }

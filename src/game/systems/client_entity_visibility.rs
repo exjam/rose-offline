@@ -2,11 +2,13 @@ use legion::{system, world::SubWorld, Entity, Query};
 
 use crate::game::{
     components::{
-        ClientEntity, ClientEntityType, ClientEntityVisibility, Command, Destination, GameClient,
-        HealthPoints, Npc, NpcStandingDirection, Position, Team,
+        ClientEntity, ClientEntityType, ClientEntityVisibility, Command, Destination, DroppedItem,
+        ExpireTime, GameClient, HealthPoints, Npc, NpcStandingDirection, Owner, Position, Team,
     },
-    messages::server::{RemoveEntities, ServerMessage, SpawnEntityMonster, SpawnEntityNpc},
-    resources::ClientEntityList,
+    messages::server::{
+        RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
+    },
+    resources::{ClientEntityList, DeltaTime},
 };
 
 #[allow(clippy::type_complexity)]
@@ -38,12 +40,15 @@ pub fn client_entity_visibility(
         &Command,
         Option<&Destination>,
     )>,
+    item_query: &mut Query<(&DroppedItem, &Position, &ExpireTime, Option<&Owner>)>,
     #[resource] client_entity_list: &ClientEntityList,
+    #[resource] delta_time: &DeltaTime,
 ) {
     let (mut clients_query_world, mut world) = world.split_for_query(clients_query);
     let (entity_id_query_world, mut world) = world.split_for_query(entity_id_query);
     let (npc_query_world, mut world) = world.split_for_query(npcs_query);
-    let (monster_query_world, mut _world) = world.split_for_query(monsters_query);
+    let (monster_query_world, mut world) = world.split_for_query(monsters_query);
+    let (item_query_world, mut _world) = world.split_for_query(item_query);
 
     // First loop through all client entities and generate visibility changes that need to be sent
     clients_query.for_each_mut(
@@ -92,6 +97,39 @@ pub fn client_entity_visibility(
                         match spawn_client_entity.entity_type {
                             ClientEntityType::Character => {
                                 todo!();
+                            }
+                            ClientEntityType::DroppedItem => {
+                                if let Ok((
+                                    spawn_item,
+                                    spawn_position,
+                                    spawn_expire_time,
+                                    spawn_owner,
+                                )) = item_query.get(&item_query_world, spawn_entity)
+                                {
+                                    let owner_entity_id = spawn_owner
+                                        .and_then(|spawn_owner| {
+                                            entity_id_query
+                                                .get(&entity_id_query_world, spawn_owner.entity)
+                                                .ok()
+                                        })
+                                        .map(|spawn_owner_client_entity| {
+                                            spawn_owner_client_entity.id
+                                        });
+
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::SpawnEntityDroppedItem(
+                                            SpawnEntityDroppedItem {
+                                                entity_id: spawn_client_entity.id,
+                                                dropped_item: spawn_item.clone(),
+                                                position: spawn_position.clone(),
+                                                remaining_time: spawn_expire_time.when
+                                                    - delta_time.now,
+                                                owner_entity_id,
+                                            },
+                                        ))
+                                        .ok();
+                                }
                             }
                             ClientEntityType::Monster => {
                                 if let Ok((

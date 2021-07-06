@@ -1,12 +1,14 @@
+use std::time::Duration;
+
 use crate::{
     data::{
         item::{EquipmentItem, Item},
         Damage,
     },
     game::components::{
-        BasicStatType, ClientEntityId, Command, Destination, EquipmentIndex, ExperiencePoints,
-        HealthPoints, ItemSlot, Level, Npc, NpcStandingDirection, Position, SkillPoints,
-        StatPoints, Team,
+        BasicStatType, ClientEntityId, Command, Destination, DroppedItem, EquipmentIndex,
+        ExperiencePoints, HealthPoints, ItemSlot, Level, Npc, NpcStandingDirection, Position,
+        SkillPoints, StatPoints, Team,
     },
 };
 
@@ -53,6 +55,15 @@ impl RemoveEntities {
     pub fn new(entity_ids: Vec<ClientEntityId>) -> Self {
         Self { entity_ids }
     }
+}
+
+#[derive(Clone)]
+pub struct SpawnEntityDroppedItem {
+    pub entity_id: ClientEntityId,
+    pub dropped_item: DroppedItem,
+    pub position: Position,
+    pub remaining_time: Duration,
+    pub owner_entity_id: Option<ClientEntityId>,
 }
 
 #[derive(Clone)]
@@ -149,6 +160,7 @@ pub struct UpdateXpStamina {
 #[derive(Clone)]
 pub enum ServerMessage {
     LocalChat(LocalChat),
+    SpawnEntityDroppedItem(SpawnEntityDroppedItem),
     SpawnEntityNpc(SpawnEntityNpc),
     SpawnEntityMonster(SpawnEntityMonster),
     RemoveEntities(RemoveEntities),

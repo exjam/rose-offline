@@ -4,7 +4,7 @@ pub enum ClientEntityType {
     Character,
     Monster,
     Npc,
-    // TODO: Dropped Item
+    DroppedItem,
 }
 
 #[derive(Clone, Copy, Debug)]

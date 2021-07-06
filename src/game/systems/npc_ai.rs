@@ -13,12 +13,13 @@ use crate::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
             AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
         },
-        Damage,
+        Damage, NpcReference, ZoneReference,
     },
     game::{
         components::{
-            AbilityValues, Command, CommandData, DamageSources, HealthPoints, Level,
-            MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, Team,
+            AbilityValues, ClientEntityType, Command, CommandData, DamageSources, ExpireTime,
+            HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner, Position,
+            SpawnOrigin, Team,
         },
         resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
         GameData,
@@ -26,6 +27,7 @@ use crate::{
 };
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
+const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 
 struct AiSourceEntity<'a> {
     entity: &'a Entity,
@@ -526,10 +528,10 @@ pub fn npc_ai(
     nearby_query: &mut Query<(&Level, &Team)>,
     attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: &mut Query<&Level>,
-    #[resource] client_entity_list: &ClientEntityList,
     #[resource] delta_time: &DeltaTime,
     #[resource] game_data: &GameData,
     #[resource] world_rates: &WorldRates,
+    #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] pending_xp_list: &mut PendingXpList,
 ) {
     let (mut spawn_point_world, mut world) = world.split_for_query(&spawn_point_query);
@@ -747,7 +749,46 @@ pub fn npc_ai(
                                 }
                             }
 
-                            // TODO: Reward item drop to killer
+                            // Drop item owned by killer
+                            if let Some(killer_entity) = damage_sources.killer {
+                                if let Some(drop_item) = game_data.drop_table.get_drop(
+                                    world_rates.drop_rate,
+                                    world_rates.drop_money_rate,
+                                    NpcReference(npc.id as usize),
+                                    ZoneReference(position.zone as usize),
+                                    0,
+                                    0,
+                                    0,
+                                )
+                                // TODO: level_difference, character_drop_rate, character_charm);
+                                {
+                                    let mut rng = rand::thread_rng();
+                                    let client_entity_zone = client_entity_list
+                                        .get_zone_mut(position.zone as usize)
+                                        .unwrap();
+                                    let drop_position = Point3::new(
+                                        position.position.x + rng.gen_range(-500..=500) as f32,
+                                        position.position.y + rng.gen_range(-500..=500) as f32,
+                                        position.position.z,
+                                    );
+                                    let drop_entity = cmd.push((
+                                        drop_item,
+                                        Position::new(drop_position, position.zone),
+                                        Owner::new(killer_entity),
+                                        ExpireTime::new(delta_time.now + DROPPED_ITEM_EXPIRE_TIME),
+                                    ));
+                                    cmd.add_component(
+                                        drop_entity,
+                                        client_entity_zone
+                                            .allocate(
+                                                ClientEntityType::DroppedItem,
+                                                drop_entity,
+                                                drop_position,
+                                            )
+                                            .unwrap(),
+                                    );
+                                }
+                            }
                         }
                     }
 

@@ -2,5 +2,11 @@ use legion::Entity;
 
 #[derive(Clone)]
 pub struct Owner {
-    entity: Entity,
+    pub entity: Entity,
+}
+
+impl Owner {
+    pub fn new(entity: Entity) -> Self {
+        Self { entity }
+    }
 }

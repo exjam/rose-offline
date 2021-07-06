@@ -2,10 +2,13 @@ use std::sync::Arc;
 
 use rand::Rng;
 
-use crate::data::{
-    formats::{FileReader, StbFile, VfsIndex},
-    item::{EquipmentItem, Item, ItemType},
-    DropItem, DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcReference, ZoneReference,
+use crate::{
+    data::{
+        formats::{FileReader, StbFile, VfsIndex},
+        item::{EquipmentItem, Item, ItemType},
+        DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcReference, ZoneReference,
+    },
+    game::components::DroppedItem,
 };
 
 pub struct DropTableData {
@@ -32,7 +35,7 @@ impl DropTable for DropTableData {
         level_difference: i32,
         character_drop_rate: i32,
         character_charm: i32,
-    ) -> Option<DropItem> {
+    ) -> Option<DroppedItem> {
         let level_difference = level_difference.max(0);
         if level_difference > 10 {
             return None;
@@ -62,7 +65,7 @@ impl DropTable for DropTableData {
                 return None;
             }
 
-            return Some(DropItem::Money(amount as usize));
+            return Some(DroppedItem::Money(amount as usize));
         }
 
         let drop_table_row = if rng.gen_range(1..=100) <= npc_drop_item_rate {
@@ -165,16 +168,16 @@ impl DropTable for DropTableData {
                     item.grade = item_grade.min(3).max(0) as u8;
                 }
 
-                Some(DropItem::Item(Item::Equipment(item)))
+                Some(DroppedItem::Item(Item::Equipment(item)))
             }
             ItemType::Consumable | ItemType::Vehicle => {
-                Item::new(&item_reference, 1).map(DropItem::Item)
+                Item::new(&item_reference, 1).map(DroppedItem::Item)
             }
             ItemType::Gem | ItemType::Material | ItemType::Quest => {
                 let quantity = (1
                     + ((npc_level + 10) / 9 + rng.gen_range(1..=20) + character_drop_rate)
                         / (drop_var + 4)) as u32;
-                Item::new(&item_reference, quantity.min(10)).map(DropItem::Item)
+                Item::new(&item_reference, quantity.min(10)).map(DroppedItem::Item)
             }
             _ => None,
         }

@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{data::item_database::ItemReference, game::components::MotionData};
-
-use super::MotionFileData;
+use crate::{data::MotionFileData, game::components::MotionData};
 
 #[derive(Clone, Copy)]
 pub struct NpcReference(pub usize);

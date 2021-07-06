@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use modular_bitfield::prelude::*;
 use num_derive::FromPrimitive;
 
@@ -9,10 +11,10 @@ use crate::{
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId,
-        Command, CommandData, Destination, Equipment, EquipmentIndex, ExperiencePoints,
-        HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
-        ManaPoints, Npc, NpcStandingDirection, Position, SkillList, SkillPoints, StatPoints, Team,
-        VehiclePartIndex, INVENTORY_PAGE_SIZE,
+        Command, CommandData, Destination, DroppedItem, Equipment, EquipmentIndex,
+        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot,
+        Level, ManaPoints, Npc, NpcStandingDirection, Position, SkillList, SkillPoints, StatPoints,
+        Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -35,6 +37,7 @@ pub enum ServerPackets {
     AttackEntity = 0x798,
     DamageEntity = 0x799,
     MoveEntity = 0x79a,
+    SpawnEntityDroppedItem = 0x7a6,
     UpdateBasicStat = 0x7a9,
     UpdateXpStamina = 0x79b,
     UpdateLevel = 0x79e,
@@ -126,6 +129,7 @@ trait PacketWriteItems {
     fn write_equipment_visible_part(&mut self, equipment: &Equipment);
     fn write_stackable_item_full(&mut self, stackable: Option<&StackableItem>);
     fn write_item_full(&mut self, item: Option<&Item>);
+    fn write_item_full_money(&mut self, money: usize);
 }
 
 impl PacketWriteItems for PacketWriter {
@@ -224,6 +228,13 @@ impl PacketWriteItems for PacketWriter {
                 self.write_u32(0);
             }
         }
+    }
+
+    fn write_item_full_money(&mut self, money: usize) {
+        let item = PacketStackableItemFull::new()
+            .with_item_type(31)
+            .with_quantity(money as u32);
+        self.write_bytes(&item.into_bytes());
     }
 }
 
@@ -663,6 +674,30 @@ impl PacketWriteCommand for PacketWriter {
             // 11 = Vending Shop
         };
         self.write_u16(command_id);
+    }
+}
+
+pub struct PacketServerSpawnEntityDroppedItem<'a> {
+    pub entity_id: ClientEntityId,
+    pub dropped_item: &'a DroppedItem,
+    pub position: &'a Position,
+    pub owner_entity_id: Option<ClientEntityId>,
+    pub remaining_time: &'a Duration,
+}
+
+impl<'a> From<&'a PacketServerSpawnEntityDroppedItem<'a>> for Packet {
+    fn from(packet: &'a PacketServerSpawnEntityDroppedItem<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::SpawnEntityDroppedItem as u16);
+        writer.write_f32(packet.position.position.x);
+        writer.write_f32(packet.position.position.y);
+        match packet.dropped_item {
+            DroppedItem::Item(item) => writer.write_item_full(Some(item)),
+            &DroppedItem::Money(amount) => writer.write_item_full_money(amount),
+        }
+        writer.write_entity_id(packet.entity_id);
+        writer.write_option_entity_id(packet.owner_entity_id);
+        writer.write_u16(packet.remaining_time.as_secs() as u16);
+        writer.into()
     }
 }
 
