@@ -38,11 +38,11 @@ fn set_command_stop(
 fn is_valid_move_target<'a>(
     position: &Position,
     target_entity: &Entity,
-    target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
-    target_query_world: &'a SubWorld,
+    move_target_query: &mut Query<(&ClientEntity, &Position)>,
+    move_target_query_world: &'a SubWorld,
 ) -> Option<(&'a ClientEntity, &'a Position)> {
-    if let Ok((target_client_entity, target_position, _, _)) =
-        target_query.get(target_query_world, *target_entity)
+    if let Ok((target_client_entity, target_position)) =
+        move_target_query.get(move_target_query_world, *target_entity)
     {
         if target_position.zone == position.zone {
             return Some((target_client_entity, target_position));
@@ -55,11 +55,11 @@ fn is_valid_move_target<'a>(
 fn is_valid_attack_target<'a>(
     position: &Position,
     target_entity: &Entity,
-    target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
-    target_query_world: &'a SubWorld,
+    attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    attack_target_query_world: &'a SubWorld,
 ) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
     if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
-        target_query.get(target_query_world, *target_entity)
+        attack_target_query.get(attack_target_query_world, *target_entity)
     {
         if target_position.zone == position.zone && target_health.hp > 0 {
             return Some((target_client_entity, target_position, target_ability_values));
@@ -82,16 +82,18 @@ pub fn command(
         &mut Command,
         &mut NextCommand,
     )>,
-    target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    move_target_query: &mut Query<(&ClientEntity, &Position)>,
+    attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
     #[resource] delta_time: &DeltaTime,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
-    let (target_query_world, mut query_world) = world.split_for_query(&target_query);
+    let (move_target_query_world, mut world) = world.split_for_query(&move_target_query);
+    let (attack_target_query_world, mut world) = world.split_for_query(&attack_target_query);
 
     query.for_each_mut(
-        &mut query_world,
+        &mut world,
         |(entity, client_entity, position, motion_data, ability_values, command, next_command)| {
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 match next_command.command.as_mut().unwrap() {
@@ -107,8 +109,8 @@ pub fn command(
                                 is_valid_move_target(
                                     position,
                                     target_entity,
-                                    target_query,
-                                    &target_query_world,
+                                    move_target_query,
+                                    &move_target_query_world,
                                 )
                             {
                                 *destination = target_position.position;
@@ -138,8 +140,8 @@ pub fn command(
                             is_valid_attack_target(
                                 position,
                                 target_entity,
-                                target_query,
-                                &target_query_world,
+                                attack_target_query,
+                                &attack_target_query_world,
                             )
                         {
                             let distance = (target_position.position.xy() - position.position.xy())
@@ -209,8 +211,8 @@ pub fn command(
                         if let Some((_, target_position)) = is_valid_move_target(
                             position,
                             target_entity,
-                            target_query,
-                            &target_query_world,
+                            move_target_query,
+                            &move_target_query_world,
                         ) {
                             *destination = target_position.position;
                         } else {
@@ -235,8 +237,8 @@ pub fn command(
                         is_valid_attack_target(
                             position,
                             target_entity,
-                            target_query,
-                            &target_query_world,
+                            attack_target_query,
+                            &attack_target_query_world,
                         )
                     {
                         let distance =
