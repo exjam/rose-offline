@@ -11,6 +11,10 @@ use crate::game::{
     resources::{DeltaTime, GameData, PendingDamage, PendingDamageList, ServerMessages},
 };
 
+const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
+const CHARACTER_MOVE_TO_DISTANCE: f32 = 1000.0;
+const DROPPED_ITEM_MOVE_TO_DISTANCE: f32 = 150.0;
+
 fn set_command_stop(
     command: &mut Command,
     cmd: &mut CommandBuffer,
@@ -208,14 +212,25 @@ pub fn command(
                     destination,
                     target,
                 }) => {
+                    let mut required_distance = 0.1;
                     if let Some(target_entity) = target {
-                        if let Some((_, target_position)) = is_valid_move_target(
+                        if let Some((target_client_entity, target_position)) = is_valid_move_target(
                             position,
                             target_entity,
                             move_target_query,
                             &move_target_query_world,
                         ) {
                             *destination = target_position.position;
+                            match target_client_entity.entity_type {
+                                ClientEntityType::Character => {
+                                    required_distance = CHARACTER_MOVE_TO_DISTANCE
+                                }
+                                ClientEntityType::Npc => required_distance = NPC_MOVE_TO_DISTANCE,
+                                ClientEntityType::DroppedItem => {
+                                    required_distance = DROPPED_ITEM_MOVE_TO_DISTANCE
+                                }
+                                _ => {}
+                            }
                         } else {
                             *target = None;
                             cmd.remove_component::<Target>(*entity);
@@ -223,7 +238,7 @@ pub fn command(
                     }
 
                     let distance = (destination.xy() - position.position.xy()).magnitude_squared();
-                    if distance < 0.1 {
+                    if distance < required_distance {
                         *command = Command::with_stop();
                         cmd.remove_component::<Destination>(*entity);
                         cmd.remove_component::<Target>(*entity);
