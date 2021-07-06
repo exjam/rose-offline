@@ -7,7 +7,10 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+async-trait = "0.1.48"
 bytes = "1"
+clap = "3.0.0-beta.2"
+crossbeam-channel = "0.5.0"
 directories = "3.0"
 encoding_rs = "0.8"
 hex = "0.4"
@@ -15,17 +18,14 @@ lazy_static = "1.4.0"
 legion = { version = "0.4.0", features = ["extended-tuple-impls"] }
 memmap = "0.7"
 modular-bitfield = "0.11.2"
+nalgebra = { version = "0.25", features = ["serde-serialize"] }
 num-derive = "0.3"
 num-traits = "0.2"
+rand = "0.8.3"
+scopeguard = "1.1.0"
 serde = { version = "1.0.125", features = ["derive"] }
 serde_json = "1.0.64"
 sha2 = "0.9"
+shellwords = "1.1.0"
 tempfile = "3.2.0"
 tokio = { version = "1.4.0", features = ["full"] }
-crossbeam-channel = "0.5.0"
-scopeguard = "1.1.0"
-async-trait = "0.1.48"
-rand = "0.8.3"
-nalgebra = { version = "0.25", features = ["serde-serialize"] }
-clap = "3.0.0-beta.2"
-shellwords = "1.1.0"
