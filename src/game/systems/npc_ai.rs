@@ -17,9 +17,9 @@ use crate::{
     },
     game::{
         components::{
-            AbilityValues, ClientEntityType, Command, CommandData, DamageSources, ExpireTime,
-            HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner, Position,
-            SpawnOrigin, Team,
+            AbilityValues, BasicStats, ClientEntityType, Command, CommandData, DamageSources,
+            ExpireTime, HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner,
+            Position, SpawnOrigin, Team,
         },
         resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
         GameData,
@@ -529,6 +529,7 @@ pub fn npc_ai(
     nearby_query: &mut Query<(&Level, &Team)>,
     attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: &mut Query<&Level>,
+    killer_query: &mut Query<(&Level, &AbilityValues)>,
     #[resource] delta_time: &DeltaTime,
     #[resource] game_data: &GameData,
     #[resource] world_rates: &WorldRates,
@@ -537,6 +538,7 @@ pub fn npc_ai(
 ) {
     let (mut spawn_point_world, mut world) = world.split_for_query(&spawn_point_query);
     let (attacker_query_world, mut world) = world.split_for_query(&attacker_query);
+    let (killer_query_world, mut world) = world.split_for_query(&killer_query);
     let (mut nearby_query_world, mut world) = world.split_for_query(&nearby_query);
     let (level_query_world, world) = world.split_for_query(&level_query);
     let mut npc_world = world;
@@ -752,42 +754,54 @@ pub fn npc_ai(
 
                             // Drop item owned by killer
                             if let Some(killer_entity) = damage_sources.killer {
-                                if let Some(drop_item) = game_data.drop_table.get_drop(
-                                    world_rates.drop_rate,
-                                    world_rates.drop_money_rate,
-                                    NpcReference(npc.id as usize),
-                                    ZoneReference(position.zone as usize),
-                                    0,
-                                    0,
-                                    0,
-                                )
-                                // TODO: level_difference, character_drop_rate, character_charm);
+                                if let Ok((killer_level, killer_ability_values)) =
+                                    killer_query.get(&killer_query_world, killer_entity)
                                 {
-                                    let mut rng = rand::thread_rng();
-                                    let client_entity_zone = client_entity_list
-                                        .get_zone_mut(position.zone as usize)
-                                        .unwrap();
-                                    let drop_position = Point3::new(
-                                        position.position.x + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
-                                        position.position.y + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
-                                        position.position.z,
-                                    );
-                                    let drop_entity = cmd.push((
-                                        drop_item,
-                                        Position::new(drop_position, position.zone),
-                                        Owner::new(killer_entity),
-                                        ExpireTime::new(delta_time.now + DROPPED_ITEM_EXPIRE_TIME),
-                                    ));
-                                    cmd.add_component(
-                                        drop_entity,
-                                        client_entity_zone
-                                            .allocate(
-                                                ClientEntityType::DroppedItem,
-                                                drop_entity,
-                                                drop_position,
-                                            )
-                                            .unwrap(),
-                                    );
+                                    let level_difference =
+                                        killer_level.level as i32 - level.level as i32;
+                                    if let Some(drop_item) = game_data.drop_table.get_drop(
+                                        world_rates.drop_rate,
+                                        world_rates.drop_money_rate,
+                                        NpcReference(npc.id as usize),
+                                        ZoneReference(position.zone as usize),
+                                        level_difference,
+                                        killer_ability_values.drop_rate as i32,
+                                        killer_ability_values.charm as i32,
+                                    ) {
+                                        let mut rng = rand::thread_rng();
+                                        let client_entity_zone = client_entity_list
+                                            .get_zone_mut(position.zone as usize)
+                                            .unwrap();
+                                        let drop_position = Point3::new(
+                                            position.position.x
+                                                + rng
+                                                    .gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS)
+                                                    as f32,
+                                            position.position.y
+                                                + rng
+                                                    .gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS)
+                                                    as f32,
+                                            position.position.z,
+                                        );
+                                        let drop_entity = cmd.push((
+                                            drop_item,
+                                            Position::new(drop_position, position.zone),
+                                            Owner::new(killer_entity),
+                                            ExpireTime::new(
+                                                delta_time.now + DROPPED_ITEM_EXPIRE_TIME,
+                                            ),
+                                        ));
+                                        cmd.add_component(
+                                            drop_entity,
+                                            client_entity_zone
+                                                .allocate(
+                                                    ClientEntityType::DroppedItem,
+                                                    drop_entity,
+                                                    drop_position,
+                                                )
+                                                .unwrap(),
+                                        );
+                                    }
                                 }
                             }
                         }
