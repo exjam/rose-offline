@@ -9,9 +9,9 @@ use crate::game::messages::{
         SetHotbarSlot,
     },
     server::{
-        LocalChat, RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
-        SpawnEntityMonster, SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory,
-        UpdateLevel, UpdateXpStamina, Whisper,
+        LocalChat, RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
+        SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
+        UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -273,35 +273,22 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerWhisper { from, text }))
                     .await?;
             }
-            ServerMessage::SpawnEntityCharacter(SpawnEntityCharacter {
-                ref character_info,
-                ref command,
-                destination,
-                entity_id,
-                ref equipment,
-                ref health,
-                ref level,
-                passive_attack_speed,
-                ref position,
-                run_speed,
-                target_entity_id,
-                ref team,
-            }) => {
+            ServerMessage::SpawnEntityCharacter(data) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerSpawnEntityCharacter {
-                        character_info,
-                        command,
-                        destination: destination.as_ref(),
-                        entity_id,
-                        equipment,
-                        health,
-                        level,
-                        passive_attack_speed,
-                        position,
-                        run_speed,
-                        target_entity_id,
-                        team,
+                        character_info: &data.character_info,
+                        command: &data.command,
+                        destination: data.destination.as_ref(),
+                        entity_id: data.entity_id,
+                        equipment: &data.equipment,
+                        health: &data.health,
+                        level: &data.level,
+                        passive_attack_speed: data.passive_attack_speed,
+                        position: &data.position,
+                        run_speed: data.run_speed,
+                        target_entity_id: data.target_entity_id,
+                        team: &data.team,
                     }))
                     .await?;
             }

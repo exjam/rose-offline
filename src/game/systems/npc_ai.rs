@@ -17,9 +17,9 @@ use crate::{
     },
     game::{
         components::{
-            AbilityValues, BasicStats, ClientEntityType, Command, CommandData, DamageSources,
-            ExpireTime, HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner,
-            Position, SpawnOrigin, Team,
+            AbilityValues, ClientEntityType, Command, CommandData, DamageSources, ExpireTime,
+            HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner, Position,
+            SpawnOrigin, Team,
         },
         resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
         GameData,

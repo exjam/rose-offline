@@ -6,9 +6,9 @@ use crate::{
         Damage,
     },
     game::components::{
-        AbilityValues, BasicStatType, CharacterInfo, ClientEntityId, Command, Destination,
-        DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level,
-        Npc, NpcStandingDirection, Position, SkillPoints, StatPoints, Team,
+        BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
+        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, Npc, NpcStandingDirection,
+        Position, SkillPoints, StatPoints, Team,
     },
 };
 
@@ -176,7 +176,7 @@ pub struct UpdateXpStamina {
 #[derive(Clone)]
 pub enum ServerMessage {
     LocalChat(LocalChat),
-    SpawnEntityCharacter(SpawnEntityCharacter),
+    SpawnEntityCharacter(Box<SpawnEntityCharacter>),
     SpawnEntityDroppedItem(SpawnEntityDroppedItem),
     SpawnEntityNpc(SpawnEntityNpc),
     SpawnEntityMonster(SpawnEntityMonster),

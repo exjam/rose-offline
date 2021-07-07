@@ -140,7 +140,7 @@ pub fn client_entity_visibility(
 
                                     client
                                         .server_message_tx
-                                        .send(ServerMessage::SpawnEntityCharacter(
+                                        .send(ServerMessage::SpawnEntityCharacter(Box::new(
                                             SpawnEntityCharacter {
                                                 entity_id: spawn_client_entity.id,
                                                 character_info: spawn_character_info.clone(),
@@ -156,7 +156,7 @@ pub fn client_entity_visibility(
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
                                             },
-                                        ))
+                                        )))
                                         .ok();
                                 }
                             }
