@@ -291,7 +291,6 @@ fn handle_gm_command(
 
             cmd.add_component(*entity, Position::new(Point3::new(x, y, 0.0), zone));
             cmd.remove_component::<ClientEntity>(*entity);
-            // TODO: Destroy entity for nearby players
 
             client
                 .server_message_tx

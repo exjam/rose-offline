@@ -767,17 +767,18 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
 }
 
 pub struct PacketServerSpawnEntityCharacter<'a> {
-    pub entity_id: ClientEntityId,
     pub character_info: &'a CharacterInfo,
-    pub position: &'a Position,
-    pub destination: Option<&'a Destination>,
-    pub health: &'a HealthPoints,
-    pub team: &'a Team,
-    pub equipment: &'a Equipment,
-    pub level: &'a Level,
-    pub ability_values: &'a AbilityValues,
     pub command: &'a Command,
+    pub destination: Option<&'a Destination>,
+    pub entity_id: ClientEntityId,
+    pub equipment: &'a Equipment,
+    pub health: &'a HealthPoints,
+    pub level: &'a Level,
+    pub passive_attack_speed: i32,
+    pub position: &'a Position,
+    pub run_speed: f32,
     pub target_entity_id: Option<ClientEntityId>,
+    pub team: &'a Team,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
@@ -795,8 +796,8 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u8(packet.character_info.gender);
-        writer.write_u16(packet.ability_values.run_speed as u16);
-        writer.write_u16(packet.ability_values.passive_attack_speed as u16);
+        writer.write_u16(packet.run_speed as u16);
+        writer.write_u16(packet.passive_attack_speed as u16);
         writer.write_u8(0); // weight rate
 
         writer.write_u32(packet.character_info.face as u32);

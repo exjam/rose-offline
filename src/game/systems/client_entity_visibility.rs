@@ -2,11 +2,13 @@ use legion::{system, world::SubWorld, Entity, Query};
 
 use crate::game::{
     components::{
-        ClientEntity, ClientEntityType, ClientEntityVisibility, Command, Destination, DroppedItem,
-        ExpireTime, GameClient, HealthPoints, Npc, NpcStandingDirection, Owner, Position, Team,
+        AbilityValues, CharacterInfo, ClientEntity, ClientEntityType, ClientEntityVisibility,
+        Command, Destination, DroppedItem, Equipment, ExpireTime, GameClient, HealthPoints, Level,
+        Npc, NpcStandingDirection, Owner, Position, Target, Team,
     },
     messages::server::{
-        RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
+        RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
+        SpawnEntityMonster, SpawnEntityNpc,
     },
     resources::{ClientEntityList, DeltaTime},
 };
@@ -23,6 +25,29 @@ pub fn client_entity_visibility(
         &Position,
     )>,
     entity_id_query: &mut Query<&ClientEntity>,
+    characters_query: &mut Query<(
+        &AbilityValues,
+        &CharacterInfo,
+        &ClientEntity,
+        &Command,
+        &Equipment,
+        &HealthPoints,
+        &Level,
+        &Position,
+        &Team,
+        Option<&Destination>,
+        Option<&Target>,
+    )>,
+    dropped_item_query: &mut Query<(&DroppedItem, &Position, &ExpireTime, Option<&Owner>)>,
+    monsters_query: &mut Query<(
+        &Npc,
+        &Position,
+        &Team,
+        &HealthPoints,
+        &Command,
+        Option<&Destination>,
+        Option<&Target>,
+    )>,
     npcs_query: &mut Query<(
         &Npc,
         &NpcStandingDirection,
@@ -31,24 +56,17 @@ pub fn client_entity_visibility(
         &HealthPoints,
         &Command,
         Option<&Destination>,
+        Option<&Target>,
     )>,
-    monsters_query: &mut Query<(
-        &Npc,
-        &Position,
-        &Team,
-        &HealthPoints,
-        &Command,
-        Option<&Destination>,
-    )>,
-    item_query: &mut Query<(&DroppedItem, &Position, &ExpireTime, Option<&Owner>)>,
     #[resource] client_entity_list: &ClientEntityList,
     #[resource] delta_time: &DeltaTime,
 ) {
     let (mut clients_query_world, mut world) = world.split_for_query(clients_query);
     let (entity_id_query_world, mut world) = world.split_for_query(entity_id_query);
-    let (npc_query_world, mut world) = world.split_for_query(npcs_query);
+    let (characters_query_world, mut world) = world.split_for_query(characters_query);
+    let (dropped_item_query_world, mut world) = world.split_for_query(dropped_item_query);
     let (monster_query_world, mut world) = world.split_for_query(monsters_query);
-    let (item_query_world, mut _world) = world.split_for_query(item_query);
+    let (npc_query_world, mut _world) = world.split_for_query(npcs_query);
 
     // First loop through all client entities and generate visibility changes that need to be sent
     clients_query.for_each_mut(
@@ -96,7 +114,51 @@ pub fn client_entity_visibility(
                     {
                         match spawn_client_entity.entity_type {
                             ClientEntityType::Character => {
-                                todo!();
+                                if let Ok((
+                                    spawn_ability_values,
+                                    spawn_character_info,
+                                    spawn_client_entity,
+                                    spawn_command,
+                                    spawn_equipment,
+                                    spawn_health_points,
+                                    spawn_level,
+                                    spawn_position,
+                                    spawn_team,
+                                    spawn_destination,
+                                    spawn_target,
+                                )) = characters_query.get(&characters_query_world, spawn_entity)
+                                {
+                                    let target_entity_id = spawn_target
+                                        .and_then(|spawn_target| {
+                                            entity_id_query
+                                                .get(&entity_id_query_world, spawn_target.entity)
+                                                .ok()
+                                        })
+                                        .map(|spawn_target_client_entity| {
+                                            spawn_target_client_entity.id
+                                        });
+
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::SpawnEntityCharacter(
+                                            SpawnEntityCharacter {
+                                                entity_id: spawn_client_entity.id,
+                                                character_info: spawn_character_info.clone(),
+                                                position: spawn_position.clone(),
+                                                destination: spawn_destination.cloned(),
+                                                health: spawn_health_points.clone(),
+                                                team: spawn_team.clone(),
+                                                equipment: spawn_equipment.clone(),
+                                                level: spawn_level.clone(),
+                                                run_speed: spawn_ability_values.run_speed,
+                                                passive_attack_speed: spawn_ability_values
+                                                    .passive_attack_speed,
+                                                command: spawn_command.clone(),
+                                                target_entity_id,
+                                            },
+                                        ))
+                                        .ok();
+                                }
                             }
                             ClientEntityType::DroppedItem => {
                                 if let Ok((
@@ -104,7 +166,8 @@ pub fn client_entity_visibility(
                                     spawn_position,
                                     spawn_expire_time,
                                     spawn_owner,
-                                )) = item_query.get(&item_query_world, spawn_entity)
+                                )) =
+                                    dropped_item_query.get(&dropped_item_query_world, spawn_entity)
                                 {
                                     let owner_entity_id = spawn_owner
                                         .and_then(|spawn_owner| {
@@ -139,8 +202,19 @@ pub fn client_entity_visibility(
                                     spawn_health,
                                     spawn_command,
                                     spawn_destination,
+                                    spawn_target,
                                 )) = monsters_query.get(&monster_query_world, spawn_entity)
                                 {
+                                    let target_entity_id = spawn_target
+                                        .and_then(|spawn_target| {
+                                            entity_id_query
+                                                .get(&entity_id_query_world, spawn_target.entity)
+                                                .ok()
+                                        })
+                                        .map(|spawn_target_client_entity| {
+                                            spawn_target_client_entity.id
+                                        });
+
                                     client
                                         .server_message_tx
                                         .send(ServerMessage::SpawnEntityMonster(
@@ -152,7 +226,7 @@ pub fn client_entity_visibility(
                                                 health: spawn_health.clone(),
                                                 destination: spawn_destination.cloned(),
                                                 command: spawn_command.clone(),
-                                                target_entity_id: None, // TODO: Target entity id !
+                                                target_entity_id,
                                             },
                                         ))
                                         .ok();
@@ -167,8 +241,19 @@ pub fn client_entity_visibility(
                                     spawn_health,
                                     spawn_command,
                                     spawn_destination,
+                                    spawn_target,
                                 )) = npcs_query.get(&npc_query_world, spawn_entity)
                                 {
+                                    let target_entity_id = spawn_target
+                                        .and_then(|spawn_target| {
+                                            entity_id_query
+                                                .get(&entity_id_query_world, spawn_target.entity)
+                                                .ok()
+                                        })
+                                        .map(|spawn_target_client_entity| {
+                                            spawn_target_client_entity.id
+                                        });
+
                                     client
                                         .server_message_tx
                                         .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
@@ -180,7 +265,7 @@ pub fn client_entity_visibility(
                                             health: spawn_health.clone(),
                                             destination: spawn_destination.cloned(),
                                             command: spawn_command.clone(),
-                                            target_entity_id: None, // TODO: Target entity id !
+                                            target_entity_id,
                                         }))
                                         .ok();
                                 }

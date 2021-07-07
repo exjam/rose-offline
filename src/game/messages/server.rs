@@ -6,9 +6,9 @@ use crate::{
         Damage,
     },
     game::components::{
-        BasicStatType, ClientEntityId, Command, Destination, DroppedItem, EquipmentIndex,
-        ExperiencePoints, HealthPoints, ItemSlot, Level, Npc, NpcStandingDirection, Position,
-        SkillPoints, StatPoints, Team,
+        AbilityValues, BasicStatType, CharacterInfo, ClientEntityId, Command, Destination,
+        DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level,
+        Npc, NpcStandingDirection, Position, SkillPoints, StatPoints, Team,
     },
 };
 
@@ -64,6 +64,22 @@ pub struct SpawnEntityDroppedItem {
     pub position: Position,
     pub remaining_time: Duration,
     pub owner_entity_id: Option<ClientEntityId>,
+}
+
+#[derive(Clone)]
+pub struct SpawnEntityCharacter {
+    pub character_info: CharacterInfo,
+    pub command: Command,
+    pub destination: Option<Destination>,
+    pub entity_id: ClientEntityId,
+    pub equipment: Equipment,
+    pub health: HealthPoints,
+    pub level: Level,
+    pub passive_attack_speed: i32,
+    pub position: Position,
+    pub run_speed: f32,
+    pub target_entity_id: Option<ClientEntityId>,
+    pub team: Team,
 }
 
 #[derive(Clone)]
@@ -160,6 +176,7 @@ pub struct UpdateXpStamina {
 #[derive(Clone)]
 pub enum ServerMessage {
     LocalChat(LocalChat),
+    SpawnEntityCharacter(SpawnEntityCharacter),
     SpawnEntityDroppedItem(SpawnEntityDroppedItem),
     SpawnEntityNpc(SpawnEntityNpc),
     SpawnEntityMonster(SpawnEntityMonster),

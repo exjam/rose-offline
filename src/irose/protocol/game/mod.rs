@@ -9,9 +9,9 @@ use crate::game::messages::{
         SetHotbarSlot,
     },
     server::{
-        LocalChat, RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
-        SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
-        UpdateXpStamina, Whisper,
+        LocalChat, RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
+        SpawnEntityMonster, SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory,
+        UpdateLevel, UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -258,21 +258,50 @@ impl GameClient {
                     }))
                     .await?;
             }
-            ServerMessage::LocalChat(LocalChat { entity_id, text }) => {
+            ServerMessage::LocalChat(LocalChat {
+                entity_id,
+                ref text,
+            }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerLocalChat {
-                        entity_id,
-                        text: &text,
-                    }))
+                    .write_packet(Packet::from(&PacketServerLocalChat { entity_id, text }))
                     .await?;
             }
-            ServerMessage::Whisper(Whisper { from, text }) => {
+            ServerMessage::Whisper(Whisper { ref from, ref text }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerWhisper {
-                        from: &from,
-                        text: &text,
+                    .write_packet(Packet::from(&PacketServerWhisper { from, text }))
+                    .await?;
+            }
+            ServerMessage::SpawnEntityCharacter(SpawnEntityCharacter {
+                ref character_info,
+                ref command,
+                destination,
+                entity_id,
+                ref equipment,
+                ref health,
+                ref level,
+                passive_attack_speed,
+                ref position,
+                run_speed,
+                target_entity_id,
+                ref team,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerSpawnEntityCharacter {
+                        character_info,
+                        command,
+                        destination: destination.as_ref(),
+                        entity_id,
+                        equipment,
+                        health,
+                        level,
+                        passive_attack_speed,
+                        position,
+                        run_speed,
+                        target_entity_id,
+                        team,
                     }))
                     .await?;
             }
@@ -296,66 +325,64 @@ impl GameClient {
             }
             ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
                 entity_id,
-                npc,
-                direction,
-                position,
-                team,
-                health,
+                ref npc,
+                ref direction,
+                ref position,
+                ref team,
+                ref health,
                 destination,
-                command,
+                ref command,
                 target_entity_id,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerSpawnEntityNpc {
                         entity_id,
-                        npc: &npc,
-                        direction: &direction,
-                        position: &position,
-                        team: &team,
-                        health: &health,
+                        npc,
+                        direction,
+                        position,
+                        team,
+                        health,
                         destination: destination.as_ref(),
-                        command: &command,
+                        command,
                         target_entity_id,
                     }))
                     .await?;
             }
             ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
                 entity_id,
-                npc,
-                position,
-                team,
-                health,
+                ref npc,
+                ref position,
+                ref team,
+                ref health,
                 destination,
-                command,
+                ref command,
                 target_entity_id,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerSpawnEntityMonster {
                         entity_id,
-                        npc: &npc,
-                        position: &position,
-                        team: &team,
-                        health: &health,
+                        npc,
+                        position,
+                        team,
+                        health,
                         destination: destination.as_ref(),
-                        command: &command,
+                        command,
                         target_entity_id,
                     }))
                     .await?;
             }
-            ServerMessage::RemoveEntities(RemoveEntities { entity_ids }) => {
+            ServerMessage::RemoveEntities(RemoveEntities { ref entity_ids }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerRemoveEntities {
-                        entity_ids: &entity_ids,
-                    }))
+                    .write_packet(Packet::from(&PacketServerRemoveEntities { entity_ids }))
                     .await?;
             }
-            ServerMessage::UpdateInventory(UpdateInventory { items }) => {
+            ServerMessage::UpdateInventory(UpdateInventory { ref items }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerUpdateInventory { items: &items }))
+                    .write_packet(Packet::from(&PacketServerUpdateInventory { items }))
                     .await?;
             }
             ServerMessage::UpdateEquipment(UpdateEquipment {
