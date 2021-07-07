@@ -67,6 +67,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             critical: (npc_data.level as f32 * 2.5) as i32,
             avoid: npc_data.avoid,
             max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
+            drop_rate: 0,
         })
     }
 
@@ -222,6 +223,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &passive_ability_values,
             ),
             max_damage_sources: 0,
+            drop_rate: calculate_drop_rate(&equipment_ability_values, &passive_ability_values),
         }
     }
 
@@ -1335,4 +1337,15 @@ fn calculate_avoid(
         passive_ability_values.value.avoid as f32 + (avoid as f32 * passive_avoid_rate);
 
     (avoid + passive_avoid) as i32
+}
+
+fn calculate_drop_rate(
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let drop_rate = equipment_ability_values.drop_rate as f32;
+    let passive_drop_rate = passive_ability_values.value.drop_rate as f32
+        + (drop_rate * passive_ability_values.rate.drop_rate as f32 / 100.0);
+
+    (drop_rate + passive_drop_rate) as i32
 }
