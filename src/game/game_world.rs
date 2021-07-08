@@ -62,6 +62,7 @@ impl GameWorld {
             .add_system(game_server_disconnect_handler_system())
             .add_system(monster_spawn_system())
             .add_system(npc_ai_system())
+            .add_system(expire_time_system())
             .flush()
             .add_system(command_system())
             .flush()
