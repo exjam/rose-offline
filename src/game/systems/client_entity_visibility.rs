@@ -38,7 +38,7 @@ pub fn client_entity_visibility(
         Option<&Destination>,
         Option<&Target>,
     )>,
-    dropped_item_query: &mut Query<(&DroppedItem, &Position, &ExpireTime, Option<&Owner>)>,
+    dropped_item_query: &mut Query<(&Option<DroppedItem>, &Position, &ExpireTime, Option<&Owner>)>,
     monsters_query: &mut Query<(
         &Npc,
         &Position,
@@ -162,7 +162,7 @@ pub fn client_entity_visibility(
                             }
                             ClientEntityType::DroppedItem => {
                                 if let Ok((
-                                    spawn_item,
+                                    Some(spawn_item),
                                     spawn_position,
                                     spawn_expire_time,
                                     spawn_owner,

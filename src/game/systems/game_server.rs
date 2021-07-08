@@ -443,7 +443,7 @@ pub fn game_server_main(
                     let item = equipment_slot.take();
                     if let Some(item) = item {
                         match inventory.try_add_equipment_item(item) {
-                            Ok(inventory_slot) => {
+                            Ok((inventory_slot, item)) => {
                                 *equipment_slot = None;
 
                                 client
@@ -451,7 +451,7 @@ pub fn game_server_main(
                                     .send(ServerMessage::UpdateInventory(UpdateInventory {
                                         items: vec![
                                             (ItemSlot::Equipped(equipment_index), None),
-                                            (inventory_slot, inventory.get_item(inventory_slot)),
+                                            (inventory_slot, Some(item.clone())),
                                         ],
                                     }))
                                     .ok();
@@ -461,7 +461,7 @@ pub fn game_server_main(
                                     ServerMessage::UpdateEquipment(server::UpdateEquipment {
                                         entity_id: entity_id.id,
                                         equipment_index,
-                                        item: equipment_slot.clone(),
+                                        item: None,
                                     }),
                                 );
                             }
@@ -498,6 +498,19 @@ pub fn game_server_main(
                             }))
                             .ok();
                     }
+                }
+            }
+            ClientMessage::PickupDroppedItem(message) => {
+                if let Some(target_entity) = client_entity_list
+                    .get_zone(position.zone as usize)
+                    .and_then(|zone| zone.get_entity(message.target_entity_id))
+                {
+                    cmd.add_component(
+                        *entity,
+                        NextCommand::with_pickup_dropped_item(target_entity),
+                    );
+                } else {
+                    cmd.add_component(*entity, NextCommand::with_stop());
                 }
             }
             _ => println!("Received unimplemented client message"),

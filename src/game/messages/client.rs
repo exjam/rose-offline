@@ -188,6 +188,10 @@ pub struct ChangeEquipment {
     pub item_slot: Option<ItemSlot>,
 }
 
+pub struct PickupDroppedItem {
+    pub target_entity_id: ClientEntityId,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -206,4 +210,5 @@ pub enum ClientMessage {
     SetHotbarSlot(SetHotbarSlot),
     ChangeEquipment(ChangeEquipment),
     IncreaseBasicStat(BasicStatType),
+    PickupDroppedItem(PickupDroppedItem),
 }

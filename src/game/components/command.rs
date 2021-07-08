@@ -15,13 +15,18 @@ pub struct CommandAttack {
 }
 
 #[derive(Clone)]
+pub struct CommandPickupDroppedItem {
+    pub target: Entity,
+}
+
+#[derive(Clone)]
 pub enum CommandData {
     Die,
     Stop,
     Move(CommandMove),
     Attack(CommandAttack),
+    PickupDroppedItem(CommandPickupDroppedItem),
     // TODO:
-    // Pick up item
     // Die
     // Cast skill
     // Sit
@@ -76,6 +81,15 @@ impl NextCommand {
         }
     }
 
+    pub fn with_pickup_dropped_item(target: Entity) -> Self {
+        Self {
+            command: Some(CommandData::PickupDroppedItem(CommandPickupDroppedItem {
+                target,
+            })),
+            has_sent_server_message: false,
+        }
+    }
+
     pub fn with_stop() -> Self {
         Self {
             command: Some(CommandData::Stop),
@@ -122,6 +136,13 @@ impl Command {
     pub fn with_attack(target: Entity, duration: Duration) -> Self {
         Self::new(
             CommandData::Attack(CommandAttack { target }),
+            Some(duration),
+        )
+    }
+
+    pub fn with_pickup_dropped_item(target: Entity, duration: Duration) -> Self {
+        Self::new(
+            CommandData::PickupDroppedItem(CommandPickupDroppedItem { target }),
             Some(duration),
         )
     }

@@ -5,15 +5,20 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use crate::game::{
     components::{
         AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandData,
-        CommandMove, Destination, HealthPoints, MotionData, NextCommand, Position, Target,
+        CommandMove, CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
+        Inventory, MotionData, NextCommand, Owner, Position, Target,
     },
-    messages::server::{self, ServerMessage},
+    messages::server::{
+        self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
+        ServerMessage,
+    },
     resources::{DeltaTime, GameData, PendingDamage, PendingDamageList, ServerMessages},
 };
 
 const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
 const CHARACTER_MOVE_TO_DISTANCE: f32 = 1000.0;
 const DROPPED_ITEM_MOVE_TO_DISTANCE: f32 = 150.0;
+const DROPPED_ITEM_PICKUP_DISTANCE: f32 = 200.0;
 
 fn set_command_stop(
     command: &mut Command,
@@ -74,6 +79,35 @@ fn is_valid_attack_target<'a>(
     None
 }
 
+fn is_valid_pickup_target<'a>(
+    position: &Position,
+    target_entity: &Entity,
+    query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &mut Option<DroppedItem>,
+        Option<&Owner>,
+    )>,
+    world: &'a mut SubWorld,
+) -> Option<(
+    &'a ClientEntity,
+    &'a mut Option<DroppedItem>,
+    Option<&'a Owner>,
+)> {
+    if let Ok((target_client_entity, target_position, target_dropped_item, target_owner)) =
+        query.get_mut(world, *target_entity)
+    {
+        // Check distance to target
+        let distance = (position.position.xy() - target_position.position.xy()).magnitude();
+        if position.zone == target_position.zone && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
+            return Some((target_client_entity, target_dropped_item, target_owner));
+        }
+    }
+
+    None
+}
+
+#[allow(clippy::clippy::type_complexity)]
 #[system]
 pub fn command(
     world: &mut SubWorld,
@@ -86,9 +120,17 @@ pub fn command(
         &AbilityValues,
         &mut Command,
         &mut NextCommand,
+        Option<&GameClient>,
+        Option<&mut Inventory>,
     )>,
     move_target_query: &mut Query<(&ClientEntity, &Position)>,
     attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    pickup_dropped_item_target_query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &mut Option<DroppedItem>,
+        Option<&Owner>,
+    )>,
     #[resource] delta_time: &DeltaTime,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
@@ -96,14 +138,28 @@ pub fn command(
 ) {
     let (move_target_query_world, mut world) = world.split_for_query(&move_target_query);
     let (attack_target_query_world, mut world) = world.split_for_query(&attack_target_query);
+    let (mut pickup_dropped_item_target_query_world, mut world) =
+        world.split_for_query(&pickup_dropped_item_target_query);
 
     query.for_each_mut(
         &mut world,
-        |(entity, client_entity, position, motion_data, ability_values, command, next_command)| {
+        |(
+            entity,
+            client_entity,
+            position,
+            motion_data,
+            ability_values,
+            command,
+            next_command,
+            game_client,
+            inventory,
+        )| {
             if !next_command.has_sent_server_message && next_command.command.is_some() {
+                // Send any server message required for update client next command
                 match next_command.command.as_mut().unwrap() {
                     CommandData::Die => {}
                     CommandData::Stop => {}
+                    CommandData::PickupDroppedItem(_) => {}
                     CommandData::Move(CommandMove {
                         destination,
                         target,
@@ -248,6 +304,87 @@ pub fn command(
                         if let Some(target_entity) = target {
                             cmd.add_component(*entity, Target::new(*target_entity));
                         }
+                    }
+                }
+                CommandData::PickupDroppedItem(CommandPickupDroppedItem {
+                    target: target_entity,
+                }) => {
+                    if let Some(inventory) = inventory {
+                        if let Some((target_client_entity, target_dropped_item, target_owner)) =
+                            is_valid_pickup_target(
+                                position,
+                                target_entity,
+                                pickup_dropped_item_target_query,
+                                &mut pickup_dropped_item_target_query_world,
+                            )
+                        {
+                            let result = if !target_owner
+                                .map_or(true, |owner| owner.entity == *entity)
+                            {
+                                // Not owner
+                                Err(PickupDroppedItemError::NoPermission)
+                            } else {
+                                // Try add to inventory
+                                match target_dropped_item.take() {
+                                    None => Err(PickupDroppedItemError::NotExist),
+                                    Some(DroppedItem::Item(item)) => {
+                                        match inventory.try_add_item(item) {
+                                            Ok((slot, item)) => Ok(PickupDroppedItemContent::Item(
+                                                slot,
+                                                item.clone(),
+                                            )),
+                                            Err(item) => {
+                                                *target_dropped_item =
+                                                    Some(DroppedItem::Item(item));
+                                                Err(PickupDroppedItemError::InventoryFull)
+                                            }
+                                        }
+                                    }
+                                    Some(DroppedItem::Money(money)) => {
+                                        if inventory.try_add_money(money).is_ok() {
+                                            Ok(PickupDroppedItemContent::Money(money))
+                                        } else {
+                                            *target_dropped_item = Some(DroppedItem::Money(money));
+                                            Err(PickupDroppedItemError::InventoryFull)
+                                        }
+                                    }
+                                }
+                            };
+
+                            if result.is_ok() {
+                                // Delete picked up item
+                                cmd.remove(*target_entity);
+
+                                // Update our current command
+                                let motion_duration =
+                                    motion_data.pickup_dropped_item.as_ref().map_or_else(
+                                        || Duration::from_secs(1),
+                                        |motion| motion.duration,
+                                    );
+
+                                *command = Command::with_pickup_dropped_item(
+                                    *target_entity,
+                                    motion_duration,
+                                );
+                                cmd.remove_component::<Destination>(*entity);
+                                cmd.remove_component::<Target>(*entity);
+                            }
+
+                            // Send message to client with result
+                            if let Some(game_client) = game_client {
+                                game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::PickupDroppedItemResult(
+                                        PickupDroppedItemResult {
+                                            item_entity_id: target_client_entity.id,
+                                            result,
+                                        },
+                                    ))
+                                    .ok();
+                            }
+                        }
+
+                        *next_command = NextCommand::default();
                     }
                 }
                 CommandData::Attack(CommandAttack {

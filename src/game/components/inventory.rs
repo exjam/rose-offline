@@ -96,7 +96,7 @@ impl InventoryPage {
         }
     }
 
-    pub fn try_add_item(&mut self, item: Item) -> Result<ItemSlot, Item> {
+    pub fn try_add_item(&mut self, item: Item) -> Result<(ItemSlot, &Item), Item> {
         match item {
             Item::Equipment(item) => self.try_add_equipment_item(item).map_err(Item::Equipment),
             Item::Stackable(item) => self.try_add_stackable_item(item).map_err(Item::Stackable),
@@ -106,7 +106,7 @@ impl InventoryPage {
     pub fn try_add_equipment_item(
         &mut self,
         item: EquipmentItem,
-    ) -> Result<ItemSlot, EquipmentItem> {
+    ) -> Result<(ItemSlot, &Item), EquipmentItem> {
         if let Some((index, slot)) = self
             .slots
             .iter_mut()
@@ -114,7 +114,10 @@ impl InventoryPage {
             .find(|(_, slot)| slot.is_none())
         {
             *slot = Some(Item::Equipment(item));
-            Ok(ItemSlot::Inventory(self.page_type, index))
+            Ok((
+                ItemSlot::Inventory(self.page_type, index),
+                slot.as_ref().unwrap(),
+            ))
         } else {
             Err(item)
         }
@@ -123,7 +126,7 @@ impl InventoryPage {
     pub fn try_add_stackable_item(
         &mut self,
         item: StackableItem,
-    ) -> Result<ItemSlot, StackableItem> {
+    ) -> Result<(ItemSlot, &Item), StackableItem> {
         if let Some(index) = self
             .slots
             .iter()
@@ -145,7 +148,10 @@ impl InventoryPage {
                     .expect("how did we get here");
             }
 
-            Ok(ItemSlot::Inventory(self.page_type, index))
+            Ok((
+                ItemSlot::Inventory(self.page_type, index),
+                self.slots[index].as_ref().unwrap(),
+            ))
         } else {
             Err(item)
         }
@@ -185,15 +191,16 @@ impl Inventory {
         Default::default()
     }
 
-    pub fn try_add_money(&mut self, money: Money) -> Option<Money> {
+    pub fn try_add_money(&mut self, money: Money) -> Result<(), Money> {
         let before = self.money;
         self.money = self.money + money;
 
         let remaining = money - (self.money - before);
         if remaining > Money(0) {
-            Some(remaining)
+            self.money = before;
+            Err(remaining)
         } else {
-            None
+            Ok(())
         }
     }
 
@@ -215,7 +222,7 @@ impl Inventory {
         }
     }
 
-    pub fn try_add_item(&mut self, item: Item) -> Result<ItemSlot, Item> {
+    pub fn try_add_item(&mut self, item: Item) -> Result<(ItemSlot, &Item), Item> {
         let page_type = InventoryPageType::from_item_type(item.get_item_type());
         self.get_page_mut(page_type).try_add_item(item)
     }
@@ -223,7 +230,7 @@ impl Inventory {
     pub fn try_add_equipment_item(
         &mut self,
         item: EquipmentItem,
-    ) -> Result<ItemSlot, EquipmentItem> {
+    ) -> Result<(ItemSlot, &Item), EquipmentItem> {
         let page_type = InventoryPageType::from_item_type(item.item.item_type);
         self.get_page_mut(page_type).try_add_equipment_item(item)
     }
@@ -231,7 +238,7 @@ impl Inventory {
     pub fn try_add_stackable_item(
         &mut self,
         item: StackableItem,
-    ) -> Result<ItemSlot, StackableItem> {
+    ) -> Result<(ItemSlot, &Item), StackableItem> {
         let page_type = InventoryPageType::from_item_type(item.item.item_type);
         self.get_page_mut(page_type).try_add_stackable_item(item)
     }

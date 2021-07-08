@@ -23,6 +23,7 @@ pub enum ClientPackets {
     Move = 0x79a,
     DropItem = 0x7a4,
     ChangeEquipment = 0x7a5,
+    PickupDroppedItem = 0x7a7,
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
 }
@@ -231,5 +232,24 @@ impl TryFrom<&Packet> for PacketClientIncreaseBasicStat {
             _ => return Err(ProtocolError::InvalidPacket),
         };
         Ok(PacketClientIncreaseBasicStat { basic_stat_type })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientPickupDroppedItem {
+    pub target_entity_id: ClientEntityId,
+}
+
+impl TryFrom<&Packet> for PacketClientPickupDroppedItem {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::PickupDroppedItem as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        Ok(PacketClientPickupDroppedItem { target_entity_id })
     }
 }

@@ -9,12 +9,15 @@ use crate::{
         item::{EquipmentItem, Item, StackableItem},
         Damage,
     },
-    game::components::{
-        AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command, CommandData,
-        Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints,
-        Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level, ManaPoints, Npc,
-        NpcStandingDirection, Position, SkillList, SkillPoints, StatPoints, Team, VehiclePartIndex,
-        INVENTORY_PAGE_SIZE,
+    game::{
+        components::{
+            AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
+            CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
+            HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
+            ManaPoints, Money, Npc, NpcStandingDirection, Position, SkillList, SkillPoints,
+            StatPoints, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+        },
+        messages::server::{PickupDroppedItemContent, PickupDroppedItemError},
     },
     protocol::{Packet, PacketWriter},
 };
@@ -38,6 +41,7 @@ pub enum ServerPackets {
     DamageEntity = 0x799,
     MoveEntity = 0x79a,
     SpawnEntityDroppedItem = 0x7a6,
+    PickupDroppedItemResult = 0x7a7,
     UpdateBasicStat = 0x7a9,
     UpdateXpStamina = 0x79b,
     UpdateLevel = 0x79e,
@@ -129,7 +133,7 @@ trait PacketWriteItems {
     fn write_equipment_visible_part(&mut self, equipment: &Equipment);
     fn write_stackable_item_full(&mut self, stackable: Option<&StackableItem>);
     fn write_item_full(&mut self, item: Option<&Item>);
-    fn write_item_full_money(&mut self, money: usize);
+    fn write_item_full_money(&mut self, money: Money);
 }
 
 impl PacketWriteItems for PacketWriter {
@@ -230,10 +234,10 @@ impl PacketWriteItems for PacketWriter {
         }
     }
 
-    fn write_item_full_money(&mut self, money: usize) {
+    fn write_item_full_money(&mut self, money: Money) {
         let item = PacketStackableItemFull::new()
             .with_item_type(31)
-            .with_quantity(money as u32);
+            .with_quantity(money.0 as u32);
         self.write_bytes(&item.into_bytes());
     }
 }
@@ -665,7 +669,7 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Move(_) => 1,
             CommandData::Attack(_) => 2,
             CommandData::Die => 3,
-            // 4 = Pickup item
+            CommandData::PickupDroppedItem(_) => 4,
             // 6 = Cast skill on self
             // 7 = Skill on entity
             // 8 = Skill on position
@@ -692,7 +696,7 @@ impl<'a> From<&'a PacketServerSpawnEntityDroppedItem<'a>> for Packet {
         writer.write_f32(packet.position.position.y);
         match packet.dropped_item {
             DroppedItem::Item(item) => writer.write_item_full(Some(item)),
-            &DroppedItem::Money(amount) => writer.write_item_full_money(amount),
+            DroppedItem::Money(amount) => writer.write_item_full_money(*amount),
         }
         writer.write_entity_id(packet.entity_id);
         writer.write_option_entity_id(packet.owner_entity_id);
@@ -845,9 +849,9 @@ impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
     }
 }
 
-fn item_slot_to_index(slot: &ItemSlot) -> usize {
+fn item_slot_to_index(slot: ItemSlot) -> usize {
     match slot {
-        ItemSlot::Equipped(equipment_index) => *equipment_index as usize,
+        ItemSlot::Equipped(equipment_index) => equipment_index as usize,
         ItemSlot::Inventory(page_type, index) => match page_type {
             InventoryPageType::Equipment => 12 + index,
             InventoryPageType::Consumables => 12 + INVENTORY_PAGE_SIZE + index,
@@ -866,7 +870,7 @@ impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::UpdateInventory as u16);
         writer.write_u8(packet.items.len() as u8);
         for (slot, item) in packet.items {
-            writer.write_u8(item_slot_to_index(slot) as u8);
+            writer.write_u8(item_slot_to_index(*slot) as u8);
             writer.write_item_full(item.as_ref());
         }
         writer.into()
@@ -947,6 +951,40 @@ impl From<&PacketServerUpdateBasicStat> for Packet {
         };
         writer.write_u8(id);
         writer.write_u16(packet.value);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPickupDroppedItemResult {
+    pub item_entity_id: ClientEntityId,
+    pub result: Result<PickupDroppedItemContent, PickupDroppedItemError>,
+}
+
+impl From<&PacketServerPickupDroppedItemResult> for Packet {
+    fn from(packet: &PacketServerPickupDroppedItemResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PickupDroppedItemResult as u16);
+        writer.write_entity_id(packet.item_entity_id);
+        match &packet.result {
+            Ok(PickupDroppedItemContent::Item(slot, item)) => {
+                writer.write_u8(0); // OK
+                writer.write_u16(item_slot_to_index(*slot) as u16);
+                writer.write_item_full(Some(item));
+            }
+            Ok(PickupDroppedItemContent::Money(money)) => {
+                writer.write_u8(0); // OK
+                writer.write_u16(0); // Slot
+                writer.write_item_full_money(*money);
+            }
+            Err(error) => {
+                match error {
+                    PickupDroppedItemError::NotExist => writer.write_u8(1),
+                    PickupDroppedItemError::NoPermission => writer.write_u8(2),
+                    PickupDroppedItemError::InventoryFull => writer.write_u8(3),
+                }
+                writer.write_u16(0); // Slot
+                writer.write_item_full(None);
+            }
+        };
         writer.into()
     }
 }

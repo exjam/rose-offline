@@ -46,7 +46,9 @@ pub use character_info::*;
 pub use character_list::CharacterList;
 pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_visibility::ClientEntityVisibility;
-pub use command::{Command, CommandAttack, CommandData, CommandMove, NextCommand};
+pub use command::{
+    Command, CommandAttack, CommandData, CommandMove, CommandPickupDroppedItem, NextCommand,
+};
 pub use damage_sources::{DamageSource, DamageSources};
 pub use destination::Destination;
 pub use dropped_item::DroppedItem;

@@ -8,7 +8,7 @@ use crate::{
         item::{EquipmentItem, Item, ItemType},
         DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcReference, ZoneReference,
     },
-    game::components::DroppedItem,
+    game::components::{DroppedItem, Money},
 };
 
 pub struct DropTableData {
@@ -65,7 +65,7 @@ impl DropTable for DropTableData {
                 return None;
             }
 
-            return Some(DroppedItem::Money(amount as usize));
+            return Some(DroppedItem::Money(Money(amount as i64)));
         }
 
         let drop_table_row = if rng.gen_range(1..=100) <= npc_drop_item_rate {

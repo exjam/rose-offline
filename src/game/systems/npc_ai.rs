@@ -811,6 +811,7 @@ pub fn npc_ai(
                 }
                 CommandData::Move(_) => {}
                 CommandData::Attack(_) => {}
+                CommandData::PickupDroppedItem(_) => {}
             }
         },
     );

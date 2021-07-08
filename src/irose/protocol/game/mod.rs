@@ -6,12 +6,12 @@ use tokio::sync::oneshot;
 use crate::game::messages::{
     client::{
         Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest, Move,
-        SetHotbarSlot,
+        PickupDroppedItem, SetHotbarSlot,
     },
     server::{
-        LocalChat, RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
-        SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
-        UpdateXpStamina, Whisper,
+        LocalChat, PickupDroppedItemResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
+        SpawnEntityMonster, SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory,
+        UpdateLevel, UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -185,6 +185,14 @@ impl GameClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::IncreaseBasicStat(basic_stat_type))?;
+            }
+            Some(ClientPackets::PickupDroppedItem) => {
+                let packet = PacketClientPickupDroppedItem::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PickupDroppedItem(PickupDroppedItem {
+                        target_entity_id: packet.target_entity_id,
+                    }))?;
             }
             _ => println!("Unhandled packet 0x{:#03X}", packet.command),
         }
@@ -428,6 +436,18 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerUpdateBasicStat {
                         basic_stat_type,
                         value,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PickupDroppedItemResult(PickupDroppedItemResult {
+                item_entity_id,
+                result,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPickupDroppedItemResult {
+                        item_entity_id,
+                        result,
                     }))
                     .await?;
             }

@@ -7,8 +7,8 @@ use crate::{
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
-        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, Npc, NpcStandingDirection,
-        Position, SkillPoints, StatPoints, Team,
+        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, Money, Npc,
+        NpcStandingDirection, Position, SkillPoints, StatPoints, Team,
     },
 };
 
@@ -36,6 +36,25 @@ pub struct MoveEntity {
     pub x: f32,
     pub y: f32,
     pub z: u16,
+}
+
+#[derive(Clone)]
+pub enum PickupDroppedItemError {
+    NotExist,
+    NoPermission,
+    InventoryFull,
+}
+
+#[derive(Clone)]
+pub enum PickupDroppedItemContent {
+    Item(ItemSlot, Item),
+    Money(Money),
+}
+
+#[derive(Clone)]
+pub struct PickupDroppedItemResult {
+    pub item_entity_id: ClientEntityId,
+    pub result: Result<PickupDroppedItemContent, PickupDroppedItemError>,
 }
 
 #[derive(Clone)]
@@ -175,21 +194,22 @@ pub struct UpdateXpStamina {
 
 #[derive(Clone)]
 pub enum ServerMessage {
-    LocalChat(LocalChat),
-    SpawnEntityCharacter(Box<SpawnEntityCharacter>),
-    SpawnEntityDroppedItem(SpawnEntityDroppedItem),
-    SpawnEntityNpc(SpawnEntityNpc),
-    SpawnEntityMonster(SpawnEntityMonster),
-    RemoveEntities(RemoveEntities),
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
+    LocalChat(LocalChat),
     MoveEntity(MoveEntity),
+    PickupDroppedItemResult(PickupDroppedItemResult),
+    RemoveEntities(RemoveEntities),
+    SpawnEntityCharacter(Box<SpawnEntityCharacter>),
+    SpawnEntityDroppedItem(SpawnEntityDroppedItem),
+    SpawnEntityMonster(SpawnEntityMonster),
+    SpawnEntityNpc(SpawnEntityNpc),
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
-    Whisper(Whisper),
     UpdateBasicStat(UpdateBasicStat),
     UpdateEquipment(UpdateEquipment),
     UpdateInventory(UpdateInventory),
     UpdateLevel(UpdateLevel),
     UpdateXpStamina(UpdateXpStamina),
+    Whisper(Whisper),
 }
