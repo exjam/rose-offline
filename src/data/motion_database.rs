@@ -66,6 +66,9 @@ impl MotionDatabase {
             attack: self
                 .get_character_motion(MotionCharacterAction::Attack, weapon_motion_type, gender)
                 .cloned(),
+            pickup_dropped_item: self
+                .get_character_motion(MotionCharacterAction::Pickitem, weapon_motion_type, gender)
+                .cloned(),
         }
     }
 }
