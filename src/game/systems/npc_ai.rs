@@ -44,9 +44,9 @@ struct AiSourceEntity<'a> {
 
 struct AiAttackerEntity<'a> {
     entity: &'a Entity,
-    position: &'a Position,
+    _position: &'a Position,
     level: &'a Level,
-    team: &'a Team,
+    _team: &'a Team,
     ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
     // TODO: Missing data on if clan master
@@ -625,9 +625,9 @@ pub fn npc_ai(
                                     },
                                     Some(AiAttackerEntity {
                                         entity: attacker,
-                                        position: attacker_position,
+                                        _position: attacker_position,
                                         level: attacker_level,
-                                        team: attacker_team,
+                                        _team: attacker_team,
                                         ability_values: attacker_ability_values,
                                         health_points: attacker_health_points,
                                     }),
@@ -784,7 +784,7 @@ pub fn npc_ai(
                                             position.position.z,
                                         );
                                         let drop_entity = cmd.push((
-                                            drop_item,
+                                            Some(drop_item),
                                             Position::new(drop_position, position.zone),
                                             Owner::new(killer_entity),
                                             ExpireTime::new(
