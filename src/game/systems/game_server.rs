@@ -172,6 +172,20 @@ pub fn game_server_join(
     }
 }
 
+fn client_entity_leave(
+    cmd: &mut CommandBuffer,
+    client_entity_list: &mut ClientEntityList,
+    entity: &Entity,
+    client_entity: &ClientEntity,
+    position: &Position,
+) {
+    if let Some(client_entity_zone) = client_entity_list.get_zone_mut(position.zone as usize) {
+        client_entity_zone.free(client_entity.id)
+    }
+    cmd.remove_component::<ClientEntity>(*entity);
+    cmd.remove_component::<ClientEntityVisibility>(*entity);
+}
+
 use clap::{App, Arg};
 use lazy_static::lazy_static;
 
@@ -263,9 +277,10 @@ fn handle_gm_command(
     entity: &Entity,
     client: &mut GameClient,
     text: &str,
-    entity_id: &ClientEntity,
+    client_entity: &ClientEntity,
     position: &Position,
     ability_values: &AbilityValues,
+    client_entity_list: &mut ClientEntityList,
 ) -> Result<(), GMCommandError> {
     let mut args = shellwords::split(text)?;
     args.insert(0, String::new()); // Clap expects arg[0] to be like executable name
@@ -292,20 +307,24 @@ fn handle_gm_command(
             let x = matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
             let y = matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
 
-            cmd.add_component(*entity, Position::new(Point3::new(x, y, 0.0), zone));
-            cmd.remove_component::<ClientEntity>(*entity);
+            if client_entity_list.get_zone(zone as usize).is_some() {
+                client_entity_leave(cmd, client_entity_list, entity, client_entity, position);
+                cmd.add_component(*entity, Position::new(Point3::new(x, y, 0.0), zone));
 
-            client
-                .server_message_tx
-                .send(ServerMessage::Teleport(server::Teleport {
-                    entity_id: entity_id.id,
-                    zone_no: zone,
-                    x,
-                    y,
-                    run_mode: 1,
-                    ride_mode: 0,
-                }))
-                .ok();
+                client
+                    .server_message_tx
+                    .send(ServerMessage::Teleport(server::Teleport {
+                        entity_id: client_entity.id,
+                        zone_no: zone,
+                        x,
+                        y,
+                        run_mode: 1,
+                        ride_mode: 0,
+                    }))
+                    .ok();
+            } else {
+                send_multiline_whisper(client, &format!("Invalid zone id {}", zone));
+            }
         }
         ("ability_values", _) => {
             send_multiline_whisper(client, &format!("{:?}", ability_values));
@@ -345,7 +364,7 @@ pub fn game_server_main(
         |(
             entity,
             client,
-            entity_id,
+            client_entity,
             position,
             basic_stats,
             stat_points,
@@ -363,9 +382,10 @@ pub fn game_server_main(
                                 entity,
                                 client,
                                 &text[1..],
-                                entity_id,
+                                client_entity,
                                 position,
                                 ability_values,
+                                client_entity_list,
                             )
                             .is_err()
                             {
@@ -375,7 +395,7 @@ pub fn game_server_main(
                             server_messages.send_entity_message(
                                 *entity,
                                 ServerMessage::LocalChat(server::LocalChat {
-                                    entity_id: entity_id.id,
+                                    entity_id: client_entity.id,
                                     text,
                                 }),
                             );
@@ -455,7 +475,7 @@ pub fn game_server_main(
                                     server_messages.send_entity_message(
                                         *entity,
                                         ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                            entity_id: entity_id.id,
+                                            entity_id: client_entity.id,
                                             equipment_index,
                                             item: equipment_slot.clone(),
                                         }),
@@ -485,7 +505,7 @@ pub fn game_server_main(
                                             *entity,
                                             ServerMessage::UpdateEquipment(
                                                 server::UpdateEquipment {
-                                                    entity_id: entity_id.id,
+                                                    entity_id: client_entity.id,
                                                     equipment_index,
                                                     item: None,
                                                 },
@@ -560,6 +580,14 @@ pub fn game_server_main(
                             .server_message_tx
                             .send(ServerMessage::LogoutReply(LogoutReply { result: Ok(()) }))
                             .ok();
+
+                        client_entity_leave(
+                            cmd,
+                            client_entity_list,
+                            entity,
+                            client_entity,
+                            position,
+                        );
                     }
                     _ => println!("Received unimplemented client message"),
                 }
