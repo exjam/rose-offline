@@ -43,6 +43,7 @@ pub fn game_server_authentication(
                     .find(|t| t.token == message.login_token)
                     .ok_or(ConnectionRequestError::InvalidToken)
                     .and_then(|token| {
+                        client.login_token = message.login_token;
                         AccountStorage::try_load(&token.username, &message.password_md5)
                             .ok()
                             .ok_or(ConnectionRequestError::InvalidPassword)
