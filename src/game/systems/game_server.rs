@@ -315,215 +315,238 @@ fn handle_gm_command(
     Ok(())
 }
 
-#[system(for_each)]
+#[allow(clippy::type_complexity)]
+#[system]
 pub fn game_server_main(
     cmd: &mut CommandBuffer,
-    entity: &Entity,
-    client: &mut GameClient,
-    entity_id: &ClientEntity,
-    position: &Position,
-    basic_stats: &mut BasicStats,
-    stat_points: &mut StatPoints,
-    hotbar: &mut Hotbar,
-    equipment: &mut Equipment,
-    inventory: &mut Inventory,
-    ability_values: &AbilityValues,
+    world: &mut SubWorld,
+    game_client_query: &mut Query<(
+        Entity,
+        &mut GameClient,
+        &ClientEntity,
+        &Position,
+        &mut BasicStats,
+        &mut StatPoints,
+        &mut Hotbar,
+        &mut Equipment,
+        &mut Inventory,
+        &AbilityValues,
+    )>,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
-    if let Ok(message) = client.client_message_rx.try_recv() {
-        match message {
-            ClientMessage::Chat(text) => {
-                if text.chars().next().map_or(false, |c| c == '/') {
-                    if handle_gm_command(
-                        cmd,
-                        entity,
-                        client,
-                        &text[1..],
-                        entity_id,
-                        position,
-                        ability_values,
-                    )
-                    .is_err()
-                    {
-                        send_gm_commands_help(client);
-                    }
-                } else {
-                    server_messages.send_entity_message(
-                        *entity,
-                        ServerMessage::LocalChat(server::LocalChat {
-                            entity_id: entity_id.id,
-                            text,
-                        }),
-                    );
-                }
-            }
-            ClientMessage::Move(message) => {
-                let mut move_target_entity = None;
-                if let Some(target_entity_id) = message.target_entity_id {
-                    if let Some(target_entity) = client_entity_list
-                        .get_zone(position.zone as usize)
-                        .and_then(|zone| zone.get_entity(target_entity_id))
-                    {
-                        move_target_entity = Some(target_entity);
-                    }
-                }
-
-                let destination = Point3::new(message.x, message.y, message.z as f32);
-                cmd.add_component(
-                    *entity,
-                    NextCommand::with_move(destination, move_target_entity),
-                );
-            }
-            ClientMessage::Attack(message) => {
-                if let Some(target_entity) = client_entity_list
-                    .get_zone(position.zone as usize)
-                    .and_then(|zone| zone.get_entity(message.target_entity_id))
-                {
-                    cmd.add_component(*entity, NextCommand::with_attack(target_entity));
-                } else {
-                    cmd.add_component(*entity, NextCommand::with_stop());
-                }
-            }
-            ClientMessage::SetHotbarSlot(SetHotbarSlot {
-                slot_index,
-                slot,
-                response_tx,
-            }) => {
-                if hotbar.set_slot(slot_index, slot).is_some() {
-                    response_tx.send(Ok(())).ok();
-                } else {
-                    response_tx.send(Err(SetHotbarSlotError::InvalidSlot)).ok();
-                }
-            }
-            ClientMessage::ChangeEquipment(ChangeEquipment {
-                equipment_index,
-                item_slot,
-            }) => {
-                // TODO: Cannot change equipment whilst casting spell
-                // TODO: Cannot change equipment whilst stunned
-
-                if let Some(item_slot) = item_slot {
-                    // TODO: Check if satisfy equipment requirements
-                    // TODO: Handle 2 handed weapons
-                    // Try equip item from inventory
-                    if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
-                        let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
-
-                        if let Some(Item::Equipment(equipment_item)) = inventory_slot {
-                            let previous = equipment_slot.take();
-                            *equipment_slot = Some(equipment_item.clone());
-                            *inventory_slot = previous.map(Item::Equipment);
-
-                            client
-                                .server_message_tx
-                                .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                    items: vec![
-                                        (
-                                            ItemSlot::Equipped(equipment_index),
-                                            equipment_slot.clone().map(Item::Equipment),
-                                        ),
-                                        (item_slot, inventory_slot.clone()),
-                                    ],
-                                }))
-                                .ok();
-
+    game_client_query.for_each_mut(
+        world,
+        |(
+            entity,
+            client,
+            entity_id,
+            position,
+            basic_stats,
+            stat_points,
+            hotbar,
+            equipment,
+            inventory,
+            ability_values,
+        )| {
+            if let Ok(message) = client.client_message_rx.try_recv() {
+                match message {
+                    ClientMessage::Chat(text) => {
+                        if text.chars().next().map_or(false, |c| c == '/') {
+                            if handle_gm_command(
+                                cmd,
+                                entity,
+                                client,
+                                &text[1..],
+                                entity_id,
+                                position,
+                                ability_values,
+                            )
+                            .is_err()
+                            {
+                                send_gm_commands_help(client);
+                            }
+                        } else {
                             server_messages.send_entity_message(
                                 *entity,
-                                ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                ServerMessage::LocalChat(server::LocalChat {
                                     entity_id: entity_id.id,
-                                    equipment_index,
-                                    item: equipment_slot.clone(),
+                                    text,
                                 }),
                             );
                         }
                     }
-                } else {
-                    // Try unequip to inventory
-                    let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
-                    let item = equipment_slot.take();
-                    if let Some(item) = item {
-                        match inventory.try_add_equipment_item(item) {
-                            Ok((inventory_slot, item)) => {
-                                *equipment_slot = None;
-
-                                client
-                                    .server_message_tx
-                                    .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                        items: vec![
-                                            (ItemSlot::Equipped(equipment_index), None),
-                                            (inventory_slot, Some(item.clone())),
-                                        ],
-                                    }))
-                                    .ok();
-
-                                server_messages.send_entity_message(
-                                    *entity,
-                                    ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                        entity_id: entity_id.id,
-                                        equipment_index,
-                                        item: None,
-                                    }),
-                                );
+                    ClientMessage::Move(message) => {
+                        let mut move_target_entity = None;
+                        if let Some(target_entity_id) = message.target_entity_id {
+                            if let Some(target_entity) = client_entity_list
+                                .get_zone(position.zone as usize)
+                                .and_then(|zone| zone.get_entity(target_entity_id))
+                            {
+                                move_target_entity = Some(target_entity);
                             }
-                            Err(item) => {
-                                *equipment_slot = Some(item);
+                        }
+
+                        let destination = Point3::new(message.x, message.y, message.z as f32);
+                        cmd.add_component(
+                            *entity,
+                            NextCommand::with_move(destination, move_target_entity),
+                        );
+                    }
+                    ClientMessage::Attack(message) => {
+                        if let Some(target_entity) = client_entity_list
+                            .get_zone(position.zone as usize)
+                            .and_then(|zone| zone.get_entity(message.target_entity_id))
+                        {
+                            cmd.add_component(*entity, NextCommand::with_attack(target_entity));
+                        } else {
+                            cmd.add_component(*entity, NextCommand::with_stop());
+                        }
+                    }
+                    ClientMessage::SetHotbarSlot(SetHotbarSlot {
+                        slot_index,
+                        slot,
+                        response_tx,
+                    }) => {
+                        if hotbar.set_slot(slot_index, slot).is_some() {
+                            response_tx.send(Ok(())).ok();
+                        } else {
+                            response_tx.send(Err(SetHotbarSlotError::InvalidSlot)).ok();
+                        }
+                    }
+                    ClientMessage::ChangeEquipment(ChangeEquipment {
+                        equipment_index,
+                        item_slot,
+                    }) => {
+                        // TODO: Cannot change equipment whilst casting spell
+                        // TODO: Cannot change equipment whilst stunned
+
+                        if let Some(item_slot) = item_slot {
+                            // TODO: Check if satisfy equipment requirements
+                            // TODO: Handle 2 handed weapons
+                            // Try equip item from inventory
+                            if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
+                                let equipment_slot =
+                                    equipment.get_equipment_slot_mut(equipment_index);
+
+                                if let Some(Item::Equipment(equipment_item)) = inventory_slot {
+                                    let previous = equipment_slot.take();
+                                    *equipment_slot = Some(equipment_item.clone());
+                                    *inventory_slot = previous.map(Item::Equipment);
+
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                            items: vec![
+                                                (
+                                                    ItemSlot::Equipped(equipment_index),
+                                                    equipment_slot.clone().map(Item::Equipment),
+                                                ),
+                                                (item_slot, inventory_slot.clone()),
+                                            ],
+                                        }))
+                                        .ok();
+
+                                    server_messages.send_entity_message(
+                                        *entity,
+                                        ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                            entity_id: entity_id.id,
+                                            equipment_index,
+                                            item: equipment_slot.clone(),
+                                        }),
+                                    );
+                                }
+                            }
+                        } else {
+                            // Try unequip to inventory
+                            let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
+                            let item = equipment_slot.take();
+                            if let Some(item) = item {
+                                match inventory.try_add_equipment_item(item) {
+                                    Ok((inventory_slot, item)) => {
+                                        *equipment_slot = None;
+
+                                        client
+                                            .server_message_tx
+                                            .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                                items: vec![
+                                                    (ItemSlot::Equipped(equipment_index), None),
+                                                    (inventory_slot, Some(item.clone())),
+                                                ],
+                                            }))
+                                            .ok();
+
+                                        server_messages.send_entity_message(
+                                            *entity,
+                                            ServerMessage::UpdateEquipment(
+                                                server::UpdateEquipment {
+                                                    entity_id: entity_id.id,
+                                                    equipment_index,
+                                                    item: None,
+                                                },
+                                            ),
+                                        );
+                                    }
+                                    Err(item) => {
+                                        *equipment_slot = Some(item);
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
-            ClientMessage::IncreaseBasicStat(basic_stat_type) => {
-                if let Some(cost) = game_data
-                    .ability_value_calculator
-                    .calculate_basic_stat_increase_cost(basic_stats, basic_stat_type)
-                {
-                    if cost < stat_points.points {
-                        let value = match basic_stat_type {
-                            BasicStatType::Strength => &mut basic_stats.strength,
-                            BasicStatType::Dexterity => &mut basic_stats.dexterity,
-                            BasicStatType::Intelligence => &mut basic_stats.intelligence,
-                            BasicStatType::Concentration => &mut basic_stats.concentration,
-                            BasicStatType::Charm => &mut basic_stats.charm,
-                            BasicStatType::Sense => &mut basic_stats.sense,
-                        };
+                    ClientMessage::IncreaseBasicStat(basic_stat_type) => {
+                        if let Some(cost) = game_data
+                            .ability_value_calculator
+                            .calculate_basic_stat_increase_cost(basic_stats, basic_stat_type)
+                        {
+                            if cost < stat_points.points {
+                                let value = match basic_stat_type {
+                                    BasicStatType::Strength => &mut basic_stats.strength,
+                                    BasicStatType::Dexterity => &mut basic_stats.dexterity,
+                                    BasicStatType::Intelligence => &mut basic_stats.intelligence,
+                                    BasicStatType::Concentration => &mut basic_stats.concentration,
+                                    BasicStatType::Charm => &mut basic_stats.charm,
+                                    BasicStatType::Sense => &mut basic_stats.sense,
+                                };
 
-                        stat_points.points -= cost;
-                        *value += 1;
+                                stat_points.points -= cost;
+                                *value += 1;
 
+                                client
+                                    .server_message_tx
+                                    .send(ServerMessage::UpdateBasicStat(UpdateBasicStat {
+                                        basic_stat_type,
+                                        value: *value,
+                                    }))
+                                    .ok();
+                            }
+                        }
+                    }
+                    ClientMessage::PickupDroppedItem(message) => {
+                        if let Some(target_entity) = client_entity_list
+                            .get_zone(position.zone as usize)
+                            .and_then(|zone| zone.get_entity(message.target_entity_id))
+                        {
+                            cmd.add_component(
+                                *entity,
+                                NextCommand::with_pickup_dropped_item(target_entity),
+                            );
+                        } else {
+                            cmd.add_component(*entity, NextCommand::with_stop());
+                        }
+                    }
+                    ClientMessage::LogoutRequest(_) => {
                         client
                             .server_message_tx
-                            .send(ServerMessage::UpdateBasicStat(UpdateBasicStat {
-                                basic_stat_type,
-                                value: *value,
-                            }))
+                            .send(ServerMessage::LogoutReply(LogoutReply { result: Ok(()) }))
                             .ok();
                     }
+                    _ => println!("Received unimplemented client message"),
                 }
             }
-            ClientMessage::PickupDroppedItem(message) => {
-                if let Some(target_entity) = client_entity_list
-                    .get_zone(position.zone as usize)
-                    .and_then(|zone| zone.get_entity(message.target_entity_id))
-                {
-                    cmd.add_component(
-                        *entity,
-                        NextCommand::with_pickup_dropped_item(target_entity),
-                    );
-                } else {
-                    cmd.add_component(*entity, NextCommand::with_stop());
-                }
-            }
-            ClientMessage::LogoutRequest(_) => {
-                client
-                    .server_message_tx
-                    .send(ServerMessage::LogoutReply(LogoutReply { result: Ok(()) }))
-                    .ok();
-            }
-            _ => println!("Received unimplemented client message"),
-        }
-    }
+        },
+    );
 }
 
 #[system(for_each)]
