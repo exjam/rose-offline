@@ -160,7 +160,7 @@ impl WorldClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => println!("[WS] Unhandled packet {:#03X}", packet.command),
         }
 
         Ok(())

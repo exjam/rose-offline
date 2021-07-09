@@ -204,7 +204,7 @@ impl GameClient {
                     LogoutRequest::ReturnToCharacterSelect,
                 ))?;
             }
-            _ => println!("Unhandled packet 0x{:#03X}", packet.command),
+            _ => println!("[GS] Unhandled packet {:#03X}", packet.command),
         }
         Ok(())
     }

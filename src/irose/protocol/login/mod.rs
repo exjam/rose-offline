@@ -146,7 +146,7 @@ impl LoginClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => println!("[LS] Unhandled packet {:#03X}", packet.command),
         }
 
         Ok(())
