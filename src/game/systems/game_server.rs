@@ -17,7 +17,7 @@ use crate::{
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-                JoinZoneResponse, SetHotbarSlot, SetHotbarSlotError,
+                JoinZoneResponse, LogoutRequest, SetHotbarSlot, SetHotbarSlotError,
             },
             server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
         },
@@ -333,12 +333,15 @@ pub fn game_server_main(
         &mut Inventory,
         &AbilityValues,
     )>,
+    world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
+    let (world_client_query_world, mut world) = world.split_for_query(world_client_query);
+
     game_client_query.for_each_mut(
-        world,
+        &mut world,
         |(
             entity,
             client,
@@ -537,7 +540,22 @@ pub fn game_server_main(
                             cmd.add_component(*entity, NextCommand::with_stop());
                         }
                     }
-                    ClientMessage::LogoutRequest(_) => {
+                    ClientMessage::LogoutRequest(request) => {
+                        if let LogoutRequest::ReturnToCharacterSelect = request {
+                            // Send ReturnToCharacterSelect via world_client
+                            world_client_query.for_each(
+                                &world_client_query_world,
+                                |world_client| {
+                                    if world_client.login_token == client.login_token {
+                                        world_client
+                                            .server_message_tx
+                                            .send(ServerMessage::ReturnToCharacterSelect)
+                                            .ok();
+                                    }
+                                },
+                            );
+                        }
+
                         client
                             .server_message_tx
                             .send(ServerMessage::LogoutReply(LogoutReply { result: Ok(()) }))

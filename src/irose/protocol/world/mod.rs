@@ -168,10 +168,19 @@ impl WorldClient {
 
     async fn handle_server_message(
         &self,
-        _client: &mut Client<'_>,
-        _message: ServerMessage,
+        client: &mut Client<'_>,
+        message: ServerMessage,
     ) -> Result<(), ProtocolError> {
-        panic!("Unimplemented message for irose world server!")
+        match message {
+            ServerMessage::ReturnToCharacterSelect => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerReturnToCharacterSelect {}))
+                    .await?;
+            }
+            _ => panic!("Received unexpected server message for world server"),
+        }
+        Ok(())
     }
 }
 

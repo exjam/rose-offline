@@ -467,6 +467,10 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerLogoutResult { result }))
                     .await?;
             }
+            // These messages are for World Server
+            ServerMessage::ReturnToCharacterSelect => {
+                panic!("Received unexpected server message for game server")
+            }
         }
         Ok(())
     }

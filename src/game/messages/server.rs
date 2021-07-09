@@ -218,4 +218,5 @@ pub enum ServerMessage {
     UpdateXpStamina(UpdateXpStamina),
     Whisper(Whisper),
     LogoutReply(LogoutReply),
+    ReturnToCharacterSelect,
 }

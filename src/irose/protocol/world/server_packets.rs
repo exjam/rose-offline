@@ -13,6 +13,7 @@ pub enum ServerPackets {
     CreateCharacterReply = 0x713,
     DeleteCharacterReply = 0x714,
     MoveServer = 0x711,
+    ReturnToCharacterSelect = 0x71c,
 }
 
 #[allow(dead_code)]
@@ -157,6 +158,15 @@ impl<'a> From<&PacketServerMoveServer<'a>> for Packet {
         writer.write_u32(packet.login_token);
         writer.write_u32(packet.packet_codec_seed);
         writer.write_null_terminated_utf8(packet.ip);
+        writer.into()
+    }
+}
+
+pub struct PacketServerReturnToCharacterSelect {}
+
+impl From<&PacketServerReturnToCharacterSelect> for Packet {
+    fn from(packet: &PacketServerReturnToCharacterSelect) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ReturnToCharacterSelect as u16);
         writer.into()
     }
 }
