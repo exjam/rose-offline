@@ -3,6 +3,7 @@ pub enum ProtocolError {
     Disconnect,
     IscError,
     InvalidPacket,
+    ServerInitiatedDisconnect,
 }
 
 impl From<tokio::sync::oneshot::error::RecvError> for ProtocolError {

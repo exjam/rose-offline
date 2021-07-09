@@ -190,8 +190,12 @@ impl ProtocolClient for WorldClient {
                         }
                     }
                 },
-                Some(message) = client.server_message_rx.recv() => {
-                    self.handle_server_message(client, message).await?;
+                server_message = client.server_message_rx.recv() => {
+                    if let Some(message) = server_message {
+                        self.handle_server_message(client, message).await?;
+                    } else {
+                        return Err(ProtocolError::ServerInitiatedDisconnect);
+                    }
                 }
             };
         }
