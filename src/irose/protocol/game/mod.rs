@@ -5,13 +5,13 @@ use tokio::sync::oneshot;
 
 use crate::game::messages::{
     client::{
-        Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest, Move,
-        PickupDroppedItem, SetHotbarSlot,
+        Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,
+        LogoutRequest, Move, PickupDroppedItem, SetHotbarSlot,
     },
     server::{
-        LocalChat, PickupDroppedItemResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
-        SpawnEntityMonster, SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory,
-        UpdateLevel, UpdateXpStamina, Whisper,
+        LocalChat, LogoutReply, PickupDroppedItemResult, RemoveEntities, ServerMessage,
+        SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc, UpdateBasicStat,
+        UpdateEquipment, UpdateInventory, UpdateLevel, UpdateXpStamina, Whisper,
     },
 };
 use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
@@ -193,6 +193,16 @@ impl GameClient {
                     .send(ClientMessage::PickupDroppedItem(PickupDroppedItem {
                         target_entity_id: packet.target_entity_id,
                     }))?;
+            }
+            Some(ClientPackets::LogoutRequest) => {
+                client
+                    .client_message_tx
+                    .send(ClientMessage::LogoutRequest(LogoutRequest::Logout))?;
+            }
+            Some(ClientPackets::ReturnToCharacterSelectRequest) => {
+                client.client_message_tx.send(ClientMessage::LogoutRequest(
+                    LogoutRequest::ReturnToCharacterSelect,
+                ))?;
             }
             _ => println!("Unhandled packet 0x{:#03X}", packet.command),
         }
@@ -449,6 +459,12 @@ impl GameClient {
                         item_entity_id,
                         result,
                     }))
+                    .await?;
+            }
+            ServerMessage::LogoutReply(LogoutReply { result }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerLogoutResult { result }))
                     .await?;
             }
         }

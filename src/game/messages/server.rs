@@ -193,6 +193,11 @@ pub struct UpdateXpStamina {
 }
 
 #[derive(Clone)]
+pub struct LogoutReply {
+    pub result: Result<(), Duration>,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -212,4 +217,5 @@ pub enum ServerMessage {
     UpdateLevel(UpdateLevel),
     UpdateXpStamina(UpdateXpStamina),
     Whisper(Whisper),
+    LogoutReply(LogoutReply),
 }

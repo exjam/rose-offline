@@ -192,6 +192,11 @@ pub struct PickupDroppedItem {
     pub target_entity_id: ClientEntityId,
 }
 
+pub enum LogoutRequest {
+    Logout,
+    ReturnToCharacterSelect,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -211,4 +216,5 @@ pub enum ClientMessage {
     ChangeEquipment(ChangeEquipment),
     IncreaseBasicStat(BasicStatType),
     PickupDroppedItem(PickupDroppedItem),
+    LogoutRequest(LogoutRequest),
 }

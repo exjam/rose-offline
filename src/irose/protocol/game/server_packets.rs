@@ -24,6 +24,7 @@ use crate::{
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {
+    LogoutResult = 0x707,
     ConnectReply = 0x70c,
     SelectCharacter = 0x715,
     CharacterInventory = 0x716,
@@ -983,6 +984,25 @@ impl From<&PacketServerPickupDroppedItemResult> for Packet {
                 }
                 writer.write_u16(0); // Slot
                 writer.write_item_full(None);
+            }
+        };
+        writer.into()
+    }
+}
+
+pub struct PacketServerLogoutResult {
+    pub result: Result<(), Duration>,
+}
+
+impl From<&PacketServerLogoutResult> for Packet {
+    fn from(packet: &PacketServerLogoutResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::LogoutResult as u16);
+        match &packet.result {
+            Ok(_) => {
+                writer.write_u16(0);
+            }
+            Err(duration) => {
+                writer.write_u16(duration.as_secs() as u16);
             }
         };
         writer.into()

@@ -15,7 +15,9 @@ use super::common_packets::read_hotbar_slot;
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
+    LogoutRequest = 0x707,
     ConnectRequest = 0x70b,
+    ReturnToCharacterSelectRequest = 0x71C,
     JoinZone = 0x753,
     Chat = 0x783,
     StopMove = 0x796,

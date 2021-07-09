@@ -1,4 +1,6 @@
-use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore};
+use legion::{
+    component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, Query,
+};
 use nalgebra::Point3;
 use std::num::{ParseFloatError, ParseIntError};
 
@@ -10,14 +12,14 @@ use crate::{
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
             ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, SkillList, SkillPoints,
-            StatPoints, Team,
+            StatPoints, Team, WorldClient,
         },
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
                 JoinZoneResponse, SetHotbarSlot, SetHotbarSlotError,
             },
-            server::{self, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
+            server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
         },
         resources::{ClientEntityList, GameData, LoginTokens, ServerMessages},
     },
@@ -512,6 +514,12 @@ pub fn game_server_main(
                 } else {
                     cmd.add_component(*entity, NextCommand::with_stop());
                 }
+            }
+            ClientMessage::LogoutRequest(_) => {
+                client
+                    .server_message_tx
+                    .send(ServerMessage::LogoutReply(LogoutReply { result: Ok(()) }))
+                    .ok();
             }
             _ => println!("Received unimplemented client message"),
         }
