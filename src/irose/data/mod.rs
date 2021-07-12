@@ -29,6 +29,8 @@ pub fn get_game_data() -> GameData {
     let npc_database = Arc::new(get_npc_database(&vfs_index).expect("Failed to load npc database"));
     let skill_database =
         Arc::new(get_skill_database(&vfs_index).expect("Failed to load skill database"));
+    let zone_database =
+        Arc::new(get_zone_database(&vfs_index).expect("Failed to load zone database"));
     let drop_table = get_drop_table(&vfs_index, item_database.clone(), npc_database.clone())
         .expect("Failed to load drop table");
 
@@ -40,7 +42,7 @@ pub fn get_game_data() -> GameData {
     .expect("Failed to get ability value calculator");
 
     GameData {
-        character_creator: get_character_creator(&vfs_index, &skill_database)
+        character_creator: get_character_creator(&vfs_index, &skill_database, &zone_database)
             .expect("Failed to get character creator"),
         ability_value_calculator,
         drop_table,
@@ -49,6 +51,6 @@ pub fn get_game_data() -> GameData {
         motions: Arc::new(get_motion_database(&vfs_index).expect("Failed to load motion database")),
         npcs: npc_database,
         skills: skill_database,
-        zones: Arc::new(get_zone_database(&vfs_index).expect("Failed to load zone database")),
+        zones: zone_database,
     }
 }

@@ -3,7 +3,7 @@ use nalgebra::Point3;
 use crate::{
     data::{
         formats::{FileReader, VfsIndex},
-        ItemReference, SkillDatabase,
+        ItemReference, SkillDatabase, ZoneDatabase,
     },
     game::components::{ExperiencePoints, SkillPoints, StatPoints},
 };
@@ -31,18 +31,8 @@ struct CharacterGenderData {
 struct CharacterCreatorData {
     gender_data: Vec<CharacterGenderData>,
     skills: Vec<(SkillReference, SkillPage)>,
-}
-
-impl CharacterCreatorData {
-    pub fn new(
-        gender_data: Vec<CharacterGenderData>,
-        skills: Vec<(SkillReference, SkillPage)>,
-    ) -> Self {
-        Self {
-            gender_data,
-            skills,
-        }
-    }
+    start_position: Position,
+    revive_position: Position,
 }
 
 pub struct StbInitAvatar(pub StbFile);
@@ -154,19 +144,20 @@ impl CharacterCreator for CharacterCreatorData {
                 job: 0,
                 face,
                 hair,
-                respawn_zone: 20,
+                revive_zone: self.revive_position.zone,
+                revive_position: self.revive_position.position,
             },
             basic_stats: gender_data.basic_stats.clone(),
             equipment: Equipment::new(),
             inventory: Inventory::new(),
             level: Level::new(1),
             experience_points: ExperiencePoints::new(),
-            position: Position::new(Point3::new(530500.0, 539500.0, 0.0), 20),
+            position: self.start_position.clone(),
             skill_list: SkillList::new(),
             hotbar: Hotbar::new(),
             delete_time: None,
-            health_points: HealthPoints::new(50),
-            mana_points: ManaPoints::new(40),
+            health_points: HealthPoints::new(0),
+            mana_points: ManaPoints::new(0),
             stat_points: StatPoints::new(),
             skill_points: SkillPoints::new(),
         };
@@ -202,6 +193,7 @@ fn load_gender(data: &StbInitAvatar, id: usize) -> Option<CharacterGenderData> {
 pub fn get_character_creator(
     vfs: &VfsIndex,
     skill_database: &SkillDatabase,
+    zone_database: &ZoneDatabase,
 ) -> Option<Box<impl CharacterCreator + Send + Sync>> {
     let file = vfs.open_file("3DDATA/STB/INIT_AVATAR.STB")?;
     let data = StbInitAvatar(StbFile::read(FileReader::from(&file)).ok()?);
@@ -222,5 +214,20 @@ pub fn get_character_creator(
         }
     }
 
-    Some(Box::new(CharacterCreatorData::new(gender_data, skills)))
+    let start_zone_id = 20;
+    let zone_data = zone_database
+        .get_zone(start_zone_id as usize)
+        .expect("Could not find start zone");
+
+    let revive_position = zone_data
+        .get_closest_revive_position(zone_data.start_position)
+        .unwrap_or(zone_data.start_position);
+    let start_position = Point3::new(530500.0, 539500.0, 0.0);
+
+    Some(Box::new(CharacterCreatorData {
+        gender_data,
+        skills,
+        start_position: Position::new(start_position, start_zone_id as u16),
+        revive_position: Position::new(revive_position, start_zone_id as u16),
+    }))
 }

@@ -1,3 +1,4 @@
+use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -8,5 +9,6 @@ pub struct CharacterInfo {
     pub job: u16,
     pub face: u8,
     pub hair: u8,
-    pub respawn_zone: u16,
+    pub revive_zone: u16,
+    pub revive_position: Point3<f32>,
 }
