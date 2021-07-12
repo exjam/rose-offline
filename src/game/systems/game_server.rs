@@ -87,21 +87,41 @@ pub fn game_server_authentication(
                                 );
                                 cmd.add_component(*entity, Command::default());
                                 cmd.add_component(*entity, NextCommand::default());
-                                cmd.add_component(*entity, ability_values);
                                 cmd.add_component(*entity, character.info.clone());
                                 cmd.add_component(*entity, character.basic_stats.clone());
                                 cmd.add_component(*entity, character.inventory.clone());
                                 cmd.add_component(*entity, character.equipment.clone());
                                 cmd.add_component(*entity, character.level.clone());
                                 cmd.add_component(*entity, character.experience_points.clone());
-                                cmd.add_component(*entity, character.position.clone());
                                 cmd.add_component(*entity, character.skill_list.clone());
                                 cmd.add_component(*entity, character.hotbar.clone());
-                                cmd.add_component(*entity, character.health_points.clone());
-                                cmd.add_component(*entity, character.mana_points.clone());
                                 cmd.add_component(*entity, character.skill_points.clone());
                                 cmd.add_component(*entity, character.stat_points.clone());
                                 cmd.add_component(*entity, Team::default_character());
+
+                                if character.health_points.hp == 0 {
+                                    cmd.add_component(
+                                        *entity,
+                                        HealthPoints::new(ability_values.max_health as u32),
+                                    );
+                                    cmd.add_component(
+                                        *entity,
+                                        ManaPoints::new(ability_values.max_mana as u32),
+                                    );
+                                    cmd.add_component(
+                                        *entity,
+                                        Position::new(
+                                            character.info.revive_position,
+                                            character.info.revive_zone,
+                                        ),
+                                    );
+                                } else {
+                                    cmd.add_component(*entity, character.health_points.clone());
+                                    cmd.add_component(*entity, character.mana_points.clone());
+                                    cmd.add_component(*entity, character.position.clone());
+                                }
+
+                                cmd.add_component(*entity, ability_values);
 
                                 GameConnectionResponse {
                                     packet_sequence_id: 123,
