@@ -234,7 +234,7 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
         npcs.len(),
         num_sectors_x,
         num_sectors_y,
-        start_position,
+        start_position.xy(),
     );
     Ok(ZoneData {
         id: id as u16,
