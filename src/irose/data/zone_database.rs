@@ -1,4 +1,4 @@
-use nalgebra::{Point2, Vector3};
+use nalgebra::{Point2, Point3, Vector3};
 use std::{collections::HashMap, path::Path};
 
 use crate::{
@@ -25,8 +25,8 @@ impl StbZone {
     }
 
     stb_column! { 1, get_zone_file, &str }
-    stb_column! { 2, get_zone_start_event_object_name, &str }
-    stb_column! { 3, get_zone_respawn_event_object_name, &str }
+    stb_column! { 2, get_zone_start_event_position_name, &str }
+    stb_column! { 3, get_zone_revive_event_position_name, &str }
     stb_column! { 0, get_zone_is_underground, bool }
     stb_column! { 5, get_zone_background_music_day, &str }
     stb_column! { 6, get_zone_background_music_night, &str }
@@ -207,14 +207,29 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
     let num_sectors_x = ((num_blocks_x as f32 * block_size) / sector_size as f32) as u32;
     let num_sectors_y = ((num_blocks_y as f32 * block_size) / sector_size as f32) as u32;
 
+    let start_event_position_name = data.get_zone_start_event_position_name(id).unwrap_or("");
+    let revive_event_position_name = data.get_zone_revive_event_position_name(id).unwrap_or("");
+    let mut start_position = Point3::new(0.0, 0.0, 0.0);
+    let mut revive_positions = Vec::new();
+    for (name, position) in zon_file.event_positions.iter() {
+        if name == start_event_position_name {
+            start_position = *position;
+        }
+
+        if name == revive_event_position_name {
+            revive_positions.push(*position);
+        }
+    }
+
     println!(
-        "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {})",
+        "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {}), start_position: {}",
         id,
         ifo_count,
         monster_spawns.len(),
         npcs.len(),
         num_sectors_x,
-        num_sectors_y
+        num_sectors_y,
+        start_position,
     );
     Ok(ZoneData {
         id: id as u16,
@@ -229,6 +244,8 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
         ),
         num_sectors_x,
         num_sectors_y,
+        start_position,
+        revive_positions,
     })
 }
 

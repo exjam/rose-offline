@@ -1,18 +1,12 @@
 use super::reader::{FileReader, ReadError};
-use nalgebra::Vector3;
+use nalgebra::Point3;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-
-#[allow(dead_code)]
-pub struct EventPosition {
-    name: String,
-    position: Vector3<f32>,
-}
 
 pub struct ZonFile {
     pub grid_per_patch: f32,
     pub grid_size: f32,
-    pub event_positions: Vec<EventPosition>,
+    pub event_positions: Vec<(String, Point3<f32>)>,
 }
 
 #[derive(Debug)]
@@ -61,13 +55,9 @@ impl ZonFile {
                 Some(BlockType::EventPositions) => {
                     let object_count = reader.read_u32()?;
                     for _ in 0..object_count {
-                        let position = reader.read_vector3_f32()?;
-                        let str_len = reader.read_u8()? as usize;
-                        let name = reader.read_fixed_length_string(str_len)?;
-                        event_positions.push(EventPosition {
-                            position,
-                            name: String::from(name),
-                        });
+                        let position = Point3::from(reader.read_vector3_f32()?);
+                        let name = reader.read_u8_length_string()?;
+                        event_positions.push((String::from(name), position));
                     }
                 }
                 _ => {}
