@@ -211,18 +211,23 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
     let revive_event_position_name = data.get_zone_revive_event_position_name(id).unwrap_or("");
     let mut start_position = Point3::new(0.0, 0.0, 0.0);
     let mut revive_positions = Vec::new();
-    for (name, position) in zon_file.event_positions.iter() {
+    for (name, mut position) in zon_file.event_positions.iter() {
+        let y = position.y;
+        position.y = position.z;
+        position.z = y;
+        position += objects_offset;
+
         if name == start_event_position_name {
-            start_position = *position;
+            start_position = position;
         }
 
         if name == revive_event_position_name {
-            revive_positions.push(*position);
+            revive_positions.push(position);
         }
     }
 
     println!(
-        "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {}), start_position: {}",
+        "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {}), start: {}",
         id,
         ifo_count,
         monster_spawns.len(),
