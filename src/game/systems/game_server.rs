@@ -399,6 +399,8 @@ pub fn game_server_main(
         &AbilityValues,
         &Command,
         &CharacterInfo,
+        &Level,
+        &SkillList,
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -422,6 +424,8 @@ pub fn game_server_main(
             ability_values,
             command,
             character_info,
+            level,
+            skill_list,
         )| {
             if let Ok(message) = client.client_message_rx.try_recv() {
                 match message {
@@ -568,6 +572,18 @@ pub fn game_server_main(
                                 }
                             }
                         }
+
+                        cmd.add_component(
+                            *entity,
+                            game_data.ability_value_calculator.calculate(
+                                character_info,
+                                level,
+                                equipment,
+                                inventory,
+                                basic_stats,
+                                skill_list,
+                            ),
+                        );
                     }
                     ClientMessage::IncreaseBasicStat(basic_stat_type) => {
                         if let Some(cost) = game_data
@@ -594,6 +610,18 @@ pub fn game_server_main(
                                         value: *value,
                                     }))
                                     .ok();
+
+                                cmd.add_component(
+                                    *entity,
+                                    game_data.ability_value_calculator.calculate(
+                                        character_info,
+                                        level,
+                                        equipment,
+                                        inventory,
+                                        basic_stats,
+                                        skill_list,
+                                    ),
+                                );
                             }
                         }
                     }
