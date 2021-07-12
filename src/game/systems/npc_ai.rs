@@ -455,7 +455,10 @@ fn npc_ai_do_actions(
             AipAction::KillSelf => {
                 ai_world
                     .cmd
-                    .add_component(*ai_parameters.source.entity, NextCommand::with_die());
+                    .add_component(*ai_parameters.source.entity, HealthPoints::new(0));
+                ai_world
+                    .cmd
+                    .add_component(*ai_parameters.source.entity, Command::with_die(None));
             }
             AipAction::UseSkill(_, _, _) => {}
             AipAction::SetVariable(_, _, _, _) => {}
