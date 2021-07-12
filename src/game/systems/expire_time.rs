@@ -15,7 +15,7 @@ pub fn expire_time(
     query.for_each(world, |(entity, expire_time, command)| {
         if delta_time.now >= expire_time.when {
             if command.is_some() {
-                cmd.add_component(*entity, Command::with_die());
+                cmd.add_component(*entity, Command::with_die(None));
             } else {
                 cmd.remove(*entity);
             }

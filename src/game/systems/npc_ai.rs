@@ -17,9 +17,9 @@ use crate::{
     },
     game::{
         components::{
-            AbilityValues, ClientEntityType, Command, CommandData, DamageSources, ExpireTime,
-            HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner, Position,
-            SpawnOrigin, Team,
+            AbilityValues, ClientEntityType, Command, CommandData, CommandDie, DamageSources,
+            ExpireTime, HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner,
+            Position, SpawnOrigin, Team,
         },
         resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
         GameData,
@@ -680,7 +680,9 @@ pub fn npc_ai(
                         }
                     }
                 }
-                CommandData::Die => {
+                CommandData::Die(CommandDie {
+                    killer: killer_entity,
+                }) => {
                     if let Some(&SpawnOrigin::MonsterSpawnPoint(spawn_point_entity, _)) =
                         spawn_origin
                     {
@@ -753,7 +755,7 @@ pub fn npc_ai(
                             }
 
                             // Drop item owned by killer
-                            if let Some(killer_entity) = damage_sources.killer {
+                            if let Some(killer_entity) = killer_entity {
                                 if let Ok((killer_level, killer_ability_values)) =
                                     killer_query.get(&killer_query_world, killer_entity)
                                 {

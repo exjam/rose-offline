@@ -10,6 +10,11 @@ pub struct CommandMove {
 }
 
 #[derive(Clone)]
+pub struct CommandDie {
+    pub killer: Option<Entity>,
+}
+
+#[derive(Clone)]
 pub struct CommandAttack {
     pub target: Entity,
 }
@@ -21,7 +26,7 @@ pub struct CommandPickupDroppedItem {
 
 #[derive(Clone)]
 pub enum CommandData {
-    Die,
+    Die(CommandDie),
     Stop,
     Move(CommandMove),
     Attack(CommandAttack),
@@ -53,13 +58,6 @@ impl NextCommand {
     pub fn default() -> Self {
         Self {
             command: None,
-            has_sent_server_message: false,
-        }
-    }
-
-    pub fn with_die() -> Self {
-        Self {
-            command: Some(CommandData::Die),
             has_sent_server_message: false,
         }
     }
@@ -119,8 +117,15 @@ impl Command {
         }
     }
 
-    pub fn with_die() -> Self {
-        Self::new(CommandData::Die, Some(Duration::new(u64::MAX, 0)))
+    pub fn is_dead(&self) -> bool {
+        matches!(self.command, CommandData::Die(_))
+    }
+
+    pub fn with_die(killer: Option<Entity>) -> Self {
+        Self::new(
+            CommandData::Die(CommandDie { killer }),
+            Some(Duration::new(u64::MAX, 0)),
+        )
     }
 
     pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {

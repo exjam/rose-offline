@@ -93,10 +93,6 @@ pub fn apply_damage(
                         last_damage_time: delta_time.now,
                     });
                 }
-
-                if health_points.hp == 0 {
-                    damage_sources.killer = Some(pending_damage.attacker);
-                }
             }
 
             if let Some(npc_ai) = npc_ai {
@@ -106,7 +102,10 @@ pub fn apply_damage(
             }
 
             if health_points.hp == 0 {
-                cmd.add_component(pending_damage.defender, Command::with_die());
+                cmd.add_component(
+                    pending_damage.defender,
+                    Command::with_die(Some(pending_damage.attacker)),
+                );
             }
         }
     }

@@ -157,7 +157,9 @@ pub fn command(
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 // Send any server message required for update client next command
                 match next_command.command.as_mut().unwrap() {
-                    CommandData::Die => {}
+                    CommandData::Die(_) => {
+                        panic!("Next command should never be set to die, set current command")
+                    }
                     CommandData::Stop => {}
                     CommandData::PickupDroppedItem(_) => {}
                     CommandData::Move(CommandMove {

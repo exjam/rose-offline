@@ -669,7 +669,7 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Stop => 0,
             CommandData::Move(_) => 1,
             CommandData::Attack(_) => 2,
-            CommandData::Die => 3,
+            CommandData::Die(_) => 3,
             CommandData::PickupDroppedItem(_) => 4,
             // 6 = Cast skill on self
             // 7 = Skill on entity
