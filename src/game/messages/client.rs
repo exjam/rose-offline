@@ -197,6 +197,11 @@ pub enum LogoutRequest {
     ReturnToCharacterSelect,
 }
 
+pub enum ReviveRequestType {
+    RevivePosition,
+    SavePosition,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -217,4 +222,5 @@ pub enum ClientMessage {
     IncreaseBasicStat(BasicStatType),
     PickupDroppedItem(PickupDroppedItem),
     LogoutRequest(LogoutRequest),
+    ReviveRequest(ReviveRequestType),
 }

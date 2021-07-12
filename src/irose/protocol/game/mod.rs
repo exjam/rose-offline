@@ -204,6 +204,12 @@ impl GameClient {
                     LogoutRequest::ReturnToCharacterSelect,
                 ))?;
             }
+            Some(ClientPackets::ReviveRequest) => {
+                let packet = PacketClientReviveRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ReviveRequest(packet.revive_request_type))?;
+            }
             _ => println!("[GS] Unhandled packet {:#03X}", packet.command),
         }
         Ok(())

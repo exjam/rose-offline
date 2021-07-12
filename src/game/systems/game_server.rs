@@ -17,7 +17,8 @@ use crate::{
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-                JoinZoneResponse, LogoutRequest, SetHotbarSlot, SetHotbarSlotError,
+                JoinZoneResponse, LogoutRequest, ReviveRequestType, SetHotbarSlot,
+                SetHotbarSlotError,
             },
             server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
         },
@@ -206,6 +207,38 @@ fn client_entity_leave(
     cmd.remove_component::<ClientEntityVisibility>(*entity);
 }
 
+fn client_teleport(
+    cmd: &mut CommandBuffer,
+    client_entity_list: &mut ClientEntityList,
+    entity: &Entity,
+    client: &GameClient,
+    client_entity: &ClientEntity,
+    previous_position: &Position,
+    new_position: Position,
+) {
+    client_entity_leave(
+        cmd,
+        client_entity_list,
+        entity,
+        client_entity,
+        previous_position,
+    );
+    cmd.add_component(*entity, Command::with_stop());
+    cmd.add_component(*entity, new_position.clone());
+
+    client
+        .server_message_tx
+        .send(ServerMessage::Teleport(server::Teleport {
+            entity_id: client_entity.id,
+            zone_no: new_position.zone,
+            x: new_position.position.x,
+            y: new_position.position.y,
+            run_mode: 1,  // TODO: Run mode
+            ride_mode: 0, // TODO: Ride mode
+        }))
+        .ok();
+}
+
 use clap::{App, Arg};
 use lazy_static::lazy_static;
 
@@ -328,20 +361,15 @@ fn handle_gm_command(
             let y = matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
 
             if client_entity_list.get_zone(zone as usize).is_some() {
-                client_entity_leave(cmd, client_entity_list, entity, client_entity, position);
-                cmd.add_component(*entity, Position::new(Point3::new(x, y, 0.0), zone));
-
-                client
-                    .server_message_tx
-                    .send(ServerMessage::Teleport(server::Teleport {
-                        entity_id: client_entity.id,
-                        zone_no: zone,
-                        x,
-                        y,
-                        run_mode: 1,
-                        ride_mode: 0,
-                    }))
-                    .ok();
+                client_teleport(
+                    cmd,
+                    client_entity_list,
+                    entity,
+                    client,
+                    client_entity,
+                    position,
+                    Position::new(Point3::new(x, y, 0.0), zone),
+                );
             } else {
                 send_multiline_whisper(client, &format!("Invalid zone id {}", zone));
             }
@@ -371,6 +399,8 @@ pub fn game_server_main(
         &mut Equipment,
         &mut Inventory,
         &AbilityValues,
+        &Command,
+        &CharacterInfo,
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -392,6 +422,8 @@ pub fn game_server_main(
             equipment,
             inventory,
             ability_values,
+            command,
+            character_info,
         )| {
             if let Ok(message) = client.client_message_rx.try_recv() {
                 match message {
@@ -608,6 +640,51 @@ pub fn game_server_main(
                             client_entity,
                             position,
                         );
+                    }
+                    ClientMessage::ReviveRequest(revive_request_type) => {
+                        if command.is_dead() {
+                            let new_position = match revive_request_type {
+                                ReviveRequestType::RevivePosition => {
+                                    let revive_position = if let Some(zone_data) =
+                                        game_data.zones.get_zone(position.zone as usize)
+                                    {
+                                        if let Some(revive_position) =
+                                            zone_data.get_closest_revive_position(position.position)
+                                        {
+                                            revive_position
+                                        } else {
+                                            zone_data.start_position
+                                        }
+                                    } else {
+                                        position.position
+                                    };
+
+                                    Position::new(revive_position, position.zone)
+                                }
+                                ReviveRequestType::SavePosition => Position::new(
+                                    character_info.revive_position,
+                                    character_info.revive_zone,
+                                ),
+                            };
+
+                            cmd.add_component(
+                                *entity,
+                                HealthPoints::new(ability_values.max_health as u32),
+                            );
+                            cmd.add_component(
+                                *entity,
+                                ManaPoints::new(ability_values.max_mana as u32),
+                            );
+                            client_teleport(
+                                cmd,
+                                client_entity_list,
+                                entity,
+                                client,
+                                client_entity,
+                                position,
+                                new_position,
+                            );
+                        }
                     }
                     _ => println!("Received unimplemented client message"),
                 }

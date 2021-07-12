@@ -165,8 +165,8 @@ impl<'a> From<&PacketServerMoveServer<'a>> for Packet {
 pub struct PacketServerReturnToCharacterSelect {}
 
 impl From<&PacketServerReturnToCharacterSelect> for Packet {
-    fn from(packet: &PacketServerReturnToCharacterSelect) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::ReturnToCharacterSelect as u16);
+    fn from(_packet: &PacketServerReturnToCharacterSelect) -> Self {
+        let writer = PacketWriter::new(ServerPackets::ReturnToCharacterSelect as u16);
         writer.into()
     }
 }

@@ -4,9 +4,12 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::{
-    game::components::{
-        BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
-        INVENTORY_PAGE_SIZE,
+    game::{
+        components::{
+            BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
+            INVENTORY_PAGE_SIZE,
+        },
+        messages::client::ReviveRequestType,
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };
@@ -19,6 +22,7 @@ pub enum ClientPackets {
     ConnectRequest = 0x70b,
     ReturnToCharacterSelectRequest = 0x71C,
     JoinZone = 0x753,
+    ReviveRequest = 0x755,
     Chat = 0x783,
     StopMove = 0x796,
     Attack = 0x798,
@@ -253,5 +257,30 @@ impl TryFrom<&Packet> for PacketClientPickupDroppedItem {
         let mut reader = PacketReader::from(packet);
         let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
         Ok(PacketClientPickupDroppedItem { target_entity_id })
+    }
+}
+
+pub struct PacketClientReviveRequest {
+    pub revive_request_type: ReviveRequestType,
+}
+
+impl TryFrom<&Packet> for PacketClientReviveRequest {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ReviveRequest as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let revive_request_type = match reader.read_u8()? {
+            1 => ReviveRequestType::RevivePosition,
+            2 => ReviveRequestType::SavePosition,
+            _ => return Err(ProtocolError::InvalidPacket),
+        };
+
+        Ok(PacketClientReviveRequest {
+            revive_request_type,
+        })
     }
 }
