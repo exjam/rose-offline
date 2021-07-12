@@ -3,6 +3,7 @@ mod reader;
 pub mod aip;
 pub mod chr;
 pub mod ifo;
+pub mod qsd;
 pub mod stl;
 pub mod vfs;
 pub mod zmo;
