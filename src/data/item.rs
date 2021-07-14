@@ -249,7 +249,7 @@ pub enum StackError {
 
 impl StackableItem {
     pub fn new(item: &ItemReference, quantity: u32) -> Option<StackableItem> {
-        if item.item_type.is_stackable_item() {
+        if item.item_type.is_stackable_item() && quantity > 0 {
             Some(StackableItem {
                 item: *item,
                 quantity,
