@@ -7,7 +7,7 @@ use crate::data::{
 };
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, FromPrimitive)]
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum EquipmentIndex {
     Face = 1,
     Head = 2,

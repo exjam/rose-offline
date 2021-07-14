@@ -43,6 +43,7 @@ impl From<ItemReferenceDecodeError> for QsdReadError {
     }
 }
 
+#[derive(Debug)]
 pub enum QsdVariableType {
     Variable,
     Switch,
@@ -66,6 +67,7 @@ fn decode_variable_type(value: u16) -> Result<QsdVariableType, QsdReadError> {
     }
 }
 
+#[derive(Debug)]
 pub enum QsdConditionOperator {
     Equals,
     GreaterThan,
@@ -105,12 +107,14 @@ pub type QsdServerChannelId = usize;
 pub type QsdEquationId = usize;
 pub type QsdStringId = usize;
 
+#[derive(Debug)]
 pub enum QsdObjectType {
     Npc,
     Event,
     Owner,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionQuestVariable {
     pub variable_type: QsdVariableType,
     pub variable_id: usize,
@@ -118,6 +122,7 @@ pub struct QsdConditionQuestVariable {
     pub value: i32,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionQuestItem {
     pub item: Option<ItemReference>,
     pub equipment_index: Option<EquipmentIndex>,
@@ -125,12 +130,14 @@ pub struct QsdConditionQuestItem {
     pub operator: QsdConditionOperator,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionCheckParty {
     pub is_leader: bool,
     pub level_operator: QsdConditionOperator,
     pub level: i32,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionObjectVariable {
     pub object_type: QsdObjectType,
     pub variable_id: usize,
@@ -138,24 +145,28 @@ pub struct QsdConditionObjectVariable {
     pub value: i32,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionSelectEventObject {
     pub zone: QsdZoneId,
     pub chunk: Point2<usize>,
     pub event_id: QsdEventId,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionWeekDayTime {
     pub week_day: u8,
     pub hour_range: RangeInclusive<u8>,
     pub minute_range: RangeInclusive<u8>,
 }
 
+#[derive(Debug)]
 pub struct QsdConditionMonthDayTime {
     pub month_day: u8,
     pub hour_range: RangeInclusive<u8>,
     pub minute_range: RangeInclusive<u8>,
 }
 
+#[derive(Debug)]
 pub enum QsdCondition {
     SelectQuest(QsdQuestId),
     QuestVariable(Vec<QsdConditionQuestVariable>),
@@ -193,6 +204,7 @@ pub enum QsdCondition {
     HasClanSkill(RangeInclusive<QsdSkillId>, bool),
 }
 
+#[derive(Debug)]
 pub enum QsdRewardOperator {
     Set,
     Add,
@@ -212,11 +224,13 @@ fn decode_reward_operator(value: u8) -> Result<QsdRewardOperator, QsdReadError> 
     }
 }
 
+#[derive(Debug)]
 pub enum QsdRewardTarget {
     Player,
     Party,
 }
 
+#[derive(Debug)]
 pub enum QsdRewardQuestAction {
     Remove,
     Add,
@@ -225,6 +239,7 @@ pub enum QsdRewardQuestAction {
     Select,
 }
 
+#[derive(Debug)]
 pub struct QsdRewardQuestVariable {
     pub variable_type: QsdVariableType,
     pub variable_id: usize,
@@ -232,6 +247,7 @@ pub struct QsdRewardQuestVariable {
     pub value: i32,
 }
 
+#[derive(Debug)]
 pub struct QsdRewardCalculatedItem {
     pub equation: usize,
     pub value: i32,
@@ -242,6 +258,7 @@ pub struct QsdRewardCalculatedItem {
 pub type QsdHealthPercent = u8;
 pub type QsdManaPercent = u8;
 
+#[derive(Debug)]
 pub enum QsdRewardSpawnNpcLocation {
     Owner,
     Npc,
@@ -249,6 +266,7 @@ pub enum QsdRewardSpawnNpcLocation {
     Position(QsdZoneId, Point2<f32>),
 }
 
+#[derive(Debug)]
 pub struct QsdRewardSpawnNpc {
     pub npc: QsdNpcId,
     pub count: usize,
@@ -257,6 +275,7 @@ pub struct QsdRewardSpawnNpc {
     pub team_number: QsdTeamNumber,
 }
 
+#[derive(Debug)]
 pub struct QsdRewardObjectVariable {
     pub object_type: QsdObjectType,
     pub variable_id: usize,
@@ -264,24 +283,28 @@ pub struct QsdRewardObjectVariable {
     pub value: i32,
 }
 
+#[derive(Debug)]
 pub enum QsdRewardNpcMessageType {
     Chat,
     Shout,
     Announce,
 }
 
+#[derive(Debug)]
 pub enum QsdRewardSetTeamNumberSource {
     Unique,
     Clan,
     Party,
 }
 
+#[derive(Debug)]
 pub enum QsdRewardMonsterSpawnState {
     Disabled,
     Enabled,
     Toggle,
 }
 
+#[derive(Debug)]
 pub enum QsdReward {
     Quest(QsdRewardQuestAction, QsdQuestId),
     AddItem(QsdRewardTarget, ItemReference, usize),
