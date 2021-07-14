@@ -3,18 +3,22 @@ use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
-use crate::game::messages::{
-    client::{
-        Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,
-        LogoutRequest, Move, PickupDroppedItem, SetHotbarSlot,
-    },
-    server::{
-        LocalChat, LogoutReply, PickupDroppedItemResult, RemoveEntities, ServerMessage,
-        SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc, UpdateBasicStat,
-        UpdateEquipment, UpdateInventory, UpdateLevel, UpdateXpStamina, Whisper,
+use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
+use crate::{
+    data::QuestTriggerHash,
+    game::messages::{
+        client::{
+            Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,
+            LogoutRequest, Move, PickupDroppedItem, QuestDelete, SetHotbarSlot,
+        },
+        server::{
+            LocalChat, LogoutReply, PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult,
+            RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
+            SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
+            UpdateXpStamina, Whisper,
+        },
     },
 };
-use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
 
 mod common_packets;
 
@@ -88,7 +92,9 @@ impl GameClient {
 
                         client
                             .connection
-                            .write_packet(Packet::from(&PacketServerCharacterQuestData {}))
+                            .write_packet(Packet::from(&PacketServerCharacterQuestData {
+                                quest_state: &response.quest_state,
+                            }))
                             .await?;
                     }
                     Err(_) => {

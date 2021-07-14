@@ -11,8 +11,8 @@ use crate::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, SkillList, SkillPoints,
-            StatPoints, Team, WorldClient,
+            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, QuestState, SkillList,
+            SkillPoints, StatPoints, Team, WorldClient,
         },
         messages::{
             client::{
@@ -101,6 +101,7 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.hotbar.clone());
                                 cmd.add_component(*entity, character.skill_points.clone());
                                 cmd.add_component(*entity, character.stat_points.clone());
+                                cmd.add_component(*entity, character.quest_state.clone());
                                 cmd.add_component(
                                     *entity,
                                     game_data.motions.get_character_motions(
@@ -137,6 +138,7 @@ pub fn game_server_authentication(
                                     mana_points,
                                     stat_points: character.stat_points,
                                     skill_points: character.skill_points,
+                                    quest_state: character.quest_state,
                                 }
                             })
                     });
@@ -755,6 +757,7 @@ pub fn game_server_disconnect_handler(
         let mana_points = entry.get_component::<ManaPoints>();
         let stat_points = entry.get_component::<StatPoints>();
         let skill_points = entry.get_component::<SkillPoints>();
+        let quest_state = entry.get_component::<QuestState>();
         let storage = CharacterStorage {
             info: info.clone(),
             basic_stats: basic_stats.unwrap().clone(),
@@ -770,6 +773,7 @@ pub fn game_server_disconnect_handler(
             mana_points: mana_points.unwrap().clone(),
             stat_points: stat_points.unwrap().clone(),
             skill_points: skill_points.unwrap().clone(),
+            quest_state: quest_state.unwrap().clone(),
         };
         storage.save().ok();
     }

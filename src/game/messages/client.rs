@@ -4,7 +4,7 @@ use crate::data::character::CharacterStorage;
 use crate::game::components::{
     BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
     EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
-    ManaPoints, Position, SkillList, SkillPoints, StatPoints, Team,
+    ManaPoints, Position, QuestState, SkillList, SkillPoints, StatPoints, Team,
 };
 
 pub enum ConnectionRequestError {
@@ -141,6 +141,7 @@ pub struct GameConnectionResponse {
     pub mana_points: ManaPoints,
     pub stat_points: StatPoints,
     pub skill_points: SkillPoints,
+    pub quest_state: QuestState,
 }
 
 pub struct GameConnectionRequest {

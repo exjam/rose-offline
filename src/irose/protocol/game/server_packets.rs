@@ -7,15 +7,15 @@ use super::common_packets::write_hotbar_slot;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        Damage,
+        Damage, QuestTriggerHash,
     },
     game::{
         components::{
             AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
             CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
             HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
-            ManaPoints, Money, Npc, NpcStandingDirection, Position, SkillList, SkillPoints,
-            StatPoints, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+            ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
+            SkillPoints, StatPoints, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
         },
         messages::server::{PickupDroppedItemContent, PickupDroppedItemError},
     },
@@ -409,38 +409,79 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
     }
 }
 
-pub struct PacketServerCharacterQuestData {}
+pub struct PacketServerCharacterQuestData<'a> {
+    pub quest_state: &'a QuestState,
+}
 
-impl From<&PacketServerCharacterQuestData> for Packet {
-    fn from(_packet: &PacketServerCharacterQuestData) -> Self {
+impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
+    fn from(packet: &'a PacketServerCharacterQuestData<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::QuestData as u16);
 
-        for _ in 0..5 {
-            writer.write_u16(0); // episode var
+        for i in 0..5 {
+            writer.write_u16(
+                packet
+                    .quest_state
+                    .episode_variables
+                    .get(i)
+                    .cloned()
+                    .unwrap_or(0u16),
+            );
         }
 
-        for _ in 0..3 {
-            writer.write_u16(0); // job var
+        for i in 0..3 {
+            writer.write_u16(
+                packet
+                    .quest_state
+                    .job_variables
+                    .get(i)
+                    .cloned()
+                    .unwrap_or(0u16),
+            );
         }
 
-        for _ in 0..7 {
-            writer.write_u16(0); // planet var
+        for i in 0..7 {
+            writer.write_u16(
+                packet
+                    .quest_state
+                    .planet_variables
+                    .get(i)
+                    .cloned()
+                    .unwrap_or(0u16),
+            );
         }
 
-        for _ in 0..10 {
-            writer.write_u16(0); // union var
+        for i in 0..10 {
+            writer.write_u16(
+                packet
+                    .quest_state
+                    .union_variables
+                    .get(i)
+                    .cloned()
+                    .unwrap_or(0u16),
+            );
         }
 
-        for _ in 0..10 {
+        for i in 0..10 {
+            let quest = packet
+                .quest_state
+                .active_quests
+                .get(i)
+                .and_then(|q| q.as_ref());
             // Quest data
-            writer.write_u16(0); // quest id
-            writer.write_u32(0); // seconds until expires
-            for _ in 0..10 {
-                writer.write_u16(0); // quest vars
+            writer.write_u16(quest.map_or(0, |quest| quest.quest_id));
+            writer.write_u32(quest.and_then(|quest| quest.expire_time).unwrap_or(0));
+            for j in 0..10 {
+                writer.write_u16(
+                    quest
+                        .and_then(|quest| quest.variables.get(j).cloned())
+                        .unwrap_or(0),
+                );
             }
-            writer.write_u32(0); // switches bitvec
-            for _ in 0..6 {
-                writer.write_item_full(None); // quest items
+            writer.write_u32(quest.map_or(0, |quest| quest.switches.as_buffer()[0]));
+            for j in 0..6 {
+                writer.write_item_full(
+                    quest.and_then(|quest| quest.items.get(j).and_then(|item| item.as_ref())),
+                );
             }
         }
 
