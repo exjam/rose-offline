@@ -198,7 +198,7 @@ impl Inventory {
         let remaining = money - (self.money - before);
         if remaining > Money(0) {
             self.money = before;
-            Err(remaining)
+            Err(money)
         } else {
             Ok(())
         }
