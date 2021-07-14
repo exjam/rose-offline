@@ -37,6 +37,10 @@ impl ItemType {
         matches!(self, ItemType::Money)
     }
 
+    pub fn is_quest_item(self) -> bool {
+        matches!(self, ItemType::Quest)
+    }
+
     pub fn is_equipment(self) -> bool {
         matches!(
             self,
