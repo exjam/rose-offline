@@ -1,6 +1,7 @@
 use legion::{
     component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, Query,
 };
+use log::warn;
 use nalgebra::Point3;
 use std::num::{ParseFloatError, ParseIntError};
 
@@ -147,7 +148,7 @@ pub fn game_server_authentication(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => println!("Received unexpected client message"),
+            _ => panic!("Received unexpected client message"),
         }
     }
 }
@@ -191,7 +192,7 @@ pub fn game_server_join(
                     }
                 }
             }
-            _ => println!("Received unexpected client message"),
+            _ => panic!("Received unexpected client message {:?}", message),
         }
     }
 }
@@ -724,7 +725,7 @@ pub fn game_server_main(
                             trigger_hash,
                         });
                     }
-                    _ => println!("Received unimplemented client message"),
+                    _ => warn!("Received unimplemented client message {:?}", message),
                 }
             }
         },

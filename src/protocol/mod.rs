@@ -39,11 +39,10 @@ pub use packet::PacketReader;
 pub use packet::PacketWriter;
 
 mod connection;
-use crate::game::messages::client::ClientMessage;
-use crate::game::messages::control::ClientType;
-use crate::game::messages::server::ServerMessage;
-use async_trait::async_trait;
 use connection::Connection;
+
+use crate::game::messages::{client::ClientMessage, control::ClientType, server::ServerMessage};
+use async_trait::async_trait;
 
 pub struct Client<'a> {
     pub entity: legion::Entity,

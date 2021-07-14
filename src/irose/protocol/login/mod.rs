@@ -1,14 +1,17 @@
 use async_trait::async_trait;
+use log::warn;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
-use crate::game::messages::client::*;
-use crate::game::messages::server::ServerMessage;
-use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
+use crate::{
+    game::messages::{client::*, server::ServerMessage},
+    protocol::{Client, Packet, ProtocolClient, ProtocolError},
+};
 
 mod client_packets;
 mod server_packets;
+
 use client_packets::*;
 use server_packets::*;
 
@@ -146,7 +149,11 @@ impl LoginClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            _ => println!("[LS] Unhandled packet {:#03X}", packet.command),
+            _ => warn!(
+                "[LS] Unhandled packet [{:#03X}] {:02x?}",
+                packet.command,
+                &packet.data[..]
+            ),
         }
 
         Ok(())

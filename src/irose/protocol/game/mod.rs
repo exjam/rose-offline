@@ -1,9 +1,9 @@
 use async_trait::async_trait;
+use log::warn;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
-use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
 use crate::{
     data::QuestTriggerHash,
     game::messages::{
@@ -18,6 +18,7 @@ use crate::{
             UpdateXpStamina, Whisper,
         },
     },
+    protocol::{Client, Packet, ProtocolClient, ProtocolError},
 };
 
 mod common_packets;
@@ -234,7 +235,11 @@ impl GameClient {
                     }
                 }
             }
-            _ => println!("[GS] Unhandled packet {:#03X}", packet.command),
+            _ => warn!(
+                "[GS] Unhandled packet [{:#03X}] {:02x?}",
+                packet.command,
+                &packet.data[..]
+            ),
         }
         Ok(())
     }

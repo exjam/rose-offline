@@ -1,3 +1,4 @@
+use log::{debug, warn};
 use std::collections::HashMap;
 
 use crate::data::{
@@ -33,11 +34,12 @@ pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
                     aips.insert(row as u16, aip);
                 }
                 Err(error) => {
-                    println!("Failed to parse {}, error: {:?}", aip_path, error);
+                    warn!("Failed to parse {}, error: {:?}", aip_path, error);
                 }
             }
         }
     }
 
+    debug!("Loaded {} AI files", aips.len());
     Some(AiDatabase { strings, aips })
 }

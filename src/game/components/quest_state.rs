@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::item::Item;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActiveQuest {
     pub quest_id: u16,
     pub expire_time: Option<u32>,
@@ -24,7 +24,7 @@ impl ActiveQuest {
     }
 }
 
-#[derive(Clone, Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct QuestState {
     pub episode_variables: [u16; 5],
     pub job_variables: [u16; 3],

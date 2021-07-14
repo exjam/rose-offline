@@ -3,11 +3,10 @@ use std::time::Duration;
 use modular_bitfield::prelude::*;
 use num_derive::FromPrimitive;
 
-use super::common_packets::write_hotbar_slot;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        Damage, QuestTriggerHash,
+        Damage,
     },
     game::{
         components::{
@@ -19,6 +18,7 @@ use crate::{
         },
         messages::server::{PickupDroppedItemContent, PickupDroppedItemError},
     },
+    irose::protocol::game::common_packets::write_hotbar_slot,
     protocol::{Packet, PacketWriter},
 };
 

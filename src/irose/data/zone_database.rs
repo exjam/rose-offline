@@ -1,3 +1,4 @@
+use log::debug;
 use nalgebra::{Point2, Point3, Vector3};
 use std::{collections::HashMap, path::Path};
 
@@ -226,7 +227,7 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
         }
     }
 
-    println!(
+    debug!(
         "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {}), start: {}",
         id,
         ifo_count,

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum BasicStatType {
     Strength,
     Dexterity,
@@ -10,7 +10,7 @@ pub enum BasicStatType {
     Sense,
 }
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BasicStats {
     pub strength: u16,
     pub dexterity: u16,

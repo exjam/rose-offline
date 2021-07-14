@@ -1,4 +1,5 @@
 use core::f32;
+use log::error;
 use rand::Rng;
 use std::sync::Arc;
 
@@ -672,7 +673,7 @@ impl EquipmentAbilityValue {
             AbilityType::StoreSkin => self.store_skin += value,
             AbilityType::VehicleHealth => self.vehicle_health += value,
             _ => {
-                println!("Item has unimplemented ability type {:?}", ability_type)
+                error!("Item has unimplemented ability type {:?}", ability_type)
             }
         }
     }
@@ -821,7 +822,7 @@ impl PassiveSkillAbilityValues {
             AbilityType::PassiveShieldDefence => abilities.shield_defence += value,
             AbilityType::PassiveImmunity => abilities.immunity += value,
             _ => {
-                println!(
+                error!(
                     "Passive skill has unimplemented ability type {:?}",
                     ability_type
                 )

@@ -1,59 +1,70 @@
 use tokio::sync::oneshot;
 
-use crate::data::character::CharacterStorage;
-use crate::data::QuestTriggerHash;
-use crate::game::components::{
-    BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
-    EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
-    ManaPoints, Position, QuestState, SkillList, SkillPoints, StatPoints, Team,
+use crate::{
+    data::{character::CharacterStorage, QuestTriggerHash},
+    game::components::{
+        BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
+        EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
+        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, StatPoints, Team,
+    },
 };
 
+#[derive(Debug)]
 pub enum ConnectionRequestError {
     Failed,
     InvalidToken,
     InvalidPassword,
 }
 
+#[derive(Debug)]
 pub struct ConnectionRequestResponse {
     pub packet_sequence_id: u32,
 }
 
+#[derive(Debug)]
 pub struct ConnectionRequest {
     pub login_token: u32,
     pub password_md5: String,
     pub response_tx: oneshot::Sender<Result<ConnectionRequestResponse, ConnectionRequestError>>,
 }
 
+#[derive(Debug)]
 pub enum LoginError {
     Failed,
     InvalidAccount,
     InvalidPassword,
 }
 
+#[derive(Debug)]
 pub struct LoginRequest {
     pub username: String,
     pub password_md5: String,
     pub response_tx: oneshot::Sender<Result<(), LoginError>>,
 }
 
+#[derive(Debug)]
 pub struct GetWorldServerList {
     pub response_tx: oneshot::Sender<Vec<(u32, String)>>,
 }
 
+#[derive(Debug)]
 pub enum GetChannelListError {
     InvalidServerId,
 }
 
+#[derive(Debug)]
 pub struct GetChannelList {
     pub server_id: u32,
     pub response_tx: oneshot::Sender<Result<Vec<(u8, String)>, GetChannelListError>>,
 }
 
+#[derive(Debug)]
 pub enum JoinServerError {
     InvalidServerId,
     InvalidChannelId,
 }
 
+#[derive(Debug)]
 pub struct JoinServerResponse {
     pub login_token: u32,
     pub packet_codec_seed: u32,
@@ -61,13 +72,14 @@ pub struct JoinServerResponse {
     pub port: u16,
 }
 
+#[derive(Debug)]
 pub struct JoinServer {
     pub server_id: u32,
     pub channel_id: u8,
     pub response_tx: oneshot::Sender<Result<JoinServerResponse, JoinServerError>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CharacterListItem {
     pub info: CharacterInfo,
     pub level: Level,
@@ -86,10 +98,12 @@ impl From<&CharacterStorage> for CharacterListItem {
     }
 }
 
+#[derive(Debug)]
 pub struct GetCharacterList {
     pub response_tx: oneshot::Sender<Vec<CharacterListItem>>,
 }
 
+#[derive(Debug)]
 pub enum CreateCharacterError {
     Failed,
     AlreadyExists,
@@ -97,6 +111,7 @@ pub enum CreateCharacterError {
     NoMoreSlots,
 }
 
+#[derive(Debug)]
 pub struct CreateCharacter {
     pub gender: u8,
     pub birth_stone: u8,
@@ -106,10 +121,12 @@ pub struct CreateCharacter {
     pub response_tx: oneshot::Sender<Result<u8, CreateCharacterError>>,
 }
 
+#[derive(Debug)]
 pub enum DeleteCharacterError {
     Failed,
 }
 
+#[derive(Debug)]
 pub struct DeleteCharacter {
     pub slot: u8,
     pub name: String,
@@ -117,16 +134,19 @@ pub struct DeleteCharacter {
     pub response_tx: oneshot::Sender<Result<Option<CharacterDeleteTime>, DeleteCharacterError>>,
 }
 
+#[derive(Debug)]
 pub enum SelectCharacterError {
     Failed,
 }
 
+#[derive(Debug)]
 pub struct SelectCharacter {
     pub slot: u8,
     pub name: String,
     pub response_tx: oneshot::Sender<Result<JoinServerResponse, SelectCharacterError>>,
 }
 
+#[derive(Debug)]
 pub struct GameConnectionResponse {
     pub packet_sequence_id: u32,
     pub character_info: CharacterInfo,
@@ -145,12 +165,14 @@ pub struct GameConnectionResponse {
     pub quest_state: QuestState,
 }
 
+#[derive(Debug)]
 pub struct GameConnectionRequest {
     pub login_token: u32,
     pub password_md5: String,
     pub response_tx: oneshot::Sender<Result<GameConnectionResponse, ConnectionRequestError>>,
 }
 
+#[derive(Debug)]
 pub struct JoinZoneResponse {
     pub entity_id: ClientEntityId,
     pub level: Level,
@@ -160,10 +182,12 @@ pub struct JoinZoneResponse {
     pub mana_points: ManaPoints,
 }
 
+#[derive(Debug)]
 pub struct JoinZoneRequest {
     pub response_tx: oneshot::Sender<JoinZoneResponse>,
 }
 
+#[derive(Debug)]
 pub struct Move {
     pub target_entity_id: Option<ClientEntityId>,
     pub x: f32,
@@ -171,44 +195,53 @@ pub struct Move {
     pub z: u16,
 }
 
+#[derive(Debug)]
 pub struct Attack {
     pub target_entity_id: ClientEntityId,
 }
 
+#[derive(Debug)]
 pub enum SetHotbarSlotError {
     InvalidSlot,
 }
 
+#[derive(Debug)]
 pub struct SetHotbarSlot {
     pub slot_index: usize,
     pub slot: Option<HotbarSlot>,
     pub response_tx: oneshot::Sender<Result<(), SetHotbarSlotError>>,
 }
 
+#[derive(Debug)]
 pub struct ChangeEquipment {
     pub equipment_index: EquipmentIndex,
     pub item_slot: Option<ItemSlot>,
 }
 
+#[derive(Debug)]
 pub struct PickupDroppedItem {
     pub target_entity_id: ClientEntityId,
 }
 
+#[derive(Debug)]
 pub enum LogoutRequest {
     Logout,
     ReturnToCharacterSelect,
 }
 
+#[derive(Debug)]
 pub enum ReviveRequestType {
     RevivePosition,
     SavePosition,
 }
 
+#[derive(Debug)]
 pub struct QuestDelete {
     pub slot: usize,
     pub quest_id: usize,
 }
 
+#[derive(Debug)]
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),

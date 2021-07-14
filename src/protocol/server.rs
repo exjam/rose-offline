@@ -1,14 +1,16 @@
-use std::sync::Arc;
-
-use super::Client;
-use super::Protocol;
-use super::{Connection, ProtocolError};
-use crate::game::messages::control::ControlMessage;
-use crate::game::messages::server::ServerMessage;
 use lazy_static::__Deref;
 use legion::Entity;
-use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::oneshot;
+use log::info;
+use std::sync::Arc;
+use tokio::{
+    net::{TcpListener, TcpStream},
+    sync::oneshot,
+};
+
+use crate::{
+    game::messages::{control::ControlMessage, server::ServerMessage},
+    protocol::{Client, Connection, Protocol, ProtocolError},
+};
 
 async fn run_connection(
     stream: TcpStream,
@@ -75,10 +77,10 @@ impl LoginServer {
                         let control_message_tx = self.control_message_tx.clone();
                         tokio::spawn(async move {
                             if let Ok(addr) = socket.peer_addr() {
-                                println!("[LS] New connection from: {:?}", addr);
+                                info!("Login Server new connection from: {:?}", addr);
                             }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                println!("[LS] Connection error: {:?}", err);
+                                info!("Login Server connection error: {:?}", err);
                             }
                         });
                     }
@@ -136,10 +138,10 @@ impl WorldServer {
                         let control_message_tx = self.control_message_tx.clone();
                         tokio::spawn(async move {
                             if let Ok(addr) = socket.peer_addr() {
-                                println!("[WS] New connection from: {:?}", addr);
+                                info!("World Server new connection from: {:?}", addr);
                             }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                println!("[WS] Connection error: {:?}", err);
+                                info!("World Server connection error: {:?}", err);
                             }
                         });
                     }
@@ -205,10 +207,10 @@ impl GameServer {
                         let control_message_tx = self.control_message_tx.clone();
                         tokio::spawn(async move {
                             if let Ok(addr) = socket.peer_addr() {
-                                println!("[GS] New connection from: {:?}", addr);
+                                info!("Game Server connection from: {:?}", addr);
                             }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                println!("[GS] Connection error: {:?}", err);
+                                info!("Game Server connection error: {:?}", err);
                             }
                         });
                     }

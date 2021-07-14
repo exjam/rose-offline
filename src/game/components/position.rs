@@ -1,7 +1,7 @@
 use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Position {
     pub position: Point3<f32>,
     pub zone: u16,

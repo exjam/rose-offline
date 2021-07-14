@@ -1,4 +1,5 @@
 use legion::{system, world::SubWorld, Entity, Query};
+use log::warn;
 
 use crate::{
     data::{
@@ -6,7 +7,7 @@ use crate::{
         QuestTrigger,
     },
     game::{
-        components::{ClientEntity, GameClient, QuestState},
+        components::{GameClient, QuestState},
         messages::server::{QuestTriggerResult, ServerMessage},
         resources::{PendingQuestTrigger, PendingQuestTriggerList},
         GameData,
@@ -46,7 +47,7 @@ fn quest_trigger_check_conditions(
                 quest_condition_quest_switch(quest_parameters, switch_id, value)
             }
             _ => {
-                println!("Unimplemented quest condition: {:?}", condition);
+                warn!("Unimplemented quest condition: {:?}", condition);
                 false
             }
         };
@@ -84,7 +85,7 @@ fn quest_trigger_apply_rewards(
                 quest_reward_set_quest_switch(quest_parameters, switch_id, value)
             }
             _ => {
-                println!("Unimplemented quest reward: {:?}", reward);
+                warn!("Unimplemented quest reward: {:?}", reward);
                 false
             }
         };

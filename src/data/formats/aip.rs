@@ -1,11 +1,13 @@
+use log::warn;
 use std::{
     ops::{Range, RangeInclusive},
     time::Duration,
 };
 
-use crate::data::ItemReference;
-
-use super::reader::{FileReader, ReadError};
+use crate::data::{
+    formats::reader::{FileReader, ReadError},
+    ItemReference,
+};
 
 #[derive(Copy, Clone)]
 pub enum AipAbilityType {
@@ -651,7 +653,7 @@ impl AipFile {
                             }
                         }
                         _ => {
-                            println!("Unimplemented AIP condition opcode: {:X}", opcode);
+                            warn!("Unimplemented AIP condition opcode: {:X}", opcode);
                             reader.skip(size_bytes - 8);
                         }
                     }
@@ -984,7 +986,7 @@ impl AipFile {
                             actions.push(AipAction::SpawnNpc(npc_id, distance, position, is_owner));
                         }
                         _ => {
-                            println!("Unimplemented AIP action opcode: {:#X}", opcode);
+                            warn!("Unimplemented AIP action opcode: {:#X}", opcode);
                             reader.skip(size_bytes - 8);
                         }
                     }

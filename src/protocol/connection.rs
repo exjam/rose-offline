@@ -1,9 +1,14 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
-use tokio::net::TcpStream;
+use log::trace;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, BufWriter},
+    net::TcpStream,
+};
 
-use super::packet::{Packet, PacketCodec};
-use super::ProtocolError;
+use crate::protocol::{
+    packet::{Packet, PacketCodec},
+    ProtocolError,
+};
 
 pub struct Connection<'a> {
     stream: BufWriter<TcpStream>,
@@ -58,7 +63,7 @@ impl<'a> Connection<'a> {
                 // Packets can contain random amount of padding at end
                 self.buffer.advance(read_length - size);
 
-                println!("RECV [{:03X}] {:02x?}", command, &data[..]);
+                trace!("RECV [{:03X}] {:02x?}", command, &data[..]);
                 return Ok(Packet { command, data });
             } else {
                 return Err(ProtocolError::InvalidPacket);
@@ -67,7 +72,7 @@ impl<'a> Connection<'a> {
     }
 
     pub async fn write_packet(&mut self, packet: Packet) -> Result<(), ProtocolError> {
-        println!("SEND [{:03X}] {:02x?}", packet.command, &packet.data[..]);
+        trace!("SEND [{:03X}] {:02x?}", packet.command, &packet.data[..]);
 
         let size = packet.data.len() + 6;
         let mut buffer = BytesMut::with_capacity(size);

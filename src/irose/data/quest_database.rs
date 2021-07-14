@@ -1,3 +1,4 @@
+use log::{debug, warn};
 use std::{collections::HashMap, time::Duration};
 
 use crate::{
@@ -50,7 +51,7 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
         if let Some(qsd_file) = vfs.open_file(qsd_path) {
             match QsdFile::read(FileReader::from(&qsd_file)) {
                 Ok(qsd) => triggers.extend(qsd.triggers),
-                Err(error) => println!("Failed to parse {}, error: {:?}", qsd_path, error),
+                Err(error) => warn!("Failed to parse {}, error: {:?}", qsd_path, error),
             }
         }
     }
@@ -60,6 +61,7 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
         triggers_by_hash.insert(key.as_str().into(), key.clone());
     }
 
+    debug!("Loaded {} QSD triggers", triggers.len());
     Some(QuestDatabase {
         quests,
         strings,

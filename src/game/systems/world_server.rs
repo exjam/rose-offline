@@ -1,4 +1,5 @@
 use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore};
+use log::warn;
 
 use crate::{
     data::{
@@ -73,7 +74,7 @@ pub fn world_server_authentication(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => println!("Received unexpected client message"),
+            _ => panic!("Received unexpected client message {:?}", message),
         }
     }
 }
@@ -189,7 +190,7 @@ pub fn world_server(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => println!("Received unimplemented client message"),
+            _ => warn!("Received unimplemented client message {:?}", message),
         }
     }
 }

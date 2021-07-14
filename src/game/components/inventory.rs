@@ -158,7 +158,7 @@ impl InventoryPage {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ItemSlot {
     Equipped(EquipmentIndex),
     Inventory(InventoryPageType, usize),

@@ -1,10 +1,12 @@
+use async_trait::async_trait;
+use log::warn;
+use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
-use crate::game::messages::client::*;
-use crate::game::messages::server::ServerMessage;
-use crate::protocol::{Client, Packet, ProtocolClient, ProtocolError};
-use async_trait::async_trait;
-use num_traits::FromPrimitive;
+use crate::{
+    game::messages::{client::*, server::ServerMessage},
+    protocol::{Client, Packet, ProtocolClient, ProtocolError},
+};
 
 mod client_packets;
 mod server_packets;
@@ -160,7 +162,11 @@ impl WorldClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            _ => println!("[WS] Unhandled packet {:#03X}", packet.command),
+            _ => warn!(
+                "[WS] Unhandled packet [{:#03X}] {:02x?}",
+                packet.command,
+                &packet.data[..]
+            ),
         }
 
         Ok(())

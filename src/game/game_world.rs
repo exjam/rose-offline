@@ -1,14 +1,13 @@
 use crossbeam_channel::Receiver;
 use legion::{Resources, Schedule, World};
+use log::debug;
 use std::time::{Duration, Instant};
 
-use crate::game::resources::{PendingQuestTriggerList, PendingXpList, WorldRates};
-
-use super::{
+use crate::game::{
     messages::control::ControlMessage,
     resources::{
         ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, PendingDamageList,
-        ServerList, ServerMessages,
+        PendingQuestTriggerList, PendingXpList, ServerList, ServerMessages, WorldRates,
     },
     systems::*,
 };
@@ -46,7 +45,7 @@ impl GameWorld {
             .add_system(startup_zones_system())
             .build();
         startup_schedule.execute(&mut world, &mut resources);
-        println!(
+        debug!(
             "Time taken to populate game world: {:?}",
             started_load.elapsed()
         );
@@ -101,7 +100,7 @@ impl GameWorld {
             if now - tick_counter_last_print > Duration::from_secs(60) {
                 let average_tick_duration =
                     tick_counter_duration.as_secs_f64() / (tick_counter as f64);
-                println!(
+                debug!(
                     "Average tick duration: {:?}",
                     Duration::from_secs_f64(average_tick_duration)
                 );

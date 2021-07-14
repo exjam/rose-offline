@@ -1,18 +1,17 @@
-use std::{collections::HashMap, ops::RangeInclusive, time::Duration};
-
+use log::warn;
 use nalgebra::Point2;
 use num_traits::FromPrimitive;
+use std::{collections::HashMap, ops::RangeInclusive, time::Duration};
 
 use crate::{
     data::{
+        formats::reader::{FileReader, ReadError},
         item::{AbilityType, ItemType},
         item_database::ItemReferenceDecodeError,
         ItemReference,
     },
     game::components::EquipmentIndex,
 };
-
-use super::reader::{FileReader, ReadError};
 
 #[derive(Debug)]
 pub enum QsdReadError {
@@ -688,7 +687,7 @@ impl QsdFile {
                             conditions.push(QsdCondition::HasClanSkill(start..=end, have));
                         }
                         _ => {
-                            println!("Unimplemented QSD condition opcode: {:X}", opcode);
+                            warn!("Unimplemented QSD condition opcode: {:X}", opcode);
                             reader.skip(size_bytes - 8);
                         }
                     }
@@ -1062,7 +1061,7 @@ impl QsdFile {
                             rewards.push(QsdReward::ResetSkills);
                         }
                         _ => {
-                            println!("Unimplemented QSD action opcode: {:X}", opcode);
+                            warn!("Unimplemented QSD action opcode: {:X}", opcode);
                             reader.skip(size_bytes - 8);
                         }
                     }

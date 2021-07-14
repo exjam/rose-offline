@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use log::debug;
 use num_traits::FromPrimitive;
 
 use crate::{
@@ -82,5 +83,7 @@ pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
             skills.insert(id as u16, skill);
         }
     }
+
+    debug!("Loaded {} skills", skills.len());
     Some(SkillDatabase::new(skills))
 }

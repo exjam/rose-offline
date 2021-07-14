@@ -5,6 +5,8 @@ mod game;
 mod irose;
 mod protocol;
 
+use log::debug;
+use simplelog::*;
 use std::time::Instant;
 use tokio::net::TcpListener;
 
@@ -12,9 +14,17 @@ use crate::protocol::server::{GameServer, LoginServer, WorldServer};
 
 #[tokio::main]
 async fn main() {
+    TermLogger::init(
+        LevelFilter::Debug,
+        Config::default(),
+        TerminalMode::Stdout,
+        ColorChoice::Auto,
+    )
+    .expect("Failed to initialise logging");
+
     let started_load = Instant::now();
     let game_data = irose::get_game_data();
-    println!("Time take to read game data {:?}", started_load.elapsed());
+    debug!("Time take to read game data {:?}", started_load.elapsed());
 
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
     std::thread::spawn(move || {

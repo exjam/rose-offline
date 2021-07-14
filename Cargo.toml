@@ -17,6 +17,7 @@ encoding_rs = "0.8"
 hex = "0.4"
 lazy_static = "1.4.0"
 legion = { version = "0.4.0", features = ["extended-tuple-impls"] }
+log = "0.4.14"
 memmap = "0.7"
 modular-bitfield = "0.11.2"
 nalgebra = { version = "0.25", features = ["serde-serialize"] }
@@ -26,6 +27,7 @@ rand = "0.8.3"
 scopeguard = "1.1.0"
 serde = { version = "1.0.125", features = ["derive"] }
 serde_json = "1.0.64"
+simplelog = "0.10.0"
 sha2 = "0.9"
 shellwords = "1.1.0"
 tempfile = "3.2.0"
