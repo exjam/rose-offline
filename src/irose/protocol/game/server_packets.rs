@@ -30,6 +30,9 @@ pub enum ServerPackets {
     CharacterInventory = 0x716,
     UpdateInventory = 0x718,
     QuestData = 0x71b,
+    UpdateMoney = 0x71d,
+    UpdateMoneyReward = 0x71e,
+    UpdateInventoryReward = 0x71f,
     QuestResult = 0x730,
     JoinZone = 0x753,
     LocalChat = 0x783,
@@ -905,17 +908,41 @@ fn item_slot_to_index(slot: ItemSlot) -> usize {
 }
 
 pub struct PacketServerUpdateInventory<'a> {
+    pub is_reward: bool,
     pub items: &'a [(ItemSlot, Option<Item>)],
 }
 
 impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
     fn from(packet: &'a PacketServerUpdateInventory<'a>) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::UpdateInventory as u16);
+        let command = if packet.is_reward {
+            ServerPackets::UpdateInventoryReward
+        } else {
+            ServerPackets::UpdateInventory
+        };
+        let mut writer = PacketWriter::new(command as u16);
         writer.write_u8(packet.items.len() as u8);
         for (slot, item) in packet.items {
             writer.write_u8(item_slot_to_index(*slot) as u8);
             writer.write_item_full(item.as_ref());
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateMoney {
+    pub is_reward: bool,
+    pub money: Money,
+}
+
+impl From<&PacketServerUpdateMoney> for Packet {
+    fn from(packet: &PacketServerUpdateMoney) -> Self {
+        let command = if packet.is_reward {
+            ServerPackets::UpdateMoneyReward
+        } else {
+            ServerPackets::UpdateMoney
+        };
+        let mut writer = PacketWriter::new(command as u16);
+        writer.write_i64(packet.money.0);
         writer.into()
     }
 }

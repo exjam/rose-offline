@@ -523,6 +523,7 @@ pub fn game_server_main(
                                     client
                                         .server_message_tx
                                         .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                            is_reward: false,
                                             items: vec![
                                                 (
                                                     ItemSlot::Equipped(equipment_index),
@@ -555,6 +556,7 @@ pub fn game_server_main(
                                         client
                                             .server_message_tx
                                             .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                                is_reward: false,
                                                 items: vec![
                                                     (ItemSlot::Equipped(equipment_index), None),
                                                     (inventory_slot, Some(item.clone())),

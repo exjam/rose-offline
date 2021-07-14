@@ -173,7 +173,14 @@ pub struct UpdateEquipment {
 
 #[derive(Clone)]
 pub struct UpdateInventory {
+    pub is_reward: bool,
     pub items: Vec<(ItemSlot, Option<Item>)>,
+}
+
+#[derive(Clone)]
+pub struct UpdateMoney {
+    pub is_reward: bool,
+    pub money: Money,
 }
 
 #[derive(Clone)]
@@ -228,6 +235,7 @@ pub enum ServerMessage {
     UpdateEquipment(UpdateEquipment),
     UpdateInventory(UpdateInventory),
     UpdateLevel(UpdateLevel),
+    UpdateMoney(UpdateMoney),
     UpdateXpStamina(UpdateXpStamina),
     Whisper(Whisper),
     LogoutReply(LogoutReply),

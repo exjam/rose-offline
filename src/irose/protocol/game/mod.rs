@@ -15,7 +15,7 @@ use crate::{
             LocalChat, LogoutReply, PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult,
             RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
             SpawnEntityNpc, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
-            UpdateXpStamina, Whisper,
+            UpdateMoney, UpdateXpStamina, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -419,10 +419,22 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerRemoveEntities { entity_ids }))
                     .await?;
             }
-            ServerMessage::UpdateInventory(UpdateInventory { ref items }) => {
+            ServerMessage::UpdateInventory(UpdateInventory {
+                is_reward,
+                ref items,
+            }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerUpdateInventory { items }))
+                    .write_packet(Packet::from(&PacketServerUpdateInventory {
+                        is_reward,
+                        items,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UpdateMoney(UpdateMoney { is_reward, money }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateMoney { is_reward, money }))
                     .await?;
             }
             ServerMessage::UpdateEquipment(UpdateEquipment {
