@@ -22,12 +22,29 @@ struct QuestParameters<'a, 'b> {
     source: &'a mut QuestSourceEntity<'b>,
 }
 
+fn quest_condition_quest_switch(
+    quest_parameters: &mut QuestParameters,
+    switch_id: usize,
+    value: bool,
+) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
+        if let Some(switch) = (*quest_state).quest_switches.get(switch_id) {
+            return *switch == value;
+        }
+    }
+
+    false
+}
+
 fn quest_trigger_check_conditions(
     quest_parameters: &mut QuestParameters,
     quest_trigger: &QuestTrigger,
 ) -> bool {
     for condition in quest_trigger.conditions.iter() {
         let result = match condition {
+            &QsdCondition::QuestSwitch(switch_id, value) => {
+                quest_condition_quest_switch(quest_parameters, switch_id, value)
+            }
             _ => {
                 println!("Unimplemented quest condition: {:?}", condition);
                 false
