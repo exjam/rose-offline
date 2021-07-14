@@ -75,6 +75,17 @@ pub trait AbilityValueCalculator {
     fn calculate_levelup_require_xp(&self, level: u32) -> u64;
     fn calculate_levelup_reward_skill_points(&self, level: u32) -> u32;
     fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32;
+
+    fn calculate_reward_value(
+        &self,
+        equation_id: usize,
+        base_reward_value: i32,
+        dup_count: i32,
+        level: i32,
+        charm: i32,
+        fame: i32,
+        world_reward_rate: i32,
+    ) -> i32;
 }
 
 pub use ai_database::AiDatabase;

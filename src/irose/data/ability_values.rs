@@ -340,6 +340,47 @@ impl AbilityValueCalculator for AbilityValuesData {
     fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32 {
         (level as f32 * 0.8) as u32 + 10
     }
+
+    fn calculate_reward_value(
+        &self,
+        equation_id: usize,
+        base_reward_value: i32,
+        dup_count: i32,
+        level: i32,
+        charm: i32,
+        fame: i32,
+        world_reward_rate: i32,
+    ) -> i32 {
+        match equation_id {
+            0 => {
+                ((base_reward_value + 30) * (charm + 10) * world_reward_rate * (fame + 20)
+                    / (level + 70))
+                    / 30000
+                    + base_reward_value
+            }
+            1 => {
+                base_reward_value * (level + 3) * (level + charm / 2 + 40) * world_reward_rate
+                    / 10000
+            }
+            2 => base_reward_value * dup_count,
+            3 | 5 => {
+                ((base_reward_value + 20) * (charm + 10) * world_reward_rate * (fame + 20)
+                    / (level + 70))
+                    / 30000
+                    + base_reward_value
+            }
+            4 => {
+                ((base_reward_value + 2) * (level + charm + 40) * (fame + 40) * world_reward_rate)
+                    / 140000
+            }
+            6 => {
+                ((base_reward_value + 20) * (level + charm) * (fame + 20) * world_reward_rate)
+                    / 3000000
+                    + base_reward_value
+            }
+            _ => 0,
+        }
+    }
 }
 
 fn calculate_damage_success_rate(
