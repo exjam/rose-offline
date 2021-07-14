@@ -94,6 +94,8 @@ fn quest_trigger_apply_rewards(quest_trigger: &QuestTrigger) -> bool {
             QsdReward::RemoveClanSkill(_) => false,
             QsdReward::ClanPointContribution(_, _) => false,
             QsdReward::TeleportNearbyClanMembers(_, _, _) => false,
+            QsdReward::CallLuaFunction(_) => false,
+            QsdReward::ResetSkills => false,
         };
 
         if !result {

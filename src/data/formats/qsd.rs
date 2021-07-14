@@ -316,6 +316,8 @@ pub enum QsdReward {
     RemoveClanSkill(QsdSkillId),
     ClanPointContribution(QsdRewardOperator, QsdClanPoints),
     TeleportNearbyClanMembers(QsdDistance, QsdZoneId, Point2<f32>),
+    CallLuaFunction(String),
+    ResetSkills,
 }
 
 pub struct QsdTrigger {
@@ -1026,6 +1028,15 @@ impl QsdFile {
                                 zone,
                                 Point2::new(x, y),
                             ));
+                        }
+                        29 => {
+                            let function = reader.read_u16_length_string()?;
+                            reader.set_position(start_position + size_bytes); // padding
+
+                            rewards.push(QsdReward::CallLuaFunction(function.to_string()));
+                        }
+                        30 => {
+                            rewards.push(QsdReward::ResetSkills);
                         }
                         _ => {
                             println!("Unimplemented QSD action opcode: {:X}", opcode);
