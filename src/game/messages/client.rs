@@ -1,6 +1,7 @@
 use tokio::sync::oneshot;
 
 use crate::data::character::CharacterStorage;
+use crate::data::QuestTriggerHash;
 use crate::game::components::{
     BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
     EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
@@ -203,6 +204,11 @@ pub enum ReviveRequestType {
     SavePosition,
 }
 
+pub struct QuestDelete {
+    pub slot: usize,
+    pub quest_id: usize,
+}
+
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -224,4 +230,6 @@ pub enum ClientMessage {
     PickupDroppedItem(PickupDroppedItem),
     LogoutRequest(LogoutRequest),
     ReviveRequest(ReviveRequestType),
+    QuestTrigger(QuestTriggerHash),
+    QuestDelete(QuestDelete),
 }

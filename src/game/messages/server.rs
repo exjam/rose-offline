@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::{
     data::{
         item::{EquipmentItem, Item},
-        Damage,
+        Damage, QuestTriggerHash,
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
@@ -198,6 +198,19 @@ pub struct LogoutReply {
 }
 
 #[derive(Clone)]
+pub struct QuestTriggerResult {
+    pub success: bool,
+    pub trigger_hash: QuestTriggerHash,
+}
+
+#[derive(Clone)]
+pub struct QuestDeleteResult {
+    pub success: bool,
+    pub slot: usize,
+    pub quest_id: usize,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -219,4 +232,6 @@ pub enum ServerMessage {
     Whisper(Whisper),
     LogoutReply(LogoutReply),
     ReturnToCharacterSelect,
+    QuestTriggerResult(QuestTriggerResult),
+    QuestDeleteResult(QuestDeleteResult),
 }

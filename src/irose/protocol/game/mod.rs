@@ -216,6 +216,24 @@ impl GameClient {
                     .client_message_tx
                     .send(ClientMessage::ReviveRequest(packet.revive_request_type))?;
             }
+            Some(ClientPackets::QuestRequest) => {
+                let packet = PacketClientQuestRequest::try_from(&packet)?;
+                match packet.request_type {
+                    PacketClientQuestRequestType::DoTrigger => {
+                        client.client_message_tx.send(ClientMessage::QuestTrigger(
+                            QuestTriggerHash::new(packet.quest_id),
+                        ))?;
+                    }
+                    PacketClientQuestRequestType::DeleteQuest => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::QuestDelete(QuestDelete {
+                                slot: packet.quest_slot as usize,
+                                quest_id: packet.quest_id as usize,
+                            }))?;
+                    }
+                }
+            }
             _ => println!("[GS] Unhandled packet {:#03X}", packet.command),
         }
         Ok(())
@@ -477,6 +495,41 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerLogoutResult { result }))
+                    .await?;
+            }
+            ServerMessage::QuestTriggerResult(QuestTriggerResult {
+                success,
+                trigger_hash,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerQuestResult {
+                        result: if success {
+                            PacketServerQuestResultType::TriggerSuccess
+                        } else {
+                            PacketServerQuestResultType::TriggerFailed
+                        },
+                        slot: 0,
+                        quest_id: trigger_hash.hash,
+                    }))
+                    .await?;
+            }
+            ServerMessage::QuestDeleteResult(QuestDeleteResult {
+                success,
+                slot,
+                quest_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerQuestResult {
+                        result: if success {
+                            PacketServerQuestResultType::DeleteSuccess
+                        } else {
+                            PacketServerQuestResultType::DeleteFailed
+                        },
+                        slot: slot as u8,
+                        quest_id: quest_id as u32,
+                    }))
                     .await?;
             }
             // These messages are for World Server

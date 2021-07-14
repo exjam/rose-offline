@@ -2,7 +2,7 @@ use crossbeam_channel::Receiver;
 use legion::{Resources, Schedule, World};
 use std::time::{Duration, Instant};
 
-use crate::game::resources::{PendingXpList, WorldRates};
+use crate::game::resources::{PendingQuestTriggerList, PendingXpList, WorldRates};
 
 use super::{
     messages::control::ControlMessage,
@@ -36,6 +36,7 @@ impl GameWorld {
         resources.insert(ServerMessages::new());
         resources.insert(ClientEntityList::new(&game_data.zones));
         resources.insert(PendingDamageList::new());
+        resources.insert(PendingQuestTriggerList::new());
         resources.insert(PendingXpList::new());
         resources.insert(WorldRates::new());
         resources.insert(game_data);
@@ -68,6 +69,7 @@ impl GameWorld {
             .flush()
             .add_system(update_position_system())
             .add_system(apply_damage_system())
+            .add_system(apply_pending_quest_trigger_system())
             .flush()
             .add_system(apply_pending_xp_system())
             .flush()

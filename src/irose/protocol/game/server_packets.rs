@@ -30,6 +30,7 @@ pub enum ServerPackets {
     CharacterInventory = 0x716,
     UpdateInventory = 0x718,
     QuestData = 0x71b,
+    QuestResult = 0x730,
     JoinZone = 0x753,
     LocalChat = 0x783,
     Whisper = 0x784,
@@ -1046,6 +1047,38 @@ impl From<&PacketServerLogoutResult> for Packet {
                 writer.write_u16(duration.as_secs() as u16);
             }
         };
+        writer.into()
+    }
+}
+
+pub enum PacketServerQuestResultType {
+    AddSuccess,
+    AddFailed,
+    DeleteSuccess,
+    DeleteFailed,
+    TriggerSuccess,
+    TriggerFailed,
+}
+
+pub struct PacketServerQuestResult {
+    pub result: PacketServerQuestResultType,
+    pub slot: u8,
+    pub quest_id: u32,
+}
+
+impl From<&PacketServerQuestResult> for Packet {
+    fn from(packet: &PacketServerQuestResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::QuestResult as u16);
+        writer.write_u8(match packet.result {
+            PacketServerQuestResultType::AddSuccess => 1,
+            PacketServerQuestResultType::AddFailed => 2,
+            PacketServerQuestResultType::DeleteSuccess => 3,
+            PacketServerQuestResultType::DeleteFailed => 4,
+            PacketServerQuestResultType::TriggerSuccess => 5,
+            PacketServerQuestResultType::TriggerFailed => 6,
+        } as u8);
+        writer.write_u8(packet.slot);
+        writer.write_u32(packet.quest_id);
         writer.into()
     }
 }

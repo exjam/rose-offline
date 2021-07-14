@@ -21,6 +21,7 @@ pub enum ClientPackets {
     LogoutRequest = 0x707,
     ConnectRequest = 0x70b,
     ReturnToCharacterSelectRequest = 0x71C,
+    QuestRequest = 0x730,
     JoinZone = 0x753,
     ReviveRequest = 0x755,
     Chat = 0x783,
@@ -281,6 +282,42 @@ impl TryFrom<&Packet> for PacketClientReviveRequest {
 
         Ok(PacketClientReviveRequest {
             revive_request_type,
+        })
+    }
+}
+
+pub enum PacketClientQuestRequestType {
+    DeleteQuest,
+    DoTrigger,
+}
+
+pub struct PacketClientQuestRequest {
+    pub request_type: PacketClientQuestRequestType,
+    pub quest_slot: u8,
+    pub quest_id: u32,
+}
+
+impl TryFrom<&Packet> for PacketClientQuestRequest {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::QuestRequest as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let request_type = match reader.read_u8()? {
+            2 => PacketClientQuestRequestType::DeleteQuest,
+            3 => PacketClientQuestRequestType::DoTrigger,
+            _ => return Err(ProtocolError::InvalidPacket),
+        };
+        let quest_slot = reader.read_u8()?;
+        let quest_id = reader.read_u32()?;
+
+        Ok(PacketClientQuestRequest {
+            request_type,
+            quest_slot,
+            quest_id,
         })
     }
 }

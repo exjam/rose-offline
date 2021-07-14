@@ -22,7 +22,10 @@ use crate::{
             },
             server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
         },
-        resources::{ClientEntityList, GameData, LoginTokens, ServerMessages},
+        resources::{
+            ClientEntityList, GameData, LoginTokens, PendingQuestTrigger, PendingQuestTriggerList,
+            ServerMessages,
+        },
     },
 };
 
@@ -406,6 +409,7 @@ pub fn game_server_main(
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
+    #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
@@ -713,6 +717,12 @@ pub fn game_server_main(
                                 new_position,
                             );
                         }
+                    }
+                    ClientMessage::QuestTrigger(trigger_hash) => {
+                        pending_quest_trigger_list.push(PendingQuestTrigger {
+                            trigger_entity: *entity,
+                            trigger_hash,
+                        });
                     }
                     _ => println!("Received unimplemented client message"),
                 }
