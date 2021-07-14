@@ -119,7 +119,7 @@ pub struct QsdConditionQuestVariable {
 }
 
 pub struct QsdConditionQuestItem {
-    pub item: ItemReference,
+    pub item: Option<ItemReference>,
     pub equipment_index: Option<EquipmentIndex>,
     pub required_count: u32,
     pub operator: QsdConditionOperator,
@@ -396,7 +396,7 @@ impl QsdFile {
                             let data_count = reader.read_u32()?;
                             let mut items = Vec::new();
                             for _ in 0..data_count {
-                                let item = ItemReference::from_base1000(reader.read_u32()?)?;
+                                let item = ItemReference::from_base1000(reader.read_u32()?).ok();
                                 let equipment_index = FromPrimitive::from_i32(reader.read_i32()?);
                                 let required_count = reader.read_u32()?;
                                 let operator = decode_condition_operator(reader.read_u8()?)?;
@@ -752,7 +752,7 @@ impl QsdFile {
                             let equation = reader.read_u8()? as QsdEquationId;
                             reader.skip(2);
                             let value = reader.read_i32()?;
-                            let item = ItemReference::from_base1000(reader.read_u32()?)?;
+                            let item = ItemReference::from_base1000(reader.read_u32()?);
                             let target = if reader.read_u8()? == 0 {
                                 QsdRewardTarget::Player
                             } else {
@@ -782,7 +782,7 @@ impl QsdFile {
                                         QsdRewardCalculatedItem {
                                             equation,
                                             value,
-                                            item,
+                                            item: item?,
                                             gem,
                                         },
                                     ));
