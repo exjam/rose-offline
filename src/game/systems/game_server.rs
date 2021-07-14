@@ -744,6 +744,7 @@ pub fn game_server_main(
 #[read_component(ManaPoints)]
 #[read_component(StatPoints)]
 #[read_component(SkillPoints)]
+#[read_component(QuestState)]
 #[filter(!component::<GameClient>())]
 pub fn game_server_disconnect_handler(
     world: &SubWorld,
