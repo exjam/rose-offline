@@ -222,6 +222,7 @@ pub enum QsdRewardQuestAction {
     Add,
     ChangeIdKeepData,
     ChangeIdResetData,
+    Select,
 }
 
 pub struct QsdRewardQuestVariable {
@@ -688,6 +689,7 @@ impl QsdFile {
                                 1 => QsdRewardQuestAction::Add,
                                 2 => QsdRewardQuestAction::ChangeIdKeepData,
                                 3 => QsdRewardQuestAction::ChangeIdResetData,
+                                4 => QsdRewardQuestAction::Select,
                                 _ => return Err(QsdReadError::InvalidQuestAction),
                             };
                             reader.skip(3); // padding
