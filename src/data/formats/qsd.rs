@@ -223,7 +223,7 @@ fn decode_reward_operator(value: u8) -> Result<QsdRewardOperator, QsdReadError> 
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdRewardTarget {
     Player,
     Party,
