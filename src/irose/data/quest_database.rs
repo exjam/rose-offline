@@ -48,8 +48,9 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
         }
 
         if let Some(qsd_file) = vfs.open_file(qsd_path) {
-            if let Ok(qsd) = QsdFile::read(FileReader::from(&qsd_file)) {
-                triggers.extend(qsd.triggers);
+            match QsdFile::read(FileReader::from(&qsd_file)) {
+                Ok(qsd) => triggers.extend(qsd.triggers),
+                Err(error) => println!("Failed to parse {}, error: {:?}", qsd_path, error),
             }
         }
     }

@@ -28,8 +28,13 @@ pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
         }
 
         if let Some(aip_file) = vfs.open_file(aip_path) {
-            if let Ok(aip) = AipFile::read(FileReader::from(&aip_file)) {
-                aips.insert(row as u16, aip);
+            match AipFile::read(FileReader::from(&aip_file)) {
+                Ok(aip) => {
+                    aips.insert(row as u16, aip);
+                }
+                Err(error) => {
+                    println!("Failed to parse {}, error: {:?}", aip_path, error);
+                }
             }
         }
     }
