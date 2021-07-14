@@ -304,9 +304,9 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u8(character_info.face as u8);
         writer.write_u8(character_info.hair as u8);
         writer.write_u16(character_info.job);
-        writer.write_u8(0); // union
-        writer.write_u8(0); // rank
-        writer.write_u8(0); // fame
+        writer.write_u8(character_info.union);
+        writer.write_u8(character_info.rank);
+        writer.write_u8(character_info.fame);
 
         // tagBasicAbility
         let basic_stats = packet.basic_stats;
@@ -327,8 +327,8 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u8(100); // Body Size
         writer.write_u8(200); // Head Size
         writer.write_u32(0); // Penalty XP
-        writer.write_u16(0); // Fame G
-        writer.write_u16(0); // Fame B
+        writer.write_u16(character_info.fame_g);
+        writer.write_u16(character_info.fame_b);
         for _ in 0..10 {
             writer.write_u16(0); // Union points
         }
