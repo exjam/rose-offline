@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::data::{
     AbilityValueCalculator, AiDatabase, CharacterCreator, DropTable, ItemDatabase, MotionDatabase,
-    NpcDatabase, SkillDatabase, ZoneDatabase,
+    NpcDatabase, QuestDatabase, SkillDatabase, ZoneDatabase,
 };
 
 pub struct GameData {
@@ -13,6 +13,7 @@ pub struct GameData {
     pub items: Arc<ItemDatabase>,
     pub motions: Arc<MotionDatabase>,
     pub npcs: Arc<NpcDatabase>,
+    pub quests: Arc<QuestDatabase>,
     pub skills: Arc<SkillDatabase>,
     pub zones: Arc<ZoneDatabase>,
 }

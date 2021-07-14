@@ -3,6 +3,7 @@ mod drop_table;
 mod item_database;
 mod motion_database;
 mod npc_database;
+mod quest_database;
 mod skill_database;
 mod zone_database;
 
@@ -90,6 +91,7 @@ pub use npc_database::{
     NpcConversationData, NpcConversationReference, NpcData, NpcDatabase, NpcMotionAction,
     NpcReference,
 };
+pub use quest_database::{QuestData, QuestDatabase, QuestTrigger, QuestTriggerHash};
 pub use skill_database::{
     SkillAddAbility, SkillData, SkillDatabase, SkillPage, SkillReference, SkillType,
 };

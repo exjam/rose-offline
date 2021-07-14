@@ -5,6 +5,7 @@ mod drop_table;
 mod item_database;
 mod motion_database;
 mod npc_database;
+mod quest_database;
 mod skill_database;
 mod zone_database;
 
@@ -18,6 +19,7 @@ use drop_table::get_drop_table;
 use item_database::get_item_database;
 use motion_database::get_motion_database;
 use npc_database::get_npc_database;
+use quest_database::get_quest_database;
 use skill_database::get_skill_database;
 use zone_database::get_zone_database;
 
@@ -50,6 +52,7 @@ pub fn get_game_data() -> GameData {
         items: item_database,
         motions: Arc::new(get_motion_database(&vfs_index).expect("Failed to load motion database")),
         npcs: npc_database,
+        quests: Arc::new(get_quest_database(&vfs_index).expect("Failed to load quest database")),
         skills: skill_database,
         zones: zone_database,
     }
