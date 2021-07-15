@@ -71,6 +71,7 @@ fn load_skill(data: &StbSkill, id: usize) -> Option<SkillData> {
         add_ability: data.get_add_ability(id),
         skill_type: FromPrimitive::from_u32(data.get_skill_type(id).unwrap_or(0))
             .unwrap_or(SkillType::Unknown),
+        skill_point_cost: data.get_levelup_skill_points(id).unwrap_or(0),
     })
 }
 

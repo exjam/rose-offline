@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use super::item::AbilityType;
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct SkillReference(pub usize);
 
 #[derive(Clone, Copy, Debug)]
@@ -31,6 +31,7 @@ pub struct SkillData {
     pub icon_number: u32,
     pub add_ability: Vec<SkillAddAbility>,
     pub skill_type: SkillType,
+    pub skill_point_cost: u32,
 }
 
 pub struct SkillDatabase {
