@@ -14,7 +14,7 @@ use crate::{
             CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
             HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
             ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
-            SkillPoints, StatPoints, Team, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+            SkillPoints, StatPoints, Team, UnionMembership, VehiclePartIndex, INVENTORY_PAGE_SIZE,
         },
         messages::server::{PickupDroppedItemContent, PickupDroppedItemError},
     },
@@ -286,6 +286,7 @@ pub struct PacketServerSelectCharacter<'a> {
     pub mana_points: &'a ManaPoints,
     pub stat_points: StatPoints,
     pub skill_points: SkillPoints,
+    pub union_membership: &'a UnionMembership,
 }
 
 impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
@@ -307,7 +308,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u8(character_info.face as u8);
         writer.write_u8(character_info.hair as u8);
         writer.write_u16(character_info.job);
-        writer.write_u8(character_info.union);
+        writer.write_u8(packet.union_membership.current_union.unwrap_or(0) as u8);
         writer.write_u8(character_info.rank);
         writer.write_u8(character_info.fame);
 
@@ -332,9 +333,18 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u32(0); // Penalty XP
         writer.write_u16(character_info.fame_g);
         writer.write_u16(character_info.fame_b);
-        for _ in 0..10 {
-            writer.write_u16(0); // Union points
+
+        for i in 0..10 {
+            writer.write_u16(
+                packet
+                    .union_membership
+                    .points
+                    .get(i)
+                    .cloned()
+                    .unwrap_or(0u32) as u16,
+            );
         }
+
         writer.write_u32(0); // Guild ID
         writer.write_u16(0); // Guild contribution
         writer.write_u8(0); // Guild pos

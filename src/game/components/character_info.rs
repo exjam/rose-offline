@@ -9,7 +9,6 @@ pub struct CharacterInfo {
     pub job: u16,
     pub face: u8,
     pub hair: u8,
-    pub union: u8,
     pub rank: u8,
     pub fame: u8,
     pub fame_b: u16,

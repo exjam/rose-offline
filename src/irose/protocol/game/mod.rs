@@ -80,6 +80,7 @@ impl GameClient {
                                 mana_points: &response.mana_points,
                                 stat_points: response.stat_points,
                                 skill_points: response.skill_points,
+                                union_membership: &response.union_membership,
                             }))
                             .await?;
 

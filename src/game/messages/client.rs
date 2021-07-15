@@ -6,6 +6,7 @@ use crate::{
         BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
         EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
         Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, StatPoints, Team,
+        UnionMembership,
     },
 };
 
@@ -163,6 +164,7 @@ pub struct GameConnectionResponse {
     pub stat_points: StatPoints,
     pub skill_points: SkillPoints,
     pub quest_state: QuestState,
+    pub union_membership: UnionMembership,
 }
 
 #[derive(Debug)]

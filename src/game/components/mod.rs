@@ -36,6 +36,7 @@ mod spawn_origin;
 mod stat_points;
 mod target;
 mod team;
+mod union_membership;
 mod world_client;
 mod zone;
 
@@ -80,5 +81,6 @@ pub use spawn_origin::SpawnOrigin;
 pub use stat_points::StatPoints;
 pub use target::Target;
 pub use team::Team;
+pub use union_membership::UnionMembership;
 pub use world_client::*;
 pub use zone::Zone;
