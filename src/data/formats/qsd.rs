@@ -231,11 +231,11 @@ pub enum QsdRewardTarget {
 
 #[derive(Debug)]
 pub enum QsdRewardQuestAction {
-    Remove,
-    Add,
-    ChangeIdKeepData,
-    ChangeIdResetData,
-    Select,
+    RemoveSelected,
+    Add(QsdQuestId),
+    ChangeSelectedIdKeepData(QsdQuestId),
+    ChangeSelectedIdResetData(QsdQuestId),
+    Select(QsdQuestId),
 }
 
 #[derive(Debug)]
@@ -305,7 +305,7 @@ pub enum QsdRewardMonsterSpawnState {
 
 #[derive(Debug)]
 pub enum QsdReward {
-    Quest(QsdRewardQuestAction, QsdQuestId),
+    Quest(QsdRewardQuestAction),
     AddItem(QsdRewardTarget, ItemReference, usize),
     RemoveItem(QsdRewardTarget, ItemReference, usize),
     QuestVariable(Vec<QsdRewardQuestVariable>),
@@ -709,16 +709,16 @@ impl QsdFile {
                         0 => {
                             let quest_id = reader.read_u32()? as QsdQuestId;
                             let action = match reader.read_u8()? {
-                                0 => QsdRewardQuestAction::Remove,
-                                1 => QsdRewardQuestAction::Add,
-                                2 => QsdRewardQuestAction::ChangeIdKeepData,
-                                3 => QsdRewardQuestAction::ChangeIdResetData,
-                                4 => QsdRewardQuestAction::Select,
+                                0 => QsdRewardQuestAction::RemoveSelected,
+                                1 => QsdRewardQuestAction::Add(quest_id),
+                                2 => QsdRewardQuestAction::ChangeSelectedIdKeepData(quest_id),
+                                3 => QsdRewardQuestAction::ChangeSelectedIdResetData(quest_id),
+                                4 => QsdRewardQuestAction::Select(quest_id),
                                 _ => return Err(QsdReadError::InvalidQuestAction),
                             };
                             reader.skip(3); // padding
 
-                            rewards.push(QsdReward::Quest(action, quest_id));
+                            rewards.push(QsdReward::Quest(action));
                         }
                         1 => {
                             let item = ItemReference::from_base1000(reader.read_u32()?)?;

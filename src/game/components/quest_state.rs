@@ -5,7 +5,7 @@ use crate::data::item::Item;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActiveQuest {
-    pub quest_id: u16,
+    pub quest_id: usize,
     pub expire_time: Option<u32>,
     pub variables: [u16; 10],
     pub switches: BitArr!(for 32, in Lsb0, u32),
@@ -13,7 +13,7 @@ pub struct ActiveQuest {
 }
 
 impl ActiveQuest {
-    pub fn new(quest_id: u16, expire_time: Option<u32>) -> Self {
+    pub fn new(quest_id: usize, expire_time: Option<u32>) -> Self {
         Self {
             quest_id,
             expire_time,
@@ -37,5 +37,32 @@ pub struct QuestState {
 impl QuestState {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    pub fn find_active_quest_index(&self, quest_id: usize) -> Option<usize> {
+        for i in 0..self.active_quests.len() {
+            if let Some(active_quest) = &self.active_quests[i] {
+                if active_quest.quest_id == quest_id {
+                    return Some(i);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn try_add_quest(&mut self, quest: ActiveQuest) -> Option<usize> {
+        for i in 0..self.active_quests.len() {
+            if self.active_quests[i].is_none() {
+                self.active_quests[i] = Some(quest);
+                return Some(i);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_quest_slot_mut(&mut self, index: usize) -> Option<&mut Option<ActiveQuest>> {
+        self.active_quests.get_mut(index)
     }
 }

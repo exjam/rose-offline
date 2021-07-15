@@ -6,15 +6,16 @@ use rand::{prelude::ThreadRng, Rng};
 use crate::{
     data::{
         formats::qsd::{
-            QsdCondition, QsdReward, QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardTarget,
+            QsdCondition, QsdReward, QsdRewardCalculatedItem, QsdRewardOperator,
+            QsdRewardQuestAction, QsdRewardTarget,
         },
         item::{AbilityType, EquipmentItem, Item},
         ItemReference, QuestTrigger,
     },
     game::{
         components::{
-            BasicStats, CharacterInfo, GameClient, Inventory, Level, Money, QuestState,
-            SkillPoints, StatPoints, UnionMembership,
+            ActiveQuest, BasicStats, CharacterInfo, GameClient, Inventory, Level, Money,
+            QuestState, SkillPoints, StatPoints, UnionMembership,
         },
         messages::server::{
             QuestTriggerResult, ServerMessage, UpdateAbilityValue, UpdateInventory, UpdateMoney,
@@ -41,6 +42,7 @@ struct QuestSourceEntity<'a> {
 
 struct QuestParameters<'a, 'b> {
     source: &'a mut QuestSourceEntity<'b>,
+    selected_quest_index: Option<usize>,
 }
 
 struct QuestWorld<'a> {
@@ -48,6 +50,17 @@ struct QuestWorld<'a> {
     world_rates: &'a WorldRates,
     pending_xp_list: &'a mut PendingXpList,
     rng: ThreadRng,
+}
+
+fn quest_condition_select_quest(quest_parameters: &mut QuestParameters, quest_id: usize) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_ref() {
+        if let Some(quest_index) = quest_state.find_active_quest_index(quest_id) {
+            quest_parameters.selected_quest_index = Some(quest_index);
+            return true;
+        }
+    }
+
+    false
 }
 
 fn quest_condition_quest_switch(
@@ -71,6 +84,9 @@ fn quest_trigger_check_conditions(
 ) -> bool {
     for condition in quest_trigger.conditions.iter() {
         let result = match *condition {
+            QsdCondition::SelectQuest(quest_id) => {
+                quest_condition_select_quest(quest_parameters, quest_id)
+            }
             QsdCondition::QuestSwitch(switch_id, value) => {
                 quest_condition_quest_switch(quest_parameters, switch_id, value)
             }
@@ -239,6 +255,7 @@ fn quest_reward_calculated_item(
                 }
                 Err(item) => {
                     // TODO: Drop item to ground
+                    warn!("Unimplemented drop unclaimed quest item {:?}", item);
                 }
             }
         }
@@ -708,6 +725,62 @@ fn quest_reward_add_ability_value(
     result
 }
 
+fn quest_reward_quest_action(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    action: &QsdRewardQuestAction,
+) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
+        match *action {
+            QsdRewardQuestAction::RemoveSelected => {
+                if let Some(quest_index) = quest_parameters.selected_quest_index {
+                    if let Some(quest_slot) = quest_state.get_quest_slot_mut(quest_index) {
+                        *quest_slot = None;
+                        return true;
+                    }
+                }
+            }
+            QsdRewardQuestAction::Add(quest_id) => {
+                // TODO: Set quest expire time
+                if let Some(quest_index) =
+                    quest_state.try_add_quest(ActiveQuest::new(quest_id, None))
+                {
+                    if quest_parameters.selected_quest_index.is_none() {
+                        quest_parameters.selected_quest_index = Some(quest_index);
+                    }
+
+                    return true;
+                }
+            }
+            QsdRewardQuestAction::ChangeSelectedIdKeepData(quest_id) => {
+                if let Some(quest_index) = quest_parameters.selected_quest_index {
+                    if let Some(Some(active_quest)) = quest_state.get_quest_slot_mut(quest_index) {
+                        active_quest.quest_id = quest_id;
+                        return true;
+                    }
+                }
+            }
+            QsdRewardQuestAction::ChangeSelectedIdResetData(quest_id) => {
+                if let Some(quest_index) = quest_parameters.selected_quest_index {
+                    if let Some(Some(active_quest)) = quest_state.get_quest_slot_mut(quest_index) {
+                        // TODO: Set quest expire time
+                        *active_quest = ActiveQuest::new(quest_id, None);
+                        return true;
+                    }
+                }
+            }
+            QsdRewardQuestAction::Select(quest_id) => {
+                if let Some(quest_index) = quest_state.find_active_quest_index(quest_id) {
+                    quest_parameters.selected_quest_index = Some(quest_index);
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -715,6 +788,9 @@ fn quest_trigger_apply_rewards(
 ) -> bool {
     for reward in quest_trigger.rewards.iter() {
         let result = match reward {
+            QsdReward::Quest(action) => {
+                quest_reward_quest_action(quest_world, quest_parameters, action)
+            }
             QsdReward::AbilityValue(values) => {
                 for (ability_type, reward_operator, value) in values {
                     match reward_operator {
@@ -866,6 +942,7 @@ pub fn apply_pending_quest_trigger(
                     skill_points,
                     union_membership,
                 },
+                selected_quest_index: None,
             };
 
             while trigger.is_some() {

@@ -484,7 +484,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
                 .get(i)
                 .and_then(|q| q.as_ref());
             // Quest data
-            writer.write_u16(quest.map_or(0, |quest| quest.quest_id));
+            writer.write_u16(quest.map_or(0, |quest| quest.quest_id) as u16);
             writer.write_u32(quest.and_then(|quest| quest.expire_time).unwrap_or(0));
             for j in 0..10 {
                 writer.write_u16(
