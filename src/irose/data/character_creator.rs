@@ -211,7 +211,7 @@ pub fn get_character_creator(
     }
 
     let mut skills = Vec::new();
-    for skill in [11, 12, 16, 19, 20, 21]
+    for skill in [11, 12, 16, 20] // Sit, Pick Up, Normal Attack, Trade
         .iter()
         .map(|id| SkillReference(*id as usize))
     {
