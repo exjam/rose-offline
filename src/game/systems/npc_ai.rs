@@ -18,9 +18,10 @@ use crate::{
     game::{
         components::{
             AbilityValues, ClientEntityType, Command, CommandData, CommandDie, DamageSources,
-            ExpireTime, HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc, NpcAi, Owner,
-            Position, SpawnOrigin, Team,
+            ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint, NextCommand, Npc,
+            NpcAi, Owner, Position, SpawnOrigin, Team,
         },
+        messages::server::ServerMessage,
         resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
         GameData,
     },
@@ -63,6 +64,7 @@ fn compare_aip_value(operator: AipOperatorType, value1: i32, value2: i32) -> boo
     }
 }
 
+#[allow(dead_code)]
 struct AiParameters<'a, 'b> {
     source: &'a AiSourceEntity<'b>,
     attacker: Option<&'a AiAttackerEntity<'b>>,
@@ -532,7 +534,7 @@ pub fn npc_ai(
     nearby_query: &mut Query<(&Level, &Team)>,
     attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: &mut Query<&Level>,
-    killer_query: &mut Query<(&Level, &AbilityValues)>,
+    killer_query: &mut Query<(&Level, &AbilityValues, Option<&GameClient>)>,
     #[resource] delta_time: &DeltaTime,
     #[resource] game_data: &GameData,
     #[resource] world_rates: &WorldRates,
@@ -541,7 +543,7 @@ pub fn npc_ai(
 ) {
     let (mut spawn_point_world, mut world) = world.split_for_query(&spawn_point_query);
     let (attacker_query_world, mut world) = world.split_for_query(&attacker_query);
-    let (killer_query_world, mut world) = world.split_for_query(&killer_query);
+    let (mut killer_query_world, mut world) = world.split_for_query(&killer_query);
     let (mut nearby_query_world, mut world) = world.split_for_query(&nearby_query);
     let (level_query_world, world) = world.split_for_query(&level_query);
     let mut npc_world = world;
@@ -757,11 +759,33 @@ pub fn npc_ai(
                                 }
                             }
 
-                            // Drop item owned by killer
                             if let Some(killer_entity) = killer_entity {
-                                if let Ok((killer_level, killer_ability_values)) =
-                                    killer_query.get(&killer_query_world, killer_entity)
+                                if let Ok((
+                                    killer_level,
+                                    killer_ability_values,
+                                    killer_game_client,
+                                )) = killer_query.get_mut(&mut killer_query_world, killer_entity)
                                 {
+                                    // Inform client to execute npc dead event
+                                    if !npc_data.death_quest_trigger_name.is_empty() {
+                                        if let Some(killer_game_client) = killer_game_client {
+                                            // TODO: Send NPC death trigger to whole party
+                                            /*
+                                            if npc_data.npc_quest_type != 0 {
+                                            }
+                                            */
+
+                                            // Send to only client
+                                            killer_game_client
+                                                .server_message_tx
+                                                .send(ServerMessage::RunNpcDeathTrigger(
+                                                    NpcReference(npc.id as usize),
+                                                ))
+                                                .ok();
+                                        }
+                                    }
+
+                                    // Drop item owned by killer
                                     let level_difference =
                                         killer_level.level as i32 - level.level as i32;
                                     if let Some(drop_item) = game_data.drop_table.get_drop(

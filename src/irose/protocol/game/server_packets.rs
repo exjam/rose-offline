@@ -6,7 +6,7 @@ use num_derive::FromPrimitive;
 use crate::{
     data::{
         item::{AbilityType, EquipmentItem, Item, StackableItem},
-        Damage,
+        Damage, NpcReference,
     },
     game::{
         components::{
@@ -38,6 +38,7 @@ pub enum ServerPackets {
     UpdateAbilityValueRewardAdd = 0x720,
     UpdateAbilityValueRewardSet = 0x721,
     QuestResult = 0x730,
+    RunNpcDeathTrigger = 0x731,
     JoinZone = 0x753,
     LocalChat = 0x783,
     Whisper = 0x784,
@@ -1179,6 +1180,18 @@ impl From<&PacketServerLearnSkillResult> for Packet {
                 writer.write_u16(0);
             }
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerRunNpcDeathTrigger {
+    pub npc: NpcReference,
+}
+
+impl From<&PacketServerRunNpcDeathTrigger> for Packet {
+    fn from(packet: &PacketServerRunNpcDeathTrigger) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::RunNpcDeathTrigger as u16);
+        writer.write_u16(packet.npc.0 as u16);
         writer.into()
     }
 }

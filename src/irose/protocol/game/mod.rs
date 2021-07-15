@@ -582,6 +582,12 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerLearnSkillResult { result }))
                     .await?;
             }
+            ServerMessage::RunNpcDeathTrigger(npc) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerRunNpcDeathTrigger { npc }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::{
     data::{
         item::{AbilityType, EquipmentItem, Item},
-        Damage, QuestTriggerHash, SkillReference,
+        Damage, NpcReference, QuestTriggerHash, SkillReference,
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
@@ -269,4 +269,5 @@ pub enum ServerMessage {
     QuestTriggerResult(QuestTriggerResult),
     QuestDeleteResult(QuestDeleteResult),
     LearnSkillResult(Result<LearnSkillSuccess, LearnSkillError>),
+    RunNpcDeathTrigger(NpcReference),
 }
