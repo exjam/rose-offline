@@ -11,7 +11,7 @@ use crate::{
             QsdRewardQuestAction, QsdRewardTarget,
         },
         item::{AbilityType, EquipmentItem, Item},
-        ItemReference, QuestTrigger, SkillReference,
+        ItemReference, QuestTrigger, SkillReference, ZoneReference,
     },
     game::{
         bundles::client_entity_teleport_zone,
@@ -862,6 +862,31 @@ fn quest_reward_add_skill(
     result.ok().map(|_| ())
 }
 
+fn quest_reward_teleport(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    new_zone: ZoneReference,
+    new_position: Point3<f32>,
+) -> bool {
+    if let (Some(client_entity), Some(position)) = (
+        quest_parameters.source.client_entity,
+        quest_parameters.source.position,
+    ) {
+        client_entity_teleport_zone(
+            quest_world.cmd,
+            quest_world.client_entity_list,
+            quest_parameters.source.entity,
+            client_entity,
+            position,
+            Position::new(new_position, new_zone.0 as u16),
+            quest_parameters.source.game_client,
+        );
+        true
+    } else {
+        false
+    }
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -941,6 +966,12 @@ fn quest_trigger_apply_rewards(
                 // CallLuaFunction is for client side only.
                 true
             }
+            &QsdReward::Teleport(_reward_target, zone_id, position) => quest_reward_teleport(
+                quest_world,
+                quest_parameters,
+                ZoneReference(zone_id),
+                Point3::new(position.x, position.y, 0.0),
+            ),
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
