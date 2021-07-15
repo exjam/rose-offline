@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item},
+        item::{AbilityType, EquipmentItem, Item},
         Damage, QuestTriggerHash,
     },
     game::components::{
@@ -159,6 +159,12 @@ pub struct Teleport {
 }
 
 #[derive(Clone)]
+pub enum UpdateAbilityValue {
+    RewardAdd(AbilityType, i32),
+    RewardSet(AbilityType, i32),
+}
+
+#[derive(Clone)]
 pub struct UpdateBasicStat {
     pub basic_stat_type: BasicStatType,
     pub value: u16,
@@ -231,6 +237,7 @@ pub enum ServerMessage {
     SpawnEntityNpc(SpawnEntityNpc),
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
+    UpdateAbilityValue(UpdateAbilityValue),
     UpdateBasicStat(UpdateBasicStat),
     UpdateEquipment(UpdateEquipment),
     UpdateInventory(UpdateInventory),

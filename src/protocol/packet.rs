@@ -140,6 +140,10 @@ impl PacketWriter {
         self.data.put_f32_le(value);
     }
 
+    pub fn write_i32(&mut self, value: i32) {
+        self.data.put_i32_le(value);
+    }
+
     pub fn write_u32(&mut self, value: u32) {
         self.data.put_u32_le(value);
     }

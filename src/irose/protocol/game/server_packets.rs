@@ -5,7 +5,7 @@ use num_derive::FromPrimitive;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item, StackableItem},
+        item::{AbilityType, EquipmentItem, Item, StackableItem},
         Damage,
     },
     game::{
@@ -33,6 +33,8 @@ pub enum ServerPackets {
     UpdateMoney = 0x71d,
     UpdateMoneyReward = 0x71e,
     UpdateInventoryReward = 0x71f,
+    UpdateAbilityValueRewardAdd = 0x720,
+    UpdateAbilityValueRewardSet = 0x721,
     QuestResult = 0x730,
     JoinZone = 0x753,
     LocalChat = 0x783,
@@ -1116,6 +1118,26 @@ impl From<&PacketServerQuestResult> for Packet {
         } as u8);
         writer.write_u8(packet.slot);
         writer.write_u32(packet.quest_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateAbilityValue {
+    pub is_add: bool,
+    pub ability_type: AbilityType,
+    pub value: i32,
+}
+
+impl From<&PacketServerUpdateAbilityValue> for Packet {
+    fn from(packet: &PacketServerUpdateAbilityValue) -> Self {
+        let command = if packet.is_add {
+            ServerPackets::UpdateAbilityValueRewardAdd
+        } else {
+            ServerPackets::UpdateAbilityValueRewardSet
+        };
+        let mut writer = PacketWriter::new(command as u16);
+        writer.write_u16(packet.ability_type as u16);
+        writer.write_i32(packet.value);
         writer.into()
     }
 }
