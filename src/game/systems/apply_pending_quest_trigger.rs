@@ -870,6 +870,10 @@ fn quest_trigger_apply_rewards(
                     base_reward_value,
                 )
             }
+            QsdReward::CallLuaFunction(_) => {
+                // CallLuaFunction is for client side only.
+                true
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
