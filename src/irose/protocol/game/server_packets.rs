@@ -505,6 +505,11 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             }
         }
 
+        let quest_switches_u32 = packet.quest_state.quest_switches.as_buffer();
+        for i in 0..(1024 / 32) {
+            writer.write_u32(quest_switches_u32.get(i).cloned().unwrap_or(0));
+        }
+
         for _ in 0..30 {
             writer.write_item_full(None); // wish list items
         }
