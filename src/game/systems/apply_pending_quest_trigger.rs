@@ -264,6 +264,16 @@ fn quest_reward_calculated_item(
     true
 }
 
+fn get_quest_calculated_money_dup_count_var<'a>(
+    selected_quest_index: Option<usize>,
+    quest_state: &'a mut Option<&mut QuestState>,
+) -> Option<&'a mut u16> {
+    let quest_index = selected_quest_index?;
+    let quest_state = quest_state.as_mut()?;
+    let active_quest = quest_state.get_quest_mut(quest_index)?;
+    active_quest.variables.last_mut()
+}
+
 fn quest_reward_calculated_money(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -271,13 +281,18 @@ fn quest_reward_calculated_money(
     reward_equation_id: usize,
     base_reward_value: i32,
 ) -> bool {
+    let dup_count_var = get_quest_calculated_money_dup_count_var(
+        quest_parameters.selected_quest_index.clone(),
+        &mut quest_parameters.source.quest_state,
+    );
+
     let reward_value = quest_world
         .game_data
         .ability_value_calculator
         .calculate_reward_value(
             reward_equation_id,
             base_reward_value,
-            0, // TODO: This should be the value of the last quest variable of current active quest, and after it resets it to 0
+            dup_count_var.as_ref().map_or(0, |x| **x) as i32,
             quest_parameters
                 .source
                 .level
@@ -302,6 +317,10 @@ fn quest_reward_calculated_money(
 
     if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
         if let Ok(_) = inventory.try_add_money(money) {
+            if let Some(dup_count_var) = dup_count_var {
+                *dup_count_var = 0u16;
+            }
+
             if let Some(game_client) = quest_parameters.source.game_client {
                 game_client
                     .server_message_tx

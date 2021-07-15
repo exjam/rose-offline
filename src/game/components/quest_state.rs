@@ -62,6 +62,14 @@ impl QuestState {
         None
     }
 
+    pub fn get_quest(&self, index: usize) -> Option<&ActiveQuest> {
+        self.active_quests.get(index).and_then(|x| x.as_ref())
+    }
+
+    pub fn get_quest_mut(&mut self, index: usize) -> Option<&mut ActiveQuest> {
+        self.active_quests.get_mut(index).and_then(|x| x.as_mut())
+    }
+
     pub fn get_quest_slot_mut(&mut self, index: usize) -> Option<&mut Option<ActiveQuest>> {
         self.active_quests.get_mut(index)
     }
