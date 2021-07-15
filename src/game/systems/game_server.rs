@@ -150,7 +150,7 @@ pub fn game_server_authentication(
                     });
                 message.response_tx.send(response).ok();
             }
-            _ => panic!("Received unexpected client message"),
+            _ => warn!("Received unexpected client message {:?}", message),
         }
     }
 }
@@ -194,7 +194,7 @@ pub fn game_server_join(
                     }
                 }
             }
-            _ => panic!("Received unexpected client message {:?}", message),
+            _ => warn!("Received unexpected client message {:?}", message),
         }
     }
 }
