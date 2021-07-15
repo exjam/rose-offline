@@ -66,7 +66,7 @@ fn decode_variable_type(value: u16) -> Result<QsdVariableType, QsdReadError> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdConditionOperator {
     Equals,
     GreaterThan,

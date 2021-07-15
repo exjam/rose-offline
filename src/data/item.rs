@@ -37,6 +37,7 @@ impl ItemType {
         matches!(self, ItemType::Money)
     }
 
+    #[allow(dead_code)]
     pub fn is_quest_item(self) -> bool {
         matches!(self, ItemType::Quest)
     }
@@ -308,7 +309,7 @@ impl Item {
     pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
         match self {
             Item::Equipment(_) => Err(StackError::NotStackable),
-            Item::Stackable(item) => item.can_stack_with(stackable),
+            Item::Stackable(self_stackable) => self_stackable.can_stack_with(stackable),
         }
     }
 
@@ -319,10 +320,34 @@ impl Item {
         }
     }
 
+    pub fn stack_with_item(&mut self, with_item: Item) -> Result<(), StackError> {
+        match self {
+            Item::Equipment(_) => Err(StackError::NotStackable),
+            Item::Stackable(self_stackable) => match with_item {
+                Item::Equipment(_) => Err(StackError::NotStackable),
+                Item::Stackable(with_stackable) => self_stackable.stack_with(with_stackable),
+            },
+        }
+    }
+
     pub fn get_item_type(&self) -> ItemType {
         match self {
             Item::Equipment(item) => item.item.item_type,
             Item::Stackable(item) => item.item.item_type,
+        }
+    }
+
+    pub fn get_quantity(&self) -> u32 {
+        match self {
+            Item::Equipment(item) => 1,
+            Item::Stackable(item) => item.quantity,
+        }
+    }
+
+    pub fn is_same_item(&self, item_reference: ItemReference) -> bool {
+        match self {
+            Item::Equipment(item) => item.item == item_reference,
+            Item::Stackable(item) => item.item == item_reference,
         }
     }
 }

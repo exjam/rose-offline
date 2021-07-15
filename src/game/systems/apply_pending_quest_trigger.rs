@@ -7,8 +7,8 @@ use rand::{prelude::ThreadRng, Rng};
 use crate::{
     data::{
         formats::qsd::{
-            QsdCondition, QsdReward, QsdRewardCalculatedItem, QsdRewardOperator,
-            QsdRewardQuestAction, QsdRewardTarget,
+            QsdCondition, QsdConditionOperator, QsdConditionQuestItem, QsdReward,
+            QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
         },
         item::{AbilityType, EquipmentItem, Item},
         ItemReference, QuestTrigger, SkillReference, ZoneReference,
@@ -16,8 +16,9 @@ use crate::{
     game::{
         bundles::client_entity_teleport_zone,
         components::{
-            ActiveQuest, BasicStats, CharacterInfo, ClientEntity, GameClient, Inventory, Level,
-            Money, Position, QuestState, SkillList, SkillPoints, StatPoints, UnionMembership,
+            ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment, EquipmentIndex,
+            GameClient, Inventory, Level, Money, Position, QuestState, SkillList, SkillPoints,
+            StatPoints, UnionMembership,
         },
         messages::server::{
             LearnSkillError, LearnSkillSuccess, QuestTriggerResult, ServerMessage,
@@ -36,6 +37,7 @@ struct QuestSourceEntity<'a> {
     game_client: Option<&'a GameClient>,
     client_entity: Option<&'a ClientEntity>,
     position: Option<&'a Position>,
+    equipment: Option<&'a Equipment>,
     inventory: Option<&'a mut Inventory>,
     level: Option<&'a mut Level>,
     character_info: Option<&'a mut CharacterInfo>,
@@ -59,6 +61,21 @@ struct QuestWorld<'a> {
     world_rates: &'a WorldRates,
     pending_xp_list: &'a mut PendingXpList,
     rng: ThreadRng,
+}
+
+fn quest_condition_operator<T: PartialEq + PartialOrd>(
+    operator: QsdConditionOperator,
+    value_lhs: T,
+    value_rhs: T,
+) -> bool {
+    match operator {
+        QsdConditionOperator::Equals => value_lhs == value_rhs,
+        QsdConditionOperator::GreaterThan => value_lhs > value_rhs,
+        QsdConditionOperator::GreaterThanEqual => value_lhs >= value_rhs,
+        QsdConditionOperator::LessThan => value_lhs < value_rhs,
+        QsdConditionOperator::LessThanEqual => value_lhs <= value_rhs,
+        QsdConditionOperator::NotEqual => value_lhs != value_rhs,
+    }
 }
 
 fn quest_condition_select_quest(quest_parameters: &mut QuestParameters, quest_id: usize) -> bool {
@@ -86,17 +103,95 @@ fn quest_condition_quest_switch(
     false
 }
 
+fn quest_condition_quest_item(
+    quest_parameters: &mut QuestParameters,
+    item_reference: Option<ItemReference>,
+    equipment_index: Option<EquipmentIndex>,
+    required_count: u32,
+    operator: QsdConditionOperator,
+) -> bool {
+    if let Some(equipment_index) = equipment_index {
+        if let Some(equipment) = quest_parameters.source.equipment.as_ref() {
+            item_reference
+                == equipment
+                    .get_equipment_item(equipment_index)
+                    .map(|item| item.item)
+        } else {
+            false
+        }
+    } else {
+        let quantity = if let Some(item_reference) = item_reference {
+            if item_reference.item_type.is_quest_item() {
+                // Check selected quest item
+                if let (Some(quest_state), Some(selected_quest_index)) = (
+                    quest_parameters.source.quest_state.as_ref(),
+                    quest_parameters.selected_quest_index,
+                ) {
+                    quest_state
+                        .get_quest(selected_quest_index)
+                        .and_then(|active_quest| active_quest.find_item(item_reference))
+                        .map(|quest_item| quest_item.get_quantity())
+                        .unwrap_or(0)
+                } else {
+                    0
+                }
+            } else {
+                // Check inventory
+                if let Some(inventory) = quest_parameters.source.inventory.as_ref() {
+                    inventory
+                        .find_item(item_reference)
+                        .and_then(|slot| inventory.get_item(slot))
+                        .map(|inventory_item| inventory_item.get_quantity())
+                        .unwrap_or(0)
+                } else {
+                    0
+                }
+            }
+        } else {
+            0
+        };
+
+        quest_condition_operator(operator, quantity, required_count)
+    }
+}
+
+fn quest_condition_quest_items(
+    quest_parameters: &mut QuestParameters,
+    items: &[QsdConditionQuestItem],
+) -> bool {
+    for &QsdConditionQuestItem {
+        item,
+        equipment_index,
+        required_count,
+        operator,
+    } in items
+    {
+        if !quest_condition_quest_item(
+            quest_parameters,
+            item,
+            equipment_index,
+            required_count,
+            operator,
+        ) {
+            return false;
+        }
+    }
+
+    true
+}
+
 fn quest_trigger_check_conditions(
     _quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
     quest_trigger: &QuestTrigger,
 ) -> bool {
     for condition in quest_trigger.conditions.iter() {
-        let result = match *condition {
-            QsdCondition::SelectQuest(quest_id) => {
+        let result = match condition {
+            &QsdCondition::SelectQuest(quest_id) => {
                 quest_condition_select_quest(quest_parameters, quest_id)
             }
-            QsdCondition::QuestSwitch(switch_id, value) => {
+            QsdCondition::QuestItems(items) => quest_condition_quest_items(quest_parameters, items),
+            &QsdCondition::QuestSwitch(switch_id, value) => {
                 quest_condition_quest_switch(quest_parameters, switch_id, value)
             }
             _ => {
@@ -807,6 +902,56 @@ fn quest_reward_quest_action(
     false
 }
 
+fn quest_reward_add_item(
+    quest_parameters: &mut QuestParameters,
+    item_reference: ItemReference,
+    quantity: usize,
+) -> bool {
+    if item_reference.item_type.is_quest_item() {
+        // Add to quest items
+        if let (Some(quest_state), Some(selected_quest_index)) = (
+            quest_parameters.source.quest_state.as_mut(),
+            quest_parameters.selected_quest_index,
+        ) {
+            return quest_state
+                .get_quest_mut(selected_quest_index)
+                .and_then(|active_quest| {
+                    Item::new(&item_reference, quantity as u32)
+                        .and_then(|item| active_quest.try_add_item(item).ok())
+                })
+                .is_some();
+        }
+    } else {
+        // Add to inventory
+        if let Some(item) = Item::new(&item_reference, quantity as u32) {
+            if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
+                match inventory.try_add_item(item) {
+                    Ok((slot, item)) => {
+                        if let Some(game_client) = quest_parameters.source.game_client {
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                    is_reward: true,
+                                    items: vec![(slot, Some(item.clone()))],
+                                }))
+                                .ok();
+                        }
+
+                        return true;
+                    }
+                    Err(item) => {
+                        // TODO: Drop item to ground
+                        warn!("Unimplemented drop unclaimed quest item {:?}", item);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    false
+}
+
 fn quest_reward_add_skill(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -919,6 +1064,9 @@ fn quest_trigger_apply_rewards(
                 }
                 true
             }
+            &QsdReward::AddItem(_reward_target, item, quantity) => {
+                quest_reward_add_item(quest_parameters, item, quantity)
+            }
             &QsdReward::AddSkill(skill_id) => {
                 quest_reward_add_skill(quest_world, quest_parameters, skill_id).is_some()
             }
@@ -995,6 +1143,7 @@ pub fn apply_pending_quest_trigger(
         Option<&GameClient>,
         Option<&ClientEntity>,
         Option<&Position>,
+        Option<&Equipment>,
         Option<&mut Inventory>,
         Option<&mut Level>,
         Option<&mut CharacterInfo>,
@@ -1032,6 +1181,7 @@ pub fn apply_pending_quest_trigger(
             game_client,
             client_entity,
             position,
+            equipment,
             inventory,
             level,
             character_info,
@@ -1049,6 +1199,7 @@ pub fn apply_pending_quest_trigger(
                     game_client,
                     client_entity,
                     position,
+                    equipment,
                     inventory,
                     level,
                     character_info,

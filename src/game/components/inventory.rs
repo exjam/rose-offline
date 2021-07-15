@@ -4,6 +4,7 @@ use std::ops::{Add, Sub};
 
 use super::EquipmentIndex;
 use crate::data::item::{EquipmentItem, Item, ItemType, StackableItem};
+use crate::data::ItemReference;
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
 
@@ -156,6 +157,18 @@ impl InventoryPage {
             Err(item)
         }
     }
+
+    pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {
+        for i in 0..self.slots.len() {
+            if let Some(slot_item) = &self.slots[i] {
+                if slot_item.is_same_item(item_reference) {
+                    return Some(ItemSlot::Inventory(self.page_type, i));
+                }
+            }
+        }
+
+        None
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -269,5 +282,22 @@ impl Inventory {
             }
             ItemSlot::Equipped(_) => None,
         }
+    }
+
+    pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {
+        for page in [
+            &self.equipment,
+            &self.consumables,
+            &self.materials,
+            &self.vehicles,
+        ]
+        .iter()
+        {
+            if let Some(slot) = page.find_item(item_reference) {
+                return Some(slot);
+            }
+        }
+
+        None
     }
 }

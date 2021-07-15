@@ -1,7 +1,7 @@
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::data::item::Item;
+use crate::data::{item::Item, ItemReference};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActiveQuest {
@@ -21,6 +21,39 @@ impl ActiveQuest {
             switches: Default::default(),
             items: Default::default(),
         }
+    }
+
+    pub fn find_item(&self, item_reference: ItemReference) -> Option<&Item> {
+        for item in self.items.iter() {
+            if let Some(item) = item.as_ref() {
+                if item.is_same_item(item_reference) {
+                    return Some(item);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub fn try_add_item(&mut self, item: Item) -> Result<usize, Item> {
+        // First try stack with any other existing items
+        for i in 0..self.items.len() {
+            if let Some(quest_item) = &mut self.items[i] {
+                if quest_item.stack_with_item(item.clone()).is_ok() {
+                    return Ok(i);
+                }
+            }
+        }
+
+        // Else find empty slot
+        for i in 0..self.items.len() {
+            if self.items[i].is_none() {
+                self.items[i] = Some(item);
+                return Ok(i);
+            }
+        }
+
+        Err(item)
     }
 }
 
