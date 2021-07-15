@@ -318,7 +318,6 @@ fn quest_reward_calculated_money(
 }
 
 fn quest_reward_set_ability_value(
-    quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
     ability_type: AbilityType,
     value: i32,
@@ -538,7 +537,6 @@ fn add_value<T: Saturating + Copy + 'static, U: num_traits::sign::Signed + AsPri
 }
 
 fn quest_reward_add_ability_value(
-    quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
     ability_type: AbilityType,
     value: i32,
@@ -726,7 +724,7 @@ fn quest_reward_add_ability_value(
 }
 
 fn quest_reward_quest_action(
-    quest_world: &mut QuestWorld,
+    _quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
     action: &QsdRewardQuestAction,
 ) -> bool {
@@ -794,36 +792,21 @@ fn quest_trigger_apply_rewards(
             QsdReward::AbilityValue(values) => {
                 for (ability_type, reward_operator, value) in values {
                     match reward_operator {
-                        QsdRewardOperator::Set => quest_reward_set_ability_value(
-                            quest_world,
-                            quest_parameters,
-                            *ability_type,
-                            *value,
-                        ),
-                        QsdRewardOperator::Add => quest_reward_add_ability_value(
-                            quest_world,
-                            quest_parameters,
-                            *ability_type,
-                            *value,
-                        ),
-                        QsdRewardOperator::Subtract => quest_reward_add_ability_value(
-                            quest_world,
-                            quest_parameters,
-                            *ability_type,
-                            -*value,
-                        ),
-                        QsdRewardOperator::Zero => quest_reward_set_ability_value(
-                            quest_world,
-                            quest_parameters,
-                            *ability_type,
-                            0,
-                        ),
-                        QsdRewardOperator::One => quest_reward_set_ability_value(
-                            quest_world,
-                            quest_parameters,
-                            *ability_type,
-                            1,
-                        ),
+                        QsdRewardOperator::Set => {
+                            quest_reward_set_ability_value(quest_parameters, *ability_type, *value)
+                        }
+                        QsdRewardOperator::Add => {
+                            quest_reward_add_ability_value(quest_parameters, *ability_type, *value)
+                        }
+                        QsdRewardOperator::Subtract => {
+                            quest_reward_add_ability_value(quest_parameters, *ability_type, -*value)
+                        }
+                        QsdRewardOperator::Zero => {
+                            quest_reward_set_ability_value(quest_parameters, *ability_type, 0)
+                        }
+                        QsdRewardOperator::One => {
+                            quest_reward_set_ability_value(quest_parameters, *ability_type, 1)
+                        }
                     };
                 }
                 true
