@@ -3,7 +3,7 @@ use std::time::Duration;
 use crate::{
     data::{
         item::{AbilityType, EquipmentItem, Item},
-        Damage, QuestTriggerHash,
+        Damage, QuestTriggerHash, SkillReference,
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
@@ -223,6 +223,25 @@ pub struct QuestDeleteResult {
     pub quest_id: usize,
 }
 
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug)]
+pub enum LearnSkillError {
+    AlreadyLearnt,
+    JobRequirement,
+    SkillRequirement,
+    AbilityRequirement,
+    Full,
+    InvalidSkillId,
+    SkillPointRequirement,
+}
+
+#[derive(Clone)]
+pub struct LearnSkillSuccess {
+    pub skill_slot: usize,
+    pub skill: SkillReference,
+    pub updated_skill_points: SkillPoints,
+}
+
 #[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
@@ -249,4 +268,5 @@ pub enum ServerMessage {
     ReturnToCharacterSelect,
     QuestTriggerResult(QuestTriggerResult),
     QuestDeleteResult(QuestDeleteResult),
+    LearnSkillResult(Result<LearnSkillSuccess, LearnSkillError>),
 }

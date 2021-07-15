@@ -576,6 +576,12 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::LearnSkillResult(result) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerLearnSkillResult { result }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

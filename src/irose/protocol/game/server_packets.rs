@@ -16,7 +16,9 @@ use crate::{
             ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
             SkillPoints, StatPoints, Team, UnionMembership, VehiclePartIndex, INVENTORY_PAGE_SIZE,
         },
-        messages::server::{PickupDroppedItemContent, PickupDroppedItemError},
+        messages::server::{
+            LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
+        },
     },
     irose::protocol::game::common_packets::write_hotbar_slot,
     protocol::{Packet, PacketWriter},
@@ -55,6 +57,7 @@ pub enum ServerPackets {
     UpdateEquipment = 0x7a5,
     Teleport = 0x7a8,
     SetHotbarSlot = 0x7aa,
+    LearnSkillResult = 0x7b0,
 }
 
 trait PacketWriteEntityId {
@@ -1090,6 +1093,7 @@ impl From<&PacketServerLogoutResult> for Packet {
     }
 }
 
+#[allow(dead_code)]
 pub enum PacketServerQuestResultType {
     AddSuccess,
     AddFailed,
@@ -1138,6 +1142,43 @@ impl From<&PacketServerUpdateAbilityValue> for Packet {
         let mut writer = PacketWriter::new(command as u16);
         writer.write_u16(packet.ability_type as u16);
         writer.write_i32(packet.value);
+        writer.into()
+    }
+}
+
+pub struct PacketServerLearnSkillResult {
+    pub result: Result<LearnSkillSuccess, LearnSkillError>,
+}
+
+impl From<&PacketServerLearnSkillResult> for Packet {
+    fn from(packet: &PacketServerLearnSkillResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::LearnSkillResult as u16);
+        match packet.result {
+            Ok(LearnSkillSuccess {
+                skill_slot,
+                skill,
+                updated_skill_points,
+            }) => {
+                writer.write_u8(1); // Success
+                writer.write_u8(skill_slot as u8);
+                writer.write_u16(skill.0 as u16);
+                writer.write_u16(updated_skill_points.points as u16);
+            }
+            Err(error) => {
+                match error {
+                    LearnSkillError::AlreadyLearnt => writer.write_u8(0),
+                    LearnSkillError::JobRequirement => writer.write_u8(2),
+                    LearnSkillError::SkillRequirement => writer.write_u8(3),
+                    LearnSkillError::AbilityRequirement => writer.write_u8(4),
+                    LearnSkillError::Full => writer.write_u8(5),
+                    LearnSkillError::InvalidSkillId => writer.write_u8(6),
+                    LearnSkillError::SkillPointRequirement => writer.write_u8(7),
+                }
+                writer.write_u8(0);
+                writer.write_u16(0);
+                writer.write_u16(0);
+            }
+        }
         writer.into()
     }
 }

@@ -1,5 +1,6 @@
-use legion::{system, world::SubWorld, Entity, Query};
+use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
+use nalgebra::Point3;
 use num_traits::Saturating;
 use rand::{prelude::ThreadRng, Rng};
 
@@ -10,18 +11,21 @@ use crate::{
             QsdRewardQuestAction, QsdRewardTarget,
         },
         item::{AbilityType, EquipmentItem, Item},
-        ItemReference, QuestTrigger,
+        ItemReference, QuestTrigger, SkillReference,
     },
     game::{
+        bundles::client_entity_teleport_zone,
         components::{
-            ActiveQuest, BasicStats, CharacterInfo, GameClient, Inventory, Level, Money,
-            QuestState, SkillPoints, StatPoints, UnionMembership,
+            ActiveQuest, BasicStats, CharacterInfo, ClientEntity, GameClient, Inventory, Level,
+            Money, Position, QuestState, SkillList, SkillPoints, StatPoints, UnionMembership,
         },
         messages::server::{
-            QuestTriggerResult, ServerMessage, UpdateAbilityValue, UpdateInventory, UpdateMoney,
+            LearnSkillError, LearnSkillSuccess, QuestTriggerResult, ServerMessage,
+            UpdateAbilityValue, UpdateInventory, UpdateMoney,
         },
         resources::{
-            PendingQuestTrigger, PendingQuestTriggerList, PendingXp, PendingXpList, WorldRates,
+            ClientEntityList, PendingQuestTrigger, PendingQuestTriggerList, PendingXp,
+            PendingXpList, WorldRates,
         },
         GameData,
     },
@@ -30,6 +34,8 @@ use crate::{
 struct QuestSourceEntity<'a> {
     entity: &'a Entity,
     game_client: Option<&'a GameClient>,
+    client_entity: Option<&'a ClientEntity>,
+    position: Option<&'a Position>,
     inventory: Option<&'a mut Inventory>,
     level: Option<&'a mut Level>,
     character_info: Option<&'a mut CharacterInfo>,
@@ -38,6 +44,7 @@ struct QuestSourceEntity<'a> {
     stat_points: Option<&'a mut StatPoints>,
     skill_points: Option<&'a mut SkillPoints>,
     union_membership: Option<&'a mut UnionMembership>,
+    skill_list: Option<&'a mut SkillList>,
 }
 
 struct QuestParameters<'a, 'b> {
@@ -46,6 +53,8 @@ struct QuestParameters<'a, 'b> {
 }
 
 struct QuestWorld<'a> {
+    cmd: &'a mut CommandBuffer,
+    client_entity_list: &'a mut ClientEntityList,
     game_data: &'a GameData,
     world_rates: &'a WorldRates,
     pending_xp_list: &'a mut PendingXpList,
@@ -798,6 +807,61 @@ fn quest_reward_quest_action(
     false
 }
 
+fn quest_reward_add_skill(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    skill_id: usize,
+) -> Option<()> {
+    let skill = SkillReference(skill_id);
+    let skill_list = quest_parameters.source.skill_list.as_mut()?;
+    let skill_points = quest_parameters
+        .source
+        .skill_points
+        .as_ref()
+        .map(|x| x.points)
+        .unwrap_or(0);
+
+    let result = if let Some(skill_data) = quest_world.game_data.skills.get_skill(&skill) {
+        // TODO: Check all skill requirements before add_skill
+        if skill_points >= skill_data.skill_point_cost {
+            if skill_list.find_skill_slot(skill).is_none() {
+                if let Some(skill_slot) = skill_list.add_skill(skill, skill_data.page) {
+                    let updated_skill_points =
+                        if let Some(skill_points) = quest_parameters.source.skill_points.as_mut() {
+                            skill_points.points -= skill_data.skill_point_cost;
+                            **skill_points
+                        } else {
+                            SkillPoints::new()
+                        };
+
+                    Ok(LearnSkillSuccess {
+                        skill_slot: skill_slot as usize,
+                        skill,
+                        updated_skill_points,
+                    })
+                } else {
+                    Err(LearnSkillError::Full)
+                }
+            } else {
+                Err(LearnSkillError::AlreadyLearnt)
+            }
+        } else {
+            Err(LearnSkillError::SkillPointRequirement)
+        }
+    } else {
+        Err(LearnSkillError::InvalidSkillId)
+    };
+
+    if let Some(game_client) = quest_parameters.source.game_client.as_mut() {
+        game_client
+            .server_message_tx
+            .send(ServerMessage::LearnSkillResult(result.clone()))
+            .ok();
+    }
+
+    result.ok().map(|_| ())
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -829,6 +893,9 @@ fn quest_trigger_apply_rewards(
                     };
                 }
                 true
+            }
+            &QsdReward::AddSkill(skill_id) => {
+                quest_reward_add_skill(quest_world, quest_parameters, skill_id).is_some()
             }
             &QsdReward::SetQuestSwitch(switch_id, value) => {
                 quest_reward_set_quest_switch(quest_parameters, switch_id, value)
@@ -891,9 +958,12 @@ fn quest_trigger_apply_rewards(
 #[allow(clippy::type_complexity)]
 #[system]
 pub fn apply_pending_quest_trigger(
+    cmd: &mut CommandBuffer,
     world: &mut SubWorld,
     entity_query: &mut Query<(
         Option<&GameClient>,
+        Option<&ClientEntity>,
+        Option<&Position>,
         Option<&mut Inventory>,
         Option<&mut Level>,
         Option<&mut CharacterInfo>,
@@ -902,13 +972,17 @@ pub fn apply_pending_quest_trigger(
         Option<&mut StatPoints>,
         Option<&mut SkillPoints>,
         Option<&mut UnionMembership>,
+        Option<&mut SkillList>,
     )>,
+    #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] game_data: &GameData,
     #[resource] world_rates: &WorldRates,
     #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
     #[resource] pending_xp_list: &mut PendingXpList,
 ) {
     let mut quest_world = QuestWorld {
+        cmd,
+        client_entity_list,
         game_data,
         world_rates,
         pending_xp_list,
@@ -925,6 +999,8 @@ pub fn apply_pending_quest_trigger(
 
         if let Ok((
             game_client,
+            client_entity,
+            position,
             inventory,
             level,
             character_info,
@@ -933,12 +1009,15 @@ pub fn apply_pending_quest_trigger(
             stat_points,
             skill_points,
             union_membership,
+            skill_list,
         )) = entity_query.get_mut(world, *trigger_entity)
         {
             let mut quest_parameters = QuestParameters {
                 source: &mut QuestSourceEntity {
                     entity: trigger_entity,
                     game_client,
+                    client_entity,
+                    position,
                     inventory,
                     level,
                     character_info,
@@ -947,6 +1026,7 @@ pub fn apply_pending_quest_trigger(
                     stat_points,
                     skill_points,
                     union_membership,
+                    skill_list,
                 },
                 selected_quest_index: None,
             };
