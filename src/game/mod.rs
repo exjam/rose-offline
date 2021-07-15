@@ -1,3 +1,4 @@
+mod bundles;
 mod game_world;
 mod resources;
 mod systems;
