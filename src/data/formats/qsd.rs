@@ -203,7 +203,7 @@ pub enum QsdCondition {
     HasClanSkill(RangeInclusive<QsdSkillId>, bool),
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdRewardOperator {
     Set,
     Add,
