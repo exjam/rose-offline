@@ -8,6 +8,12 @@ use crate::game::{
     resources::ClientEntityList,
 };
 
+mod ability_values;
+
+pub use ability_values::{
+    ability_values_add_value, ability_values_get_value, ability_values_set_value,
+};
+
 pub fn client_entity_leave_zone(
     cmd: &mut CommandBuffer,
     client_entity_list: &mut ClientEntityList,

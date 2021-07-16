@@ -339,7 +339,7 @@ impl Item {
 
     pub fn get_quantity(&self) -> u32 {
         match self {
-            Item::Equipment(item) => 1,
+            Item::Equipment(_) => 1,
             Item::Stackable(item) => item.quantity,
         }
     }

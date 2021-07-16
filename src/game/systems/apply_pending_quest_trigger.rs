@@ -1,7 +1,6 @@
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
 use nalgebra::Point3;
-use num_traits::Saturating;
 use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
@@ -14,15 +13,18 @@ use crate::{
         ItemReference, QuestTrigger, SkillReference, ZoneReference,
     },
     game::{
-        bundles::client_entity_teleport_zone,
+        bundles::{
+            ability_values_add_value, ability_values_get_value, ability_values_set_value,
+            client_entity_teleport_zone,
+        },
         components::{
-            ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment, EquipmentIndex,
-            GameClient, Inventory, Level, Money, Position, QuestState, SkillList, SkillPoints,
-            StatPoints, UnionMembership,
+            AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
+            EquipmentIndex, ExperiencePoints, GameClient, Inventory, Level, Money, MoveSpeed,
+            Position, QuestState, SkillList, SkillPoints, StatPoints, Team, UnionMembership,
         },
         messages::server::{
-            LearnSkillError, LearnSkillSuccess, QuestTriggerResult, ServerMessage,
-            UpdateAbilityValue, UpdateInventory, UpdateMoney,
+            LearnSkillError, LearnSkillSuccess, QuestTriggerResult, ServerMessage, UpdateInventory,
+            UpdateMoney,
         },
         resources::{
             ClientEntityList, PendingQuestTrigger, PendingQuestTriggerList, PendingXp,
@@ -36,17 +38,21 @@ struct QuestSourceEntity<'a> {
     entity: &'a Entity,
     game_client: Option<&'a GameClient>,
     client_entity: Option<&'a ClientEntity>,
-    position: Option<&'a Position>,
+    ability_values: Option<&'a mut AbilityValues>,
+    basic_stats: Option<&'a mut BasicStats>,
+    character_info: Option<&'a mut CharacterInfo>,
     equipment: Option<&'a Equipment>,
+    experience_points: Option<&'a mut ExperiencePoints>,
     inventory: Option<&'a mut Inventory>,
     level: Option<&'a mut Level>,
-    character_info: Option<&'a mut CharacterInfo>,
-    basic_stats: Option<&'a mut BasicStats>,
+    move_speed: Option<&'a mut MoveSpeed>,
+    position: Option<&'a Position>,
     quest_state: Option<&'a mut QuestState>,
-    stat_points: Option<&'a mut StatPoints>,
-    skill_points: Option<&'a mut SkillPoints>,
-    union_membership: Option<&'a mut UnionMembership>,
     skill_list: Option<&'a mut SkillList>,
+    skill_points: Option<&'a mut SkillPoints>,
+    stat_points: Option<&'a mut StatPoints>,
+    team: Option<&'a mut Team>,
+    union_membership: Option<&'a mut UnionMembership>,
 }
 
 struct QuestParameters<'a, 'b> {
@@ -180,6 +186,34 @@ fn quest_condition_quest_items(
     true
 }
 
+fn quest_condition_ability_values(
+    quest_parameters: &mut QuestParameters,
+    ability_values: &[(AbilityType, QsdConditionOperator, i32)],
+) -> bool {
+    for &(ability_type, operator, compare_value) in ability_values {
+        let current_value = ability_values_get_value(
+            ability_type,
+            quest_parameters.source.ability_values.as_deref(),
+            quest_parameters.source.character_info.as_deref(),
+            quest_parameters.source.experience_points.as_deref(),
+            quest_parameters.source.inventory.as_deref(),
+            quest_parameters.source.level.as_deref(),
+            quest_parameters.source.move_speed.as_deref(),
+            quest_parameters.source.stat_points.as_deref(),
+            quest_parameters.source.skill_points.as_deref(),
+            quest_parameters.source.team.as_deref(),
+            quest_parameters.source.union_membership.as_deref(),
+        )
+        .unwrap_or(0);
+
+        if !quest_condition_operator(operator, current_value, compare_value) {
+            return false;
+        }
+    }
+
+    true
+}
+
 fn quest_trigger_check_conditions(
     _quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -187,6 +221,9 @@ fn quest_trigger_check_conditions(
 ) -> bool {
     for condition in quest_trigger.conditions.iter() {
         let result = match condition {
+            QsdCondition::AbilityValue(ability_values) => {
+                quest_condition_ability_values(quest_parameters, ability_values)
+            }
             &QsdCondition::SelectQuest(quest_id) => {
                 quest_condition_select_quest(quest_parameters, quest_id)
             }
@@ -197,7 +234,34 @@ fn quest_trigger_check_conditions(
             _ => {
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
-            }
+            } /*
+              QsdCondition::QuestVariable(_) => todo!(),
+              QsdCondition::Party(_) => todo!(),
+              QsdCondition::Position(_, _, _) => todo!(),
+              QsdCondition::WorldTime(_) => todo!(),
+              QsdCondition::QuestTimeRemaining(_, _) => todo!(),
+              QsdCondition::HasSkill(_, _) => todo!(),
+              QsdCondition::RandomPercent(_) => todo!(),
+              QsdCondition::ObjectVariable(_) => todo!(),
+              QsdCondition::SelectEventObject(_) => todo!(),
+              QsdCondition::SelectNpc(_) => todo!(),
+              QsdCondition::PartyMemberCount(_) => todo!(),
+              QsdCondition::ObjectZoneTime(_, _) => todo!(),
+              QsdCondition::CompareNpcVariables(_, _, _) => todo!(),
+              QsdCondition::MonthDayTime(_) => todo!(),
+              QsdCondition::WeekDayTime(_) => todo!(),
+              QsdCondition::TeamNumber(_) => todo!(),
+              QsdCondition::ObjectDistance(_, _) => todo!(),
+              QsdCondition::ServerChannelNumber(_) => todo!(),
+              QsdCondition::InClan(_) => todo!(),
+              QsdCondition::ClanPosition(_, _) => todo!(),
+              QsdCondition::ClanPointContribution(_, _) => todo!(),
+              QsdCondition::ClanLevel(_, _) => todo!(),
+              QsdCondition::ClanPoints(_, _) => todo!(),
+              QsdCondition::ClanMoney(_, _) => todo!(),
+              QsdCondition::ClanMemberCount(_, _) => todo!(),
+              QsdCondition::HasClanSkill(_, _) => todo!(),
+              */
         };
 
         if !result {
@@ -386,7 +450,7 @@ fn quest_reward_calculated_money(
     base_reward_value: i32,
 ) -> bool {
     let dup_count_var = get_quest_calculated_money_dup_count_var(
-        quest_parameters.selected_quest_index.clone(),
+        quest_parameters.selected_quest_index,
         &mut quest_parameters.source.quest_state,
     );
 
@@ -420,7 +484,7 @@ fn quest_reward_calculated_money(
     let money = Money(reward_value as i64);
 
     if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
-        if let Ok(_) = inventory.try_add_money(money) {
+        if inventory.try_add_money(money).is_ok() {
             if let Some(dup_count_var) = dup_count_var {
                 *dup_count_var = 0u16;
             }
@@ -438,412 +502,6 @@ fn quest_reward_calculated_money(
     }
 
     true
-}
-
-fn quest_reward_set_ability_value(
-    quest_parameters: &mut QuestParameters,
-    ability_type: AbilityType,
-    value: i32,
-) -> bool {
-    let result = match ability_type {
-        AbilityType::Gender => {
-            if let Some(character_info) = quest_parameters.source.character_info.as_mut() {
-                character_info.gender = value as u8;
-            }
-
-            true
-        }
-        AbilityType::Face => {
-            if let Some(character_info) = quest_parameters.source.character_info.as_mut() {
-                character_info.face = value as u8;
-            }
-
-            true
-        }
-        AbilityType::Hair => {
-            if let Some(character_info) = quest_parameters.source.character_info.as_mut() {
-                character_info.hair = value as u8;
-            }
-
-            true
-        }
-        AbilityType::Class => {
-            if let Some(character_info) = quest_parameters.source.character_info.as_mut() {
-                character_info.job = value as u16;
-            }
-
-            true
-        }
-        AbilityType::Strength => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.strength = value as u16;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Dexterity => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.dexterity = value as u16;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Intelligence => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.intelligence = value as u16;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Concentration => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.concentration = value as u16;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Charm => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.charm = value as u16;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Sense => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.sense = value as u16;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Union => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                if value == 0 {
-                    union_membership.current_union = None;
-                } else {
-                    union_membership.current_union = Some(value as usize);
-                }
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint1 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[0] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint2 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[1] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint3 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[2] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint4 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[3] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint5 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[4] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint6 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[5] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint7 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[6] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint8 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[7] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint9 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[8] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint10 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[9] = value as u32;
-                true
-            } else {
-                false
-            }
-        }
-        /*
-        TODO: Implement remaining set ability types
-        AbilityType::Health => false,
-        AbilityType::Mana => false,
-        AbilityType::Experience => false,
-        AbilityType::Level => false,
-        AbilityType::PvpFlag => false,
-        AbilityType::TeamNumber => false,
-        AbilityType::Stamina => false,
-        */
-        _ => {
-            warn!(
-                "quest_reward_set_ability_value unimplemented for ability type {:?}",
-                ability_type
-            );
-            false
-        }
-    };
-
-    if result {
-        if let Some(game_client) = quest_parameters.source.game_client {
-            game_client
-                .server_message_tx
-                .send(ServerMessage::UpdateAbilityValue(
-                    UpdateAbilityValue::RewardSet(ability_type, value),
-                ))
-                .ok();
-        }
-    }
-
-    result
-}
-
-use num_traits::AsPrimitive;
-fn add_value<T: Saturating + Copy + 'static, U: num_traits::sign::Signed + AsPrimitive<T>>(
-    value: T,
-    add_value: U,
-) -> T {
-    if add_value.is_negative() {
-        value.saturating_sub(add_value.abs().as_())
-    } else {
-        value.saturating_add(add_value.as_())
-    }
-}
-
-fn quest_reward_add_ability_value(
-    quest_parameters: &mut QuestParameters,
-    ability_type: AbilityType,
-    value: i32,
-) -> bool {
-    let result = match ability_type {
-        AbilityType::Strength => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.strength = add_value(basic_stats.strength, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Dexterity => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.dexterity = add_value(basic_stats.dexterity, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Intelligence => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.intelligence = add_value(basic_stats.intelligence, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Concentration => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.concentration = add_value(basic_stats.concentration, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Charm => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.charm = add_value(basic_stats.charm, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Sense => {
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
-                basic_stats.sense = add_value(basic_stats.sense, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::BonusPoint => {
-            if let Some(stat_points) = quest_parameters.source.stat_points.as_mut() {
-                stat_points.points = add_value(stat_points.points, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Skillpoint => {
-            if let Some(skill_points) = quest_parameters.source.skill_points.as_mut() {
-                skill_points.points = add_value(skill_points.points, value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::Money => {
-            if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
-                inventory.try_add_money(Money(value as i64)).is_ok()
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint1 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[0] = add_value(union_membership.points[0], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint2 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[1] = add_value(union_membership.points[1], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint3 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[2] = add_value(union_membership.points[2], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint4 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[3] = add_value(union_membership.points[3], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint5 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[4] = add_value(union_membership.points[4], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint6 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[5] = add_value(union_membership.points[5], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint7 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[6] = add_value(union_membership.points[6], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint8 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[7] = add_value(union_membership.points[7], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint9 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[8] = add_value(union_membership.points[8], value);
-                true
-            } else {
-                false
-            }
-        }
-        AbilityType::UnionPoint10 => {
-            if let Some(union_membership) = quest_parameters.source.union_membership.as_mut() {
-                union_membership.points[9] = add_value(union_membership.points[9], value);
-                true
-            } else {
-                false
-            }
-        }
-        /*
-        TODO: Implement remaining add ability types
-        AbilityType::Health => false,
-        AbilityType::Mana => false,
-        AbilityType::Experience => false,
-        AbilityType::Level => false,
-        */
-        _ => {
-            warn!(
-                "quest_reward_add_ability_value unimplemented for ability type {:?}",
-                ability_type
-            );
-            false
-        }
-    };
-
-    if result {
-        if let Some(game_client) = quest_parameters.source.game_client {
-            game_client
-                .server_message_tx
-                .send(ServerMessage::UpdateAbilityValue(
-                    UpdateAbilityValue::RewardAdd(ability_type, value),
-                ))
-                .ok();
-        }
-    }
-
-    result
 }
 
 fn quest_reward_quest_action(
@@ -1045,21 +703,50 @@ fn quest_trigger_apply_rewards(
             QsdReward::AbilityValue(values) => {
                 for (ability_type, reward_operator, value) in values {
                     match reward_operator {
-                        QsdRewardOperator::Set => {
-                            quest_reward_set_ability_value(quest_parameters, *ability_type, *value)
-                        }
-                        QsdRewardOperator::Add => {
-                            quest_reward_add_ability_value(quest_parameters, *ability_type, *value)
-                        }
-                        QsdRewardOperator::Subtract => {
-                            quest_reward_add_ability_value(quest_parameters, *ability_type, -*value)
-                        }
-                        QsdRewardOperator::Zero => {
-                            quest_reward_set_ability_value(quest_parameters, *ability_type, 0)
-                        }
-                        QsdRewardOperator::One => {
-                            quest_reward_set_ability_value(quest_parameters, *ability_type, 1)
-                        }
+                        QsdRewardOperator::Set => ability_values_set_value(
+                            *ability_type,
+                            *value,
+                            quest_parameters.source.basic_stats.as_deref_mut(),
+                            quest_parameters.source.character_info.as_deref_mut(),
+                            quest_parameters.source.union_membership.as_deref_mut(),
+                            &quest_parameters.source.game_client,
+                        ),
+                        QsdRewardOperator::Add => ability_values_add_value(
+                            *ability_type,
+                            *value,
+                            quest_parameters.source.basic_stats.as_deref_mut(),
+                            quest_parameters.source.inventory.as_deref_mut(),
+                            quest_parameters.source.stat_points.as_deref_mut(),
+                            quest_parameters.source.skill_points.as_deref_mut(),
+                            quest_parameters.source.union_membership.as_deref_mut(),
+                            &quest_parameters.source.game_client,
+                        ),
+                        QsdRewardOperator::Subtract => ability_values_add_value(
+                            *ability_type,
+                            -*value,
+                            quest_parameters.source.basic_stats.as_deref_mut(),
+                            quest_parameters.source.inventory.as_deref_mut(),
+                            quest_parameters.source.stat_points.as_deref_mut(),
+                            quest_parameters.source.skill_points.as_deref_mut(),
+                            quest_parameters.source.union_membership.as_deref_mut(),
+                            &quest_parameters.source.game_client,
+                        ),
+                        QsdRewardOperator::Zero => ability_values_set_value(
+                            *ability_type,
+                            0,
+                            quest_parameters.source.basic_stats.as_deref_mut(),
+                            quest_parameters.source.character_info.as_deref_mut(),
+                            quest_parameters.source.union_membership.as_deref_mut(),
+                            &quest_parameters.source.game_client,
+                        ),
+                        QsdRewardOperator::One => ability_values_set_value(
+                            *ability_type,
+                            1,
+                            quest_parameters.source.basic_stats.as_deref_mut(),
+                            quest_parameters.source.character_info.as_deref_mut(),
+                            quest_parameters.source.union_membership.as_deref_mut(),
+                            &quest_parameters.source.game_client,
+                        ),
                     };
                 }
                 true
@@ -1123,7 +810,33 @@ fn quest_trigger_apply_rewards(
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
-            }
+            } /*
+              QsdReward::RemoveItem(_, _, _) => todo!(),
+              QsdReward::QuestVariable(_) => todo!(),
+              QsdReward::SetHealthManaPercent(_, _, _) => todo!(),
+              QsdReward::SpawnNpc(_) => todo!(),
+              QsdReward::Trigger(_) => todo!(),
+              QsdReward::ResetBasicStats => todo!(),
+              QsdReward::ObjectVariable(_) => todo!(),
+              QsdReward::NpcMessage(_, _) => todo!(),
+              QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
+              QsdReward::RemoveSkill(_) => todo!(),
+              QsdReward::ClearSwitchGroup(_) => todo!(),
+              QsdReward::ClearAllSwitches => todo!(),
+              QsdReward::FormatAnnounceMessage(_, _) => todo!(),
+              QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
+              QsdReward::SetTeamNumber(_) => todo!(),
+              QsdReward::SetRevivePosition(_) => todo!(),
+              QsdReward::SetMonsterSpawnState(_, _) => todo!(),
+              QsdReward::ClanLevel(_, _) => todo!(),
+              QsdReward::ClanMoney(_, _) => todo!(),
+              QsdReward::ClanPoints(_, _) => todo!(),
+              QsdReward::AddClanSkill(_) => todo!(),
+              QsdReward::RemoveClanSkill(_) => todo!(),
+              QsdReward::ClanPointContribution(_, _) => todo!(),
+              QsdReward::TeleportNearbyClanMembers(_, _, _) => todo!(),
+              QsdReward::ResetSkills => todo!(),
+              */
         };
 
         if !result {
@@ -1142,17 +855,21 @@ pub fn apply_pending_quest_trigger(
     entity_query: &mut Query<(
         Option<&GameClient>,
         Option<&ClientEntity>,
-        Option<&Position>,
+        Option<&mut AbilityValues>,
+        Option<&mut BasicStats>,
+        Option<&mut CharacterInfo>,
         Option<&Equipment>,
+        Option<&mut ExperiencePoints>,
         Option<&mut Inventory>,
         Option<&mut Level>,
-        Option<&mut CharacterInfo>,
-        Option<&mut BasicStats>,
+        Option<&mut MoveSpeed>,
+        Option<&Position>,
         Option<&mut QuestState>,
-        Option<&mut StatPoints>,
-        Option<&mut SkillPoints>,
-        Option<&mut UnionMembership>,
         Option<&mut SkillList>,
+        Option<&mut SkillPoints>,
+        Option<&mut StatPoints>,
+        Option<&mut Team>,
+        Option<&mut UnionMembership>,
     )>,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] game_data: &GameData,
@@ -1180,17 +897,21 @@ pub fn apply_pending_quest_trigger(
         if let Ok((
             game_client,
             client_entity,
-            position,
+            ability_values,
+            basic_stats,
+            character_info,
             equipment,
+            experience_points,
             inventory,
             level,
-            character_info,
-            basic_stats,
+            move_speed,
+            position,
             quest_state,
-            stat_points,
-            skill_points,
-            union_membership,
             skill_list,
+            skill_points,
+            stat_points,
+            team,
+            union_membership,
         )) = entity_query.get_mut(world, *trigger_entity)
         {
             let mut quest_parameters = QuestParameters {
@@ -1198,17 +919,21 @@ pub fn apply_pending_quest_trigger(
                     entity: trigger_entity,
                     game_client,
                     client_entity,
-                    position,
+                    ability_values,
+                    basic_stats,
+                    character_info,
                     equipment,
+                    experience_points,
                     inventory,
                     level,
-                    character_info,
-                    basic_stats,
+                    move_speed,
+                    position,
                     quest_state,
-                    stat_points,
-                    skill_points,
-                    union_membership,
                     skill_list,
+                    skill_points,
+                    stat_points,
+                    team,
+                    union_membership,
                 },
                 selected_quest_index: None,
             };
