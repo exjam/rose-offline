@@ -348,6 +348,7 @@ pub struct QsdTrigger {
     pub rewards: Vec<QsdReward>,
     pub next_trigger_name: Option<String>,
 }
+
 pub struct QsdFile {
     pub triggers: HashMap<String, QsdTrigger>,
 }

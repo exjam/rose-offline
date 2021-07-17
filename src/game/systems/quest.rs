@@ -58,6 +58,7 @@ struct QuestSourceEntity<'a> {
 struct QuestParameters<'a, 'b> {
     source: &'a mut QuestSourceEntity<'b>,
     selected_quest_index: Option<usize>,
+    next_trigger_name: Option<String>,
 }
 
 struct QuestWorld<'a> {
@@ -819,6 +820,10 @@ fn quest_trigger_apply_rewards(
                 ZoneReference(zone_id),
                 Point3::new(position.x, position.y, 0.0),
             ),
+            QsdReward::Trigger(name) => {
+                quest_parameters.next_trigger_name = Some(name.clone());
+                true
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
@@ -827,7 +832,6 @@ fn quest_trigger_apply_rewards(
               QsdReward::QuestVariable(_) => todo!(),
               QsdReward::SetHealthManaPercent(_, _, _) => todo!(),
               QsdReward::SpawnNpc(_) => todo!(),
-              QsdReward::Trigger(_) => todo!(),
               QsdReward::ResetBasicStats => todo!(),
               QsdReward::ObjectVariable(_) => todo!(),
               QsdReward::NpcMessage(_, _) => todo!(),
@@ -950,6 +954,7 @@ pub fn quest(
                     union_membership,
                 },
                 selected_quest_index: None,
+                next_trigger_name: None,
             };
 
             while trigger.is_some() {
@@ -968,11 +973,18 @@ pub fn quest(
                     break;
                 }
 
-                trigger = trigger
-                    .unwrap()
-                    .next_trigger_name
-                    .as_ref()
-                    .and_then(|name| game_data.quests.get_trigger_by_name(name));
+                if quest_parameters.next_trigger_name.is_some() {
+                    trigger = quest_parameters
+                        .next_trigger_name
+                        .take()
+                        .and_then(|name| game_data.quests.get_trigger_by_name(&name));
+                } else {
+                    trigger = trigger
+                        .unwrap()
+                        .next_trigger_name
+                        .as_ref()
+                        .and_then(|name| game_data.quests.get_trigger_by_name(name));
+                }
             }
 
             if let Some(game_client) = game_client {
