@@ -69,7 +69,7 @@ impl GameWorld {
             .add_system(command_system())
             .flush()
             .add_system(update_position_system())
-            .add_system(apply_damage_system())
+            .add_system(damage_system())
             .add_system(quest_system())
             .flush()
             .add_system(experience_points_system())

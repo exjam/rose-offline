@@ -1,7 +1,7 @@
-mod apply_damage;
 mod client_entity_visibility;
 mod command;
 mod control_server;
+mod damage;
 mod experience_points;
 mod expire_time;
 mod game_server;
@@ -15,10 +15,10 @@ mod update_position;
 mod world_server;
 mod world_time;
 
-pub use apply_damage::*;
 pub use client_entity_visibility::*;
 pub use command::*;
 pub use control_server::*;
+pub use damage::damage_system;
 pub use experience_points::experience_points_system;
 pub use expire_time::expire_time_system;
 pub use game_server::*;

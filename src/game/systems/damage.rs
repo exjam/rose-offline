@@ -10,7 +10,7 @@ use crate::game::{
 
 #[allow(clippy::type_complexity)]
 #[system]
-pub fn apply_damage(
+pub fn damage(
     world: &mut SubWorld,
     cmd: &mut CommandBuffer,
     attacker_query: &mut Query<&ClientEntity>,
