@@ -72,7 +72,7 @@ impl GameWorld {
             .add_system(apply_damage_system())
             .add_system(quest_system())
             .flush()
-            .add_system(apply_pending_xp_system())
+            .add_system(experience_points_system())
             .flush()
             .add_system(client_entity_visibility_system())
             .add_system(server_messages_sender_system())

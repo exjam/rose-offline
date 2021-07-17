@@ -12,7 +12,7 @@ use crate::game::{
 
 #[allow(clippy::type_complexity)]
 #[system]
-pub fn apply_pending_xp(
+pub fn experience_points(
     world: &mut SubWorld,
     entity_query: &mut Query<(
         Entity,

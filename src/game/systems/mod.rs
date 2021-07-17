@@ -1,8 +1,8 @@
 mod apply_damage;
-mod apply_pending_xp;
 mod client_entity_visibility;
 mod command;
 mod control_server;
+mod experience_points;
 mod expire_time;
 mod game_server;
 mod login_server;
@@ -16,10 +16,10 @@ mod world_server;
 mod world_time;
 
 pub use apply_damage::*;
-pub use apply_pending_xp::apply_pending_xp_system;
 pub use client_entity_visibility::*;
 pub use command::*;
 pub use control_server::*;
+pub use experience_points::experience_points_system;
 pub use expire_time::expire_time_system;
 pub use game_server::*;
 pub use login_server::*;
