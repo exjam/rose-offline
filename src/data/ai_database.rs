@@ -12,6 +12,7 @@ impl AiDatabase {
         self.aips.get(&(index as u16))
     }
 
+    #[allow(dead_code)]
     pub fn get_ai_string(&self, index: usize) -> Option<&str> {
         self.strings.get(&(index as u16)).map(String::as_str)
     }

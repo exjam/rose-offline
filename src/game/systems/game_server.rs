@@ -119,9 +119,7 @@ pub fn game_server_authentication(
                                 );
                                 cmd.add_component(
                                     *entity,
-                                    MoveSpeed {
-                                        speed: ability_values.run_speed,
-                                    },
+                                    MoveSpeed::new(ability_values.run_speed),
                                 );
                                 cmd.add_component(*entity, Command::default());
                                 cmd.add_component(*entity, NextCommand::default());
