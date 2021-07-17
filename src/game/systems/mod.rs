@@ -1,3 +1,4 @@
+mod chat_commands;
 mod client_entity_visibility;
 mod command;
 mod control_server;
@@ -15,6 +16,7 @@ mod update_position;
 mod world_server;
 mod world_time;
 
+pub use chat_commands::chat_commands_system;
 pub use client_entity_visibility::*;
 pub use command::*;
 pub use control_server::*;

@@ -1,11 +1,8 @@
-use clap::{App, Arg};
-use lazy_static::lazy_static;
 use legion::{
     component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, Query,
 };
 use log::warn;
 use nalgebra::Point3;
-use std::num::{ParseFloatError, ParseIntError};
 
 use crate::{
     data::{account::AccountStorage, character::CharacterStorage, item::Item},
@@ -24,11 +21,11 @@ use crate::{
                 JoinZoneResponse, LogoutRequest, ReviveRequestType, SetHotbarSlot,
                 SetHotbarSlotError,
             },
-            server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory, Whisper},
+            server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory},
         },
         resources::{
-            ClientEntityList, GameData, LoginTokens, PendingQuestTrigger, PendingQuestTriggerList,
-            ServerMessages, WorldTime,
+            ClientEntityList, GameData, LoginTokens, PendingChatCommandList, PendingQuestTrigger,
+            PendingQuestTriggerList, ServerMessages, WorldTime,
         },
     },
 };
@@ -202,147 +199,6 @@ pub fn game_server_join(
     }
 }
 
-lazy_static! {
-    pub static ref GM_COMMANDS: App<'static> = {
-        App::new("GM Commands")
-            .subcommand(App::new("help"))
-            .subcommand(App::new("where"))
-            .subcommand(App::new("ability_values"))
-            .subcommand(
-                App::new("mm")
-                    .arg(Arg::new("zone").required(true))
-                    .arg(Arg::new("x").required(true))
-                    .arg(Arg::new("y").required(true)),
-            )
-    };
-}
-
-fn send_gm_commands_help(client: &mut GameClient) {
-    for subcommand in GM_COMMANDS.get_subcommands() {
-        let mut help_string = String::from(subcommand.get_name());
-        for arg in subcommand.get_arguments() {
-            help_string.push(' ');
-            if !arg.is_set(clap::ArgSettings::Required) {
-                help_string.push('[');
-                help_string.push_str(arg.get_name());
-                help_string.push(']');
-            } else {
-                help_string.push_str(arg.get_name());
-            }
-        }
-
-        client
-            .server_message_tx
-            .send(ServerMessage::Whisper(Whisper {
-                from: String::from("SERVER"),
-                text: help_string,
-            }))
-            .ok();
-    }
-}
-
-fn send_multiline_whisper(client: &mut GameClient, str: &str) {
-    for line in str.lines() {
-        client
-            .server_message_tx
-            .send(ServerMessage::Whisper(Whisper {
-                from: String::from("SERVER"),
-                text: line.to_string(),
-            }))
-            .ok();
-    }
-}
-
-pub enum GMCommandError {
-    InvalidCommand,
-    InvalidArguments,
-}
-
-impl From<shellwords::MismatchedQuotes> for GMCommandError {
-    fn from(_: shellwords::MismatchedQuotes) -> Self {
-        Self::InvalidCommand
-    }
-}
-
-impl From<clap::Error> for GMCommandError {
-    fn from(error: clap::Error) -> Self {
-        match error.kind {
-            clap::ErrorKind::MissingRequiredArgument => Self::InvalidArguments,
-            _ => Self::InvalidCommand,
-        }
-    }
-}
-
-impl From<ParseIntError> for GMCommandError {
-    fn from(_: ParseIntError) -> Self {
-        Self::InvalidArguments
-    }
-}
-
-impl From<ParseFloatError> for GMCommandError {
-    fn from(_: ParseFloatError) -> Self {
-        Self::InvalidArguments
-    }
-}
-
-fn handle_gm_command(
-    cmd: &mut CommandBuffer,
-    entity: &Entity,
-    client: &mut GameClient,
-    text: &str,
-    client_entity: &ClientEntity,
-    position: &Position,
-    ability_values: &AbilityValues,
-    client_entity_list: &mut ClientEntityList,
-) -> Result<(), GMCommandError> {
-    let mut args = shellwords::split(text)?;
-    args.insert(0, String::new()); // Clap expects arg[0] to be like executable name
-    let matches = GM_COMMANDS.clone().try_get_matches_from(args)?;
-
-    match matches.subcommand().ok_or(GMCommandError::InvalidCommand)? {
-        ("where", _) => {
-            client
-                .server_message_tx
-                .send(ServerMessage::Whisper(Whisper {
-                    from: String::from("SERVER"),
-                    text: format!(
-                        "zone: {} x: {} y: {} z: {}",
-                        position.zone,
-                        position.position.x,
-                        position.position.y,
-                        position.position.z
-                    ),
-                }))
-                .ok();
-        }
-        ("mm", matches) => {
-            let zone = matches.value_of("zone").unwrap().parse::<u16>()?;
-            let x = matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
-            let y = matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
-
-            if client_entity_list.get_zone(zone as usize).is_some() {
-                client_entity_teleport_zone(
-                    cmd,
-                    client_entity_list,
-                    entity,
-                    client_entity,
-                    position,
-                    Position::new(Point3::new(x, y, 0.0), zone),
-                    Some(client),
-                );
-            } else {
-                send_multiline_whisper(client, &format!("Invalid zone id {}", zone));
-            }
-        }
-        ("ability_values", _) => {
-            send_multiline_whisper(client, &format!("{:?}", ability_values));
-        }
-        _ => return Err(GMCommandError::InvalidCommand),
-    }
-
-    Ok(())
-}
-
 #[allow(clippy::type_complexity)]
 #[system]
 pub fn game_server_main(
@@ -366,6 +222,7 @@ pub fn game_server_main(
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
+    #[resource] pending_chat_command_list: &mut PendingChatCommandList,
     #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
@@ -394,20 +251,7 @@ pub fn game_server_main(
                 match message {
                     ClientMessage::Chat(text) => {
                         if text.chars().next().map_or(false, |c| c == '/') {
-                            if handle_gm_command(
-                                cmd,
-                                entity,
-                                client,
-                                &text[1..],
-                                client_entity,
-                                position,
-                                ability_values,
-                                client_entity_list,
-                            )
-                            .is_err()
-                            {
-                                send_gm_commands_help(client);
-                            }
+                            pending_chat_command_list.push((*entity, text));
                         } else {
                             server_messages.send_entity_message(
                                 *entity,
