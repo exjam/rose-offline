@@ -70,7 +70,7 @@ impl GameWorld {
             .flush()
             .add_system(update_position_system())
             .add_system(apply_damage_system())
-            .add_system(apply_pending_quest_trigger_system())
+            .add_system(quest_system())
             .flush()
             .add_system(apply_pending_xp_system())
             .flush()

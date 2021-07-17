@@ -861,7 +861,7 @@ fn quest_trigger_apply_rewards(
 
 #[allow(clippy::type_complexity)]
 #[system]
-pub fn apply_pending_quest_trigger(
+pub fn quest(
     cmd: &mut CommandBuffer,
     world: &mut SubWorld,
     entity_query: &mut Query<(
