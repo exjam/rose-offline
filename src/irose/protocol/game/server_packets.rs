@@ -6,7 +6,7 @@ use num_derive::FromPrimitive;
 use crate::{
     data::{
         item::{AbilityType, EquipmentItem, Item, StackableItem},
-        Damage, NpcReference,
+        Damage, NpcReference, WorldTicks,
     },
     game::{
         components::{
@@ -437,6 +437,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
     fn from(packet: &'a PacketServerCharacterQuestData<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::QuestData as u16);
 
+        // Episode Variables
         for i in 0..5 {
             writer.write_u16(
                 packet
@@ -448,6 +449,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             );
         }
 
+        // Job Variables
         for i in 0..3 {
             writer.write_u16(
                 packet
@@ -470,6 +472,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             );
         }
 
+        // Union Variables
         for i in 0..10 {
             writer.write_u16(
                 packet
@@ -481,15 +484,24 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             );
         }
 
+        // Active Quests
         for i in 0..10 {
             let quest = packet
                 .quest_state
                 .active_quests
                 .get(i)
                 .and_then(|q| q.as_ref());
-            // Quest data
+
+            // Active Quest Data
             writer.write_u16(quest.map_or(0, |quest| quest.quest_id) as u16);
-            writer.write_u32(quest.and_then(|quest| quest.expire_time).unwrap_or(0));
+            writer.write_u32(
+                quest
+                    .and_then(|quest| quest.expire_time)
+                    .map(|expire_time| expire_time.0 as u32)
+                    .unwrap_or(0),
+            );
+
+            // Active Quest Variables
             for j in 0..10 {
                 writer.write_u16(
                     quest
@@ -497,7 +509,11 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
                         .unwrap_or(0),
                 );
             }
+
+            // Active Quest Switches
             writer.write_u32(quest.map_or(0, |quest| quest.switches.as_buffer()[0]));
+
+            // Active Quest Items
             for j in 0..6 {
                 writer.write_item_full(
                     quest.and_then(|quest| quest.items.get(j).and_then(|item| item.as_ref())),
@@ -505,6 +521,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             }
         }
 
+        // Quest Switches
         let quest_switches_u32 = packet.quest_state.quest_switches.as_buffer();
         for i in 0..(1024 / 32) {
             writer.write_u32(quest_switches_u32.get(i).cloned().unwrap_or(0));
@@ -614,6 +631,7 @@ pub struct PacketServerJoinZone<'a> {
     pub team: &'a Team,
     pub health_points: &'a HealthPoints,
     pub mana_points: &'a ManaPoints,
+    pub world_time: WorldTicks,
 }
 
 impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
@@ -636,7 +654,7 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
         }
         writer.write_u32(0); // global flags (0x1 = pvp allowed)
 
-        writer.write_u32(0); // account world time
+        writer.write_u32(packet.world_time.0 as u32);
         writer.write_u32(packet.team.id);
         writer.into()
     }

@@ -13,6 +13,7 @@ mod server_messages;
 mod startup_zones;
 mod update_position;
 mod world_server;
+mod world_time;
 
 pub use apply_damage::*;
 pub use apply_pending_quest_trigger::apply_pending_quest_trigger_system;
@@ -29,3 +30,4 @@ pub use server_messages::*;
 pub use startup_zones::*;
 pub use update_position::*;
 pub use world_server::*;
+pub use world_time::world_time_system;

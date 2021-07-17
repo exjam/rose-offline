@@ -7,7 +7,7 @@ use crate::game::{
     messages::control::ControlMessage,
     resources::{
         ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, PendingDamageList,
-        PendingQuestTriggerList, PendingXpList, ServerList, ServerMessages, WorldRates,
+        PendingQuestTriggerList, PendingXpList, ServerList, ServerMessages, WorldRates, WorldTime,
     },
     systems::*,
 };
@@ -38,6 +38,7 @@ impl GameWorld {
         resources.insert(PendingQuestTriggerList::new());
         resources.insert(PendingXpList::new());
         resources.insert(WorldRates::new());
+        resources.insert(WorldTime::new());
         resources.insert(game_data);
 
         let started_load = Instant::now();
@@ -51,6 +52,7 @@ impl GameWorld {
         );
 
         let mut schedule = Schedule::builder()
+            .add_system(world_time_system())
             .add_system(control_server_system())
             .add_system(login_server_authentication_system())
             .add_system(login_server_system())

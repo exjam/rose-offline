@@ -1,19 +1,19 @@
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{item::Item, ItemReference};
+use crate::data::{item::Item, ItemReference, WorldTicks};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActiveQuest {
     pub quest_id: usize,
-    pub expire_time: Option<u32>,
+    pub expire_time: Option<WorldTicks>,
     pub variables: [u16; 10],
     pub switches: BitArr!(for 32, in Lsb0, u32),
     pub items: [Option<Item>; 6],
 }
 
 impl ActiveQuest {
-    pub fn new(quest_id: usize, expire_time: Option<u32>) -> Self {
+    pub fn new(quest_id: usize, expire_time: Option<WorldTicks>) -> Self {
         Self {
             quest_id,
             expire_time,

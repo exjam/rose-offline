@@ -10,7 +10,7 @@ use crate::{
             QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
         },
         item::{AbilityType, EquipmentItem, Item},
-        ItemReference, QuestTrigger, SkillReference, ZoneReference,
+        ItemReference, QuestTrigger, SkillReference, WorldTicks, ZoneReference,
     },
     game::{
         bundles::{
@@ -28,7 +28,7 @@ use crate::{
         },
         resources::{
             ClientEntityList, PendingQuestTrigger, PendingQuestTriggerList, PendingXp,
-            PendingXpList, WorldRates,
+            PendingXpList, WorldRates, WorldTime,
         },
         GameData,
     },
@@ -65,6 +65,7 @@ struct QuestWorld<'a> {
     client_entity_list: &'a mut ClientEntityList,
     game_data: &'a GameData,
     world_rates: &'a WorldRates,
+    world_time: &'a WorldTime,
     pending_xp_list: &'a mut PendingXpList,
     rng: ThreadRng,
 }
@@ -82,6 +83,15 @@ fn quest_condition_operator<T: PartialEq + PartialOrd>(
         QsdConditionOperator::LessThanEqual => value_lhs <= value_rhs,
         QsdConditionOperator::NotEqual => value_lhs != value_rhs,
     }
+}
+
+fn quest_get_expire_time(quest_world: &mut QuestWorld, quest_id: usize) -> Option<WorldTicks> {
+    quest_world
+        .game_data
+        .quests
+        .get_quest_data(quest_id)
+        .and_then(|quest_data| quest_data.time_limit)
+        .map(|time_limit| quest_world.world_time.now + time_limit)
 }
 
 fn quest_condition_select_quest(quest_parameters: &mut QuestParameters, quest_id: usize) -> bool {
@@ -505,7 +515,7 @@ fn quest_reward_calculated_money(
 }
 
 fn quest_reward_quest_action(
-    _quest_world: &mut QuestWorld,
+    quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
     action: &QsdRewardQuestAction,
 ) -> bool {
@@ -520,10 +530,10 @@ fn quest_reward_quest_action(
                 }
             }
             QsdRewardQuestAction::Add(quest_id) => {
-                // TODO: Set quest expire time
-                if let Some(quest_index) =
-                    quest_state.try_add_quest(ActiveQuest::new(quest_id, None))
-                {
+                if let Some(quest_index) = quest_state.try_add_quest(ActiveQuest::new(
+                    quest_id,
+                    quest_get_expire_time(quest_world, quest_id),
+                )) {
                     if quest_parameters.selected_quest_index.is_none() {
                         quest_parameters.selected_quest_index = Some(quest_index);
                     }
@@ -542,8 +552,10 @@ fn quest_reward_quest_action(
             QsdRewardQuestAction::ChangeSelectedIdResetData(quest_id) => {
                 if let Some(quest_index) = quest_parameters.selected_quest_index {
                     if let Some(Some(active_quest)) = quest_state.get_quest_slot_mut(quest_index) {
-                        // TODO: Set quest expire time
-                        *active_quest = ActiveQuest::new(quest_id, None);
+                        *active_quest = ActiveQuest::new(
+                            quest_id,
+                            quest_get_expire_time(quest_world, quest_id),
+                        );
                         return true;
                     }
                 }
@@ -876,12 +888,14 @@ pub fn apply_pending_quest_trigger(
     #[resource] world_rates: &WorldRates,
     #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
     #[resource] pending_xp_list: &mut PendingXpList,
+    #[resource] world_time: &WorldTime,
 ) {
     let mut quest_world = QuestWorld {
         cmd,
         client_entity_list,
         game_data,
         world_rates,
+        world_time,
         pending_xp_list,
         rng: rand::thread_rng(),
     };

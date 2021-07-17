@@ -1,10 +1,10 @@
 use log::{debug, warn};
-use std::{collections::HashMap, time::Duration};
+use std::collections::HashMap;
 
 use crate::{
     data::{
         formats::{qsd::QsdFile, FileReader, StbFile, VfsIndex},
-        QuestData, QuestDatabase,
+        QuestData, QuestDatabase, WorldTicks,
     },
     stb_column,
 };
@@ -12,7 +12,7 @@ use crate::{
 struct StbQuest(StbFile);
 
 impl StbQuest {
-    stb_column! { 1, get_time_limit, u64 }
+    stb_column! { 1, get_time_limit, WorldTicks }
 }
 
 pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
@@ -31,10 +31,7 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
     let quest_stb = StbQuest(StbFile::read(FileReader::from(&file)).ok()?);
     let mut quests = Vec::new();
     for row in 0..quest_stb.0.rows() {
-        let time_limit = quest_stb
-            .get_time_limit(row)
-            .filter(|v| *v != 0)
-            .map(Duration::from_secs);
+        let time_limit = quest_stb.get_time_limit(row).filter(|x| x.0 != 0);
         quests.push(QuestData { time_limit });
     }
 

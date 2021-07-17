@@ -28,7 +28,7 @@ use crate::{
         },
         resources::{
             ClientEntityList, GameData, LoginTokens, PendingQuestTrigger, PendingQuestTriggerList,
-            ServerMessages,
+            ServerMessages, WorldTime,
         },
     },
 };
@@ -171,6 +171,7 @@ pub fn game_server_join(
     mana_points: &ManaPoints,
     position: &Position,
     #[resource] client_entity_list: &mut ClientEntityList,
+    #[resource] world_time: &WorldTime,
 ) {
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
@@ -192,6 +193,7 @@ pub fn game_server_join(
                                 team: team.clone(),
                                 health_points: health_points.clone(),
                                 mana_points: mana_points.clone(),
+                                world_time: world_time.now,
                             })
                             .ok();
                     }

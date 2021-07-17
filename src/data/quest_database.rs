@@ -1,9 +1,9 @@
-use std::{collections::HashMap, num::Wrapping, time::Duration};
+use std::{collections::HashMap, num::Wrapping};
 
-pub use crate::data::formats::qsd::QsdTrigger as QuestTrigger;
+pub use crate::data::{formats::qsd::QsdTrigger as QuestTrigger, WorldTicks};
 
 pub struct QuestData {
-    pub time_limit: Option<Duration>,
+    pub time_limit: Option<WorldTicks>,
 }
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
@@ -80,6 +80,10 @@ pub struct QuestDatabase {
 }
 
 impl QuestDatabase {
+    pub fn get_quest_data(&self, id: usize) -> Option<&QuestData> {
+        self.quests.get(id)
+    }
+
     pub fn get_trigger_by_name(&self, name: &str) -> Option<&QuestTrigger> {
         self.triggers.get(name)
     }

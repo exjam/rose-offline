@@ -9,6 +9,7 @@ mod pending_xp_list;
 mod server_list;
 mod server_messages;
 mod world_rates;
+mod world_time;
 
 pub use client_entity_list::ClientEntityList;
 pub use control_channel::ControlChannel;
@@ -21,3 +22,4 @@ pub use pending_xp_list::{PendingXp, PendingXpList};
 pub use server_list::{GameServer, ServerList, WorldServer};
 pub use server_messages::ServerMessages;
 pub use world_rates::WorldRates;
+pub use world_time::WorldTime;

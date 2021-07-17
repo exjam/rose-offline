@@ -1,7 +1,7 @@
 use tokio::sync::oneshot;
 
 use crate::{
-    data::{character::CharacterStorage, QuestTriggerHash},
+    data::{character::CharacterStorage, QuestTriggerHash, WorldTicks},
     game::components::{
         BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
         EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
@@ -182,6 +182,7 @@ pub struct JoinZoneResponse {
     pub team: Team,
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,
+    pub world_time: WorldTicks,
 }
 
 #[derive(Debug)]

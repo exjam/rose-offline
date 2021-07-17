@@ -14,7 +14,9 @@ pub mod item;
 
 use directories::ProjectDirs;
 use lazy_static::lazy_static;
-use std::path::PathBuf;
+use num_derive::NumOps;
+use serde::{Deserialize, Serialize};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 
 lazy_static! {
     pub static ref LOCAL_STORAGE_DIR: PathBuf = {
@@ -28,6 +30,26 @@ lazy_static! {
 use crate::game::components::{
     AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Inventory, Level, SkillList,
 };
+
+pub const WORLD_TICK_DURATION: Duration = Duration::from_secs(10);
+
+#[derive(Copy, Clone, Debug, NumOps, Deserialize, Serialize)]
+pub struct WorldTicks(pub u64);
+
+impl From<WorldTicks> for Duration {
+    fn from(ticks: WorldTicks) -> Duration {
+        Duration::from_millis(ticks.0 * WORLD_TICK_DURATION.as_millis() as u64)
+    }
+}
+
+impl FromStr for WorldTicks {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u64>().map_err(|_| ())?;
+        Ok(WorldTicks(value))
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct Damage {

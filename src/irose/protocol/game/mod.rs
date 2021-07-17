@@ -129,6 +129,7 @@ impl GameClient {
                         team: &response.team,
                         health_points: &response.health_points,
                         mana_points: &response.mana_points,
+                        world_time: response.world_time,
                     }))
                     .await?;
             }
