@@ -22,7 +22,7 @@ use crate::{
             NpcAi, Owner, Position, SpawnOrigin, Team,
         },
         messages::server::ServerMessage,
-        resources::{ClientEntityList, DeltaTime, PendingXp, PendingXpList, WorldRates},
+        resources::{ClientEntityList, PendingXp, PendingXpList, ServerTime, WorldRates},
         GameData,
     },
 };
@@ -535,7 +535,7 @@ pub fn npc_ai(
     attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: &mut Query<&Level>,
     killer_query: &mut Query<(&Level, &AbilityValues, Option<&GameClient>)>,
-    #[resource] delta_time: &DeltaTime,
+    #[resource] server_time: &ServerTime,
     #[resource] game_data: &GameData,
     #[resource] world_rates: &WorldRates,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -655,7 +655,7 @@ pub fn npc_ai(
                     if let Some(npc_ai) = npc_ai {
                         if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
                             if let Some(trigger_on_idle) = ai_program.trigger_on_idle.as_ref() {
-                                npc_ai.idle_duration += delta_time.delta;
+                                npc_ai.idle_duration += server_time.delta;
 
                                 if npc_ai.idle_duration > ai_program.idle_trigger_interval {
                                     npc_ai_run_trigger(
@@ -731,7 +731,7 @@ pub fn npc_ai(
                             // Reward XP to all attackers
                             for damage_source in damage_sources.damage_sources.iter() {
                                 let time_since_damage =
-                                    delta_time.now - damage_source.last_damage_time;
+                                    server_time.now - damage_source.last_damage_time;
                                 if time_since_damage > DAMAGE_REWARD_EXPIRE_TIME {
                                     // Damage expired, ignore.
                                     continue;
@@ -817,7 +817,7 @@ pub fn npc_ai(
                                             Position::new(drop_position, position.zone),
                                             Owner::new(killer_entity),
                                             ExpireTime::new(
-                                                delta_time.now + DROPPED_ITEM_EXPIRE_TIME,
+                                                server_time.now + DROPPED_ITEM_EXPIRE_TIME,
                                             ),
                                         ));
                                         cmd.add_component(

@@ -2,7 +2,7 @@ use legion::{system, systems::CommandBuffer, Entity};
 
 use crate::game::{
     components::{ClientEntity, Destination, MoveSpeed, Position},
-    resources::{ClientEntityList, DeltaTime},
+    resources::{ClientEntityList, ServerTime},
 };
 
 #[system(for_each)]
@@ -14,7 +14,7 @@ pub fn update_position(
     position: &mut Position,
     destination: &Destination,
     #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] delta_time: &DeltaTime,
+    #[resource] server_time: &ServerTime,
 ) {
     let direction = destination.position.xy() - position.position.xy();
     let distance_squared = direction.magnitude_squared();
@@ -23,7 +23,8 @@ pub fn update_position(
         position.position = destination.position;
         cmd.remove_component::<Destination>(*entity);
     } else {
-        let move_vector = direction.normalize() * move_speed.speed * delta_time.delta.as_secs_f32();
+        let move_vector =
+            direction.normalize() * move_speed.speed * server_time.delta.as_secs_f32();
         if move_vector.magnitude_squared() >= distance_squared {
             position.position = destination.position;
             cmd.remove_component::<Destination>(*entity);

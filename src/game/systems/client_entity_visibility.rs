@@ -10,7 +10,7 @@ use crate::game::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
         SpawnEntityMonster, SpawnEntityNpc,
     },
-    resources::{ClientEntityList, DeltaTime},
+    resources::{ClientEntityList, ServerTime},
 };
 
 #[allow(clippy::type_complexity)]
@@ -59,7 +59,7 @@ pub fn client_entity_visibility(
         Option<&Target>,
     )>,
     #[resource] client_entity_list: &ClientEntityList,
-    #[resource] delta_time: &DeltaTime,
+    #[resource] server_time: &ServerTime,
 ) {
     let (mut clients_query_world, mut world) = world.split_for_query(clients_query);
     let (entity_id_query_world, mut world) = world.split_for_query(entity_id_query);
@@ -187,7 +187,7 @@ pub fn client_entity_visibility(
                                                 dropped_item: spawn_item.clone(),
                                                 position: spawn_position.clone(),
                                                 remaining_time: spawn_expire_time.when
-                                                    - delta_time.now,
+                                                    - server_time.now,
                                                 owner_entity_id,
                                             },
                                         ))

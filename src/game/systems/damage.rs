@@ -5,7 +5,7 @@ use crate::game::{
         ClientEntity, Command, DamageSource, DamageSources, HealthPoints, NpcAi, Position,
     },
     messages::server::{DamageEntity, ServerMessage},
-    resources::{DeltaTime, PendingDamageList, ServerMessages},
+    resources::{PendingDamageList, ServerMessages, ServerTime},
 };
 
 #[allow(clippy::type_complexity)]
@@ -23,7 +23,7 @@ pub fn damage(
     )>,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
-    #[resource] delta_time: &DeltaTime,
+    #[resource] server_time: &ServerTime,
 ) {
     for pending_damage in pending_damage_list.iter() {
         let attacker_entity_id = attacker_query
@@ -65,12 +65,12 @@ pub fn damage(
                     .iter_mut()
                     .find(|source| source.entity == pending_damage.attacker)
                 {
-                    source.last_damage_time = delta_time.now;
+                    source.last_damage_time = server_time.now;
                     source.total_damage += pending_damage.damage.amount as usize;
                 } else {
                     // If we have a full list of damage sources, remove the oldest
                     if damage_sources.damage_sources.len() == damage_sources.max_damage_sources {
-                        let mut oldest_time = delta_time.now;
+                        let mut oldest_time = server_time.now;
                         let mut oldest_index = None;
 
                         for i in 0..damage_sources.damage_sources.len() {
@@ -89,8 +89,8 @@ pub fn damage(
                     damage_sources.damage_sources.push(DamageSource {
                         entity: pending_damage.attacker,
                         total_damage: pending_damage.damage.amount as usize,
-                        first_damage_time: delta_time.now,
-                        last_damage_time: delta_time.now,
+                        first_damage_time: server_time.now,
+                        last_damage_time: server_time.now,
                     });
                 }
             }

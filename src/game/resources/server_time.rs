@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-pub struct DeltaTime {
+pub struct ServerTime {
     pub delta: Duration,
     pub now: Instant,
 }

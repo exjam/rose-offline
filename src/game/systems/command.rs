@@ -12,7 +12,7 @@ use crate::game::{
         self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
         ServerMessage,
     },
-    resources::{DeltaTime, GameData, PendingDamage, PendingDamageList, ServerMessages},
+    resources::{GameData, PendingDamage, PendingDamageList, ServerMessages, ServerTime},
 };
 
 const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
@@ -131,7 +131,7 @@ pub fn command(
         &mut Option<DroppedItem>,
         Option<&Owner>,
     )>,
-    #[resource] delta_time: &DeltaTime,
+    #[resource] server_time: &ServerTime,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
@@ -230,7 +230,7 @@ pub fn command(
                 next_command.has_sent_server_message = true;
             }
 
-            command.duration += delta_time.delta;
+            command.duration += server_time.delta;
 
             let required_duration = match command.command {
                 CommandData::Attack(_) => {

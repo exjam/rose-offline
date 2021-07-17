@@ -9,7 +9,7 @@ use crate::{
             ClientEntityType, Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint,
             MoveSpeed, NextCommand, Npc, NpcAi, Position, SpawnOrigin, Team,
         },
-        resources::{ClientEntityList, DeltaTime, GameData},
+        resources::{ClientEntityList, GameData, ServerTime},
     },
 };
 
@@ -19,11 +19,11 @@ pub fn monster_spawn(
     spawn_point_entity: &Entity,
     spawn_point: &mut MonsterSpawnPoint,
     spawn_point_position: &Position,
-    #[resource] delta_time: &DeltaTime,
+    #[resource] server_time: &ServerTime,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] game_data: &GameData,
 ) {
-    spawn_point.time_since_last_check += delta_time.delta;
+    spawn_point.time_since_last_check += server_time.delta;
     if spawn_point.time_since_last_check < spawn_point.interval {
         return;
     }

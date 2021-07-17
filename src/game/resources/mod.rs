@@ -1,6 +1,5 @@
 mod client_entity_list;
 mod control_channel;
-mod delta_time;
 mod game_data;
 mod login_tokens;
 mod pending_damage_list;
@@ -8,12 +7,12 @@ mod pending_quest_trigger_list;
 mod pending_xp_list;
 mod server_list;
 mod server_messages;
+mod server_time;
 mod world_rates;
 mod world_time;
 
 pub use client_entity_list::ClientEntityList;
 pub use control_channel::ControlChannel;
-pub use delta_time::DeltaTime;
 pub use game_data::GameData;
 pub use login_tokens::{LoginToken, LoginTokens};
 pub use pending_damage_list::{PendingDamage, PendingDamageList};
@@ -21,5 +20,6 @@ pub use pending_quest_trigger_list::{PendingQuestTrigger, PendingQuestTriggerLis
 pub use pending_xp_list::{PendingXp, PendingXpList};
 pub use server_list::{GameServer, ServerList, WorldServer};
 pub use server_messages::ServerMessages;
+pub use server_time::ServerTime;
 pub use world_rates::WorldRates;
 pub use world_time::WorldTime;

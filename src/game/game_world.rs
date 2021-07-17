@@ -6,8 +6,9 @@ use std::time::{Duration, Instant};
 use crate::game::{
     messages::control::ControlMessage,
     resources::{
-        ClientEntityList, ControlChannel, DeltaTime, GameData, LoginTokens, PendingDamageList,
-        PendingQuestTriggerList, PendingXpList, ServerList, ServerMessages, WorldRates, WorldTime,
+        ClientEntityList, ControlChannel, GameData, LoginTokens, PendingDamageList,
+        PendingQuestTriggerList, PendingXpList, ServerList, ServerMessages, ServerTime, WorldRates,
+        WorldTime,
     },
     systems::*,
 };
@@ -87,7 +88,7 @@ impl GameWorld {
 
         loop {
             let current_tick = std::time::Instant::now();
-            resources.insert(DeltaTime {
+            resources.insert(ServerTime {
                 delta: current_tick - last_tick,
                 now: current_tick,
             });
