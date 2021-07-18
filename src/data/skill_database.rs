@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use super::item::AbilityType;
+use crate::data::ability::AbilityType;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct SkillReference(pub usize);

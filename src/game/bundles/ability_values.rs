@@ -2,7 +2,7 @@ use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
 
 use crate::{
-    data::item::AbilityType,
+    data::ability::AbilityType,
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory,

@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use crate::data::item::{AbilityType, ItemClass, ItemType};
+use crate::data::{
+    ability::AbilityType,
+    item::{ItemClass, ItemType},
+};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ItemReference {

@@ -5,7 +5,8 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        item::{AbilityType, ItemClass, ItemWeaponType},
+        ability::AbilityType,
+        item::{ItemClass, ItemWeaponType},
         AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
         SkillReference,
     },

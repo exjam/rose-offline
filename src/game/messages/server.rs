@@ -2,7 +2,8 @@ use std::time::Duration;
 
 use crate::{
     data::{
-        item::{AbilityType, EquipmentItem, Item},
+        ability::AbilityType,
+        item::{EquipmentItem, Item},
         Damage, NpcReference, QuestTriggerHash, SkillReference,
     },
     game::components::{

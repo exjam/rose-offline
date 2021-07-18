@@ -5,7 +5,8 @@ use num_derive::FromPrimitive;
 
 use crate::{
     data::{
-        item::{AbilityType, EquipmentItem, Item, StackableItem},
+        ability::AbilityType,
+        item::{EquipmentItem, Item, StackableItem},
         Damage, NpcReference, WorldTicks,
     },
     game::{

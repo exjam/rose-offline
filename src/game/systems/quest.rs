@@ -5,11 +5,12 @@ use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
     data::{
+        ability::AbilityType,
         formats::qsd::{
             QsdCondition, QsdConditionOperator, QsdConditionQuestItem, QsdReward,
             QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
         },
-        item::{AbilityType, EquipmentItem, Item},
+        item::{EquipmentItem, Item},
         ItemReference, QuestTrigger, SkillReference, WorldTicks, ZoneReference,
     },
     game::{

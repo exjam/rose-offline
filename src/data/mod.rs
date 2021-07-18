@@ -7,6 +7,7 @@ mod quest_database;
 mod skill_database;
 mod zone_database;
 
+pub mod ability;
 pub mod account;
 pub mod character;
 pub mod formats;

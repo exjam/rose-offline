@@ -5,8 +5,9 @@ use std::{collections::HashMap, ops::RangeInclusive, time::Duration};
 
 use crate::{
     data::{
+        ability::AbilityType,
         formats::reader::{FileReader, ReadError},
-        item::{AbilityType, ItemType},
+        item::ItemType,
         item_database::ItemReferenceDecodeError,
         ItemReference,
     },

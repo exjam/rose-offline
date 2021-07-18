@@ -2,8 +2,9 @@ use num_traits::FromPrimitive;
 use std::{collections::HashMap, str::FromStr};
 
 use crate::data::{
+    ability::AbilityType,
     formats::{FileReader, StbFile, StlFile, VfsIndex},
-    item::{AbilityType, ItemClass},
+    item::ItemClass,
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
     GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData, JewelleryItemData,
     MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData, WeaponItemData,
