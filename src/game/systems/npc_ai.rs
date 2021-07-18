@@ -752,7 +752,7 @@ pub fn npc_ai(
                                     if reward_xp > 0 {
                                         pending_xp_list.push(PendingXp::new(
                                             damage_source.entity,
-                                            reward_xp,
+                                            reward_xp as u64,
                                             Some(*entity),
                                         ));
                                     }

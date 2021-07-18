@@ -335,7 +335,7 @@ fn quest_reward_calculated_experience_points(
 
     quest_world.pending_xp_list.push(PendingXp::new(
         *quest_parameters.source.entity,
-        reward_value,
+        reward_value as u64,
         None,
     ));
 
