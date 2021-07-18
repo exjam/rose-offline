@@ -6,14 +6,17 @@ use std::num::{ParseFloatError, ParseIntError};
 
 use crate::game::{
     bundles::client_entity_teleport_zone,
-    components::{AbilityValues, ClientEntity, GameClient, Position},
+    components::{AbilityValues, ClientEntity, GameClient, Level, Position},
     messages::server::{ServerMessage, Whisper},
-    resources::{ClientEntityList, PendingChatCommandList},
+    resources::{ClientEntityList, PendingChatCommandList, PendingXp, PendingXpList},
+    GameData,
 };
 
 pub struct ChatCommandWorld<'a> {
     cmd: &'a mut CommandBuffer,
     client_entity_list: &'a mut ClientEntityList,
+    game_data: &'a GameData,
+    pending_xp_list: &'a mut PendingXpList,
 }
 
 pub struct ChatCommandUser<'a> {
@@ -21,6 +24,7 @@ pub struct ChatCommandUser<'a> {
     client_entity: &'a ClientEntity,
     entity: &'a Entity,
     game_client: &'a GameClient,
+    level: &'a Level,
     position: &'a Position,
 }
 
@@ -36,6 +40,7 @@ lazy_static! {
                     .arg(Arg::new("x").required(true))
                     .arg(Arg::new("y").required(true)),
             )
+            .subcommand(App::new("level").arg(Arg::new("level").required(true)))
     };
 }
 
@@ -114,9 +119,12 @@ fn handle_gm_command(
 ) -> Result<(), GMCommandError> {
     let mut args = shellwords::split(command_text)?;
     args.insert(0, String::new()); // Clap expects arg[0] to be like executable name
-    let matches = GM_COMMANDS.clone().try_get_matches_from(args)?;
+    let command_matches = GM_COMMANDS.clone().try_get_matches_from(args)?;
 
-    match matches.subcommand().ok_or(GMCommandError::InvalidCommand)? {
+    match command_matches
+        .subcommand()
+        .ok_or(GMCommandError::InvalidCommand)?
+    {
         ("where", _) => {
             chat_command_user
                 .game_client
@@ -133,10 +141,10 @@ fn handle_gm_command(
                 }))
                 .ok();
         }
-        ("mm", matches) => {
-            let zone = matches.value_of("zone").unwrap().parse::<u16>()?;
-            let x = matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
-            let y = matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
+        ("mm", arg_matches) => {
+            let zone = arg_matches.value_of("zone").unwrap().parse::<u16>()?;
+            let x = arg_matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
+            let y = arg_matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
 
             if chat_command_world
                 .client_entity_list
@@ -165,6 +173,24 @@ fn handle_gm_command(
                 &format!("{:?}", chat_command_user.ability_values),
             );
         }
+        ("level", arg_matches) => {
+            let target_level = arg_matches.value_of("level").unwrap().parse::<u32>()?;
+            let current_level = chat_command_user.level.level;
+            let mut required_xp = 0;
+
+            for level in current_level..target_level {
+                required_xp += chat_command_world
+                    .game_data
+                    .ability_value_calculator
+                    .calculate_levelup_require_xp(level);
+            }
+
+            chat_command_world.pending_xp_list.push(PendingXp::new(
+                *chat_command_user.entity,
+                required_xp,
+                None,
+            ));
+        }
         _ => return Err(GMCommandError::InvalidCommand),
     }
 
@@ -180,18 +206,23 @@ pub fn chat_commands(
         &AbilityValues,
         &ClientEntity,
         &GameClient,
+        &Level,
         &Position,
     )>,
     #[resource] client_entity_list: &mut ClientEntityList,
+    #[resource] game_data: &GameData,
     #[resource] pending_chat_commands: &mut PendingChatCommandList,
+    #[resource] pending_xp_list: &mut PendingXpList,
 ) {
     let mut chat_command_world = ChatCommandWorld {
         cmd,
         client_entity_list,
+        game_data,
+        pending_xp_list,
     };
 
     for (entity, command) in pending_chat_commands.iter() {
-        if let Ok((ability_values, client_entity, game_client, position)) =
+        if let Ok((ability_values, client_entity, game_client, level, position)) =
             user_query.get(world, *entity)
         {
             let chat_command_user = ChatCommandUser {
@@ -199,10 +230,13 @@ pub fn chat_commands(
                 client_entity,
                 entity,
                 game_client,
+                level,
                 position,
             };
 
-            if handle_gm_command(&mut chat_command_world, &chat_command_user, &command[1..]).is_err() {
+            if handle_gm_command(&mut chat_command_world, &chat_command_user, &command[1..])
+                .is_err()
+            {
                 send_gm_commands_help(chat_command_user.game_client);
             }
         }
