@@ -7,7 +7,10 @@ use nalgebra::Point3;
 use crate::{
     data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
-        bundles::{client_entity_leave_zone, client_entity_teleport_zone},
+        bundles::{
+            client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
+            create_character_entity,
+        },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
@@ -67,16 +70,7 @@ pub fn game_server_authentication(
                                     &character.skill_list,
                                 );
 
-                                let weapon_motion_type = game_data
-                                    .items
-                                    .get_equipped_weapon_item_data(
-                                        &character.equipment,
-                                        EquipmentIndex::WeaponRight,
-                                    )
-                                    .map(|item_data| item_data.motion_type)
-                                    .unwrap_or(0)
-                                    as usize;
-
+                                // If the character was saved as dead, we must respawn them!
                                 let (health_points, mana_points, position) =
                                     if character.health_points.hp == 0 {
                                         (
@@ -89,43 +83,55 @@ pub fn game_server_authentication(
                                         )
                                     } else {
                                         (
-                                            character.health_points.clone(),
-                                            character.mana_points.clone(),
+                                            character.health_points,
+                                            character.mana_points,
                                             character.position.clone(),
                                         )
                                     };
 
-                                cmd.add_component(*entity, character.info.clone());
-                                cmd.add_component(*entity, character.basic_stats.clone());
-                                cmd.add_component(*entity, character.inventory.clone());
-                                cmd.add_component(*entity, character.equipment.clone());
-                                cmd.add_component(*entity, character.level.clone());
-                                cmd.add_component(*entity, character.experience_points.clone());
-                                cmd.add_component(*entity, character.skill_list.clone());
-                                cmd.add_component(*entity, character.hotbar.clone());
-                                cmd.add_component(*entity, character.skill_points.clone());
-                                cmd.add_component(*entity, character.stat_points.clone());
-                                cmd.add_component(*entity, character.quest_state.clone());
-                                cmd.add_component(*entity, character.union_membership.clone());
-                                cmd.add_component(*entity, character.stamina.clone());
-                                cmd.add_component(
-                                    *entity,
-                                    game_data.motions.get_character_motions(
-                                        weapon_motion_type,
-                                        character.info.gender as usize,
-                                    ),
+                                let weapon_motion_type = game_data
+                                    .items
+                                    .get_equipped_weapon_item_data(
+                                        &character.equipment,
+                                        EquipmentIndex::WeaponRight,
+                                    )
+                                    .map(|item_data| item_data.motion_type)
+                                    .unwrap_or(0)
+                                    as usize;
+
+                                let motion_data = game_data.motions.get_character_motions(
+                                    weapon_motion_type,
+                                    character.info.gender as usize,
                                 );
-                                cmd.add_component(
-                                    *entity,
-                                    MoveSpeed::new(ability_values.run_speed),
+
+                                let move_speed = MoveSpeed::new(ability_values.run_speed);
+
+                                create_character_entity(
+                                    cmd,
+                                    entity,
+                                    ability_values,
+                                    character.basic_stats.clone(),
+                                    Command::default(),
+                                    character.equipment.clone(),
+                                    character.experience_points.clone(),
+                                    health_points,
+                                    character.hotbar.clone(),
+                                    character.info.clone(),
+                                    character.inventory.clone(),
+                                    character.level.clone(),
+                                    mana_points,
+                                    motion_data,
+                                    move_speed,
+                                    NextCommand::default(),
+                                    position.clone(),
+                                    character.quest_state.clone(),
+                                    character.skill_list.clone(),
+                                    character.skill_points,
+                                    character.stamina,
+                                    character.stat_points,
+                                    Team::default_character(),
+                                    character.union_membership.clone(),
                                 );
-                                cmd.add_component(*entity, Command::default());
-                                cmd.add_component(*entity, NextCommand::default());
-                                cmd.add_component(*entity, Team::default_character());
-                                cmd.add_component(*entity, health_points.clone());
-                                cmd.add_component(*entity, mana_points.clone());
-                                cmd.add_component(*entity, position.clone());
-                                cmd.add_component(*entity, ability_values);
 
                                 GameConnectionResponse {
                                     packet_sequence_id: 123,
@@ -173,27 +179,27 @@ pub fn game_server_join(
     if let Ok(message) = client.client_message_rx.try_recv() {
         match message {
             ClientMessage::JoinZoneRequest(message) => {
-                if let Some(zone) = client_entity_list.get_zone_mut(position.zone as usize) {
-                    if let Some(client_entity) =
-                        zone.allocate(ClientEntityType::Character, *entity, position.position)
-                    {
-                        let entity_id = client_entity.id;
-                        cmd.add_component(*entity, client_entity);
-                        cmd.add_component(*entity, ClientEntityVisibility::new());
+                if let Ok(entity_id) = client_entity_join_zone(
+                    cmd,
+                    client_entity_list,
+                    entity,
+                    ClientEntityType::Character,
+                    position,
+                ) {
+                    cmd.add_component(*entity, ClientEntityVisibility::new());
 
-                        message
-                            .response_tx
-                            .send(JoinZoneResponse {
-                                entity_id,
-                                level: level.clone(),
-                                experience_points: experience_points.clone(),
-                                team: team.clone(),
-                                health_points: health_points.clone(),
-                                mana_points: mana_points.clone(),
-                                world_time: world_time.now,
-                            })
-                            .ok();
-                    }
+                    message
+                        .response_tx
+                        .send(JoinZoneResponse {
+                            entity_id,
+                            level: level.clone(),
+                            experience_points: experience_points.clone(),
+                            team: team.clone(),
+                            health_points: *health_points,
+                            mana_points: *mana_points,
+                            world_time: world_time.now,
+                        })
+                        .ok();
                 }
             }
             _ => warn!("Received unexpected client message {:?}", message),
@@ -589,13 +595,13 @@ pub fn game_server_disconnect_handler(
             skill_list: skill_list.unwrap().clone(),
             hotbar: hotbar.unwrap().clone(),
             delete_time: None,
-            health_points: health_points.unwrap().clone(),
-            mana_points: mana_points.unwrap().clone(),
-            stat_points: stat_points.unwrap().clone(),
-            skill_points: skill_points.unwrap().clone(),
+            health_points: *health_points.unwrap(),
+            mana_points: *mana_points.unwrap(),
+            stat_points: *stat_points.unwrap(),
+            skill_points: *skill_points.unwrap(),
             quest_state: quest_state.unwrap().clone(),
             union_membership: union_membership.unwrap().clone(),
-            stamina: stamina.unwrap().clone(),
+            stamina: *stamina.unwrap(),
         };
         storage.save().ok();
     }

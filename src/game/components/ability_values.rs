@@ -1,16 +1,16 @@
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DamageCategory {
     Character,
     Npc,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DamageType {
     Physical,
     Magic,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AbilityValues {
     pub damage_category: DamageCategory,
     pub level: i32,

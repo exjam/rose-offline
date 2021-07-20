@@ -5,6 +5,7 @@ use rand::Rng;
 use crate::{
     data::NpcReference,
     game::{
+        bundles::{client_entity_join_zone, create_monster_entity},
         components::{
             ClientEntityType, Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint,
             MoveSpeed, NextCommand, Npc, NpcAi, Position, SpawnOrigin, Team,
@@ -159,72 +160,69 @@ pub fn monster_spawn(
 
     let spawn_point_zone = spawn_point_position.zone;
     let spawn_point_position = spawn_point_position.position;
-    let client_entity_zone = client_entity_list
-        .get_zone_mut(spawn_point_zone as usize)
-        .unwrap();
     let spawn_range = (spawn_point.range * 100) as i32;
 
     for (id, count) in spawn_queue {
         for _ in 0..count {
-            let position = Point3::new(
-                spawn_point_position.x
-                    + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
-                spawn_point_position.y
-                    + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
-                0.0,
-            );
-            let entity = cmd.push((
-                Npc::new(id.0 as u32, 0),
-                Position::new(position, spawn_point_zone),
-                Team::default_monster(),
-                SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),
-                Command::default(),
-                NextCommand::default(),
-                game_data.npcs.get_npc_motions(id.0),
-            ));
-            cmd.add_component(
-                entity,
-                client_entity_zone
-                    .allocate(ClientEntityType::Monster, entity, position)
-                    .unwrap(),
-            );
-
-            if let Some(npc_data) = game_data.npcs.get_npc(id.0) {
-                cmd.add_component(entity, Level::new(npc_data.level as u32));
-                cmd.add_component(entity, MoveSpeed::new(npc_data.walk_speed as f32));
-            }
-
-            let ai_file_index = game_data
-                .npcs
-                .get_npc(id.0)
-                .map(|npc_data| npc_data.ai_file_index)
-                .unwrap_or(0);
-            if ai_file_index != 0 {
-                cmd.add_component(entity, NpcAi::new(ai_file_index as usize));
-            }
-
-            if let Some(ability_values) = game_data
+            let npc_data = game_data.npcs.get_npc(id.0);
+            let ability_values = game_data
                 .ability_value_calculator
-                .calculate_npc(id.0 as usize)
-            {
-                cmd.add_component(
-                    entity,
-                    HealthPoints {
-                        hp: ability_values.max_health as u32,
-                    },
+                .calculate_npc(id.0 as usize);
+
+            if let (Some(npc_data), Some(ability_values)) = (npc_data, ability_values) {
+                let npc_ai = Some(npc_data.ai_file_index)
+                    .filter(|ai_file_index| *ai_file_index != 0)
+                    .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
+
+                let damage_sources = Some(ability_values.max_damage_sources)
+                    .filter(|max_damage_sources| *max_damage_sources > 0)
+                    .map(DamageSources::new);
+                let health_points = HealthPoints::new(ability_values.max_health as u32);
+                let level = Level::new(ability_values.level as u32);
+                let move_speed = MoveSpeed::new(ability_values.walk_speed as f32);
+
+                let position = Position::new(
+                    Point3::new(
+                        spawn_point_position.x
+                            + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
+                        spawn_point_position.y
+                            + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
+                        0.0,
+                    ),
+                    spawn_point_zone,
                 );
 
-                if ability_values.max_damage_sources > 0 {
-                    cmd.add_component(
-                        entity,
-                        DamageSources::new(ability_values.max_damage_sources),
-                    );
-                }
+                let entity = cmd.push(());
 
-                cmd.add_component(entity, ability_values);
+                create_monster_entity(
+                    cmd,
+                    &entity,
+                    ability_values,
+                    Command::default(),
+                    damage_sources,
+                    health_points,
+                    level,
+                    game_data.npcs.get_npc_motions(id.0),
+                    move_speed,
+                    NextCommand::default(),
+                    Npc::new(id.0 as u32, 0),
+                    npc_ai,
+                    position.clone(),
+                    SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),
+                    Team::default_monster(),
+                );
+
+                client_entity_join_zone(
+                    cmd,
+                    client_entity_list,
+                    &entity,
+                    ClientEntityType::Monster,
+                    &position,
+                )
+                .expect("Failed to join monster into zone");
+
+                spawn_point.num_alive_monsters += 1;
             }
-
-            spawn_point.num_alive_monsters += 1;
         }
     }
 }
