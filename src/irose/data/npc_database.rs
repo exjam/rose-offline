@@ -142,12 +142,17 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
 
     let mut npcs = HashMap::new();
     for id in 1..data.rows() {
-        if data.get_string_id(id).is_none() {
+        let npc_model_data = model_data.npcs.get(&(id as u16));
+        let npc_string_id = data.get_string_id(id);
+        let ai_file_index = data.get_ai_file_index(id).unwrap_or(0);
+
+        if npc_string_id.is_none() && npc_model_data.is_some() && ai_file_index == 0 {
+            // NPC must have either a name, a model, or an AI file
             continue;
         }
 
         let mut motion_data = HashMap::new();
-        if let Some(npc_model_data) = model_data.npcs.get(&(id as u16)) {
+        if let Some(npc_model_data) = npc_model_data {
             for (action, motion_index) in npc_model_data.motion_ids.iter() {
                 if let Some(action) = get_npc_action(*action) {
                     if let Some(file) = model_data
@@ -201,7 +206,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 die_sound_index: data.get_die_sound_index(id).unwrap_or(0),
                 npc_quest_type: data.get_npc_quest_type(id).unwrap_or(0),
                 glow_colour: data.get_glow_colour(id),
-                string_id: data.get_string_id(id).unwrap().to_string(),
+                string_id: npc_string_id.map(|s| s.to_string()).unwrap_or_default(),
                 create_effect_index: data.get_create_effect_index(id).unwrap_or(0),
                 create_sound_index: data.get_create_sound_index(id).unwrap_or(0),
                 death_quest_trigger_name: data
