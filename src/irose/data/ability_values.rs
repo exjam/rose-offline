@@ -300,6 +300,16 @@ impl AbilityValueCalculator for AbilityValuesData {
         }) as i32
     }
 
+    fn calculate_give_stamina(
+        &self,
+        experience_points: i32,
+        level: i32,
+        world_stamina_rate: i32,
+    ) -> i32 {
+        (((experience_points + 100) as f32 / (level + 6) as f32)
+            * (world_stamina_rate as f32 / 80.0)) as i32
+    }
+
     fn calculate_basic_stat_increase_cost(
         &self,
         basic_stats: &BasicStats,

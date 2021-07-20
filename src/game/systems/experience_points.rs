@@ -3,12 +3,15 @@ use legion::{system, world::SubWorld, Entity, Query};
 use crate::game::{
     components::{
         AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
-        GameClient, HealthPoints, Inventory, Level, ManaPoints, SkillList, SkillPoints, StatPoints,
+        GameClient, HealthPoints, Inventory, Level, ManaPoints, SkillList, SkillPoints, Stamina,
+        StatPoints,
     },
     messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
     resources::{PendingXpList, ServerMessages},
     GameData,
 };
+
+const MAX_STAMINA: u32 = 5000;
 
 #[allow(clippy::type_complexity)]
 #[system]
@@ -19,6 +22,7 @@ pub fn experience_points(
         &ClientEntity,
         &mut Level,
         &mut ExperiencePoints,
+        &mut Stamina,
         &mut SkillPoints,
         &mut StatPoints,
         Option<&GameClient>,
@@ -48,6 +52,7 @@ pub fn experience_points(
             client_entity,
             level,
             experience_points,
+            stamina,
             skill_points,
             stat_points,
             game_client,
@@ -55,7 +60,11 @@ pub fn experience_points(
         {
             experience_points.xp = experience_points.xp.saturating_add(pending_xp.xp as u64);
 
-            // TODO: Reward stamina
+            stamina.stamina = stamina.stamina.saturating_add(pending_xp.stamina as u32);
+            if stamina.stamina > MAX_STAMINA {
+                stamina.stamina = MAX_STAMINA;
+            }
+
             // TODO: Apply level cap
             // TODO: Penalty xp?
 
@@ -114,8 +123,8 @@ pub fn experience_points(
                         entity_id: client_entity.id,
                         level: level.clone(),
                         experience_points: experience_points.clone(),
-                        stat_points: stat_points.clone(),
-                        skill_points: skill_points.clone(),
+                        stat_points: *stat_points,
+                        skill_points: *skill_points,
                     }),
                 );
             } else if let Some(game_client) = game_client {
@@ -133,7 +142,7 @@ pub fn experience_points(
                     .server_message_tx
                     .send(ServerMessage::UpdateXpStamina(UpdateXpStamina {
                         xp: experience_points.xp,
-                        stamina: 0,
+                        stamina: stamina.stamina,
                         source_entity_id,
                     }))
                     .ok();

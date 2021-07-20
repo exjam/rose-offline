@@ -81,6 +81,7 @@ impl GameClient {
                                 stat_points: response.stat_points,
                                 skill_points: response.skill_points,
                                 union_membership: &response.union_membership,
+                                stamina: response.stamina,
                             }))
                             .await?;
 

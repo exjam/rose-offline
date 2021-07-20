@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
-pub struct StatPoints {
-    pub points: u32,
+pub struct Stamina {
+    pub stamina: u32,
 }
 
-impl StatPoints {
+impl Stamina {
     pub fn new() -> Self {
-        Self { points: 0 }
+        Self { stamina: 0 }
     }
 }

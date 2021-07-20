@@ -188,6 +188,7 @@ fn handle_gm_command(
             chat_command_world.pending_xp_list.push(PendingXp::new(
                 *chat_command_user.entity,
                 required_xp,
+                0,
                 None,
             ));
         }

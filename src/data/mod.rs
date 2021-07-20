@@ -89,6 +89,13 @@ pub trait AbilityValueCalculator {
         world_xp_rate: i32,
     ) -> i32;
 
+    fn calculate_give_stamina(
+        &self,
+        experience_points: i32,
+        level: i32,
+        world_stamina_rate: i32,
+    ) -> i32;
+
     fn calculate_basic_stat_increase_cost(
         &self,
         basic_stats: &BasicStats,

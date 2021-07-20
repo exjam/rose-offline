@@ -13,7 +13,7 @@ use crate::{
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
             ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, QuestState, SkillList,
-            SkillPoints, StatPoints, Team, UnionMembership, WorldClient,
+            SkillPoints, Stamina, StatPoints, Team, UnionMembership, WorldClient,
         },
         messages::{
             client::{
@@ -107,6 +107,7 @@ pub fn game_server_authentication(
                                 cmd.add_component(*entity, character.stat_points.clone());
                                 cmd.add_component(*entity, character.quest_state.clone());
                                 cmd.add_component(*entity, character.union_membership.clone());
+                                cmd.add_component(*entity, character.stamina.clone());
                                 cmd.add_component(
                                     *entity,
                                     game_data.motions.get_character_motions(
@@ -143,6 +144,7 @@ pub fn game_server_authentication(
                                     skill_points: character.skill_points,
                                     quest_state: character.quest_state,
                                     union_membership: character.union_membership,
+                                    stamina: character.stamina,
                                 }
                             })
                     });
@@ -549,6 +551,7 @@ pub fn game_server_main(
 #[read_component(SkillPoints)]
 #[read_component(QuestState)]
 #[read_component(UnionMembership)]
+#[read_component(Stamina)]
 #[filter(!component::<GameClient>())]
 pub fn game_server_disconnect_handler(
     world: &SubWorld,
@@ -574,6 +577,7 @@ pub fn game_server_disconnect_handler(
         let skill_points = entry.get_component::<SkillPoints>();
         let quest_state = entry.get_component::<QuestState>();
         let union_membership = entry.get_component::<UnionMembership>();
+        let stamina = entry.get_component::<Stamina>();
         let storage = CharacterStorage {
             info: info.clone(),
             basic_stats: basic_stats.unwrap().clone(),
@@ -591,6 +595,7 @@ pub fn game_server_disconnect_handler(
             skill_points: skill_points.unwrap().clone(),
             quest_state: quest_state.unwrap().clone(),
             union_membership: union_membership.unwrap().clone(),
+            stamina: stamina.unwrap().clone(),
         };
         storage.save().ok();
     }

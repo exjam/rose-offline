@@ -15,7 +15,8 @@ use crate::{
             CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
             HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
             ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
-            SkillPoints, StatPoints, Team, UnionMembership, VehiclePartIndex, INVENTORY_PAGE_SIZE,
+            SkillPoints, Stamina, StatPoints, Team, UnionMembership, VehiclePartIndex,
+            INVENTORY_PAGE_SIZE,
         },
         messages::server::{
             LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
@@ -294,6 +295,7 @@ pub struct PacketServerSelectCharacter<'a> {
     pub stat_points: StatPoints,
     pub skill_points: SkillPoints,
     pub union_membership: &'a UnionMembership,
+    pub stamina: Stamina,
 }
 
 impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
@@ -356,7 +358,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u16(0); // Guild contribution
         writer.write_u8(0); // Guild pos
         writer.write_u16(0); // PK flag
-        writer.write_u16(100); // Stamina
+        writer.write_u16(packet.stamina.stamina as u16);
 
         for _ in 0..40 {
             writer.write_u32(0); // seconds remaining

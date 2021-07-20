@@ -750,9 +750,18 @@ pub fn npc_ai(
                                             world_rates.xp_rate,
                                         );
                                     if reward_xp > 0 {
+                                        let stamina = game_data
+                                            .ability_value_calculator
+                                            .calculate_give_stamina(
+                                                reward_xp,
+                                                level.level as i32,
+                                                world_rates.xp_rate,
+                                            );
+
                                         pending_xp_list.push(PendingXp::new(
                                             damage_source.entity,
                                             reward_xp as u64,
+                                            stamina as u32,
                                             Some(*entity),
                                         ));
                                     }
