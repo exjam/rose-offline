@@ -295,7 +295,7 @@ pub fn command(
                         }
                     }
 
-                    let distance = (destination.xy() - position.position.xy()).magnitude_squared();
+                    let distance = (destination.xy() - position.position.xy()).magnitude();
                     if distance < required_distance {
                         *command = Command::with_stop();
                         cmd.remove_component::<Destination>(*entity);
