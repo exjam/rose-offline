@@ -883,7 +883,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
-        writer.write_u8(0); // move mode
+        writer.write_u8(1); // move mode
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
@@ -907,7 +907,6 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
             VehiclePartIndex::Body,
             VehiclePartIndex::Engine,
             VehiclePartIndex::Leg,
-            VehiclePartIndex::Ability,
             VehiclePartIndex::Arms,
         ] {
             writer.write_equipment_item_part(packet.equipment.get_vehicle_item(*index));
