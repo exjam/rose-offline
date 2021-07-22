@@ -7,8 +7,8 @@ use crate::game::{
     messages::control::ControlMessage,
     resources::{
         ClientEntityList, ControlChannel, GameData, LoginTokens, PendingChatCommandList,
-        PendingDamageList, PendingQuestTriggerList, PendingXpList, ServerList, ServerMessages,
-        ServerTime, WorldRates, WorldTime,
+        PendingDamageList, PendingQuestTriggerList, PendingSaveList, PendingXpList, ServerList,
+        ServerMessages, ServerTime, WorldRates, WorldTime,
     },
     systems::*,
 };
@@ -38,6 +38,7 @@ impl GameWorld {
         resources.insert(PendingChatCommandList::new());
         resources.insert(PendingDamageList::new());
         resources.insert(PendingQuestTriggerList::new());
+        resources.insert(PendingSaveList::new());
         resources.insert(PendingXpList::new());
         resources.insert(WorldRates::new());
         resources.insert(WorldTime::new());
@@ -63,7 +64,6 @@ impl GameWorld {
             .add_system(game_server_authentication_system())
             .add_system(game_server_join_system())
             .add_system(game_server_main_system())
-            .add_system(game_server_disconnect_handler_system())
             .add_system(chat_commands_system())
             .add_system(monster_spawn_system())
             .add_system(npc_ai_system())
@@ -79,6 +79,8 @@ impl GameWorld {
             .flush()
             .add_system(client_entity_visibility_system())
             .add_system(server_messages_sender_system())
+            .flush()
+            .add_system(save_system())
             .build();
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);

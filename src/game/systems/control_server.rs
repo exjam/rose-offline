@@ -3,7 +3,9 @@ use legion::{system, systems::CommandBuffer};
 use crate::game::{
     components::{GameClient, LoginClient, ServerInfo, WorldClient},
     messages::control::{ClientType, ControlMessage},
-    resources::{ControlChannel, GameServer, ServerList, WorldServer},
+    resources::{
+        ControlChannel, GameServer, PendingSave, PendingSaveList, ServerList, WorldServer,
+    },
 };
 
 #[system]
@@ -11,6 +13,7 @@ pub fn control_server(
     cmd: &mut CommandBuffer,
     #[resource] channel: &mut ControlChannel,
     #[resource] server_list: &mut ServerList,
+    #[resource] pending_save_list: &mut PendingSaveList,
 ) {
     while let Ok(message) = channel.control_rx.try_recv() {
         match message {
@@ -37,7 +40,9 @@ pub fn control_server(
                 client_type,
                 entity,
             } => match client_type {
-                ClientType::Game => cmd.remove_component::<GameClient>(entity),
+                ClientType::Game => {
+                    pending_save_list.push(PendingSave::with_character(entity, true))
+                }
                 _ => cmd.remove(entity),
             },
             ControlMessage::AddWorldServer {

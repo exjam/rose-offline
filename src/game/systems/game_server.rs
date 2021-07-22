@@ -1,6 +1,4 @@
-use legion::{
-    component, system, systems::CommandBuffer, world::SubWorld, Entity, EntityStore, Query,
-};
+use legion::{component, system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
 use nalgebra::Point3;
 
@@ -15,8 +13,8 @@ use crate::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, QuestState, SkillList,
-            SkillPoints, Stamina, StatPoints, Team, UnionMembership, WorldClient,
+            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, SkillList, StatPoints,
+            Team, WorldClient,
         },
         messages::{
             client::{
@@ -540,78 +538,4 @@ pub fn game_server_main(
             }
         },
     );
-}
-
-#[system(for_each)]
-#[read_component(BasicStats)]
-#[read_component(Inventory)]
-#[read_component(Equipment)]
-#[read_component(Level)]
-#[read_component(ExperiencePoints)]
-#[read_component(Position)]
-#[read_component(SkillList)]
-#[read_component(Hotbar)]
-#[read_component(HealthPoints)]
-#[read_component(ManaPoints)]
-#[read_component(StatPoints)]
-#[read_component(SkillPoints)]
-#[read_component(QuestState)]
-#[read_component(UnionMembership)]
-#[read_component(Stamina)]
-#[filter(!component::<GameClient>())]
-pub fn game_server_disconnect_handler(
-    world: &SubWorld,
-    cmd: &mut CommandBuffer,
-    entity: &Entity,
-    client_entity: Option<&ClientEntity>,
-    info: &CharacterInfo,
-    position: &Position,
-    #[resource] client_entity_list: &mut ClientEntityList,
-) {
-    if let Ok(entry) = world.entry_ref(*entity) {
-        let basic_stats = entry.get_component::<BasicStats>();
-        let inventory = entry.get_component::<Inventory>();
-        let equipment = entry.get_component::<Equipment>();
-        let level = entry.get_component::<Level>();
-        let experience_points = entry.get_component::<ExperiencePoints>();
-        let position = entry.get_component::<Position>();
-        let skill_list = entry.get_component::<SkillList>();
-        let hotbar = entry.get_component::<Hotbar>();
-        let health_points = entry.get_component::<HealthPoints>();
-        let mana_points = entry.get_component::<ManaPoints>();
-        let stat_points = entry.get_component::<StatPoints>();
-        let skill_points = entry.get_component::<SkillPoints>();
-        let quest_state = entry.get_component::<QuestState>();
-        let union_membership = entry.get_component::<UnionMembership>();
-        let stamina = entry.get_component::<Stamina>();
-        let storage = CharacterStorage {
-            info: info.clone(),
-            basic_stats: basic_stats.unwrap().clone(),
-            inventory: inventory.unwrap().clone(),
-            equipment: equipment.unwrap().clone(),
-            level: level.unwrap().clone(),
-            experience_points: experience_points.unwrap().clone(),
-            position: position.unwrap().clone(),
-            skill_list: skill_list.unwrap().clone(),
-            hotbar: hotbar.unwrap().clone(),
-            delete_time: None,
-            health_points: *health_points.unwrap(),
-            mana_points: *mana_points.unwrap(),
-            stat_points: *stat_points.unwrap(),
-            skill_points: *skill_points.unwrap(),
-            quest_state: quest_state.unwrap().clone(),
-            union_membership: union_membership.unwrap().clone(),
-            stamina: *stamina.unwrap(),
-        };
-        storage.save().ok();
-    }
-
-    if let Some(client_entity) = client_entity {
-        client_entity_list
-            .get_zone_mut(position.zone as usize)
-            .unwrap()
-            .free(client_entity.id);
-    }
-
-    cmd.remove(*entity);
 }
