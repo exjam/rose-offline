@@ -194,8 +194,8 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
     }
 
     let min_x = min_x.unwrap();
-    let min_y = min_y.unwrap();
-    let max_x = max_x.unwrap();
+    let min_y = min_y.unwrap() - 1; // Map grows in negative y
+    let max_x = max_x.unwrap() + 1; // Map grows in positive x
     let max_y = max_y.unwrap();
 
     let sector_size = data
@@ -203,8 +203,8 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
         .unwrap_or(0)
         .clamp(MIN_SECTOR_SIZE, MAX_SECTOR_SIZE);
     let block_size = 16.0 * zon_file.grid_per_patch * zon_file.grid_size;
-    let num_blocks_x = (max_x + 1) - min_x;
-    let num_blocks_y = (max_y + 1) - min_y;
+    let num_blocks_x = max_x - min_x;
+    let num_blocks_y = max_y - min_y;
     let num_sectors_x = ((num_blocks_x as f32 * block_size) / sector_size as f32) as u32;
     let num_sectors_y = ((num_blocks_y as f32 * block_size) / sector_size as f32) as u32;
 
