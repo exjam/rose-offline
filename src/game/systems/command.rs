@@ -252,8 +252,10 @@ pub fn command(
                 _ => command.required_duration,
             };
 
-            let command_complete =
-                required_duration.map_or_else(|| true, |duration| command.duration > duration);
+            let command_complete = required_duration.map_or_else(
+                || true,
+                |required_duration| command.duration >= required_duration,
+            );
             if !command_complete {
                 // Current command still in animation
                 return;
