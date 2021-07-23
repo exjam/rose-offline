@@ -259,6 +259,11 @@ pub fn command(
                 return;
             }
 
+            if command.is_dead() {
+                // We can't perform NextCommand if we are dead!
+                return;
+            }
+
             if next_command.command.is_none() {
                 // No next command
                 return;
