@@ -265,7 +265,12 @@ pub fn command(
             }
 
             if next_command.command.is_none() {
-                // No next command
+                // If we have completed current command, and there is no next command, then clear current.
+                if command_complete {
+                    *command = Command::default();
+                }
+
+                // Nothing to do when there is no next command
                 return;
             }
 
