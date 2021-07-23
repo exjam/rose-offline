@@ -126,17 +126,27 @@ fn handle_gm_command(
         .ok_or(GMCommandError::InvalidCommand)?
     {
         ("where", _) => {
+            let sector = chat_command_world
+                .client_entity_list
+                .get_zone(chat_command_user.position.zone as usize)
+                .map(|client_entity_zone| {
+                    client_entity_zone.calculate_sector(chat_command_user.position.position.xy())
+                })
+                .unwrap_or_else(|| Point2::new(0u32, 0u32));
+
             chat_command_user
                 .game_client
                 .server_message_tx
                 .send(ServerMessage::Whisper(Whisper {
                     from: String::from("SERVER"),
                     text: format!(
-                        "zone: {} x: {} y: {} z: {}",
+                        "zone: {} position: ({}, {}, {}) sector: ({}, {})",
                         chat_command_user.position.zone,
                         chat_command_user.position.position.x,
                         chat_command_user.position.position.y,
-                        chat_command_user.position.position.z
+                        chat_command_user.position.position.z,
+                        sector.x,
+                        sector.y,
                     ),
                 }))
                 .ok();

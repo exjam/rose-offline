@@ -71,7 +71,7 @@ impl ClientEntityZone {
         }
     }
 
-    fn calculate_sector(&self, position: Point2<f32>) -> Point2<u32> {
+    pub fn calculate_sector(&self, position: Point2<f32>) -> Point2<u32> {
         let sector = (position - self.sectors_base_position) / self.sector_size;
         Point2::new(
             u32::min(
