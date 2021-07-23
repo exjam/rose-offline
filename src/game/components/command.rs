@@ -32,7 +32,6 @@ pub enum CommandData {
     Attack(CommandAttack),
     PickupDroppedItem(CommandPickupDroppedItem),
     // TODO:
-    // Die
     // Cast skill
     // Sit
 }
@@ -121,11 +120,8 @@ impl Command {
         matches!(self.command, CommandData::Die(_))
     }
 
-    pub fn with_die(killer: Option<Entity>) -> Self {
-        Self::new(
-            CommandData::Die(CommandDie { killer }),
-            Some(Duration::new(u64::MAX, 0)),
-        )
+    pub fn with_die(killer: Option<Entity>, duration: Option<Duration>) -> Self {
+        Self::new(CommandData::Die(CommandDie { killer }), duration)
     }
 
     pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {

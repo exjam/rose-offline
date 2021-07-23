@@ -9,6 +9,7 @@ pub struct NpcAi {
     pub idle_duration: Duration,
     pub has_run_created_trigger: bool,
     pub pending_damage: Vec<(Entity, Damage)>,
+    pub has_run_dead_ai: bool,
 }
 
 impl NpcAi {
@@ -18,6 +19,7 @@ impl NpcAi {
             idle_duration: Duration::default(),
             has_run_created_trigger: false,
             pending_damage: Vec::new(),
+            has_run_dead_ai: false,
         }
     }
 }

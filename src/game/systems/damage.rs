@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use legion::{system, systems::CommandBuffer, world::SubWorld, Query};
 
 use crate::game::{
     components::{
-        ClientEntity, Command, DamageSource, DamageSources, HealthPoints, NpcAi, Position,
+        ClientEntity, Command, DamageSource, DamageSources, HealthPoints, MotionData, NpcAi,
+        Position,
     },
     messages::server::{DamageEntity, ServerMessage},
     resources::{PendingDamageList, ServerMessages, ServerTime},
@@ -20,6 +23,7 @@ pub fn damage(
         &mut HealthPoints,
         Option<&mut DamageSources>,
         Option<&mut NpcAi>,
+        Option<&MotionData>,
     )>,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
@@ -31,7 +35,7 @@ pub fn damage(
             .map(|client_entity| Some(client_entity.id))
             .unwrap_or(None);
 
-        if let Ok((client_entity, position, health_points, damage_sources, npc_ai)) =
+        if let Ok((client_entity, position, health_points, damage_sources, npc_ai, motion_data)) =
             defender_query.get_mut(world, pending_damage.defender)
         {
             if pending_damage.damage.apply_hit_stun {
@@ -104,7 +108,13 @@ pub fn damage(
             if health_points.hp == 0 {
                 cmd.add_component(
                     pending_damage.defender,
-                    Command::with_die(Some(pending_damage.attacker)),
+                    Command::with_die(
+                        Some(pending_damage.attacker),
+                        motion_data
+                            .and_then(|motion_data| motion_data.die.as_ref())
+                            .map(|die_motion| die_motion.duration)
+                            .or_else(|| Some(Duration::from_secs(1))),
+                    ),
                 );
             }
         }
