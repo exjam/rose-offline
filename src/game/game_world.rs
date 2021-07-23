@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use crate::game::{
     messages::control::ControlMessage,
     resources::{
-        ClientEntityList, ControlChannel, GameData, LoginTokens, PendingChatCommandList,
+        BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, PendingChatCommandList,
         PendingDamageList, PendingQuestTriggerList, PendingSaveList, PendingXpList, ServerList,
         ServerMessages, ServerTime, WorldRates, WorldTime,
     },
@@ -30,6 +30,7 @@ impl GameWorld {
         let mut world = World::default();
 
         let mut resources = Resources::default();
+        resources.insert(BotList::new());
         resources.insert(ControlChannel::new(self.control_rx.clone()));
         resources.insert(ServerList::new());
         resources.insert(LoginTokens::new());
@@ -66,6 +67,7 @@ impl GameWorld {
             .add_system(game_server_main_system())
             .add_system(chat_commands_system())
             .add_system(monster_spawn_system())
+            .add_system(bot_ai_system())
             .add_system(npc_ai_system())
             .add_system(expire_time_system())
             .flush()

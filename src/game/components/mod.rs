@@ -1,6 +1,7 @@
 mod ability_values;
 mod account;
 mod basic_stats;
+mod bot_ai;
 mod character_delete_time;
 mod character_info;
 mod character_list;
@@ -44,6 +45,7 @@ mod zone;
 pub use ability_values::{AbilityValues, DamageCategory, DamageType};
 pub use account::*;
 pub use basic_stats::*;
+pub use bot_ai::{BotAi, BotAiState};
 pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::*;
 pub use character_list::CharacterList;

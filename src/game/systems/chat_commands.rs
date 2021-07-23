@@ -1,19 +1,29 @@
 use clap::{App, Arg};
 use lazy_static::lazy_static;
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
-use nalgebra::Point3;
-use std::num::{ParseFloatError, ParseIntError};
+use nalgebra::{Point2, Point3};
+use rand::prelude::SliceRandom;
+use std::{
+    f32::consts::PI,
+    num::{ParseFloatError, ParseIntError},
+};
 
 use crate::game::{
-    bundles::client_entity_teleport_zone,
-    components::{AbilityValues, ClientEntity, GameClient, Level, Position},
+    bundles::{client_entity_join_zone, client_entity_teleport_zone, create_character_entity},
+    components::{
+        AbilityValues, BotAi, ClientEntity, ClientEntityType, Command, EquipmentIndex,
+        EquipmentItemDatabase, GameClient, Level, MoveSpeed, NextCommand, Owner, Position, Team,
+    },
     messages::server::{ServerMessage, Whisper},
-    resources::{ClientEntityList, PendingChatCommandList, PendingXp, PendingXpList},
+    resources::{
+        BotList, BotListEntry, ClientEntityList, PendingChatCommandList, PendingXp, PendingXpList,
+    },
     GameData,
 };
 
 pub struct ChatCommandWorld<'a> {
     cmd: &'a mut CommandBuffer,
+    bot_list: &'a mut BotList,
     client_entity_list: &'a mut ClientEntityList,
     game_data: &'a GameData,
     pending_xp_list: &'a mut PendingXpList,
@@ -41,6 +51,7 @@ lazy_static! {
                     .arg(Arg::new("y").required(true)),
             )
             .subcommand(App::new("level").arg(Arg::new("level").required(true)))
+            .subcommand(App::new("bot").arg(Arg::new("n").required(true)))
     };
 }
 
@@ -202,6 +213,110 @@ fn handle_gm_command(
                 None,
             ));
         }
+        ("bot", arg_matches) => {
+            let num_bots = arg_matches.value_of("n").unwrap().parse::<i32>()?;
+            let spawn_radius = f32::max(num_bots as f32 * 15.0, 100.0);
+            let mut rng = rand::thread_rng();
+            let genders = [0, 1];
+            let faces = [1, 8, 15, 22, 29, 36, 43];
+            let hair = [0, 5, 10, 15, 20];
+
+            for i in 0..num_bots {
+                let angle = (i as f32 * (2.0 * PI)) / num_bots as f32;
+                let offset_x = spawn_radius * angle.cos();
+                let offset_y = spawn_radius * angle.sin();
+
+                if let Ok(mut bot_data) = chat_command_world.game_data.character_creator.create(
+                    format!(
+                        "Friend {}",
+                        chat_command_world.bot_list.len() + 1 + i as usize
+                    ),
+                    *genders.choose(&mut rng).unwrap() as u8,
+                    1,
+                    *faces.choose(&mut rng).unwrap() as u8,
+                    *hair.choose(&mut rng).unwrap() as u8,
+                ) {
+                    let entity = chat_command_world
+                        .cmd
+                        .push((BotAi::new(), Owner::new(*chat_command_user.entity)));
+                    chat_command_world.bot_list.push(BotListEntry::new(entity));
+
+                    bot_data.position = chat_command_user.position.clone();
+                    bot_data.position.position.x += offset_x;
+                    bot_data.position.position.y += offset_y;
+
+                    let ability_values = chat_command_world
+                        .game_data
+                        .ability_value_calculator
+                        .calculate(
+                            &bot_data.info,
+                            &bot_data.level,
+                            &bot_data.equipment,
+                            &bot_data.inventory,
+                            &bot_data.basic_stats,
+                            &bot_data.skill_list,
+                        );
+                    bot_data.health_points.hp = ability_values.max_health as u32;
+                    bot_data.mana_points.mp = ability_values.max_mana as u32;
+
+                    let command = Command::default();
+                    let next_command = NextCommand::default();
+                    let move_speed = MoveSpeed::new(ability_values.run_speed as f32);
+                    let team = Team::default_character();
+
+                    let weapon_motion_type = chat_command_world
+                        .game_data
+                        .items
+                        .get_equipped_weapon_item_data(
+                            &bot_data.equipment,
+                            EquipmentIndex::WeaponRight,
+                        )
+                        .map(|item_data| item_data.motion_type)
+                        .unwrap_or(0) as usize;
+
+                    let motion_data = chat_command_world
+                        .game_data
+                        .motions
+                        .get_character_motions(weapon_motion_type, bot_data.info.gender as usize);
+
+                    create_character_entity(
+                        chat_command_world.cmd,
+                        &entity,
+                        ability_values,
+                        bot_data.basic_stats,
+                        command,
+                        bot_data.equipment,
+                        bot_data.experience_points,
+                        bot_data.health_points,
+                        bot_data.hotbar,
+                        bot_data.info,
+                        bot_data.inventory,
+                        bot_data.level,
+                        bot_data.mana_points,
+                        motion_data,
+                        move_speed,
+                        next_command,
+                        bot_data.position.clone(),
+                        bot_data.quest_state,
+                        bot_data.skill_list,
+                        bot_data.skill_points,
+                        bot_data.stamina,
+                        bot_data.stat_points,
+                        team,
+                        bot_data.union_membership,
+                    );
+
+                    client_entity_join_zone(
+                        chat_command_world.cmd,
+                        chat_command_world.client_entity_list,
+                        &entity,
+                        ClientEntityType::Character,
+                        &bot_data.position,
+                    )
+                    .ok();
+                }
+            }
+        }
         _ => return Err(GMCommandError::InvalidCommand),
     }
 
@@ -220,6 +335,7 @@ pub fn chat_commands(
         &Level,
         &Position,
     )>,
+    #[resource] bot_list: &mut BotList,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] game_data: &GameData,
     #[resource] pending_chat_commands: &mut PendingChatCommandList,
@@ -227,6 +343,7 @@ pub fn chat_commands(
 ) {
     let mut chat_command_world = ChatCommandWorld {
         cmd,
+        bot_list,
         client_entity_list,
         game_data,
         pending_xp_list,

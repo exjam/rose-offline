@@ -1,3 +1,4 @@
+mod bot_list;
 mod client_entity_list;
 mod control_channel;
 mod game_data;
@@ -13,6 +14,7 @@ mod server_time;
 mod world_rates;
 mod world_time;
 
+pub use bot_list::{BotList, BotListEntry};
 pub use client_entity_list::{ClientEntityList, ClientEntitySet};
 pub use control_channel::ControlChannel;
 pub use game_data::GameData;
