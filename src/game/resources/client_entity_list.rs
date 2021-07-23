@@ -246,6 +246,8 @@ impl Iterator for ClientEntityZoneEntityIterator<'_> {
                 let distance_squared = (position.xy() - self.origin).magnitude_squared();
                 if distance_squared <= self.max_distance_squared {
                     break Some((*entity, *position));
+                } else {
+                    continue;
                 }
             }
 
