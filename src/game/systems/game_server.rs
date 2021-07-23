@@ -260,7 +260,7 @@ pub fn game_server_main(
                             pending_chat_command_list.push((*entity, text));
                         } else {
                             server_messages.send_entity_message(
-                                *entity,
+                                client_entity,
                                 ServerMessage::LocalChat(server::LocalChat {
                                     entity_id: client_entity.id,
                                     text,
@@ -271,11 +271,11 @@ pub fn game_server_main(
                     ClientMessage::Move(message) => {
                         let mut move_target_entity = None;
                         if let Some(target_entity_id) = message.target_entity_id {
-                            if let Some(target_entity) = client_entity_list
+                            if let Some((target_entity, _, _)) = client_entity_list
                                 .get_zone(position.zone as usize)
                                 .and_then(|zone| zone.get_entity(target_entity_id))
                             {
-                                move_target_entity = Some(target_entity);
+                                move_target_entity = Some(*target_entity);
                             }
                         }
 
@@ -286,11 +286,11 @@ pub fn game_server_main(
                         );
                     }
                     ClientMessage::Attack(message) => {
-                        if let Some(target_entity) = client_entity_list
+                        if let Some((target_entity, _, _)) = client_entity_list
                             .get_zone(position.zone as usize)
                             .and_then(|zone| zone.get_entity(message.target_entity_id))
                         {
-                            cmd.add_component(*entity, NextCommand::with_attack(target_entity));
+                            cmd.add_component(*entity, NextCommand::with_attack(*target_entity));
                         } else {
                             cmd.add_component(*entity, NextCommand::with_stop());
                         }
@@ -341,7 +341,7 @@ pub fn game_server_main(
                                         .ok();
 
                                     server_messages.send_entity_message(
-                                        *entity,
+                                        client_entity,
                                         ServerMessage::UpdateEquipment(server::UpdateEquipment {
                                             entity_id: client_entity.id,
                                             equipment_index,
@@ -371,7 +371,7 @@ pub fn game_server_main(
                                             .ok();
 
                                         server_messages.send_entity_message(
-                                            *entity,
+                                            client_entity,
                                             ServerMessage::UpdateEquipment(
                                                 server::UpdateEquipment {
                                                     entity_id: client_entity.id,
@@ -441,13 +441,13 @@ pub fn game_server_main(
                         }
                     }
                     ClientMessage::PickupDroppedItem(message) => {
-                        if let Some(target_entity) = client_entity_list
+                        if let Some((target_entity, _, _)) = client_entity_list
                             .get_zone(position.zone as usize)
                             .and_then(|zone| zone.get_entity(message.target_entity_id))
                         {
                             cmd.add_component(
                                 *entity,
-                                NextCommand::with_pickup_dropped_item(target_entity),
+                                NextCommand::with_pickup_dropped_item(*target_entity),
                             );
                         } else {
                             cmd.add_component(*entity, NextCommand::with_stop());

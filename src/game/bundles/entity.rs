@@ -147,7 +147,7 @@ pub fn client_entity_join_zone(
         .get_zone_mut(position.zone as usize)
         .ok_or(ClientEntityJoinZoneError::InvalidZone)?;
     let client_entity = zone
-        .allocate(client_entity_type, *entity, position.position)
+        .join_zone(client_entity_type, *entity, position.position)
         .ok_or(ClientEntityJoinZoneError::OutOfEntityId)?;
 
     let client_entity_id = client_entity.id;
@@ -163,7 +163,7 @@ pub fn client_entity_leave_zone(
     position: &Position,
 ) {
     if let Some(client_entity_zone) = client_entity_list.get_zone_mut(position.zone as usize) {
-        client_entity_zone.free(client_entity.id)
+        client_entity_zone.leave_zone(entity, client_entity);
     }
     cmd.remove_component::<ClientEntity>(*entity);
     cmd.remove_component::<ClientEntityVisibility>(*entity);

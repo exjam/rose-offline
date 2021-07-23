@@ -118,7 +118,7 @@ pub fn experience_points(
 
                 // Send level up packet
                 server_messages.send_entity_message(
-                    *entity,
+                    client_entity,
                     ServerMessage::UpdateLevel(UpdateLevel {
                         entity_id: client_entity.id,
                         level: level.clone(),

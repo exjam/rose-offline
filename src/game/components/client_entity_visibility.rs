@@ -1,9 +1,8 @@
-use legion::Entity;
-use std::collections::HashSet;
+use crate::game::resources::ClientEntitySet;
 
 #[derive(Default)]
 pub struct ClientEntityVisibility {
-    pub entities: HashSet<Entity>,
+    pub entities: ClientEntitySet,
 }
 
 impl ClientEntityVisibility {

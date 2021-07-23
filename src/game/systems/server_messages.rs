@@ -23,7 +23,12 @@ pub fn server_messages_sender(
         }
 
         for message in server_messages.pending_entity_messages.iter() {
-            if client_visibility.entities.contains(&message.entity) {
+            if position.zone == message.zone
+                && client_visibility
+                    .entities
+                    .get(message.entity_id.0)
+                    .map_or(false, |b| *b)
+            {
                 client.server_message_tx.send(message.message.clone()).ok();
             }
         }

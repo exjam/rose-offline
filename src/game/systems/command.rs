@@ -3,6 +3,7 @@ use std::time::Duration;
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 
 use crate::game::{
+    bundles::client_entity_leave_zone,
     components::{
         AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandData,
         CommandMove, CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
@@ -12,7 +13,9 @@ use crate::game::{
         self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
         ServerMessage,
     },
-    resources::{GameData, PendingDamage, PendingDamageList, ServerMessages, ServerTime},
+    resources::{
+        ClientEntityList, GameData, PendingDamage, PendingDamageList, ServerMessages, ServerTime,
+    },
 };
 
 const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
@@ -24,7 +27,7 @@ fn set_command_stop(
     command: &mut Command,
     cmd: &mut CommandBuffer,
     entity: &Entity,
-    entity_id: &ClientEntity,
+    client_entity: &ClientEntity,
     position: &Position,
     server_messages: &mut ServerMessages,
 ) {
@@ -33,9 +36,9 @@ fn set_command_stop(
     cmd.remove_component::<Target>(*entity);
 
     server_messages.send_entity_message(
-        *entity,
+        client_entity,
         ServerMessage::StopMoveEntity(server::StopMoveEntity {
-            entity_id: entity_id.id,
+            entity_id: client_entity.id,
             x: position.position.x,
             y: position.position.y,
             z: position.position.z as u16,
@@ -91,6 +94,7 @@ fn is_valid_pickup_target<'a>(
     world: &'a mut SubWorld,
 ) -> Option<(
     &'a ClientEntity,
+    &'a Position,
     &'a mut Option<DroppedItem>,
     Option<&'a Owner>,
 )> {
@@ -100,7 +104,12 @@ fn is_valid_pickup_target<'a>(
         // Check distance to target
         let distance = (position.position.xy() - target_position.position.xy()).magnitude();
         if position.zone == target_position.zone && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
-            return Some((target_client_entity, target_dropped_item, target_owner));
+            return Some((
+                target_client_entity,
+                target_position,
+                target_dropped_item,
+                target_owner,
+            ));
         }
     }
 
@@ -132,6 +141,7 @@ pub fn command(
         Option<&Owner>,
     )>,
     #[resource] server_time: &ServerTime,
+    #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] pending_damage_list: &mut PendingDamageList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
@@ -185,7 +195,7 @@ pub fn command(
 
                         let distance = (destination.xy() - position.position.xy()).magnitude();
                         server_messages.send_entity_message(
-                            *entity,
+                            client_entity,
                             ServerMessage::MoveEntity(server::MoveEntity {
                                 entity_id: client_entity.id,
                                 target_entity_id,
@@ -211,7 +221,7 @@ pub fn command(
                                 .magnitude();
 
                             server_messages.send_entity_message(
-                                *entity,
+                                client_entity,
                                 ServerMessage::AttackEntity(server::AttackEntity {
                                     entity_id: client_entity.id,
                                     target_entity_id: target_client_entity.id,
@@ -270,7 +280,6 @@ pub fn command(
                     destination,
                     target,
                 }) => {
-                    let mut required_distance = 0.1;
                     if let Some(target_entity) = target {
                         if let Some((target_client_entity, target_position)) = is_valid_move_target(
                             position,
@@ -278,16 +287,25 @@ pub fn command(
                             move_target_query,
                             &move_target_query_world,
                         ) {
-                            *destination = target_position.position;
-                            match target_client_entity.entity_type {
-                                ClientEntityType::Character => {
-                                    required_distance = CHARACTER_MOVE_TO_DISTANCE
-                                }
-                                ClientEntityType::Npc => required_distance = NPC_MOVE_TO_DISTANCE,
+                            let required_distance = match target_client_entity.entity_type {
+                                ClientEntityType::Character => Some(CHARACTER_MOVE_TO_DISTANCE),
+                                ClientEntityType::Npc => Some(NPC_MOVE_TO_DISTANCE),
                                 ClientEntityType::DroppedItem => {
-                                    required_distance = DROPPED_ITEM_MOVE_TO_DISTANCE
+                                    Some(DROPPED_ITEM_MOVE_TO_DISTANCE)
                                 }
-                                _ => {}
+                                _ => None,
+                            };
+
+                            if let Some(required_distance) = required_distance {
+                                let offset = (target_position.position.xy()
+                                    - position.position.xy())
+                                .normalize()
+                                    * required_distance;
+                                destination.x = target_position.position.x - offset.x;
+                                destination.y = target_position.position.y - offset.y;
+                                destination.z = target_position.position.z;
+                            } else {
+                                *destination = target_position.position;
                             }
                         } else {
                             *target = None;
@@ -296,11 +314,12 @@ pub fn command(
                     }
 
                     let distance = (destination.xy() - position.position.xy()).magnitude();
-                    if distance < required_distance {
+                    if distance < 0.1 {
                         *command = Command::with_stop();
                         cmd.remove_component::<Destination>(*entity);
                         cmd.remove_component::<Target>(*entity);
                     } else {
+                        *command = Command::with_move(*destination, *target);
                         cmd.add_component(*entity, Destination::new(*destination));
 
                         if let Some(target_entity) = target {
@@ -312,14 +331,17 @@ pub fn command(
                     target: target_entity,
                 }) => {
                     if let Some(inventory) = inventory {
-                        if let Some((target_client_entity, target_dropped_item, target_owner)) =
-                            is_valid_pickup_target(
-                                position,
-                                target_entity,
-                                pickup_dropped_item_target_query,
-                                &mut pickup_dropped_item_target_query_world,
-                            )
-                        {
+                        if let Some((
+                            target_client_entity,
+                            target_position,
+                            target_dropped_item,
+                            target_owner,
+                        )) = is_valid_pickup_target(
+                            position,
+                            target_entity,
+                            pickup_dropped_item_target_query,
+                            &mut pickup_dropped_item_target_query_world,
+                        ) {
                             let result = if !target_owner
                                 .map_or(true, |owner| owner.entity == *entity)
                             {
@@ -355,6 +377,13 @@ pub fn command(
 
                             if result.is_ok() {
                                 // Delete picked up item
+                                client_entity_leave_zone(
+                                    cmd,
+                                    client_entity_list,
+                                    target_entity,
+                                    target_client_entity,
+                                    target_position,
+                                );
                                 cmd.remove(*target_entity);
 
                                 // Update our current command
