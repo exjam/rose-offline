@@ -49,7 +49,7 @@ impl StbNpc {
         Some(tabs)
     }
 
-    stb_column! { 25, get_is_targetable, bool }
+    stb_column! { 25, get_is_untargetable, bool }
     stb_column! { 26, get_attack_range, i32 }
     stb_column! { 27, get_npc_type_index, u32 }
     stb_column! { 28, get_hit_sound_index, u32 }
@@ -192,7 +192,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 summon_point_requirement: data.get_summon_point_requirement(id).unwrap_or(0),
                 shop_tabs: data.get_shop_tabs(id).unwrap_or_else(Vec::new),
                 shop_union_number: data.get_shop_union_number(id).unwrap_or(0),
-                is_targetable: data.get_is_targetable(id).unwrap_or(false),
+                is_untargetable: data.get_is_untargetable(id).unwrap_or(false),
                 attack_range: data.get_attack_range(id).unwrap_or(0),
                 npc_type_index: data.get_npc_type_index(id).unwrap_or(0),
                 hit_sound_index: data.get_hit_sound_index(id).unwrap_or(0),

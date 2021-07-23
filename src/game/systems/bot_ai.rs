@@ -83,15 +83,15 @@ pub fn bot_ai(
                                         .get(&nearby_enemy_query_world, nearby_entity)
                                     {
                                         // Find valid nearby enemy entities that we can attack
-                                        let is_targetable = nearby_npc
+                                        let is_untargetable = nearby_npc
                                             .and_then(|nearby_npc| {
                                                 game_data.npcs.get_npc(nearby_npc.id as usize)
                                             })
-                                            .map_or(true, |nearby_npc_data| {
-                                                nearby_npc_data.is_targetable
+                                            .map_or(false, |nearby_npc_data| {
+                                                nearby_npc_data.is_untargetable
                                             });
 
-                                        if is_targetable
+                                        if !is_untargetable
                                             && nearby_team.id != Team::DEFAULT_NPC_TEAM_ID
                                             && nearby_team.id != team.id
                                         {

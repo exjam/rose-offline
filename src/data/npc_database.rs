@@ -47,7 +47,7 @@ pub struct NpcData {
     pub summon_point_requirement: u32,
     pub shop_tabs: Vec<u32>,
     pub shop_union_number: u32,
-    pub is_targetable: bool,
+    pub is_untargetable: bool,
     pub attack_range: i32,
     pub npc_type_index: u32,
     pub hit_sound_index: u32,
