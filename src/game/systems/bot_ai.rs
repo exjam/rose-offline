@@ -27,12 +27,13 @@ pub fn bot_ai(
     )>,
     owner_query: &mut Query<(&Position, Option<&Destination>)>,
     nearby_item_query: &mut Query<(&Option<DroppedItem>, &Owner)>,
-    nearby_monster_query: &mut Query<(&Npc, &Team)>,
+    nearby_enemy_query: &mut Query<(Option<&Npc>, &Team)>,
     #[resource] client_entity_list: &mut ClientEntityList,
+    #[resource] game_data: &GameData,
 ) {
     let (owner_query_world, mut world) = world.split_for_query(&owner_query);
     let (nearby_item_query_world, mut world) = world.split_for_query(&nearby_item_query);
-    let (nearby_monster_query_world, world) = world.split_for_query(&nearby_monster_query);
+    let (nearby_enemy_query_world, world) = world.split_for_query(&nearby_enemy_query);
     let mut bot_world = world;
 
     bot_query.for_each_mut(
@@ -78,10 +79,22 @@ pub fn bot_ai(
                                                 nearby_items.push((nearby_entity, nearby_position));
                                             }
                                         }
-                                    } else if let Ok((_, monster_team)) = nearby_monster_query
-                                        .get(&nearby_monster_query_world, nearby_entity)
+                                    } else if let Ok((nearby_npc, nearby_team)) = nearby_enemy_query
+                                        .get(&nearby_enemy_query_world, nearby_entity)
                                     {
-                                        if monster_team.id == Team::default_monster().id {
+                                        // Find valid nearby enemy entities that we can attack
+                                        let is_targetable = nearby_npc
+                                            .and_then(|nearby_npc| {
+                                                game_data.npcs.get_npc(nearby_npc.id as usize)
+                                            })
+                                            .map_or(true, |nearby_npc_data| {
+                                                nearby_npc_data.is_targetable
+                                            });
+
+                                        if is_targetable
+                                            && nearby_team.id != Team::DEFAULT_NPC_TEAM_ID
+                                            && nearby_team.id != team.id
+                                        {
                                             nearby_monsters.push((nearby_entity, nearby_position));
                                         }
                                     }

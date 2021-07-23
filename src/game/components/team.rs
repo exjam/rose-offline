@@ -4,15 +4,25 @@ pub struct Team {
 }
 
 impl Team {
+    pub const DEFAULT_NPC_TEAM_ID: u32 = 1;
+    pub const DEFAULT_CHARACTER_TEAM_ID: u32 = 2;
+    pub const DEFAULT_MONSTER_TEAM_ID: u32 = 100;
+
     pub fn default_npc() -> Self {
-        Self { id: 1 }
+        Self {
+            id: Self::DEFAULT_NPC_TEAM_ID,
+        }
     }
 
     pub fn default_character() -> Self {
-        Self { id: 2 }
+        Self {
+            id: Self::DEFAULT_CHARACTER_TEAM_ID,
+        }
     }
 
     pub fn default_monster() -> Self {
-        Self { id: 100 }
+        Self {
+            id: Self::DEFAULT_MONSTER_TEAM_ID,
+        }
     }
 }
