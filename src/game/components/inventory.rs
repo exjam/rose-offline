@@ -300,4 +300,11 @@ impl Inventory {
 
         None
     }
+
+    pub fn has_empty_slot(&self, page_type: InventoryPageType) -> bool {
+        self.get_page(page_type)
+            .slots
+            .iter()
+            .any(|slot| slot.is_none())
+    }
 }

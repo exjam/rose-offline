@@ -3,10 +3,11 @@ use rand::seq::SliceRandom;
 
 use crate::game::{
     components::{
-        BotAi, BotAiState, Command, CommandData, CommandDie, Destination, DroppedItem, NextCommand,
-        Npc, Owner, Position, Team,
+        BotAi, BotAiState, Command, CommandData, CommandDie, Destination, DroppedItem, Inventory,
+        InventoryPageType, NextCommand, Npc, Owner, Position, Team,
     },
     resources::ClientEntityList,
+    GameData,
 };
 
 #[allow(clippy::type_complexity)]
@@ -19,8 +20,10 @@ pub fn bot_ai(
         &mut BotAi,
         &Command,
         &NextCommand,
+        &Inventory,
         &Position,
         &Owner,
+        &Team,
     )>,
     owner_query: &mut Query<(&Position, Option<&Destination>)>,
     nearby_item_query: &mut Query<(&Option<DroppedItem>, &Owner)>,
@@ -34,7 +37,7 @@ pub fn bot_ai(
 
     bot_query.for_each_mut(
         &mut bot_world,
-        |(entity, bot_ai, command, _next_command, position, owner)| {
+        |(entity, bot_ai, command, _next_command, inventory, position, owner, team)| {
             let _owner_components = owner_query.get(&owner_query_world, owner.entity);
 
             match command.command {
@@ -56,11 +59,24 @@ pub fn bot_ai(
                                         search_distance,
                                     )
                                 {
-                                    if let Ok((Some(_), dropped_item_owner)) = nearby_item_query
-                                        .get(&nearby_item_query_world, nearby_entity)
+                                    if let Ok((Some(dropped_item), dropped_item_owner)) =
+                                        nearby_item_query
+                                            .get(&nearby_item_query_world, nearby_entity)
                                     {
+                                        // Find any nearby dropped items that belong to us and that we have space to pick up
                                         if dropped_item_owner.entity == *entity {
-                                            nearby_items.push((nearby_entity, nearby_position));
+                                            let has_space = match dropped_item {
+                                                DroppedItem::Item(item) => inventory
+                                                    .has_empty_slot(
+                                                        InventoryPageType::from_item_type(
+                                                            item.get_item_type(),
+                                                        ),
+                                                    ),
+                                                DroppedItem::Money(_) => true,
+                                            };
+                                            if has_space {
+                                                nearby_items.push((nearby_entity, nearby_position));
+                                            }
                                         }
                                     } else if let Ok((_, monster_team)) = nearby_monster_query
                                         .get(&nearby_monster_query_world, nearby_entity)
