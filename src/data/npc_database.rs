@@ -105,6 +105,7 @@ impl NpcDatabase {
         if let Some(npc) = self.get_npc(id) {
             MotionData {
                 attack: npc.motion_data.get(&NpcMotionAction::Attack).cloned(),
+                die: npc.motion_data.get(&NpcMotionAction::Die).cloned(),
                 pickup_dropped_item: None,
             }
         } else {
