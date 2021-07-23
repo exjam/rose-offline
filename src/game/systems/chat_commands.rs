@@ -47,8 +47,8 @@ lazy_static! {
             .subcommand(
                 App::new("mm")
                     .arg(Arg::new("zone").required(true))
-                    .arg(Arg::new("x").required(true))
-                    .arg(Arg::new("y").required(true)),
+                    .arg(Arg::new("x"))
+                    .arg(Arg::new("y")),
             )
             .subcommand(App::new("level").arg(Arg::new("level").required(true)))
             .subcommand(App::new("bot").arg(Arg::new("n").required(true)))
@@ -164,8 +164,17 @@ fn handle_gm_command(
         }
         ("mm", arg_matches) => {
             let zone = arg_matches.value_of("zone").unwrap().parse::<u16>()?;
-            let x = arg_matches.value_of("x").unwrap().parse::<f32>()? * 1000.0;
-            let y = arg_matches.value_of("y").unwrap().parse::<f32>()? * 1000.0;
+            let (x, y) = if let (Some(x), Some(y)) =
+                (arg_matches.value_of("x"), arg_matches.value_of("y"))
+            {
+                (x.parse::<f32>()? * 1000.0, y.parse::<f32>()? * 1000.0)
+            } else if let Some(zone_data) =
+                chat_command_world.game_data.zones.get_zone(zone as usize)
+            {
+                (zone_data.start_position.x, zone_data.start_position.y)
+            } else {
+                (520.0, 520.0)
+            };
 
             if chat_command_world
                 .client_entity_list
