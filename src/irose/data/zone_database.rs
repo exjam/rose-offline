@@ -6,7 +6,7 @@ use crate::{
     data::{
         formats::{
             ifo::{self, IfoReadError, MonsterSpawn},
-            FileReader, IfoFile, StbFile, VfsIndex, ZonFile, ZonReadError,
+            FileReader, IfoFile, StbFile, StlFile, VfsIndex, ZonFile, ZonReadError,
         },
         NpcConversationReference, NpcReference, ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint,
         ZoneNpcSpawn,
@@ -133,7 +133,12 @@ fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn
     }
 }
 
-fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, LoadZoneError> {
+fn load_zone(
+    vfs: &VfsIndex,
+    data: &StbZone,
+    stl: &StlFile,
+    id: usize,
+) -> Result<ZoneData, LoadZoneError> {
     let zone_file =
         VfsIndex::normalise_path(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?);
     let zone_base_directory = Path::new(&zone_file)
@@ -227,9 +232,14 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
         }
     }
 
+    let name = stl
+        .get_text_string(1, data.get_zone_string_id(id).unwrap_or(""))
+        .unwrap_or(&"")
+        .to_string();
     debug!(
-        "Loaded zone {}, blocks: {} monster spawns: {}, npcs: {}, sectors ({}, {}), start: {}",
+        "Loaded zone {} {} blocks: {}, spawns: {}, npcs: {}, sectors ({}, {}), start: {}",
         id,
+        name,
         ifo_count,
         monster_spawns.len(),
         npcs.len(),
@@ -239,6 +249,7 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
     );
     Ok(ZoneData {
         id: id as u16,
+        name,
         sector_size,
         grid_per_patch: zon_file.grid_per_patch,
         grid_size: zon_file.grid_size,
@@ -256,6 +267,9 @@ fn load_zone(vfs: &VfsIndex, data: &StbZone, id: usize) -> Result<ZoneData, Load
 }
 
 pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
+    let file = vfs.open_file("3DDATA/STB/LIST_ZONE_S.STL")?;
+    let stl = StlFile::read(FileReader::from(&file)).ok()?;
+
     let file = vfs.open_file("3DDATA/STB/LIST_ZONE.STB")?;
     let data = StbZone(StbFile::read(FileReader::from(&file)).ok()?);
     let mut zones = HashMap::new();
@@ -265,7 +279,7 @@ pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
             continue;
         }
 
-        if let Ok(zone_data) = load_zone(vfs, &data, id) {
+        if let Ok(zone_data) = load_zone(vfs, &data, &stl, id) {
             zones.insert(id as u16, zone_data);
         }
     }

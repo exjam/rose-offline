@@ -26,6 +26,7 @@ pub struct ZoneNpcSpawn {
 
 pub struct ZoneData {
     pub id: u16,
+    pub name: String,
     pub sector_size: u32,
     pub grid_per_patch: f32,
     pub grid_size: f32,

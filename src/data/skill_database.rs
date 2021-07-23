@@ -27,6 +27,7 @@ pub enum SkillType {
 }
 
 pub struct SkillData {
+    pub name: String,
     pub page: SkillPage,
     pub icon_number: u32,
     pub add_ability: Vec<SkillAddAbility>,
