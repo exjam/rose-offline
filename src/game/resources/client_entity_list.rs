@@ -187,7 +187,10 @@ impl ClientEntityZone {
 
     pub fn leave_zone(&mut self, entity: &Entity, client_entity: &ClientEntity) {
         // Validate entity list
-        assert_eq!(self.entities[client_entity.id.0].as_ref().map(|x| &x.0), Some(entity));
+        assert_eq!(
+            self.entities[client_entity.id.0].as_ref().map(|x| &x.0),
+            Some(entity)
+        );
 
         // Leave sector
         self.leave_sector(client_entity.sector, client_entity.id);
@@ -203,7 +206,10 @@ impl ClientEntityZone {
         position: Point3<f32>,
     ) {
         // Validate entity list
-        assert_eq!(self.entities[client_entity.id.0].as_ref().map(|x| &x.0), Some(entity));
+        assert_eq!(
+            self.entities[client_entity.id.0].as_ref().map(|x| &x.0),
+            Some(entity)
+        );
 
         // Update sector
         let midpoint = self.calculate_sector_midpoint(client_entity.sector);
