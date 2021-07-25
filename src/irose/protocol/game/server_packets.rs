@@ -6,7 +6,7 @@ use num_derive::FromPrimitive;
 use crate::{
     data::{
         ability::AbilityType,
-        item::{EquipmentItem, Item, StackableItem},
+        item::{EquipmentItem, Item},
         Damage, NpcReference, WorldTicks,
     },
     game::{
@@ -61,6 +61,10 @@ pub enum ServerPackets {
     Teleport = 0x7a8,
     SetHotbarSlot = 0x7aa,
     LearnSkillResult = 0x7b0,
+    OpenPersonalStore = 0x7c2,
+    PersonalStoreItemList = 0x7c4,
+    PersonalStoreTransactionResult = 0x7c6,
+    PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
 }
 
 trait PacketWriteEntityId {
@@ -581,12 +585,12 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Attack(_) => 2,
             CommandData::Die(_) => 3,
             CommandData::PickupDroppedItem(_) => 4,
+            CommandData::PersonalStore => 11,
             // 6 = Cast skill on self
             // 7 = Skill on entity
             // 8 = Skill on position
             // 9 = Run away
             // 10 = Sit
-            // 11 = Vending Shop
         };
         self.write_u16(command_id);
     }
@@ -1040,6 +1044,111 @@ impl From<&PacketServerRunNpcDeathTrigger> for Packet {
     fn from(packet: &PacketServerRunNpcDeathTrigger) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::RunNpcDeathTrigger as u16);
         writer.write_u16(packet.npc.0 as u16);
+        writer.into()
+    }
+}
+
+pub struct PacketServerOpenPersonalStore<'a> {
+    pub entity_id: ClientEntityId,
+    pub skin: i32,
+    pub title: &'a str,
+}
+
+impl<'a> From<&'a PacketServerOpenPersonalStore<'a>> for Packet {
+    fn from(packet: &'a PacketServerOpenPersonalStore<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::OpenPersonalStore as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.skin as u16);
+        writer.write_null_terminated_utf8(packet.title);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPersonalStoreItemList<'a> {
+    pub sell_items: &'a [(u8, Item, Money)],
+    pub buy_items: &'a [(u8, Item, Money)],
+}
+
+impl<'a> From<&'a PacketServerPersonalStoreItemList<'a>> for Packet {
+    fn from(packet: &'a PacketServerPersonalStoreItemList<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PersonalStoreItemList as u16);
+
+        writer.write_u8(packet.sell_items.len() as u8);
+        writer.write_u8(packet.buy_items.len() as u8);
+
+        for (slot_index, item, price) in packet.sell_items.iter() {
+            writer.write_u8(*slot_index);
+            writer.write_item_full(Some(item));
+            writer.write_u32(price.0 as u32);
+        }
+
+        for (slot_index, item, price) in packet.buy_items.iter() {
+            writer.write_u8(*slot_index);
+            writer.write_item_full(Some(item));
+            writer.write_u32(price.0 as u32);
+        }
+
+        writer.into()
+    }
+}
+pub struct PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
+    pub money: Money,
+    pub slot: ItemSlot,
+    pub item: Option<Item>,
+}
+
+impl From<&PacketServerPersonalStoreTransactionUpdateMoneyAndInventory> for Packet {
+    fn from(packet: &PacketServerPersonalStoreTransactionUpdateMoneyAndInventory) -> Self {
+        let mut writer = PacketWriter::new(
+            ServerPackets::PersonalStoreTransactionUpdateMoneyAndInventory as u16,
+        );
+        writer.write_i64(packet.money.0);
+        writer.write_u8(1);
+        writer.write_u8(item_slot_to_index(packet.slot) as u8);
+        writer.write_item_full(packet.item.as_ref());
+        writer.into()
+    }
+}
+
+pub enum PacketServerPersonalStoreTransactionResult {
+    Cancelled(ClientEntityId),
+    SoldOut(ClientEntityId, usize, Option<Item>),
+    BoughtFromStore(ClientEntityId, usize, Option<Item>),
+}
+
+impl From<&PacketServerPersonalStoreTransactionResult> for Packet {
+    fn from(packet: &PacketServerPersonalStoreTransactionResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PersonalStoreTransactionResult as u16);
+
+        match packet {
+            &PacketServerPersonalStoreTransactionResult::Cancelled(store_entity_id) => {
+                writer.write_entity_id(store_entity_id);
+                writer.write_u8(1); // Cancelled
+                writer.write_u8(0); // Update item count
+            }
+            PacketServerPersonalStoreTransactionResult::BoughtFromStore(
+                store_entity_id,
+                store_slot_index,
+                store_slot,
+            ) => {
+                writer.write_entity_id(*store_entity_id);
+                writer.write_u8(4); // Item bought from store
+                writer.write_u8(1); // Update item count
+                writer.write_u8(*store_slot_index as u8);
+                writer.write_item_full(store_slot.as_ref());
+            }
+            PacketServerPersonalStoreTransactionResult::SoldOut(
+                store_entity_id,
+                store_slot_index,
+                store_slot,
+            ) => {
+                writer.write_entity_id(*store_entity_id);
+                writer.write_u8(2); // Sold Out
+                writer.write_u8(1); // Update item count
+                writer.write_u8(*store_slot_index as u8);
+                writer.write_item_full(store_slot.as_ref());
+            }
+        }
         writer.into()
     }
 }

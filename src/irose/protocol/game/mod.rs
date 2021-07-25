@@ -9,13 +9,16 @@ use crate::{
     game::messages::{
         client::{
             Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,
-            LogoutRequest, Move, PickupDroppedItem, QuestDelete, SetHotbarSlot,
+            LogoutRequest, Move, PersonalStoreBuyItem, PickupDroppedItem, QuestDelete,
+            SetHotbarSlot,
         },
         server::{
-            LocalChat, LogoutReply, PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult,
-            RemoveEntities, ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster,
-            SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateInventory,
-            UpdateLevel, UpdateMoney, UpdateXpStamina, Whisper,
+            LocalChat, LogoutReply, OpenPersonalStore, PersonalStoreTransactionCancelled,
+            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
+            PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
+            QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
+            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
+            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateXpStamina, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -237,6 +240,24 @@ impl GameClient {
                             }))?;
                     }
                 }
+            }
+            Some(ClientPackets::PersonalStoreListItems) => {
+                let packet = PacketClientPersonalStoreListItems::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PersonalStoreListItems(
+                        packet.target_entity_id,
+                    ))?;
+            }
+            Some(ClientPackets::PersonalStoreBuyItem) => {
+                let packet = PacketClientPersonalStoreBuyItem::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
+                        store_entity_id: packet.store_entity_id,
+                        store_slot_index: packet.store_slot_index,
+                        buy_item: packet.buy_item,
+                    }))?;
             }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
@@ -590,6 +611,91 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerRunNpcDeathTrigger { npc }))
                     .await?;
             }
+            ServerMessage::OpenPersonalStore(OpenPersonalStore {
+                entity_id,
+                skin,
+                title,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerOpenPersonalStore {
+                        entity_id,
+                        skin,
+                        title: &title,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PersonalStoreItemList(personal_store_item_list) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPersonalStoreItemList {
+                        sell_items: &personal_store_item_list.sell_items,
+                        buy_items: &personal_store_item_list.buy_items,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PersonalStoreTransactionResult(result) => match result {
+                PersonalStoreTransactionResult::Cancelled(PersonalStoreTransactionCancelled {
+                    store_entity_id,
+                }) => {
+                    client
+                        .connection
+                        .write_packet(Packet::from(
+                            &PacketServerPersonalStoreTransactionResult::Cancelled(store_entity_id),
+                        ))
+                        .await?;
+                }
+                PersonalStoreTransactionResult::SoldOut(PersonalStoreTransactionSoldOut {
+                    store_entity_id,
+                    store_slot_index,
+                    item,
+                }) => {
+                    client
+                        .connection
+                        .write_packet(Packet::from(
+                            &PacketServerPersonalStoreTransactionResult::SoldOut(
+                                store_entity_id,
+                                store_slot_index,
+                                item,
+                            ),
+                        ))
+                        .await?;
+                }
+                PersonalStoreTransactionResult::BoughtFromStore(
+                    PersonalStoreTransactionSuccess {
+                        store_entity_id,
+                        store_slot_index,
+                        store_slot_item,
+                        money,
+                        inventory_slot,
+                        inventory_item,
+                    },
+                ) => {
+                    client
+                        .connection
+                        .write_packet(Packet::from(
+                            &PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
+                                money,
+                                slot: inventory_slot,
+                                item: inventory_item,
+                            },
+                        ))
+                        .await?;
+
+                    client
+                        .connection
+                        .write_packet(Packet::from(
+                            &PacketServerPersonalStoreTransactionResult::BoughtFromStore(
+                                store_entity_id,
+                                store_slot_index,
+                                store_slot_item,
+                            ),
+                        ))
+                        .await?;
+                }
+                PersonalStoreTransactionResult::NoMoreNeed(_) => todo!(),
+                PersonalStoreTransactionResult::SoldToStore(_) => todo!(),
+            },
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

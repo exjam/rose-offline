@@ -31,6 +31,7 @@ pub enum CommandData {
     Move(CommandMove),
     Attack(CommandAttack),
     PickupDroppedItem(CommandPickupDroppedItem),
+    PersonalStore,
     // TODO:
     // Cast skill
     // Sit
@@ -93,6 +94,13 @@ impl NextCommand {
             has_sent_server_message: false,
         }
     }
+
+    pub fn with_personal_store() -> Self {
+        Self {
+            command: Some(CommandData::PersonalStore),
+            has_sent_server_message: false,
+        }
+    }
 }
 
 impl Command {
@@ -150,5 +158,12 @@ impl Command {
 
     pub fn with_stop() -> Self {
         Self::new(CommandData::Stop, None)
+    }
+
+    pub fn with_personal_store() -> Self {
+        Self::new(
+            CommandData::PersonalStore,
+            Some(Duration::from_secs(u64::MAX)),
+        )
     }
 }

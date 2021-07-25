@@ -19,14 +19,16 @@ use crate::{
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-                JoinZoneResponse, LogoutRequest, ReviveRequestType, SetHotbarSlot,
-                SetHotbarSlotError,
+                JoinZoneResponse, LogoutRequest, PersonalStoreBuyItem, ReviveRequestType,
+                SetHotbarSlot, SetHotbarSlotError,
             },
             server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory},
         },
         resources::{
-            ClientEntityList, GameData, LoginTokens, PendingChatCommandList, PendingQuestTrigger,
-            PendingQuestTriggerList, ServerMessages, WorldTime,
+            ClientEntityList, GameData, LoginTokens, PendingChatCommandList,
+            PendingPersonalStoreEvent, PendingPersonalStoreEventList, PendingQuestTrigger,
+            PendingQuestTriggerList, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
+            ServerMessages, WorldTime,
         },
     },
 };
@@ -230,6 +232,7 @@ pub fn game_server_main(
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] pending_chat_command_list: &mut PendingChatCommandList,
     #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
+    #[resource] pending_store_event_list: &mut PendingPersonalStoreEventList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
@@ -532,6 +535,38 @@ pub fn game_server_main(
                             trigger_entity: *entity,
                             trigger_hash,
                         });
+                    }
+                    ClientMessage::PersonalStoreListItems(store_entity_id) => {
+                        if let Some((store_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone as usize)
+                            .and_then(|zone| zone.get_entity(store_entity_id))
+                        {
+                            pending_store_event_list.push(PendingPersonalStoreEvent::ListItems(
+                                PersonalStoreEventListItems {
+                                    store_entity: *store_entity,
+                                    list_entity: *entity,
+                                },
+                            ));
+                        }
+                    }
+                    ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
+                        store_entity_id,
+                        store_slot_index,
+                        buy_item,
+                    }) => {
+                        if let Some((store_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone as usize)
+                            .and_then(|zone| zone.get_entity(store_entity_id))
+                        {
+                            pending_store_event_list.push(PendingPersonalStoreEvent::BuyItem(
+                                PersonalStoreEventBuyItem {
+                                    store_entity: *store_entity,
+                                    buyer_entity: *entity,
+                                    store_slot_index,
+                                    buy_item,
+                                },
+                            ));
+                        }
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }

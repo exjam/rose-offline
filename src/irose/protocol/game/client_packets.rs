@@ -4,6 +4,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::{
+    data::item::Item,
     game::{
         components::{
             BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
@@ -14,7 +15,7 @@ use crate::{
     protocol::{Packet, PacketReader, ProtocolError},
 };
 
-use super::common_packets::read_hotbar_slot;
+use super::common_packets::{read_hotbar_slot, PacketReadItems};
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -33,6 +34,8 @@ pub enum ClientPackets {
     PickupDroppedItem = 0x7a7,
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
+    PersonalStoreListItems = 0x7c4,
+    PersonalStoreBuyItem = 0x7c5,
 }
 
 #[derive(Debug)]
@@ -318,6 +321,60 @@ impl TryFrom<&Packet> for PacketClientQuestRequest {
             request_type,
             quest_slot,
             quest_id,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientPersonalStoreListItems {
+    pub target_entity_id: ClientEntityId,
+}
+
+impl TryFrom<&Packet> for PacketClientPersonalStoreListItems {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::PersonalStoreListItems as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        Ok(PacketClientPersonalStoreListItems { target_entity_id })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientPersonalStoreBuyItem {
+    pub store_entity_id: ClientEntityId,
+    pub store_slot_index: usize,
+    pub buy_item: Item,
+}
+
+impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::PersonalStoreBuyItem as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let store_entity_id = ClientEntityId(reader.read_u16()? as usize);
+
+        // Although the packet supports multiple items, no one uses it
+        // so to keep our code simpler we only support single item.
+        let _item_count = reader.read_u8()?;
+
+        let store_slot_index = reader.read_u8()? as usize;
+        let buy_item = reader
+            .read_item_full()?
+            .ok_or(ProtocolError::InvalidPacket)?;
+
+        Ok(PacketClientPersonalStoreBuyItem {
+            store_entity_id,
+            store_slot_index,
+            buy_item,
         })
     }
 }

@@ -7,7 +7,7 @@ use crate::game::{
     components::{
         AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandData,
         CommandMove, CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
-        Inventory, MotionData, NextCommand, Owner, Position, Target,
+        Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, Target,
     },
     messages::server::{
         self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
@@ -131,6 +131,7 @@ pub fn command(
         &mut NextCommand,
         Option<&GameClient>,
         Option<&mut Inventory>,
+        Option<&PersonalStore>,
     )>,
     move_target_query: &mut Query<(&ClientEntity, &Position)>,
     attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
@@ -163,6 +164,7 @@ pub fn command(
             next_command,
             game_client,
             inventory,
+            personal_store,
         )| {
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 // Send any server message required for update client next command
@@ -171,6 +173,7 @@ pub fn command(
                         panic!("Next command should never be set to die, set current command")
                     }
                     CommandData::Stop => {}
+                    CommandData::PersonalStore => {}
                     CommandData::PickupDroppedItem(_) => {}
                     CommandData::Move(CommandMove {
                         destination,
@@ -496,6 +499,20 @@ pub fn command(
                         );
                         *next_command = NextCommand::default();
                     }
+                }
+                CommandData::PersonalStore => {
+                    let personal_store = personal_store.unwrap();
+                    server_messages.send_entity_message(
+                        client_entity,
+                        ServerMessage::OpenPersonalStore(server::OpenPersonalStore {
+                            entity_id: client_entity.id,
+                            skin: personal_store.skin,
+                            title: personal_store.title.clone(),
+                        }),
+                    );
+
+                    *command = Command::with_personal_store();
+                    *next_command = NextCommand::default();
                 }
                 _ => {}
             }

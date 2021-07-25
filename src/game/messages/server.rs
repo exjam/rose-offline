@@ -244,6 +244,50 @@ pub struct LearnSkillSuccess {
 }
 
 #[derive(Clone)]
+pub struct OpenPersonalStore {
+    pub entity_id: ClientEntityId,
+    pub skin: i32,
+    pub title: String,
+}
+
+#[derive(Clone)]
+pub enum PersonalStoreTransactionResult {
+    Cancelled(PersonalStoreTransactionCancelled),
+    SoldOut(PersonalStoreTransactionSoldOut),
+    NoMoreNeed(PersonalStoreTransactionSoldOut),
+    BoughtFromStore(PersonalStoreTransactionSuccess),
+    SoldToStore(PersonalStoreTransactionSuccess),
+}
+
+#[derive(Clone)]
+pub struct PersonalStoreTransactionCancelled {
+    pub store_entity_id: ClientEntityId,
+}
+
+#[derive(Clone)]
+pub struct PersonalStoreTransactionSoldOut {
+    pub store_entity_id: ClientEntityId,
+    pub store_slot_index: usize,
+    pub item: Option<Item>,
+}
+
+#[derive(Clone)]
+pub struct PersonalStoreTransactionSuccess {
+    pub store_entity_id: ClientEntityId,
+    pub store_slot_index: usize,
+    pub store_slot_item: Option<Item>,
+    pub money: Money,
+    pub inventory_slot: ItemSlot,
+    pub inventory_item: Option<Item>,
+}
+
+#[derive(Clone)]
+pub struct PersonalStoreItemList {
+    pub sell_items: Vec<(u8, Item, Money)>,
+    pub buy_items: Vec<(u8, Item, Money)>,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -271,4 +315,7 @@ pub enum ServerMessage {
     QuestDeleteResult(QuestDeleteResult),
     LearnSkillResult(Result<LearnSkillSuccess, LearnSkillError>),
     RunNpcDeathTrigger(NpcReference),
+    OpenPersonalStore(OpenPersonalStore),
+    PersonalStoreItemList(PersonalStoreItemList),
+    PersonalStoreTransactionResult(PersonalStoreTransactionResult),
 }

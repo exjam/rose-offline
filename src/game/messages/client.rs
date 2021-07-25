@@ -1,7 +1,7 @@
 use tokio::sync::oneshot;
 
 use crate::{
-    data::{character::CharacterStorage, QuestTriggerHash, WorldTicks},
+    data::{character::CharacterStorage, item::Item, QuestTriggerHash, WorldTicks},
     game::components::{
         BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
         EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
@@ -246,6 +246,13 @@ pub struct QuestDelete {
 }
 
 #[derive(Debug)]
+pub struct PersonalStoreBuyItem {
+    pub store_entity_id: ClientEntityId,
+    pub store_slot_index: usize,
+    pub buy_item: Item,
+}
+
+#[derive(Debug)]
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -269,4 +276,6 @@ pub enum ClientMessage {
     ReviveRequest(ReviveRequestType),
     QuestTrigger(QuestTriggerHash),
     QuestDelete(QuestDelete),
+    PersonalStoreListItems(ClientEntityId),
+    PersonalStoreBuyItem(PersonalStoreBuyItem),
 }

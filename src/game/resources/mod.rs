@@ -5,6 +5,7 @@ mod game_data;
 mod login_tokens;
 mod pending_chat_commands;
 mod pending_damage_list;
+mod pending_personal_store_event;
 mod pending_quest_trigger_list;
 mod pending_save_list;
 mod pending_xp_list;
@@ -21,6 +22,10 @@ pub use game_data::GameData;
 pub use login_tokens::{LoginToken, LoginTokens};
 pub use pending_chat_commands::PendingChatCommandList;
 pub use pending_damage_list::{PendingDamage, PendingDamageList};
+pub use pending_personal_store_event::{
+    PendingPersonalStoreEvent, PendingPersonalStoreEventList, PersonalStoreEventBuyItem,
+    PersonalStoreEventListItems,
+};
 pub use pending_quest_trigger_list::{PendingQuestTrigger, PendingQuestTriggerList};
 pub use pending_save_list::{PendingCharacterSave, PendingSave, PendingSaveList};
 pub use pending_xp_list::{PendingXp, PendingXpList};
