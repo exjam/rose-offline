@@ -2,23 +2,32 @@ use clap::{App, Arg};
 use lazy_static::lazy_static;
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use nalgebra::{Point2, Point3};
+use num_traits::FromPrimitive;
 use rand::prelude::SliceRandom;
 use std::{
     f32::consts::PI,
     num::{ParseFloatError, ParseIntError},
 };
 
-use crate::game::{
-    bundles::{client_entity_join_zone, client_entity_teleport_zone, create_character_entity},
-    components::{
-        AbilityValues, BotAi, ClientEntity, ClientEntityType, Command, EquipmentIndex,
-        EquipmentItemDatabase, GameClient, Level, MoveSpeed, NextCommand, Owner, Position, Team,
+use crate::{
+    data::{
+        item::{Item, ItemType},
+        ItemReference,
     },
-    messages::server::{ServerMessage, Whisper},
-    resources::{
-        BotList, BotListEntry, ClientEntityList, PendingChatCommandList, PendingXp, PendingXpList,
+    game::{
+        bundles::{client_entity_join_zone, client_entity_teleport_zone, create_character_entity},
+        components::{
+            AbilityValues, BotAi, ClientEntity, ClientEntityType, Command, EquipmentIndex,
+            EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveSpeed, NextCommand,
+            Owner, PersonalStore, Position, Team, PERSONAL_STORE_ITEM_SLOTS,
+        },
+        messages::server::{ServerMessage, Whisper},
+        resources::{
+            BotList, BotListEntry, ClientEntityList, PendingChatCommandList, PendingXp,
+            PendingXpList,
+        },
+        GameData,
     },
-    GameData,
 };
 
 pub struct ChatCommandWorld<'a> {
@@ -52,6 +61,7 @@ lazy_static! {
             )
             .subcommand(App::new("level").arg(Arg::new("level").required(true)))
             .subcommand(App::new("bot").arg(Arg::new("n").required(true)))
+            .subcommand(App::new("shop").arg(Arg::new("item_type").required(true)))
     };
 }
 
@@ -121,6 +131,137 @@ impl From<ParseFloatError> for GMCommandError {
     fn from(_: ParseFloatError) -> Self {
         Self::InvalidArguments
     }
+}
+
+fn create_bot_entity(
+    chat_command_world: &mut ChatCommandWorld,
+    name: String,
+    gender: u8,
+    face: u8,
+    hair: u8,
+    position: Position,
+    owner: Entity,
+) -> Option<Entity> {
+    let mut bot_data = chat_command_world
+        .game_data
+        .character_creator
+        .create(name, gender, 1, face, hair)
+        .ok()?;
+
+    let ability_values = chat_command_world
+        .game_data
+        .ability_value_calculator
+        .calculate(
+            &bot_data.info,
+            &bot_data.level,
+            &bot_data.equipment,
+            &bot_data.inventory,
+            &bot_data.basic_stats,
+            &bot_data.skill_list,
+        );
+
+    let command = Command::default();
+    let next_command = NextCommand::default();
+    let move_speed = MoveSpeed::new(ability_values.run_speed as f32);
+    let team = Team::default_character();
+
+    let weapon_motion_type = chat_command_world
+        .game_data
+        .items
+        .get_equipped_weapon_item_data(&bot_data.equipment, EquipmentIndex::WeaponRight)
+        .map(|item_data| item_data.motion_type)
+        .unwrap_or(0) as usize;
+
+    let motion_data = chat_command_world
+        .game_data
+        .motions
+        .get_character_motions(weapon_motion_type, bot_data.info.gender as usize);
+
+    bot_data.position = position.clone();
+    bot_data.health_points.hp = ability_values.max_health as u32;
+    bot_data.mana_points.mp = ability_values.max_mana as u32;
+
+    let entity = chat_command_world
+        .cmd
+        .push((BotAi::new(), Owner::new(owner)));
+
+    create_character_entity(
+        chat_command_world.cmd,
+        &entity,
+        ability_values,
+        bot_data.basic_stats,
+        command,
+        bot_data.equipment,
+        bot_data.experience_points,
+        bot_data.health_points,
+        bot_data.hotbar,
+        bot_data.info,
+        bot_data.inventory,
+        bot_data.level,
+        bot_data.mana_points,
+        motion_data,
+        move_speed,
+        next_command,
+        bot_data.position,
+        bot_data.quest_state,
+        bot_data.skill_list,
+        bot_data.skill_points,
+        bot_data.stamina,
+        bot_data.stat_points,
+        team,
+        bot_data.union_membership,
+    );
+
+    client_entity_join_zone(
+        chat_command_world.cmd,
+        chat_command_world.client_entity_list,
+        &entity,
+        ClientEntityType::Character,
+        &position,
+    )
+    .ok();
+
+    Some(entity)
+}
+
+fn create_random_bot_entities(
+    chat_command_world: &mut ChatCommandWorld,
+    num_bots: usize,
+    spacing: f32,
+    origin: Position,
+    owner: &Entity,
+) -> Vec<Entity> {
+    let mut rng = rand::thread_rng();
+    let genders = [0, 1];
+    let faces = [1, 8, 15, 22, 29, 36, 43];
+    let hair = [0, 5, 10, 15, 20];
+
+    let spawn_radius = f32::max(num_bots as f32 * spacing, 100.0);
+    let mut bot_entities = Vec::new();
+
+    for i in 0..num_bots {
+        let angle = (i as f32 * (2.0 * PI)) / num_bots as f32;
+        let mut bot_position = origin.clone();
+        bot_position.position.x += spawn_radius * angle.cos();
+        bot_position.position.y += spawn_radius * angle.sin();
+
+        if let Some(bot_entity) = create_bot_entity(
+            chat_command_world,
+            format!("Friend {}", chat_command_world.bot_list.len() as usize),
+            *genders.choose(&mut rng).unwrap() as u8,
+            *faces.choose(&mut rng).unwrap() as u8,
+            *hair.choose(&mut rng).unwrap() as u8,
+            bot_position,
+            *owner,
+        ) {
+            chat_command_world
+                .bot_list
+                .push(BotListEntry::new(bot_entity));
+            bot_entities.push(bot_entity);
+        }
+    }
+
+    bot_entities
 }
 
 fn handle_gm_command(
@@ -223,106 +364,56 @@ fn handle_gm_command(
             ));
         }
         ("bot", arg_matches) => {
-            let num_bots = arg_matches.value_of("n").unwrap().parse::<i32>()?;
-            let spawn_radius = f32::max(num_bots as f32 * 15.0, 100.0);
-            let mut rng = rand::thread_rng();
-            let genders = [0, 1];
-            let faces = [1, 8, 15, 22, 29, 36, 43];
-            let hair = [0, 5, 10, 15, 20];
+            let num_bots = arg_matches.value_of("n").unwrap().parse::<usize>()?;
+            create_random_bot_entities(
+                chat_command_world,
+                num_bots,
+                15.0,
+                chat_command_user.position.clone(),
+                chat_command_user.entity,
+            );
+        }
+        ("shop", arg_matches) => {
+            let item_type: Option<ItemType> =
+                FromPrimitive::from_i32(arg_matches.value_of("item_type").unwrap().parse::<i32>()?);
+            if let Some(item_type) = item_type {
+                let mut all_items: Vec<ItemReference> = chat_command_world
+                    .game_data
+                    .items
+                    .iter_items(item_type)
+                    .collect();
+                all_items.sort_by(|a, b| a.item_number.cmp(&b.item_number));
 
-            for i in 0..num_bots {
-                let angle = (i as f32 * (2.0 * PI)) / num_bots as f32;
-                let offset_x = spawn_radius * angle.cos();
-                let offset_y = spawn_radius * angle.sin();
+                let num_bots =
+                    (all_items.len() + PERSONAL_STORE_ITEM_SLOTS - 1) / PERSONAL_STORE_ITEM_SLOTS;
+                let bot_entities = create_random_bot_entities(
+                    chat_command_world,
+                    num_bots,
+                    30.0,
+                    chat_command_user.position.clone(),
+                    chat_command_user.entity,
+                );
+                let mut index = 0usize;
 
-                if let Ok(mut bot_data) = chat_command_world.game_data.character_creator.create(
-                    format!(
-                        "Friend {}",
-                        chat_command_world.bot_list.len() + 1 + i as usize
-                    ),
-                    *genders.choose(&mut rng).unwrap() as u8,
-                    1,
-                    *faces.choose(&mut rng).unwrap() as u8,
-                    *hair.choose(&mut rng).unwrap() as u8,
-                ) {
-                    let entity = chat_command_world
+                for (shop_index, entity) in bot_entities.into_iter().enumerate() {
+                    let mut store = PersonalStore::new(format!("Shop {}", shop_index), 0);
+                    let mut inventory = Inventory::new();
+
+                    for i in index..index + PERSONAL_STORE_ITEM_SLOTS {
+                        if let Some(item) = all_items.get(i).and_then(|item| Item::new(item, 999)) {
+                            if let Ok((slot, _)) = inventory.try_add_item(item) {
+                                store.add_sell_item(slot, Money(1)).ok();
+                            }
+                        }
+                    }
+
+                    index += PERSONAL_STORE_ITEM_SLOTS;
+
+                    chat_command_world.cmd.add_component(entity, store);
+                    chat_command_world.cmd.add_component(entity, inventory);
+                    chat_command_world
                         .cmd
-                        .push((BotAi::new(), Owner::new(*chat_command_user.entity)));
-                    chat_command_world.bot_list.push(BotListEntry::new(entity));
-
-                    bot_data.position = chat_command_user.position.clone();
-                    bot_data.position.position.x += offset_x;
-                    bot_data.position.position.y += offset_y;
-
-                    let ability_values = chat_command_world
-                        .game_data
-                        .ability_value_calculator
-                        .calculate(
-                            &bot_data.info,
-                            &bot_data.level,
-                            &bot_data.equipment,
-                            &bot_data.inventory,
-                            &bot_data.basic_stats,
-                            &bot_data.skill_list,
-                        );
-                    bot_data.health_points.hp = ability_values.max_health as u32;
-                    bot_data.mana_points.mp = ability_values.max_mana as u32;
-
-                    let command = Command::default();
-                    let next_command = NextCommand::default();
-                    let move_speed = MoveSpeed::new(ability_values.run_speed as f32);
-                    let team = Team::default_character();
-
-                    let weapon_motion_type = chat_command_world
-                        .game_data
-                        .items
-                        .get_equipped_weapon_item_data(
-                            &bot_data.equipment,
-                            EquipmentIndex::WeaponRight,
-                        )
-                        .map(|item_data| item_data.motion_type)
-                        .unwrap_or(0) as usize;
-
-                    let motion_data = chat_command_world
-                        .game_data
-                        .motions
-                        .get_character_motions(weapon_motion_type, bot_data.info.gender as usize);
-
-                    create_character_entity(
-                        chat_command_world.cmd,
-                        &entity,
-                        ability_values,
-                        bot_data.basic_stats,
-                        command,
-                        bot_data.equipment,
-                        bot_data.experience_points,
-                        bot_data.health_points,
-                        bot_data.hotbar,
-                        bot_data.info,
-                        bot_data.inventory,
-                        bot_data.level,
-                        bot_data.mana_points,
-                        motion_data,
-                        move_speed,
-                        next_command,
-                        bot_data.position.clone(),
-                        bot_data.quest_state,
-                        bot_data.skill_list,
-                        bot_data.skill_points,
-                        bot_data.stamina,
-                        bot_data.stat_points,
-                        team,
-                        bot_data.union_membership,
-                    );
-
-                    client_entity_join_zone(
-                        chat_command_world.cmd,
-                        chat_command_world.client_entity_list,
-                        &entity,
-                        ClientEntityType::Character,
-                        &bot_data.position,
-                    )
-                    .ok();
+                        .add_component(entity, NextCommand::with_personal_store());
                 }
             }
         }

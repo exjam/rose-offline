@@ -395,4 +395,83 @@ impl ItemDatabase {
     pub fn get_vehicle_item(&self, id: usize) -> Option<&VehicleItemData> {
         self.vehicle.get(&(id as u16))
     }
+
+    pub fn iter_items(
+        &self,
+        item_type: ItemType,
+    ) -> Box<dyn std::iter::Iterator<Item = ItemReference> + '_> {
+        match item_type {
+            ItemType::Face => Box::new(
+                self.face
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Face, *id as usize)),
+            ),
+            ItemType::Head => Box::new(
+                self.head
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Head, *id as usize)),
+            ),
+            ItemType::Body => Box::new(
+                self.body
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Body, *id as usize)),
+            ),
+            ItemType::Hands => Box::new(
+                self.hands
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Hands, *id as usize)),
+            ),
+            ItemType::Feet => Box::new(
+                self.feet
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Feet, *id as usize)),
+            ),
+            ItemType::Back => Box::new(
+                self.back
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Back, *id as usize)),
+            ),
+            ItemType::Jewellery => Box::new(
+                self.jewellery
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Jewellery, *id as usize)),
+            ),
+            ItemType::Weapon => Box::new(
+                self.weapon
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Weapon, *id as usize)),
+            ),
+            ItemType::SubWeapon => Box::new(
+                self.subweapon
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::SubWeapon, *id as usize)),
+            ),
+            ItemType::Consumable => Box::new(
+                self.consumable
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Consumable, *id as usize)),
+            ),
+            ItemType::Gem => Box::new(
+                self.gem
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Gem, *id as usize)),
+            ),
+            ItemType::Material => Box::new(
+                self.material
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Material, *id as usize)),
+            ),
+            ItemType::Quest => Box::new(
+                self.quest
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Quest, *id as usize)),
+            ),
+            ItemType::Vehicle => Box::new(
+                self.vehicle
+                    .keys()
+                    .map(|id| ItemReference::new(ItemType::Vehicle, *id as usize)),
+            ),
+            _ => panic!("Invalid ItemType"),
+        }
+    }
 }
