@@ -161,7 +161,7 @@ impl InventoryPage {
     pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {
         for i in 0..self.slots.len() {
             if let Some(slot_item) = &self.slots[i] {
-                if slot_item.is_same_item(item_reference) {
+                if slot_item.is_same_item_reference(item_reference) {
                     return Some(ItemSlot::Inventory(self.page_type, i));
                 }
             }
@@ -217,6 +217,15 @@ impl Inventory {
         }
     }
 
+    pub fn try_take_money(&mut self, money: Money) -> Result<Money, ()> {
+        if self.money > money {
+            self.money = self.money - money;
+            Ok(money)
+        } else {
+            Err(())
+        }
+    }
+
     fn get_page(&self, page_type: InventoryPageType) -> &InventoryPage {
         match page_type {
             InventoryPageType::Equipment => &self.equipment,
@@ -256,14 +265,13 @@ impl Inventory {
         self.get_page_mut(page_type).try_add_stackable_item(item)
     }
 
-    pub fn get_item(&self, slot: ItemSlot) -> Option<Item> {
+    pub fn get_item(&self, slot: ItemSlot) -> Option<&Item> {
         match slot {
             ItemSlot::Inventory(page_type, index) => self
                 .get_page(page_type)
                 .slots
                 .get(index)
-                .cloned()
-                .unwrap_or(None),
+                .and_then(|x| x.as_ref()),
             ItemSlot::Equipped(_) => None,
         }
     }

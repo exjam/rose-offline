@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
@@ -198,7 +200,7 @@ impl ItemWeaponType {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct EquipmentItem {
     pub item: ItemReference,
     pub gem: u16,
@@ -239,7 +241,7 @@ impl From<&EquipmentItem> for ItemReference {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct StackableItem {
     pub item: ItemReference,
     pub quantity: u32,
@@ -289,7 +291,7 @@ impl From<&StackableItem> for ItemReference {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub enum Item {
     Equipment(EquipmentItem),
     Stackable(StackableItem),
@@ -304,6 +306,10 @@ impl Item {
         } else {
             None
         }
+    }
+
+    pub fn is_stackable(&self) -> bool {
+        matches!(self, Item::Stackable(_))
     }
 
     pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
@@ -330,6 +336,21 @@ impl Item {
         }
     }
 
+    // Only succeeds if quanity < self.quantity, this can not take the whole item
+    pub fn try_take_subquantity(&mut self, quantity: u32) -> Option<Item> {
+        match self {
+            Item::Equipment(_) => None,
+            Item::Stackable(stackable) => {
+                if stackable.quantity < quantity {
+                    None
+                } else {
+                    stackable.quantity -= quantity;
+                    Item::new(&stackable.item, quantity)
+                }
+            }
+        }
+    }
+
     pub fn get_item_type(&self) -> ItemType {
         match self {
             Item::Equipment(item) => item.item.item_type,
@@ -344,10 +365,82 @@ impl Item {
         }
     }
 
-    pub fn is_same_item(&self, item_reference: ItemReference) -> bool {
+    pub fn as_equipment(&self) -> Option<&EquipmentItem> {
+        match self {
+            Item::Equipment(equipment) => Some(equipment),
+            Item::Stackable(_) => None,
+        }
+    }
+
+    pub fn as_equipment_mut(&mut self) -> Option<&mut EquipmentItem> {
+        match self {
+            Item::Equipment(equipment) => Some(equipment),
+            Item::Stackable(_) => None,
+        }
+    }
+
+    pub fn as_stackable(&self) -> Option<&StackableItem> {
+        match self {
+            Item::Equipment(_) => None,
+            Item::Stackable(stackable) => Some(stackable),
+        }
+    }
+
+    pub fn as_stackable_mut(&mut self) -> Option<&mut StackableItem> {
+        match self {
+            Item::Equipment(_) => None,
+            Item::Stackable(stackable) => Some(stackable),
+        }
+    }
+
+    pub fn is_same_item_reference(&self, item_reference: ItemReference) -> bool {
         match self {
             Item::Equipment(item) => item.item == item_reference,
             Item::Stackable(item) => item.item == item_reference,
+        }
+    }
+
+    pub fn is_same_item(&self, compare_item: &Item) -> bool {
+        match self {
+            Item::Equipment(_) => self == compare_item,
+            Item::Stackable(item) => compare_item.is_same_item_reference(item.item),
+        }
+    }
+}
+
+pub trait ItemSlotBehaviour {
+    fn try_take_quantity(&mut self, quantity: u32) -> Option<Item>;
+    fn try_stack_with_item(&mut self, with_item: Item) -> Result<(), StackError>;
+
+    fn contains_same_item(&self, compare_item: &Item) -> bool;
+}
+
+impl ItemSlotBehaviour for Option<Item> {
+    fn try_take_quantity(&mut self, quantity: u32) -> Option<Item> {
+        match self {
+            Some(item) => match item.get_quantity().cmp(&quantity) {
+                Ordering::Less => None,
+                Ordering::Equal => self.take(),
+                Ordering::Greater => item.try_take_subquantity(quantity),
+            },
+            None => None,
+        }
+    }
+
+    fn try_stack_with_item(&mut self, with_item: Item) -> Result<(), StackError> {
+        match self {
+            Some(item) => item.try_stack_with_item(with_item),
+            None => {
+                *self = Some(with_item);
+                Ok(())
+            }
+        }
+    }
+
+    fn contains_same_item(&self, compare_item: &Item) -> bool {
+        match self {
+            Some(item) => item.is_same_item(compare_item),
+            None => false,
         }
     }
 }

@@ -26,7 +26,7 @@ impl ActiveQuest {
     pub fn find_item(&self, item_reference: ItemReference) -> Option<&Item> {
         for item in self.items.iter() {
             if let Some(item) = item.as_ref() {
-                if item.is_same_item(item_reference) {
+                if item.is_same_item_reference(item_reference) {
                     return Some(item);
                 }
             }
