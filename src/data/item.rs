@@ -276,7 +276,7 @@ impl StackableItem {
         }
     }
 
-    pub fn stack_with(&mut self, stackable: StackableItem) -> Result<(), StackError> {
+    pub fn try_stack_with(&mut self, stackable: StackableItem) -> Result<(), StackError> {
         self.can_stack_with(&stackable)?;
         self.quantity += stackable.quantity;
         Ok(())
@@ -313,19 +313,19 @@ impl Item {
         }
     }
 
-    pub fn stack_with(&mut self, stackable: StackableItem) -> Result<(), StackError> {
+    pub fn try_stack_with(&mut self, stackable: StackableItem) -> Result<(), StackError> {
         match self {
             Item::Equipment(_) => Err(StackError::NotStackable),
-            Item::Stackable(item) => item.stack_with(stackable),
+            Item::Stackable(item) => item.try_stack_with(stackable),
         }
     }
 
-    pub fn stack_with_item(&mut self, with_item: Item) -> Result<(), StackError> {
+    pub fn try_stack_with_item(&mut self, with_item: Item) -> Result<(), StackError> {
         match self {
             Item::Equipment(_) => Err(StackError::NotStackable),
             Item::Stackable(self_stackable) => match with_item {
                 Item::Equipment(_) => Err(StackError::NotStackable),
-                Item::Stackable(with_stackable) => self_stackable.stack_with(with_stackable),
+                Item::Stackable(with_stackable) => self_stackable.try_stack_with(with_stackable),
             },
         }
     }

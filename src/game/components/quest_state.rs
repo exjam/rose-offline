@@ -39,7 +39,7 @@ impl ActiveQuest {
         // First try stack with any other existing items
         for i in 0..self.items.len() {
             if let Some(quest_item) = &mut self.items[i] {
-                if quest_item.stack_with_item(item.clone()).is_ok() {
+                if quest_item.try_stack_with_item(item.clone()).is_ok() {
                     return Ok(i);
                 }
             }

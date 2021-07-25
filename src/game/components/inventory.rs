@@ -145,7 +145,7 @@ impl InventoryPage {
                 self.slots[index]
                     .as_mut()
                     .unwrap()
-                    .stack_with(item)
+                    .try_stack_with(item)
                     .expect("how did we get here");
             }
 
