@@ -7,7 +7,10 @@ use crate::{
         item::{EquipmentItem, Item, StackableItem},
         ItemReference,
     },
-    game::components::{Equipment, EquipmentIndex, HotbarSlot, Money},
+    game::components::{
+        Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money,
+        INVENTORY_PAGE_SIZE,
+    },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
 
@@ -18,33 +21,46 @@ pub struct PacketHotbarSlot {
     index: B11,
 }
 
-pub fn read_hotbar_slot(reader: &mut PacketReader) -> Result<Option<HotbarSlot>, ProtocolError> {
-    let slot = PacketHotbarSlot::from_bytes(reader.read_fixed_length_bytes(2)?.try_into().unwrap());
-    match slot.slot_type() {
-        1 => Ok(Some(HotbarSlot::Inventory(slot.index()))),
-        2 => Ok(Some(HotbarSlot::Command(slot.index()))),
-        3 => Ok(Some(HotbarSlot::Skill(slot.index()))),
-        4 => Ok(Some(HotbarSlot::Emote(slot.index()))),
-        5 => Ok(Some(HotbarSlot::Dialog(slot.index()))),
-        6 => Ok(Some(HotbarSlot::ClanSkill(slot.index()))),
-        _ => Ok(None),
+pub trait PacketReadHotbarSlot {
+    fn read_hotbar_slot(&mut self) -> Result<Option<HotbarSlot>, ProtocolError>;
+}
+
+impl<'a> PacketReadHotbarSlot for PacketReader<'a> {
+    fn read_hotbar_slot(&mut self) -> Result<Option<HotbarSlot>, ProtocolError> {
+        let slot =
+            PacketHotbarSlot::from_bytes(self.read_fixed_length_bytes(2)?.try_into().unwrap());
+        match slot.slot_type() {
+            1 => Ok(Some(HotbarSlot::Inventory(slot.index()))),
+            2 => Ok(Some(HotbarSlot::Command(slot.index()))),
+            3 => Ok(Some(HotbarSlot::Skill(slot.index()))),
+            4 => Ok(Some(HotbarSlot::Emote(slot.index()))),
+            5 => Ok(Some(HotbarSlot::Dialog(slot.index()))),
+            6 => Ok(Some(HotbarSlot::ClanSkill(slot.index()))),
+            _ => Ok(None),
+        }
     }
 }
 
-pub fn write_hotbar_slot(writer: &mut PacketWriter, slot: &Option<HotbarSlot>) {
-    let (slot_type, index) = match slot {
-        Some(HotbarSlot::Inventory(index)) => (1, *index),
-        Some(HotbarSlot::Command(index)) => (2, *index),
-        Some(HotbarSlot::Skill(index)) => (3, *index),
-        Some(HotbarSlot::Emote(index)) => (4, *index),
-        Some(HotbarSlot::Dialog(index)) => (5, *index),
-        Some(HotbarSlot::ClanSkill(index)) => (6, *index),
-        _ => (0, 0),
-    };
-    let slot = PacketHotbarSlot::new()
-        .with_slot_type(slot_type)
-        .with_index(index);
-    writer.write_bytes(&slot.into_bytes());
+pub trait PacketWriteHotbarSlot {
+    fn write_hotbar_slot(&mut self, slot: &Option<HotbarSlot>);
+}
+
+impl PacketWriteHotbarSlot for PacketWriter {
+    fn write_hotbar_slot(&mut self, slot: &Option<HotbarSlot>) {
+        let (slot_type, index) = match slot {
+            Some(HotbarSlot::Inventory(index)) => (1, *index),
+            Some(HotbarSlot::Command(index)) => (2, *index),
+            Some(HotbarSlot::Skill(index)) => (3, *index),
+            Some(HotbarSlot::Emote(index)) => (4, *index),
+            Some(HotbarSlot::Dialog(index)) => (5, *index),
+            Some(HotbarSlot::ClanSkill(index)) => (6, *index),
+            _ => (0, 0),
+        };
+        let slot = PacketHotbarSlot::new()
+            .with_slot_type(slot_type)
+            .with_index(index);
+        self.write_bytes(&slot.into_bytes());
+    }
 }
 
 #[bitfield]
@@ -266,5 +282,44 @@ impl PacketWriteItems for PacketWriter {
             .with_item_type(31)
             .with_quantity(money.0 as u32);
         self.write_bytes(&item.into_bytes());
+    }
+}
+
+pub trait PacketReadItemSlot {
+    fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError>;
+    fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError>;
+}
+
+fn parse_item_slot(index: usize) -> Result<ItemSlot, ProtocolError>
+{
+    if index == 0 {
+        Err(ProtocolError::InvalidPacket)
+    } else if index < 12 {
+        if let Some(equipment_index) = FromPrimitive::from_usize(index) {
+            Ok(ItemSlot::Equipped(equipment_index))
+        } else {
+            Err(ProtocolError::InvalidPacket)
+        }
+    } else {
+        let index = index - 12;
+        let page = index / INVENTORY_PAGE_SIZE;
+        let slot = index % INVENTORY_PAGE_SIZE;
+        match page {
+            0 => Ok(ItemSlot::Inventory(InventoryPageType::Equipment, slot)),
+            1 => Ok(ItemSlot::Inventory(InventoryPageType::Consumables, slot)),
+            2 => Ok(ItemSlot::Inventory(InventoryPageType::Materials, slot)),
+            3 => Ok(ItemSlot::Inventory(InventoryPageType::Vehicles, slot)),
+            _ => Err(ProtocolError::InvalidPacket),
+        }
+    }
+}
+
+impl<'a> PacketReadItemSlot for PacketReader<'a> {
+    fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError> {
+        parse_item_slot(self.read_u8()? as usize)
+    }
+
+    fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError> {
+        parse_item_slot(self.read_u16()? as usize)
     }
 }

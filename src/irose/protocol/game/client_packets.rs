@@ -6,16 +6,14 @@ use num_traits::FromPrimitive;
 use crate::{
     data::item::Item,
     game::{
-        components::{
-            BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot,
-            INVENTORY_PAGE_SIZE,
-        },
+        components::{BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot},
         messages::client::ReviveRequestType,
+    },
+    irose::protocol::game::common_packets::{
+        PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };
-
-use super::common_packets::{read_hotbar_slot, PacketReadItems};
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -171,27 +169,8 @@ impl TryFrom<&Packet> for PacketClientSetHotbarSlot {
 
         let mut reader = PacketReader::from(packet);
         let slot_index = reader.read_u8()?;
-        let slot = read_hotbar_slot(&mut reader)?;
+        let slot = reader.read_hotbar_slot()?;
         Ok(PacketClientSetHotbarSlot { slot_index, slot })
-    }
-}
-
-fn item_slot_from_index(index: usize) -> Option<ItemSlot> {
-    if index == 0 {
-        None // Invalid
-    } else if index < 12 {
-        Some(ItemSlot::Equipped(FromPrimitive::from_usize(index)?))
-    } else {
-        let index = index - 12;
-        let page = index / INVENTORY_PAGE_SIZE;
-        let slot = index % INVENTORY_PAGE_SIZE;
-        match page {
-            0 => Some(ItemSlot::Inventory(InventoryPageType::Equipment, slot)),
-            1 => Some(ItemSlot::Inventory(InventoryPageType::Consumables, slot)),
-            2 => Some(ItemSlot::Inventory(InventoryPageType::Materials, slot)),
-            3 => Some(ItemSlot::Inventory(InventoryPageType::Vehicles, slot)),
-            _ => None,
-        }
     }
 }
 
@@ -211,10 +190,10 @@ impl TryFrom<&Packet> for PacketClientChangeEquipment {
         let mut reader = PacketReader::from(packet);
         let equipment_index =
             FromPrimitive::from_u16(reader.read_u16()?).ok_or(ProtocolError::InvalidPacket)?;
-        let inventory_index = reader.read_u16()? as usize;
+        let item_slot = reader.read_item_slot_u16().ok();
         Ok(PacketClientChangeEquipment {
             equipment_index,
-            item_slot: item_slot_from_index(inventory_index),
+            item_slot,
         })
     }
 }

@@ -22,7 +22,7 @@ use crate::{
             LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
         },
     },
-    irose::protocol::game::common_packets::{write_hotbar_slot, PacketWriteItems},
+    irose::protocol::game::common_packets::{PacketWriteHotbarSlot, PacketWriteItems},
     protocol::{Packet, PacketWriter},
 };
 
@@ -205,7 +205,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         assert!(packet.hotbar.pages.len() * packet.hotbar.pages[0].len() == 32);
         for page in &packet.hotbar.pages {
             for slot in page {
-                write_hotbar_slot(&mut writer, slot);
+                writer.write_hotbar_slot(slot);
             }
         }
 
@@ -568,7 +568,7 @@ impl From<&PacketServerSetHotbarSlot> for Packet {
     fn from(packet: &PacketServerSetHotbarSlot) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SetHotbarSlot as u16);
         writer.write_u8(packet.slot_index);
-        write_hotbar_slot(&mut writer, &packet.slot);
+        writer.write_hotbar_slot(&packet.slot);
         writer.into()
     }
 }
