@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
@@ -119,6 +119,15 @@ pub struct SubWeaponItemData {
 
 pub struct ConsumableItemData {
     pub item_data: BaseItemData,
+    pub store_skin: i32,
+    pub confile_index: usize,
+    pub ability_requirement: Option<(AbilityType, i32)>,
+    pub add_ability: Option<(AbilityType, i32)>,
+    pub learn_skill_id: usize,
+    pub use_skill_id: usize,
+    pub apply_status_effect_id: usize,
+    pub cooldown_type_id: usize,
+    pub cooldown_duration: Duration,
 }
 
 pub struct MaterialItemData {

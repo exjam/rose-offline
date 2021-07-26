@@ -1,5 +1,5 @@
 use num_traits::FromPrimitive;
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use crate::data::{
     ability::AbilityType,
@@ -127,6 +127,39 @@ impl StbItem {
     // LIST_SUBWEAPON
     stb_column! { 34, get_subweapon_gem_position, u32 }
 
+    // LIST_USEITEM
+    stb_column! { 8, get_consumeable_store_skin, i32 }
+    stb_column! { 22, get_consumeable_confile_index, usize }
+
+    pub fn get_consumeable_ability_requirement(&self, id: usize) -> Option<(AbilityType, i32)> {
+        let ability_type: Option<AbilityType> =
+            self.0.try_get_int(id, 17).and_then(FromPrimitive::from_i32);
+        let ability_value = self.0.try_get_int(id, 18);
+
+        ability_type.and_then(|ability_type| {
+            ability_value.map(|ability_value| (ability_type, ability_value))
+        })
+    }
+
+    pub fn get_consumeable_add_ability(&self, id: usize) -> Option<(AbilityType, i32)> {
+        let ability_type: Option<AbilityType> =
+            self.0.try_get_int(id, 19).and_then(FromPrimitive::from_i32);
+        let ability_value = self.0.try_get_int(id, 20);
+
+        ability_type.and_then(|ability_type| {
+            ability_value.map(|ability_value| (ability_type, ability_value))
+        })
+    }
+
+    stb_column! { 20, get_consumeable_learn_skill_id, usize }
+    stb_column! { 20, get_consumeable_use_skill_id, usize }
+    stb_column! { 21, get_consumeable_use_script_index, usize }
+    stb_column! { 22, get_consumeable_use_effect_index, usize }
+    stb_column! { 23, get_consumeable_use_sound_index, usize }
+    stb_column! { 24, get_consumeable_apply_status_effect_id, usize }
+    stb_column! { 25, get_consumeable_cooldown_type_id, usize }
+    stb_column! { 26, get_consumeable_cooldown_duration_seconds, u32 }
+
     // LIST_JEMITEM
     pub fn get_gem_add_ability(&self, id: usize) -> Vec<(AbilityType, i32)> {
         let mut add_ability = Vec::new();
@@ -246,6 +279,25 @@ fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponIt
     })
 }
 
+fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<ConsumableItemData> {
+    let base_item_data = load_base_item(data, stl, id, true)?;
+    Some(ConsumableItemData {
+        item_data: base_item_data,
+        store_skin: data.get_consumeable_store_skin(id).unwrap_or(0),
+        confile_index: data.get_consumeable_confile_index(id).unwrap_or(0),
+        ability_requirement: data.get_consumeable_ability_requirement(id),
+        add_ability: data.get_consumeable_add_ability(id),
+        learn_skill_id: data.get_consumeable_learn_skill_id(id).unwrap_or(0),
+        use_skill_id: data.get_consumeable_use_skill_id(id).unwrap_or(0),
+        apply_status_effect_id: data.get_consumeable_apply_status_effect_id(id).unwrap_or(0),
+        cooldown_type_id: data.get_consumeable_cooldown_type_id(id).unwrap_or(0),
+        cooldown_duration: Duration::from_secs(
+            data.get_consumeable_cooldown_duration_seconds(id)
+                .unwrap_or(0) as u64,
+        ),
+    })
+}
+
 fn load_gem_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<GemItemData> {
     let base_item_data = load_base_item(data, stl, id, true)?;
     Some(GemItemData {
@@ -293,7 +345,7 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
     let jewellery = load_items! { vfs, "3DDATA/STB/LIST_JEWEL.STB", "3DDATA/STB/LIST_JEWEL_S.STL", load_base_item, JewelleryItemData };
     let weapon = load_items! { vfs, "3DDATA/STB/LIST_WEAPON.STB", "3DDATA/STB/LIST_WEAPON_S.STL", load_weapon_item, WeaponItemData };
     let subweapon = load_items! { vfs, "3DDATA/STB/LIST_SUBWPN.STB", "3DDATA/STB/LIST_SUBWPN_S.STL", load_base_item, SubWeaponItemData };
-    let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA/STB/LIST_USEITEM_S.STL", load_base_item, ConsumableItemData };
+    let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA/STB/LIST_USEITEM_S.STL", load_consumeable_item, ConsumableItemData };
     let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA/STB/LIST_JEMITEM_S.STL",load_gem_item, GemItemData };
     let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA/STB/LIST_NATURAL_S.STL", load_base_item, MaterialItemData };
     let quest = load_items! { vfs, "3DDATA/STB/LIST_QUESTITEM.STB", "3DDATA/STB/LIST_QUESTITEM_S.STL", load_base_item, QuestItemData };
