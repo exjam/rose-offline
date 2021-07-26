@@ -259,6 +259,20 @@ impl GameClient {
                         buy_item: packet.buy_item,
                     }))?;
             }
+            Some(ClientPackets::DropItem) => {
+                let packet = PacketClientDropItem::try_from(&packet)?;
+                client.client_message_tx.send(ClientMessage::DropItem(
+                    packet.item_slot,
+                    packet.quantity as usize,
+                ))?;
+            }
+            Some(ClientPackets::UseItem) => {
+                let packet = PacketClientUseItem::try_from(&packet)?;
+                client.client_message_tx.send(ClientMessage::UseItem(
+                    packet.item_slot,
+                    packet.target_entity_id,
+                ))?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,

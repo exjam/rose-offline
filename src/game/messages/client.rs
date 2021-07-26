@@ -278,4 +278,6 @@ pub enum ClientMessage {
     QuestDelete(QuestDelete),
     PersonalStoreListItems(ClientEntityId),
     PersonalStoreBuyItem(PersonalStoreBuyItem),
+    DropItem(ItemSlot, usize),
+    UseItem(ItemSlot, Option<ClientEntityId>),
 }

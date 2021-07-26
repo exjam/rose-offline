@@ -27,6 +27,7 @@ pub enum ClientPackets {
     StopMove = 0x796,
     Attack = 0x798,
     Move = 0x79a,
+    UseItem = 0x7a3,
     DropItem = 0x7a4,
     ChangeEquipment = 0x7a5,
     PickupDroppedItem = 0x7a7,
@@ -354,6 +355,56 @@ impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
             store_entity_id,
             store_slot_index,
             buy_item,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientDropItem {
+    pub item_slot: ItemSlot,
+    pub quantity: u32,
+}
+
+impl TryFrom<&Packet> for PacketClientDropItem {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::DropItem as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let item_slot = reader.read_item_slot_u8()?;
+        let quantity = reader.read_u32()?;
+
+        Ok(PacketClientDropItem {
+            item_slot,
+            quantity,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientUseItem {
+    pub item_slot: ItemSlot,
+    pub target_entity_id: Option<ClientEntityId>,
+}
+
+impl TryFrom<&Packet> for PacketClientUseItem {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::UseItem as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let item_slot = reader.read_item_slot_u16()?;
+        let target_entity_id = reader.read_u16().ok().map(|x| ClientEntityId(x as usize));
+
+        Ok(PacketClientUseItem {
+            item_slot,
+            target_entity_id,
         })
     }
 }
