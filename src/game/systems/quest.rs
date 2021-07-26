@@ -16,7 +16,7 @@ use crate::{
     game::{
         bundles::{
             ability_values_add_value, ability_values_get_value, ability_values_set_value,
-            client_entity_teleport_zone,
+            client_entity_teleport_zone, skill_list_try_learn_skill,
         },
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
@@ -631,53 +631,19 @@ fn quest_reward_add_skill(
     skill_id: usize,
 ) -> Option<()> {
     let skill = SkillReference(skill_id);
-    let skill_list = quest_parameters.source.skill_list.as_mut()?;
-    let skill_points = quest_parameters
-        .source
-        .skill_points
-        .as_ref()
-        .map(|x| x.points)
-        .unwrap_or(0);
-
-    let result = if let Some(skill_data) = quest_world.game_data.skills.get_skill(&skill) {
-        // TODO: Check all skill requirements before add_skill
-        if skill_points >= skill_data.skill_point_cost {
-            if skill_list.find_skill_slot(skill).is_none() {
-                if let Some(skill_slot) = skill_list.add_skill(skill, skill_data.page) {
-                    let updated_skill_points =
-                        if let Some(skill_points) = quest_parameters.source.skill_points.as_mut() {
-                            skill_points.points -= skill_data.skill_point_cost;
-                            **skill_points
-                        } else {
-                            SkillPoints::new()
-                        };
-
-                    Ok(LearnSkillSuccess {
-                        skill_slot: skill_slot as usize,
-                        skill,
-                        updated_skill_points,
-                    })
-                } else {
-                    Err(LearnSkillError::Full)
-                }
-            } else {
-                Err(LearnSkillError::AlreadyLearnt)
-            }
-        } else {
-            Err(LearnSkillError::SkillPointRequirement)
-        }
+    if let Some(skill_list) = quest_parameters.source.skill_list.as_deref_mut() {
+        skill_list_try_learn_skill(
+            quest_world.game_data.skills.as_ref(),
+            skill,
+            skill_list,
+            quest_parameters.source.skill_points.as_deref_mut(),
+            quest_parameters.source.game_client,
+        )
+        .ok()
+        .map(|_| ())
     } else {
-        Err(LearnSkillError::InvalidSkillId)
-    };
-
-    if let Some(game_client) = quest_parameters.source.game_client.as_mut() {
-        game_client
-            .server_message_tx
-            .send(ServerMessage::LearnSkillResult(result.clone()))
-            .ok();
+        Some(())
     }
-
-    result.ok().map(|_| ())
 }
 
 fn quest_reward_teleport(
