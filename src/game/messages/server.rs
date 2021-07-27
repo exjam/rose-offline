@@ -9,7 +9,7 @@ use crate::{
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
         EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, Money, Npc,
-        NpcStandingDirection, Position, SkillPoints, StatPoints, Team,
+        NpcStandingDirection, Position, SkillPoints, SkillSlot, StatPoints, Team,
     },
 };
 
@@ -238,7 +238,7 @@ pub enum LearnSkillError {
 
 #[derive(Clone)]
 pub struct LearnSkillSuccess {
-    pub skill_slot: usize,
+    pub skill_slot: SkillSlot,
     pub skill: SkillReference,
     pub updated_skill_points: SkillPoints,
 }
@@ -250,6 +250,7 @@ pub struct OpenPersonalStore {
     pub title: String,
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub enum PersonalStoreTransactionResult {
     Cancelled(PersonalStoreTransactionCancelled),

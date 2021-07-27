@@ -1,7 +1,7 @@
 use crate::{
     data::{SkillDatabase, SkillReference},
     game::{
-        components::{GameClient, SkillList, SkillPoints},
+        components::{GameClient, SkillList, SkillPoints, SkillSlot},
         messages::server::{LearnSkillError, LearnSkillSuccess, ServerMessage},
     },
 };
@@ -11,12 +11,12 @@ fn try_learn_skill(
     skill: SkillReference,
     skill_list: &mut SkillList,
     skill_points: Option<&mut SkillPoints>,
-) -> Result<usize, LearnSkillError> {
+) -> Result<SkillSlot, LearnSkillError> {
     let skill_data = skill_database
         .get_skill(&skill)
         .ok_or(LearnSkillError::InvalidSkillId)?;
 
-    if skill_list.find_skill_slot(skill).is_some() {
+    if skill_list.find_skill(skill_data).is_some() {
         return Err(LearnSkillError::AlreadyLearnt);
     }
 
@@ -28,15 +28,15 @@ fn try_learn_skill(
 
     // TODO: Check skill job / skill / ability requirements
 
-    let skill_slot = skill_list
-        .add_skill(skill, skill_data.page)
+    let (skill_slot, _) = skill_list
+        .add_skill(skill_data)
         .ok_or(LearnSkillError::Full)?;
 
     if let Some(skill_points) = skill_points {
         skill_points.points -= skill_data.skill_point_cost;
     }
 
-    Ok(skill_slot as usize)
+    Ok(skill_slot)
 }
 
 pub fn skill_list_try_learn_skill(
@@ -45,7 +45,7 @@ pub fn skill_list_try_learn_skill(
     skill_list: &mut SkillList,
     mut skill_points: Option<&mut SkillPoints>,
     game_client: Option<&GameClient>,
-) -> Result<usize, LearnSkillError> {
+) -> Result<SkillSlot, LearnSkillError> {
     let result = try_learn_skill(
         skill_database,
         skill,
@@ -59,7 +59,7 @@ pub fn skill_list_try_learn_skill(
                 game_client
                     .server_message_tx
                     .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
-                        skill_slot: skill_slot as usize,
+                        skill_slot,
                         skill,
                         updated_skill_points: skill_points
                             .cloned()

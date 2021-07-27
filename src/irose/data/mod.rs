@@ -44,8 +44,12 @@ pub fn get_game_data() -> GameData {
     .expect("Failed to get ability value calculator");
 
     GameData {
-        character_creator: get_character_creator(&vfs_index, &skill_database, &zone_database)
-            .expect("Failed to get character creator"),
+        character_creator: get_character_creator(
+            &vfs_index,
+            skill_database.clone(),
+            &zone_database,
+        )
+        .expect("Failed to get character creator"),
         ability_value_calculator,
         drop_table,
         ai: Arc::new(get_ai_database(&vfs_index).expect("Failed to load AI database")),

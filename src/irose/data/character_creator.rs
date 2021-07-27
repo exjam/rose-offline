@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use nalgebra::Point3;
 
 use crate::{
@@ -15,7 +17,7 @@ use crate::{
         character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
         formats::StbFile,
         item::{EquipmentItem, Item},
-        SkillPage, SkillReference,
+        SkillReference,
     },
     game::components::{
         BasicStats, CharacterInfo, Equipment, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
@@ -31,8 +33,9 @@ struct CharacterGenderData {
 }
 
 struct CharacterCreatorData {
+    skill_database: Arc<SkillDatabase>,
     gender_data: Vec<CharacterGenderData>,
-    skills: Vec<(SkillReference, SkillPage)>,
+    skills: Vec<SkillReference>,
     start_position: Position,
     revive_position: Position,
 }
@@ -171,8 +174,10 @@ impl CharacterCreator for CharacterCreatorData {
             stamina: Stamina::new(),
         };
 
-        for (skill, page) in &self.skills {
-            character.skill_list.add_skill(*skill, *page);
+        for skill in &self.skills {
+            if let Some(skill_data) = self.skill_database.get_skill(skill) {
+                character.skill_list.add_skill(skill_data);
+            }
         }
 
         character
@@ -201,7 +206,7 @@ fn load_gender(data: &StbInitAvatar, id: usize) -> Option<CharacterGenderData> {
 
 pub fn get_character_creator(
     vfs: &VfsIndex,
-    skill_database: &SkillDatabase,
+    skill_database: Arc<SkillDatabase>,
     zone_database: &ZoneDatabase,
 ) -> Option<Box<impl CharacterCreator + Send + Sync>> {
     let file = vfs.open_file("3DDATA/STB/INIT_AVATAR.STB")?;
@@ -213,15 +218,12 @@ pub fn get_character_creator(
         }
     }
 
-    let mut skills = Vec::new();
-    for skill in [11, 12, 16, 20] // Sit, Pick Up, Normal Attack, Trade
-        .iter()
-        .map(|id| SkillReference(*id as usize))
-    {
-        if let Some(skill_data) = skill_database.get_skill(&skill) {
-            skills.push((skill, skill_data.page));
-        }
-    }
+    let skills = vec![
+        SkillReference(11), // Sit
+        SkillReference(12), // Pick Up
+        SkillReference(16), // Attack
+        SkillReference(20), // Trade
+    ];
 
     let start_zone_id = 20;
     let zone_data = zone_database
@@ -234,6 +236,7 @@ pub fn get_character_creator(
     let start_position = Point3::new(530500.0, 539500.0, 0.0);
 
     Some(Box::new(CharacterCreatorData {
+        skill_database,
         gender_data,
         skills,
         start_position: Position::new(start_position, start_zone_id as u16),

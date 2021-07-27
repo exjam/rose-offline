@@ -80,7 +80,7 @@ pub use personal_store::{PersonalStore, PERSONAL_STORE_ITEM_SLOTS};
 pub use position::Position;
 pub use quest_state::{ActiveQuest, QuestState};
 pub use server_info::ServerInfo;
-pub use skill_list::SkillList;
+pub use skill_list::{SkillList, SkillPage, SkillSlot};
 pub use skill_points::SkillPoints;
 pub use spawn_origin::SpawnOrigin;
 pub use stamina::{Stamina, MAX_STAMINA};

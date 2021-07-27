@@ -6,7 +6,7 @@ use num_traits::FromPrimitive;
 use crate::{
     data::{
         formats::{FileReader, StbFile, StlFile, VfsIndex},
-        SkillAddAbility, SkillData, SkillDatabase, SkillPage, SkillType,
+        SkillAddAbility, SkillData, SkillDatabase, SkillPageType, SkillReference, SkillType,
     },
     stb_column,
 };
@@ -49,12 +49,12 @@ impl StbSkill {
     }
 }
 
-fn decode_skill_page(value: u32) -> Option<SkillPage> {
+fn decode_skill_page(value: u32) -> Option<SkillPageType> {
     match value {
-        0 => Some(SkillPage::Basic),
-        1 => Some(SkillPage::Active),
-        2 => Some(SkillPage::Passive),
-        3 => Some(SkillPage::Clan),
+        0 => Some(SkillPageType::Basic),
+        1 => Some(SkillPageType::Active),
+        2 => Some(SkillPageType::Passive),
+        3 => Some(SkillPageType::Clan),
         _ => None,
     }
 }
@@ -66,6 +66,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
     }
 
     Some(SkillData {
+        id: SkillReference(id),
         name: stl
             .get_text_string(1, data.0.get(id, data.0.columns() - 1))
             .unwrap_or(&"")

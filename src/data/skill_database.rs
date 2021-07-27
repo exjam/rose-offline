@@ -7,8 +7,8 @@ use crate::data::ability::AbilityType;
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct SkillReference(pub usize);
 
-#[derive(Clone, Copy, Debug)]
-pub enum SkillPage {
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+pub enum SkillPageType {
     Basic,
     Active,
     Passive,
@@ -27,8 +27,9 @@ pub enum SkillType {
 }
 
 pub struct SkillData {
+    pub id: SkillReference,
     pub name: String,
-    pub page: SkillPage,
+    pub page: SkillPageType,
     pub icon_number: u32,
     pub add_ability: Vec<SkillAddAbility>,
     pub skill_type: SkillType,

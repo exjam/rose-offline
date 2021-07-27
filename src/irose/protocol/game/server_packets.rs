@@ -14,7 +14,7 @@ use crate::{
             AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
             CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
             HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, Npc,
-            NpcStandingDirection, Position, QuestState, SkillList, SkillPoints, Stamina,
+            NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints, Stamina,
             StatPoints, Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
@@ -22,7 +22,7 @@ use crate::{
         },
     },
     irose::protocol::game::common_packets::{
-        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteSkillSlot,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -107,6 +107,19 @@ impl From<&PacketConnectionReply> for Packet {
         writer.write_u32(packet.packet_sequence_id);
         writer.write_u32(packet.pay_flags);
         writer.into()
+    }
+}
+
+fn write_skill_page(writer: &mut PacketWriter, skill_page: &SkillPage) {
+    for index in 0..30 {
+        writer.write_u16(
+            skill_page
+                .skills
+                .get(index)
+                .copied()
+                .flatten()
+                .map_or(0, |x| x.0) as u16,
+        );
     }
 }
 
@@ -196,12 +209,10 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         }
 
         // tagSkillAbility
-        assert!(packet.skill_list.pages.len() * packet.skill_list.pages[0].len() == 120);
-        for page in &packet.skill_list.pages {
-            for slot in page {
-                writer.write_u16(slot.map_or(0, |x| x.0) as u16);
-            }
-        }
+        write_skill_page(&mut writer, &packet.skill_list.basic);
+        write_skill_page(&mut writer, &packet.skill_list.active);
+        write_skill_page(&mut writer, &packet.skill_list.passive);
+        write_skill_page(&mut writer, &packet.skill_list.clan);
 
         // CHotIcons
         assert!(packet.hotbar.pages.len() * packet.hotbar.pages[0].len() == 32);
@@ -1003,7 +1014,7 @@ impl From<&PacketServerLearnSkillResult> for Packet {
                 updated_skill_points,
             }) => {
                 writer.write_u8(1); // Success
-                writer.write_u8(skill_slot as u8);
+                writer.write_skill_slot_u8(skill_slot);
                 writer.write_u16(skill.0 as u16);
                 writer.write_u16(updated_skill_points.points as u16);
             }

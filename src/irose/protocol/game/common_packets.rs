@@ -5,10 +5,10 @@ use std::convert::TryInto;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        ItemReference,
+        ItemReference, SkillPageType,
     },
     game::components::{
-        Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money,
+        Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money, SkillSlot,
         INVENTORY_PAGE_SIZE,
     },
     protocol::{PacketReader, PacketWriter, ProtocolError},
@@ -347,5 +347,24 @@ impl PacketWriteItemSlot for PacketWriter {
 
     fn write_item_slot_u16(&mut self, item_slot: ItemSlot) {
         self.write_u16(item_slot_to_index(item_slot) as u16)
+    }
+}
+
+pub trait PacketWriteSkillSlot {
+    fn write_skill_slot_u8(&mut self, slot: SkillSlot);
+}
+
+fn skill_slot_to_index(slot: SkillSlot) -> usize {
+    match slot {
+        SkillSlot(SkillPageType::Basic, index) => index,
+        SkillSlot(SkillPageType::Active, index) => 30 + index,
+        SkillSlot(SkillPageType::Passive, index) => (2 * 30) + index,
+        SkillSlot(SkillPageType::Clan, index) => (3 * 30) + index,
+    }
+}
+
+impl PacketWriteSkillSlot for PacketWriter {
+    fn write_skill_slot_u8(&mut self, slot: SkillSlot) {
+        self.write_u8(skill_slot_to_index(slot) as u8)
     }
 }
