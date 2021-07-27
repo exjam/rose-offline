@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
 use super::EquipmentIndex;
-use crate::data::item::{EquipmentItem, Item, ItemType, StackableItem};
+use crate::data::item::{EquipmentItem, Item, ItemSlotBehaviour, ItemType, StackableItem};
 use crate::data::ItemReference;
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
@@ -290,6 +290,16 @@ impl Inventory {
             }
             ItemSlot::Equipped(_) => None,
         }
+    }
+
+    pub fn try_stack_with_item(&mut self, slot: ItemSlot, with_item: Item) -> Option<&Item> {
+        self.get_item_slot_mut(slot)
+            .and_then(|item_slot| item_slot.try_stack_with_item(with_item).ok())
+    }
+
+    pub fn try_take_quantity(&mut self, slot: ItemSlot, quantity: u32) -> Option<Item> {
+        self.get_item_slot_mut(slot)
+            .and_then(|item_slot| item_slot.try_take_quantity(quantity))
     }
 
     pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {

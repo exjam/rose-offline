@@ -27,8 +27,8 @@ use crate::{
         resources::{
             ClientEntityList, GameData, LoginTokens, PendingChatCommandList,
             PendingPersonalStoreEvent, PendingPersonalStoreEventList, PendingQuestTrigger,
-            PendingQuestTriggerList, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
-            ServerMessages, WorldTime,
+            PendingQuestTriggerList, PendingUseItem, PendingUseItemList, PersonalStoreEventBuyItem,
+            PersonalStoreEventListItems, ServerMessages, WorldTime,
         },
     },
 };
@@ -233,6 +233,7 @@ pub fn game_server_main(
     #[resource] pending_chat_command_list: &mut PendingChatCommandList,
     #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
     #[resource] pending_store_event_list: &mut PendingPersonalStoreEventList,
+    #[resource] pending_use_item_list: &mut PendingUseItemList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
@@ -567,6 +568,21 @@ pub fn game_server_main(
                                 },
                             ));
                         }
+                    }
+                    ClientMessage::UseItem(item_slot, target_entity_id) => {
+                        let target_entity = target_entity_id
+                            .and_then(|target_entity_id| {
+                                client_entity_list
+                                    .get_zone(position.zone as usize)
+                                    .and_then(|zone| zone.get_entity(target_entity_id))
+                            })
+                            .map(|(target_entity, _, _)| *target_entity);
+
+                        pending_use_item_list.push(PendingUseItem::new(
+                            *entity,
+                            item_slot,
+                            target_entity,
+                        ));
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }

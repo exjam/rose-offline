@@ -4,7 +4,7 @@ use crate::{
     data::{
         ability::AbilityType,
         item::{EquipmentItem, Item},
-        Damage, NpcReference, QuestTriggerHash, SkillReference,
+        Damage, ItemReference, NpcReference, QuestTriggerHash, SkillReference,
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
@@ -288,6 +288,13 @@ pub struct PersonalStoreItemList {
 }
 
 #[derive(Clone)]
+pub struct UseItem {
+    pub entity_id: ClientEntityId,
+    pub item: ItemReference,
+    pub inventory_slot: ItemSlot,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -318,4 +325,5 @@ pub enum ServerMessage {
     OpenPersonalStore(OpenPersonalStore),
     PersonalStoreItemList(PersonalStoreItemList),
     PersonalStoreTransactionResult(PersonalStoreTransactionResult),
+    UseItem(UseItem),
 }

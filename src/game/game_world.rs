@@ -8,7 +8,8 @@ use crate::game::{
     resources::{
         BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, PendingChatCommandList,
         PendingDamageList, PendingPersonalStoreEventList, PendingQuestTriggerList, PendingSaveList,
-        PendingXpList, ServerList, ServerMessages, ServerTime, WorldRates, WorldTime,
+        PendingUseItemList, PendingXpList, ServerList, ServerMessages, ServerTime, WorldRates,
+        WorldTime,
     },
     systems::*,
 };
@@ -41,6 +42,7 @@ impl GameWorld {
         resources.insert(PendingPersonalStoreEventList::new());
         resources.insert(PendingQuestTriggerList::new());
         resources.insert(PendingSaveList::new());
+        resources.insert(PendingUseItemList::new());
         resources.insert(PendingXpList::new());
         resources.insert(WorldRates::new());
         resources.insert(WorldTime::new());
@@ -74,10 +76,12 @@ impl GameWorld {
             .flush()
             .add_system(command_system())
             .flush()
-            .add_system(personal_store_system())
             .add_system(update_position_system())
+            .flush()
+            .add_system(personal_store_system())
             .add_system(damage_system())
             .add_system(quest_system())
+            .add_system(use_item_system())
             .flush()
             .add_system(experience_points_system())
             .flush()

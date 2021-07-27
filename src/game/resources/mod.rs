@@ -8,6 +8,7 @@ mod pending_damage_list;
 mod pending_personal_store_event;
 mod pending_quest_trigger_list;
 mod pending_save_list;
+mod pending_use_item_list;
 mod pending_xp_list;
 mod server_list;
 mod server_messages;
@@ -28,6 +29,7 @@ pub use pending_personal_store_event::{
 };
 pub use pending_quest_trigger_list::{PendingQuestTrigger, PendingQuestTriggerList};
 pub use pending_save_list::{PendingCharacterSave, PendingSave, PendingSaveList};
+pub use pending_use_item_list::{PendingUseItem, PendingUseItemList};
 pub use pending_xp_list::{PendingXp, PendingXpList};
 pub use server_list::{GameServer, ServerList, WorldServer};
 pub use server_messages::ServerMessages;

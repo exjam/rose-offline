@@ -18,7 +18,8 @@ use crate::{
             PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
             QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
             SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateXpStamina, Whisper,
+            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateXpStamina, UseItem,
+            Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -710,6 +711,20 @@ impl GameClient {
                 PersonalStoreTransactionResult::NoMoreNeed(_) => todo!(),
                 PersonalStoreTransactionResult::SoldToStore(_) => todo!(),
             },
+            ServerMessage::UseItem(UseItem {
+                entity_id,
+                item,
+                inventory_slot,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUseItem {
+                        entity_id,
+                        item,
+                        inventory_slot,
+                    }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

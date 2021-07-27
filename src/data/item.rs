@@ -61,7 +61,7 @@ impl ItemType {
 }
 
 // TODO: The number mappings for this should move to irose stb loading code?
-#[derive(Copy, Clone, FromPrimitive)]
+#[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum ItemClass {
     Unknown = 0,
 
@@ -351,6 +351,20 @@ impl Item {
         }
     }
 
+    pub fn get_item_reference(&self) -> ItemReference {
+        match self {
+            Item::Equipment(item) => item.item,
+            Item::Stackable(item) => item.item,
+        }
+    }
+
+    pub fn get_item_number(&self) -> usize {
+        match self {
+            Item::Equipment(item) => item.item.item_number,
+            Item::Stackable(item) => item.item.item_number,
+        }
+    }
+
     pub fn get_item_type(&self) -> ItemType {
         match self {
             Item::Equipment(item) => item.item.item_type,
@@ -410,7 +424,7 @@ impl Item {
 
 pub trait ItemSlotBehaviour {
     fn try_take_quantity(&mut self, quantity: u32) -> Option<Item>;
-    fn try_stack_with_item(&mut self, with_item: Item) -> Result<(), StackError>;
+    fn try_stack_with_item(&mut self, with_item: Item) -> Result<&Item, StackError>;
 
     fn contains_same_item(&self, compare_item: &Item) -> bool;
 }
@@ -427,12 +441,15 @@ impl ItemSlotBehaviour for Option<Item> {
         }
     }
 
-    fn try_stack_with_item(&mut self, with_item: Item) -> Result<(), StackError> {
+    fn try_stack_with_item(&mut self, with_item: Item) -> Result<&Item, StackError> {
         match self {
-            Some(item) => item.try_stack_with_item(with_item),
+            Some(item) => match item.try_stack_with_item(with_item) {
+                Ok(_) => Ok(self.as_ref().unwrap()),
+                Err(err) => Err(err),
+            },
             None => {
                 *self = Some(with_item);
-                Ok(())
+                Ok(self.as_ref().unwrap())
             }
         }
     }

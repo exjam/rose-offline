@@ -7,16 +7,15 @@ use crate::{
     data::{
         ability::AbilityType,
         item::{EquipmentItem, Item},
-        Damage, NpcReference, WorldTicks,
+        Damage, ItemReference, NpcReference, WorldTicks,
     },
     game::{
         components::{
             AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
             CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
-            HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPageType, ItemSlot, Level,
-            ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
-            SkillPoints, Stamina, StatPoints, Team, UnionMembership, VehiclePartIndex,
-            INVENTORY_PAGE_SIZE,
+            HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, Npc,
+            NpcStandingDirection, Position, QuestState, SkillList, SkillPoints, Stamina,
+            StatPoints, Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
             LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
@@ -1140,6 +1139,22 @@ impl From<&PacketServerPersonalStoreTransactionResult> for Packet {
                 writer.write_item_full(store_slot.as_ref());
             }
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerUseItem {
+    pub entity_id: ClientEntityId,
+    pub item: ItemReference,
+    pub inventory_slot: ItemSlot,
+}
+
+impl From<&PacketServerUseItem> for Packet {
+    fn from(packet: &PacketServerUseItem) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UseItem as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.item.item_number as u16);
+        writer.write_item_slot_u8(packet.inventory_slot);
         writer.into()
     }
 }

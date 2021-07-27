@@ -16,6 +16,7 @@ mod save;
 mod server_messages;
 mod startup_zones;
 mod update_position;
+mod use_item;
 mod world_server;
 mod world_time;
 
@@ -37,5 +38,6 @@ pub use save::save_system;
 pub use server_messages::*;
 pub use startup_zones::*;
 pub use update_position::*;
+pub use use_item::use_item_system;
 pub use world_server::*;
 pub use world_time::world_time_system;
