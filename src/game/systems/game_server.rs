@@ -584,6 +584,38 @@ pub fn game_server_main(
                             target_entity,
                         ));
                     }
+                    ClientMessage::CastSkillSelf(skill_slot) => {
+                        if let Some(skill) = skill_list.get_skill(skill_slot) {
+                            cmd.add_component(
+                                *entity,
+                                NextCommand::with_cast_skill_target_self(skill),
+                            );
+                        }
+                    }
+                    ClientMessage::CastSkillTargetEntity(skill_slot, target_entity_id) => {
+                        if let Some(skill) = skill_list.get_skill(skill_slot) {
+                            if let Some((target_entity, _, _)) = client_entity_list
+                                .get_zone(position.zone as usize)
+                                .and_then(|zone| zone.get_entity(target_entity_id))
+                            {
+                                cmd.add_component(
+                                    *entity,
+                                    NextCommand::with_cast_skill_target_entity(
+                                        skill,
+                                        *target_entity,
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                    ClientMessage::CastSkillTargetPosition(skill_slot, position) => {
+                        if let Some(skill) = skill_list.get_skill(skill_slot) {
+                            cmd.add_component(
+                                *entity,
+                                NextCommand::with_cast_skill_target_position(skill, position),
+                            );
+                        }
+                    }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
             }

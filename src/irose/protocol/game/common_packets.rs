@@ -350,8 +350,22 @@ impl PacketWriteItemSlot for PacketWriter {
     }
 }
 
+pub trait PacketReadSkillSlot {
+    fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, ProtocolError>;
+}
+
 pub trait PacketWriteSkillSlot {
     fn write_skill_slot_u8(&mut self, slot: SkillSlot);
+}
+
+fn skill_slot_from_index(index: usize) -> Result<SkillSlot, ProtocolError> {
+    match index {
+        0..=29 => Ok(SkillSlot(SkillPageType::Basic, index)),
+        30..=59 => Ok(SkillSlot(SkillPageType::Active, index)),
+        60..=89 => Ok(SkillSlot(SkillPageType::Passive, index)),
+        90..=119 => Ok(SkillSlot(SkillPageType::Clan, index)),
+        _ => Err(ProtocolError::InvalidPacket),
+    }
 }
 
 fn skill_slot_to_index(slot: SkillSlot) -> usize {
@@ -360,6 +374,12 @@ fn skill_slot_to_index(slot: SkillSlot) -> usize {
         SkillSlot(SkillPageType::Active, index) => 30 + index,
         SkillSlot(SkillPageType::Passive, index) => (2 * 30) + index,
         SkillSlot(SkillPageType::Clan, index) => (3 * 30) + index,
+    }
+}
+
+impl<'a> PacketReadSkillSlot for PacketReader<'a> {
+    fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, ProtocolError> {
+        skill_slot_from_index(self.read_u8()? as usize)
     }
 }
 

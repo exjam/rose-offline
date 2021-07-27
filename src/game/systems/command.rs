@@ -1,13 +1,14 @@
 use std::time::Duration;
 
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use log::warn;
 
 use crate::game::{
     bundles::client_entity_leave_zone,
     components::{
-        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandData,
-        CommandMove, CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
-        Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, Target,
+        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
+        CommandData, CommandMove, CommandPickupDroppedItem, Destination, DroppedItem, GameClient,
+        HealthPoints, Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, Target,
     },
     messages::server::{
         self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
@@ -71,6 +72,25 @@ fn is_valid_attack_target<'a>(
     attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
     attack_target_query_world: &'a SubWorld,
 ) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
+    // TODO: Check Team
+    if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
+        attack_target_query.get(attack_target_query_world, *target_entity)
+    {
+        if target_position.zone == position.zone && target_health.hp > 0 {
+            return Some((target_client_entity, target_position, target_ability_values));
+        }
+    }
+
+    None
+}
+
+fn is_valid_skill_target<'a>(
+    position: &Position,
+    target_entity: &Entity,
+    attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    attack_target_query_world: &'a SubWorld,
+) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
+    // TODO: Check Team
     if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
         attack_target_query.get(attack_target_query_world, *target_entity)
     {
@@ -237,6 +257,64 @@ pub fn command(
                         } else {
                             next_command.command = Some(CommandData::Stop);
                         }
+                    }
+                    CommandData::CastSkill(CommandCastSkill::TargetSelf(skill)) => {
+                        server_messages.send_entity_message(
+                            client_entity,
+                            ServerMessage::CastSkillSelf(server::CastSkillSelf {
+                                entity_id: client_entity.id,
+                                skill: *skill,
+                                npc_motion_id: None, // TODO: CastSkillSelf npc_motion_id
+                            }),
+                        );
+                    }
+                    CommandData::CastSkill(CommandCastSkill::TargetEntity(
+                        skill,
+                        target_entity,
+                    )) => {
+                        if let Some((target_client_entity, target_position, _)) =
+                            is_valid_skill_target(
+                                position,
+                                target_entity,
+                                attack_target_query,
+                                &attack_target_query_world,
+                            )
+                        {
+                            let distance = (target_position.position.xy() - position.position.xy())
+                                .magnitude();
+
+                            server_messages.send_entity_message(
+                                client_entity,
+                                ServerMessage::CastSkillTargetEntity(
+                                    server::CastSkillTargetEntity {
+                                        entity_id: client_entity.id,
+                                        skill: *skill,
+                                        target_entity_id: target_client_entity.id,
+                                        target_distance: distance,
+                                        target_position: target_position.position.xy(),
+                                        npc_motion_id: None, // TODO: CastSkillTargetEntity npc_motion_id
+                                    },
+                                ),
+                            );
+                        } else {
+                            next_command.command = Some(CommandData::Stop);
+                        }
+                    }
+                    CommandData::CastSkill(CommandCastSkill::TargetPosition(
+                        skill,
+                        target_position,
+                    )) => {
+                        server_messages.send_entity_message(
+                            client_entity,
+                            ServerMessage::CastSkillTargetPosition(
+                                server::CastSkillTargetPosition {
+                                    entity_id: client_entity.id,
+                                    skill: *skill,
+                                    target_position: *target_position,
+                                    npc_motion_id: None, // TODO: CastSkillTargetPosition npc_motion_id
+                                },
+                            ),
+                        );
                     }
                 }
 
@@ -499,6 +577,30 @@ pub fn command(
                         );
                         *next_command = NextCommand::default();
                     }
+                }
+                CommandData::CastSkill(CommandCastSkill::TargetSelf(skill)) => {
+                    warn!("Unimplemented CommandCastSkill::TargetSelf({:?})", skill);
+                    *command = Command::default();
+                    *next_command = NextCommand::default();
+                }
+                CommandData::CastSkill(CommandCastSkill::TargetEntity(skill, target_entity)) => {
+                    warn!(
+                        "Unimplemented CommandCastSkill::TargetEntity({:?}, {:?})",
+                        skill, target_entity
+                    );
+                    *command = Command::default();
+                    *next_command = NextCommand::default();
+                }
+                CommandData::CastSkill(CommandCastSkill::TargetPosition(
+                    skill,
+                    target_position,
+                )) => {
+                    warn!(
+                        "Unimplemented CommandData::CastSkill({:?}, {:?})",
+                        skill, target_position
+                    );
+                    *command = Command::default();
+                    *next_command = NextCommand::default();
                 }
                 CommandData::PersonalStore => {
                     let personal_store = personal_store.unwrap();

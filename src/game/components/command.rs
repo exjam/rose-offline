@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use legion::Entity;
-use nalgebra::Point3;
+use nalgebra::{Point2, Point3};
+
+use crate::data::SkillReference;
 
 #[derive(Clone)]
 pub struct CommandMove {
@@ -25,6 +27,13 @@ pub struct CommandPickupDroppedItem {
 }
 
 #[derive(Clone)]
+pub enum CommandCastSkill {
+    TargetSelf(SkillReference),
+    TargetEntity(SkillReference, Entity),
+    TargetPosition(SkillReference, Point2<f32>),
+}
+
+#[derive(Clone)]
 pub enum CommandData {
     Die(CommandDie),
     Stop,
@@ -32,8 +41,8 @@ pub enum CommandData {
     Attack(CommandAttack),
     PickupDroppedItem(CommandPickupDroppedItem),
     PersonalStore,
+    CastSkill(CommandCastSkill),
     // TODO:
-    // Cast skill
     // Sit
 }
 
@@ -98,6 +107,32 @@ impl NextCommand {
     pub fn with_personal_store() -> Self {
         Self {
             command: Some(CommandData::PersonalStore),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_cast_skill_target_self(skill: SkillReference) -> Self {
+        Self {
+            command: Some(CommandData::CastSkill(CommandCastSkill::TargetSelf(skill))),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_cast_skill_target_entity(skill: SkillReference, target_entity: Entity) -> Self {
+        Self {
+            command: Some(CommandData::CastSkill(CommandCastSkill::TargetEntity(
+                skill,
+                target_entity,
+            ))),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_cast_skill_target_position(skill: SkillReference, position: Point2<f32>) -> Self {
+        Self {
+            command: Some(CommandData::CastSkill(CommandCastSkill::TargetPosition(
+                skill, position,
+            ))),
             has_sent_server_message: false,
         }
     }

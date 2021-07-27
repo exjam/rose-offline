@@ -1,3 +1,4 @@
+use nalgebra::Point2;
 use tokio::sync::oneshot;
 
 use crate::{
@@ -5,8 +6,8 @@ use crate::{
     game::components::{
         BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
         EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
-        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, Team,
-        UnionMembership,
+        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, SkillSlot, Stamina,
+        StatPoints, Team, UnionMembership,
     },
 };
 
@@ -280,4 +281,7 @@ pub enum ClientMessage {
     PersonalStoreBuyItem(PersonalStoreBuyItem),
     DropItem(ItemSlot, usize),
     UseItem(ItemSlot, Option<ClientEntityId>),
+    CastSkillSelf(SkillSlot),
+    CastSkillTargetEntity(SkillSlot, ClientEntityId),
+    CastSkillTargetPosition(SkillSlot, Point2<f32>),
 }

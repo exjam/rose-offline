@@ -1,21 +1,22 @@
 use std::time::Duration;
 
 use modular_bitfield::prelude::*;
+use nalgebra::Point2;
 use num_derive::FromPrimitive;
 
 use crate::{
     data::{
         ability::AbilityType,
         item::{EquipmentItem, Item},
-        Damage, ItemReference, NpcReference, WorldTicks,
+        Damage, ItemReference, NpcReference, SkillReference, WorldTicks,
     },
     game::{
         components::{
             AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
-            CommandData, Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints,
-            HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, Npc,
-            NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints, Stamina,
-            StatPoints, Team, UnionMembership, VehiclePartIndex,
+            CommandCastSkill, CommandData, Destination, DroppedItem, Equipment, EquipmentIndex,
+            ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
+            ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
+            SkillPage, SkillPoints, Stamina, StatPoints, Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
             LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
@@ -63,6 +64,9 @@ pub enum ServerPackets {
     UpdateBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
     LearnSkillResult = 0x7b0,
+    CastSkillSelf = 0x7b2,
+    CastSkillTargetEntity = 0x7b3,
+    CastSkillTargetPosition = 0x7b4,
     OpenPersonalStore = 0x7c2,
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
@@ -599,9 +603,9 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Die(_) => 3,
             CommandData::PickupDroppedItem(_) => 4,
             CommandData::PersonalStore => 11,
-            // 6 = Cast skill on self
-            // 7 = Skill on entity
-            // 8 = Skill on position
+            CommandData::CastSkill(CommandCastSkill::TargetSelf(_)) => 6,
+            CommandData::CastSkill(CommandCastSkill::TargetEntity(_, _)) => 7,
+            CommandData::CastSkill(CommandCastSkill::TargetPosition(_, _)) => 8,
             // 9 = Run away
             // 10 = Sit
         };
@@ -1166,6 +1170,70 @@ impl From<&PacketServerUseItem> for Packet {
         writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.item.item_number as u16);
         writer.write_item_slot_u8(packet.inventory_slot);
+        writer.into()
+    }
+}
+
+pub struct PacketServerCastSkillSelf {
+    pub entity_id: ClientEntityId,
+    pub skill: SkillReference,
+    pub npc_motion_id: Option<usize>,
+}
+
+impl From<&PacketServerCastSkillSelf> for Packet {
+    fn from(packet: &PacketServerCastSkillSelf) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::CastSkillSelf as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.skill.0 as u16);
+        if let Some(npc_motion_id) = packet.npc_motion_id {
+            writer.write_u8(npc_motion_id as u8);
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerCastSkillTargetEntity {
+    pub entity_id: ClientEntityId,
+    pub skill: SkillReference,
+    pub target_entity_id: ClientEntityId,
+    pub target_distance: f32,
+    pub target_position: Point2<f32>,
+    pub npc_motion_id: Option<usize>,
+}
+
+impl From<&PacketServerCastSkillTargetEntity> for Packet {
+    fn from(packet: &PacketServerCastSkillTargetEntity) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::CastSkillTargetEntity as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_entity_id(packet.target_entity_id);
+        writer.write_u16(packet.skill.0 as u16);
+        writer.write_u16(packet.target_distance as u16);
+        writer.write_f32(packet.target_position.x);
+        writer.write_f32(packet.target_position.y);
+        if let Some(npc_motion_id) = packet.npc_motion_id {
+            writer.write_u8(npc_motion_id as u8);
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerCastSkillTargetPosition {
+    pub entity_id: ClientEntityId,
+    pub skill: SkillReference,
+    pub target_position: Point2<f32>,
+    pub npc_motion_id: Option<usize>,
+}
+
+impl From<&PacketServerCastSkillTargetPosition> for Packet {
+    fn from(packet: &PacketServerCastSkillTargetPosition) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::CastSkillTargetPosition as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.skill.0 as u16);
+        writer.write_f32(packet.target_position.x);
+        writer.write_f32(packet.target_position.y);
+        if let Some(npc_motion_id) = packet.npc_motion_id {
+            writer.write_u8(npc_motion_id as u8);
+        }
         writer.into()
     }
 }

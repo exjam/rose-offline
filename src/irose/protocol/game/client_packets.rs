@@ -1,16 +1,19 @@
 use std::convert::TryFrom;
 
+use nalgebra::Point2;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::{
     data::item::Item,
     game::{
-        components::{BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot},
+        components::{
+            BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot, SkillSlot,
+        },
         messages::client::ReviveRequestType,
     },
     irose::protocol::game::common_packets::{
-        PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
+        PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };
@@ -33,6 +36,9 @@ pub enum ClientPackets {
     PickupDroppedItem = 0x7a7,
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
+    CastSkillSelf = 0x7b2,
+    CastSkillTargetEntity = 0x7b3,
+    CastSkillTargetPosition = 0x7b4,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
 }
@@ -405,6 +411,77 @@ impl TryFrom<&Packet> for PacketClientUseItem {
         Ok(PacketClientUseItem {
             item_slot,
             target_entity_id,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientCastSkillSelf {
+    pub skill_slot: SkillSlot,
+}
+
+impl TryFrom<&Packet> for PacketClientCastSkillSelf {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::CastSkillSelf as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let skill_slot = reader.read_skill_slot_u8()?;
+
+        Ok(PacketClientCastSkillSelf { skill_slot })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientCastSkillTargetEntity {
+    pub target_entity_id: ClientEntityId,
+    pub skill_slot: SkillSlot,
+}
+
+impl TryFrom<&Packet> for PacketClientCastSkillTargetEntity {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::CastSkillTargetEntity as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let skill_slot = reader.read_skill_slot_u8()?;
+
+        Ok(PacketClientCastSkillTargetEntity {
+            target_entity_id,
+            skill_slot,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientCastSkillTargetPosition {
+    pub skill_slot: SkillSlot,
+    pub position: Point2<f32>,
+}
+
+impl TryFrom<&Packet> for PacketClientCastSkillTargetPosition {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::CastSkillTargetPosition as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let skill_slot = reader.read_skill_slot_u8()?;
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+
+        Ok(PacketClientCastSkillTargetPosition {
+            skill_slot,
+            position: Point2::new(x, y),
         })
     }
 }

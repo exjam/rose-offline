@@ -13,13 +13,13 @@ use crate::{
             SetHotbarSlot,
         },
         server::{
-            LocalChat, LogoutReply, OpenPersonalStore, PersonalStoreTransactionCancelled,
-            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-            PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
-            QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
-            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateXpStamina, UseItem,
-            Whisper,
+            CastSkillSelf, CastSkillTargetEntity, CastSkillTargetPosition, LocalChat, LogoutReply,
+            OpenPersonalStore, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
+            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
+            PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
+            ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
+            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
+            UpdateMoney, UpdateXpStamina, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -273,6 +273,30 @@ impl GameClient {
                     packet.item_slot,
                     packet.target_entity_id,
                 ))?;
+            }
+            Some(ClientPackets::CastSkillSelf) => {
+                let packet = PacketClientCastSkillSelf::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CastSkillSelf(packet.skill_slot))?;
+            }
+            Some(ClientPackets::CastSkillTargetEntity) => {
+                let packet = PacketClientCastSkillTargetEntity::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CastSkillTargetEntity(
+                        packet.skill_slot,
+                        packet.target_entity_id,
+                    ))?;
+            }
+            Some(ClientPackets::CastSkillTargetPosition) => {
+                let packet = PacketClientCastSkillTargetPosition::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CastSkillTargetPosition(
+                        packet.skill_slot,
+                        packet.position,
+                    ))?;
             }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
@@ -722,6 +746,56 @@ impl GameClient {
                         entity_id,
                         item,
                         inventory_slot,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CastSkillSelf(CastSkillSelf {
+                entity_id,
+                skill,
+                npc_motion_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCastSkillSelf {
+                        entity_id,
+                        skill,
+                        npc_motion_id,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CastSkillTargetEntity(CastSkillTargetEntity {
+                entity_id,
+                skill,
+                target_entity_id,
+                target_distance,
+                target_position,
+                npc_motion_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCastSkillTargetEntity {
+                        entity_id,
+                        skill,
+                        target_entity_id,
+                        target_distance,
+                        target_position,
+                        npc_motion_id,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CastSkillTargetPosition(CastSkillTargetPosition {
+                entity_id,
+                skill,
+                target_position,
+                npc_motion_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCastSkillTargetPosition {
+                        entity_id,
+                        skill,
+                        target_position,
+                        npc_motion_id,
                     }))
                     .await?;
             }

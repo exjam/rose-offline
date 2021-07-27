@@ -85,6 +85,14 @@ impl SkillList {
         self.get_page_mut(skill_data.page).find_skill(skill_data)
     }
 
+    pub fn get_skill(&self, skill_slot: SkillSlot) -> Option<SkillReference> {
+        self.get_page(skill_slot.0)
+            .skills
+            .get(skill_slot.1)
+            .copied()
+            .flatten()
+    }
+
     pub fn get_passive_skills(&self) -> impl Iterator<Item = &SkillReference> + '_ {
         self.passive.skills.iter().filter_map(|x| x.as_ref())
     }

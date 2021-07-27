@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use nalgebra::Point2;
+
 use crate::{
     data::{
         ability::AbilityType,
@@ -296,6 +298,31 @@ pub struct UseItem {
 }
 
 #[derive(Clone)]
+pub struct CastSkillSelf {
+    pub entity_id: ClientEntityId,
+    pub skill: SkillReference,
+    pub npc_motion_id: Option<usize>,
+}
+
+#[derive(Clone)]
+pub struct CastSkillTargetEntity {
+    pub entity_id: ClientEntityId,
+    pub skill: SkillReference,
+    pub target_entity_id: ClientEntityId,
+    pub target_distance: f32,
+    pub target_position: Point2<f32>,
+    pub npc_motion_id: Option<usize>,
+}
+
+#[derive(Clone)]
+pub struct CastSkillTargetPosition {
+    pub entity_id: ClientEntityId,
+    pub skill: SkillReference,
+    pub target_position: Point2<f32>,
+    pub npc_motion_id: Option<usize>,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -327,4 +354,7 @@ pub enum ServerMessage {
     PersonalStoreItemList(PersonalStoreItemList),
     PersonalStoreTransactionResult(PersonalStoreTransactionResult),
     UseItem(UseItem),
+    CastSkillSelf(CastSkillSelf),
+    CastSkillTargetEntity(CastSkillTargetEntity),
+    CastSkillTargetPosition(CastSkillTargetPosition),
 }
