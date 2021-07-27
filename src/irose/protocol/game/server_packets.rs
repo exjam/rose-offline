@@ -22,7 +22,9 @@ use crate::{
             LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
         },
     },
-    irose::protocol::game::common_packets::{PacketWriteHotbarSlot, PacketWriteItems},
+    irose::protocol::game::common_packets::{
+        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+    },
     protocol::{Packet, PacketWriter},
 };
 
@@ -763,18 +765,6 @@ impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
     }
 }
 
-fn item_slot_to_index(slot: ItemSlot) -> usize {
-    match slot {
-        ItemSlot::Equipped(equipment_index) => equipment_index as usize,
-        ItemSlot::Inventory(page_type, index) => match page_type {
-            InventoryPageType::Equipment => 12 + index,
-            InventoryPageType::Consumables => 12 + INVENTORY_PAGE_SIZE + index,
-            InventoryPageType::Materials => 12 + 2 * INVENTORY_PAGE_SIZE + index,
-            InventoryPageType::Vehicles => 12 + 3 * INVENTORY_PAGE_SIZE + index,
-        },
-    }
-}
-
 pub struct PacketServerUpdateInventory<'a> {
     pub is_reward: bool,
     pub items: &'a [(ItemSlot, Option<Item>)],
@@ -790,7 +780,7 @@ impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
         let mut writer = PacketWriter::new(command as u16);
         writer.write_u8(packet.items.len() as u8);
         for (slot, item) in packet.items {
-            writer.write_u8(item_slot_to_index(*slot) as u8);
+            writer.write_item_slot_u8(*slot);
             writer.write_item_full(item.as_ref());
         }
         writer.into()
@@ -905,7 +895,7 @@ impl From<&PacketServerPickupDroppedItemResult> for Packet {
         match &packet.result {
             Ok(PickupDroppedItemContent::Item(slot, item)) => {
                 writer.write_u8(0); // OK
-                writer.write_u16(item_slot_to_index(*slot) as u16);
+                writer.write_item_slot_u16(*slot);
                 writer.write_item_full(Some(item));
             }
             Ok(PickupDroppedItemContent::Money(money)) => {
@@ -1104,7 +1094,7 @@ impl From<&PacketServerPersonalStoreTransactionUpdateMoneyAndInventory> for Pack
         );
         writer.write_i64(packet.money.0);
         writer.write_u8(1);
-        writer.write_u8(item_slot_to_index(packet.slot) as u8);
+        writer.write_item_slot_u8(packet.slot);
         writer.write_item_full(packet.item.as_ref());
         writer.into()
     }

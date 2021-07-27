@@ -290,8 +290,12 @@ pub trait PacketReadItemSlot {
     fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError>;
 }
 
-fn parse_item_slot(index: usize) -> Result<ItemSlot, ProtocolError>
-{
+pub trait PacketWriteItemSlot {
+    fn write_item_slot_u8(&mut self, item_slot: ItemSlot);
+    fn write_item_slot_u16(&mut self, item_slot: ItemSlot);
+}
+
+fn parse_item_slot(index: usize) -> Result<ItemSlot, ProtocolError> {
     if index == 0 {
         Err(ProtocolError::InvalidPacket)
     } else if index < 12 {
@@ -314,6 +318,18 @@ fn parse_item_slot(index: usize) -> Result<ItemSlot, ProtocolError>
     }
 }
 
+fn item_slot_to_index(slot: ItemSlot) -> usize {
+    match slot {
+        ItemSlot::Equipped(equipment_index) => equipment_index as usize,
+        ItemSlot::Inventory(page_type, index) => match page_type {
+            InventoryPageType::Equipment => 12 + index,
+            InventoryPageType::Consumables => 12 + INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Materials => 12 + 2 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Vehicles => 12 + 3 * INVENTORY_PAGE_SIZE + index,
+        },
+    }
+}
+
 impl<'a> PacketReadItemSlot for PacketReader<'a> {
     fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError> {
         parse_item_slot(self.read_u8()? as usize)
@@ -321,5 +337,15 @@ impl<'a> PacketReadItemSlot for PacketReader<'a> {
 
     fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError> {
         parse_item_slot(self.read_u16()? as usize)
+    }
+}
+
+impl PacketWriteItemSlot for PacketWriter {
+    fn write_item_slot_u8(&mut self, item_slot: ItemSlot) {
+        self.write_u8(item_slot_to_index(item_slot) as u8)
+    }
+
+    fn write_item_slot_u16(&mut self, item_slot: ItemSlot) {
+        self.write_u16(item_slot_to_index(item_slot) as u16)
     }
 }
