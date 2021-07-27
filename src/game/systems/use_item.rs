@@ -11,8 +11,8 @@ use crate::{
         bundles::{ability_values_add_value, ability_values_get_value, skill_list_try_learn_skill},
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
-            GameClient, Inventory, ItemSlot, Level, MoveSpeed, SkillList, SkillPoints, StatPoints,
-            Team, UnionMembership,
+            GameClient, Inventory, ItemSlot, Level, MoveSpeed, SkillList, SkillPoints, Stamina,
+            StatPoints, Team, UnionMembership,
         },
         messages::server::{ServerMessage, UpdateInventory, UseItem},
         resources::{PendingUseItem, PendingUseItemList, ServerMessages},
@@ -40,6 +40,7 @@ struct UseItemUser<'a> {
     pub move_speed: &'a MoveSpeed,
     pub skill_list: &'a mut SkillList,
     pub skill_points: &'a mut SkillPoints,
+    pub stamina: &'a mut Stamina,
     pub stat_points: &'a mut StatPoints,
     pub team_number: &'a Team,
     pub union_membership: &'a mut UnionMembership,
@@ -83,8 +84,9 @@ fn use_inventory_item(
             Some(use_item_user.inventory),
             Some(use_item_user.level),
             Some(use_item_user.move_speed),
-            Some(use_item_user.stat_points),
             Some(use_item_user.skill_points),
+            Some(use_item_user.stamina),
+            Some(use_item_user.stat_points),
             Some(use_item_user.team_number),
             Some(use_item_user.union_membership),
         )
@@ -123,7 +125,10 @@ fn use_inventory_item(
             .is_ok(),
             false,
         ),
-        ItemClass::MagicItem | ItemClass::RepairTool | ItemClass::EngineFuel | ItemClass::TimeCoupon => {
+        ItemClass::MagicItem
+        | ItemClass::RepairTool
+        | ItemClass::EngineFuel
+        | ItemClass::TimeCoupon => {
             warn!(
                 "Unimplemented use item ItemClass {:?} with item {:?}",
                 item_data.item_data.class, item
@@ -141,8 +146,9 @@ fn use_inventory_item(
                     add_ability_value,
                     Some(use_item_user.basic_stats),
                     Some(use_item_user.inventory),
-                    Some(use_item_user.stat_points),
                     Some(use_item_user.skill_points),
+                    Some(use_item_user.stamina),
+                    Some(use_item_user.stat_points),
                     Some(use_item_user.union_membership),
                     use_item_user.game_client,
                 );
@@ -230,6 +236,7 @@ pub fn use_item(
         &MoveSpeed,
         &mut SkillList,
         &mut SkillPoints,
+        &mut Stamina,
         &mut StatPoints,
         &Team,
         &mut UnionMembership,
@@ -263,6 +270,7 @@ pub fn use_item(
             move_speed,
             skill_list,
             skill_points,
+            stamina,
             stat_points,
             team_number,
             union_membership,
@@ -282,6 +290,7 @@ pub fn use_item(
                 move_speed,
                 skill_list,
                 skill_points,
+                stamina,
                 stat_points,
                 team_number,
                 union_membership,

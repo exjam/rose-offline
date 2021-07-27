@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub const MAX_STAMINA: u32 = 5000;
+
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct Stamina {
     pub stamina: u32,

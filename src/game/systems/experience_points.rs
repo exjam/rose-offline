@@ -4,14 +4,12 @@ use crate::game::{
     components::{
         AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
         GameClient, HealthPoints, Inventory, Level, ManaPoints, SkillList, SkillPoints, Stamina,
-        StatPoints,
+        StatPoints, MAX_STAMINA,
     },
     messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
     resources::{PendingXpList, ServerMessages},
     GameData,
 };
-
-const MAX_STAMINA: u32 = 5000;
 
 #[allow(clippy::type_complexity)]
 #[system]

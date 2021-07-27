@@ -6,7 +6,8 @@ use crate::{
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory,
-            Level, Money, MoveSpeed, SkillPoints, StatPoints, Team, UnionMembership,
+            Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership,
+            MAX_STAMINA,
         },
         messages::server::{ServerMessage, UpdateAbilityValue},
     },
@@ -33,8 +34,9 @@ pub fn ability_values_get_value(
     inventory: Option<&Inventory>,
     level: Option<&Level>,
     move_speed: Option<&MoveSpeed>,
-    stat_points: Option<&StatPoints>,
     skill_points: Option<&SkillPoints>,
+    stamina: Option<&Stamina>,
+    stat_points: Option<&StatPoints>,
     team_number: Option<&Team>,
     union_membership: Option<&UnionMembership>,
 ) -> Option<i32> {
@@ -82,6 +84,7 @@ pub fn ability_values_get_value(
         AbilityType::UnionPoint8 => union_membership.map(|x| x.points[7] as i32),
         AbilityType::UnionPoint9 => union_membership.map(|x| x.points[8] as i32),
         AbilityType::UnionPoint10 => union_membership.map(|x| x.points[9] as i32),
+        AbilityType::Stamina => stamina.map(|x| x.stamina as i32),
         /*
         TODO: Implement remaining get ability types.
         AbilityType::Health => todo!(),
@@ -95,7 +98,6 @@ pub fn ability_values_get_value(
         AbilityType::MaxMana => todo!(),
         AbilityType::DropRate => todo!(),
         AbilityType::CurrentPlanet => todo!(),
-        AbilityType::Stamina => todo!(),
         AbilityType::GuildNumber => todo!(),
         AbilityType::GuildScore => todo!(),
         AbilityType::GuildPosition => todo!(),
@@ -115,8 +117,9 @@ pub fn ability_values_add_value(
     value: i32,
     mut basic_stats: Option<&mut BasicStats>,
     mut inventory: Option<&mut Inventory>,
-    mut stat_points: Option<&mut StatPoints>,
     mut skill_points: Option<&mut SkillPoints>,
+    mut stamina: Option<&mut Stamina>,
+    mut stat_points: Option<&mut StatPoints>,
     mut union_membership: Option<&mut UnionMembership>,
     game_client: Option<&GameClient>,
 ) -> bool {
@@ -267,6 +270,14 @@ pub fn ability_values_add_value(
         AbilityType::UnionPoint10 => {
             if let Some(union_membership) = union_membership.as_mut() {
                 union_membership.points[9] = add_value(union_membership.points[9], value);
+                true
+            } else {
+                false
+            }
+        }
+        AbilityType::Stamina => {
+            if let Some(stamina) = stamina.as_mut() {
+                stamina.stamina = u32::min(add_value(stamina.stamina, value), MAX_STAMINA);
                 true
             } else {
                 false
@@ -487,7 +498,6 @@ pub fn ability_values_set_value(
         AbilityType::Level => false,
         AbilityType::PvpFlag => false,
         AbilityType::TeamNumber => false,
-        AbilityType::Stamina => false,
         */
         _ => {
             warn!(
