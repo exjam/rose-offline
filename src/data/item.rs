@@ -308,6 +308,7 @@ impl Item {
         }
     }
 
+    #[allow(dead_code)]
     pub fn is_stackable(&self) -> bool {
         matches!(self, Item::Stackable(_))
     }
@@ -379,6 +380,7 @@ impl Item {
         }
     }
 
+    #[allow(dead_code)]
     pub fn as_equipment(&self) -> Option<&EquipmentItem> {
         match self {
             Item::Equipment(equipment) => Some(equipment),
@@ -386,6 +388,7 @@ impl Item {
         }
     }
 
+    #[allow(dead_code)]
     pub fn as_equipment_mut(&mut self) -> Option<&mut EquipmentItem> {
         match self {
             Item::Equipment(equipment) => Some(equipment),
@@ -393,6 +396,7 @@ impl Item {
         }
     }
 
+    #[allow(dead_code)]
     pub fn as_stackable(&self) -> Option<&StackableItem> {
         match self {
             Item::Equipment(_) => None,
@@ -400,6 +404,7 @@ impl Item {
         }
     }
 
+    #[allow(dead_code)]
     pub fn as_stackable_mut(&mut self) -> Option<&mut StackableItem> {
         match self {
             Item::Equipment(_) => None,
