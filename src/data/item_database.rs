@@ -125,7 +125,7 @@ pub struct ConsumableItemData {
     pub add_ability: Option<(AbilityType, i32)>,
     pub learn_skill_id: usize,
     pub use_skill_id: usize,
-    pub apply_status_effect_id: usize,
+    pub apply_status_effect_id: Option<usize>,
     pub cooldown_type_id: usize,
     pub cooldown_duration: Duration,
 }
