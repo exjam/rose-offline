@@ -118,7 +118,7 @@ pub fn ability_values_add_value(
     mut stat_points: Option<&mut StatPoints>,
     mut skill_points: Option<&mut SkillPoints>,
     mut union_membership: Option<&mut UnionMembership>,
-    game_client: &Option<&GameClient>,
+    game_client: Option<&GameClient>,
 ) -> bool {
     let result = match ability_type {
         AbilityType::Strength => {
@@ -308,7 +308,7 @@ pub fn ability_values_set_value(
     mut basic_stats: Option<&mut BasicStats>,
     mut character_info: Option<&mut CharacterInfo>,
     mut union_membership: Option<&mut UnionMembership>,
-    game_client: &Option<&GameClient>,
+    game_client: Option<&GameClient>,
 ) -> bool {
     let result = match ability_type {
         AbilityType::Gender => {

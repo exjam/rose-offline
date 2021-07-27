@@ -23,10 +23,7 @@ use crate::{
             EquipmentIndex, ExperiencePoints, GameClient, Inventory, Level, Money, MoveSpeed,
             Position, QuestState, SkillList, SkillPoints, StatPoints, Team, UnionMembership,
         },
-        messages::server::{
-            LearnSkillError, LearnSkillSuccess, QuestTriggerResult, ServerMessage, UpdateInventory,
-            UpdateMoney,
-        },
+        messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
         resources::{
             ClientEntityList, PendingQuestTrigger, PendingQuestTriggerList, PendingXp,
             PendingXpList, WorldRates, WorldTime,
@@ -690,7 +687,7 @@ fn quest_trigger_apply_rewards(
                             quest_parameters.source.basic_stats.as_deref_mut(),
                             quest_parameters.source.character_info.as_deref_mut(),
                             quest_parameters.source.union_membership.as_deref_mut(),
-                            &quest_parameters.source.game_client,
+                            quest_parameters.source.game_client.as_deref(),
                         ),
                         QsdRewardOperator::Add => ability_values_add_value(
                             *ability_type,
@@ -700,7 +697,7 @@ fn quest_trigger_apply_rewards(
                             quest_parameters.source.stat_points.as_deref_mut(),
                             quest_parameters.source.skill_points.as_deref_mut(),
                             quest_parameters.source.union_membership.as_deref_mut(),
-                            &quest_parameters.source.game_client,
+                            quest_parameters.source.game_client.as_deref(),
                         ),
                         QsdRewardOperator::Subtract => ability_values_add_value(
                             *ability_type,
@@ -710,7 +707,7 @@ fn quest_trigger_apply_rewards(
                             quest_parameters.source.stat_points.as_deref_mut(),
                             quest_parameters.source.skill_points.as_deref_mut(),
                             quest_parameters.source.union_membership.as_deref_mut(),
-                            &quest_parameters.source.game_client,
+                            quest_parameters.source.game_client.as_deref(),
                         ),
                         QsdRewardOperator::Zero => ability_values_set_value(
                             *ability_type,
@@ -718,7 +715,7 @@ fn quest_trigger_apply_rewards(
                             quest_parameters.source.basic_stats.as_deref_mut(),
                             quest_parameters.source.character_info.as_deref_mut(),
                             quest_parameters.source.union_membership.as_deref_mut(),
-                            &quest_parameters.source.game_client,
+                            quest_parameters.source.game_client.as_deref(),
                         ),
                         QsdRewardOperator::One => ability_values_set_value(
                             *ability_type,
@@ -726,7 +723,7 @@ fn quest_trigger_apply_rewards(
                             quest_parameters.source.basic_stats.as_deref_mut(),
                             quest_parameters.source.character_info.as_deref_mut(),
                             quest_parameters.source.union_membership.as_deref_mut(),
-                            &quest_parameters.source.game_client,
+                            quest_parameters.source.game_client.as_deref(),
                         ),
                     };
                 }
