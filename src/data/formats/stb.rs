@@ -220,9 +220,9 @@ macro_rules! stb_column_array {
                     .try_get(row, i)
                     .and_then(|x| x.parse::<$value_type>().ok())
                 {
-                    result.push(value);
+                    result.push(Some(value));
                 } else {
-                    result.push(None)
+                    result.push(None);
                 }
             }
             result
