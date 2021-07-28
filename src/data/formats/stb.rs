@@ -225,6 +225,30 @@ macro_rules! stb_column_array {
                     result.push(None);
                 }
             }
+
+            result
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! stb_column_array_vec {
+    (
+        $range:expr, $name:ident, $value_type:ty, $len:expr
+    ) => {
+        pub fn $name(&self, row: usize) -> ArrayVec<$value_type, $len> {
+            let mut result: ArrayVec<$value_type, $len> = ArrayVec::new();
+
+            for i in $range {
+                if let Some(value) = self
+                    .0
+                    .try_get(row, i)
+                    .and_then(|x| x.parse::<$value_type>().ok())
+                {
+                    result.push(value);
+                }
+            }
+
             result
         }
     };
