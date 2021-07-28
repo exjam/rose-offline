@@ -1,4 +1,4 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, num::NonZeroUsize, time::Duration};
 
 use crate::game::components::{MotionData, MotionDataCharacter};
 
@@ -30,6 +30,8 @@ pub enum MotionCharacterAction {
     Pickitem = 17,
 }
 
+pub struct MotionReference(NonZeroUsize);
+
 pub struct MotionDatabase {
     weapoon_type_count: usize,
     motion_indices: Vec<u16>,
@@ -51,25 +53,27 @@ impl MotionDatabase {
 
     pub fn get_character_motion(
         &self,
-        action_index: usize,
+        motion: MotionReference,
         weapon_motion_type: usize,
         gender: usize,
     ) -> Option<&MotionFileData> {
         let index = self
             .motion_indices
-            .get(action_index * self.weapoon_type_count + weapon_motion_type)?;
+            .get(motion.0.get() * self.weapoon_type_count + weapon_motion_type)?;
 
         self.motion_files.get(gender).and_then(|x| x.get(index))
     }
 
     #[allow(dead_code)]
-    pub fn find_first_character_motion(&self, action_index: usize) -> Option<&MotionFileData> {
+    pub fn find_first_character_motion(&self, motion: MotionReference) -> Option<&MotionFileData> {
+        let motion = motion.0.get();
+
         // Try find the first set motion for every weapon_type & gender for an action index
         for gender in 0..self.motion_files.len() {
             for i in 0..self.weapoon_type_count {
                 if let Some(index) = self
                     .motion_indices
-                    .get(i + action_index * self.weapoon_type_count)
+                    .get(i + motion * self.weapoon_type_count)
                 {
                     if let Some(data) = self.motion_files.get(gender).and_then(|x| x.get(index)) {
                         return Some(data);
@@ -87,31 +91,35 @@ impl MotionDatabase {
         gender: usize,
     ) -> MotionData {
         let get_motion = |action| {
-            self.get_character_motion(action, weapon_motion_type, gender)
-                .cloned()
+            self.get_character_motion(
+                MotionReference(NonZeroUsize::new(action as usize).unwrap()),
+                weapon_motion_type,
+                gender,
+            )
+            .cloned()
         };
 
         MotionData::with_character_motions(MotionDataCharacter {
             weapon_motion_type,
             gender,
-            attack1: get_motion(MotionCharacterAction::Attack as usize),
-            attack2: get_motion(MotionCharacterAction::Attack2 as usize),
-            attack3: get_motion(MotionCharacterAction::Attack3 as usize),
-            die: get_motion(MotionCharacterAction::Die as usize),
-            fall: get_motion(MotionCharacterAction::Fall as usize),
-            hit: get_motion(MotionCharacterAction::Hit as usize),
-            jump1: get_motion(MotionCharacterAction::Jump1 as usize),
-            jump2: get_motion(MotionCharacterAction::Jump2 as usize),
-            pickup_dropped_item: get_motion(MotionCharacterAction::Pickitem as usize),
-            raise: get_motion(MotionCharacterAction::Raise as usize),
-            run: get_motion(MotionCharacterAction::Run as usize),
-            sit: get_motion(MotionCharacterAction::Sit as usize),
-            sitting: get_motion(MotionCharacterAction::Sitting as usize),
-            standup: get_motion(MotionCharacterAction::Standup as usize),
-            stop1: get_motion(MotionCharacterAction::Stop1 as usize),
-            stop2: get_motion(MotionCharacterAction::Stop2 as usize),
-            stop3: get_motion(MotionCharacterAction::Stop3 as usize),
-            walk: get_motion(MotionCharacterAction::Walk as usize),
+            attack1: get_motion(MotionCharacterAction::Attack),
+            attack2: get_motion(MotionCharacterAction::Attack2),
+            attack3: get_motion(MotionCharacterAction::Attack3),
+            die: get_motion(MotionCharacterAction::Die),
+            fall: get_motion(MotionCharacterAction::Fall),
+            hit: get_motion(MotionCharacterAction::Hit),
+            jump1: get_motion(MotionCharacterAction::Jump1),
+            jump2: get_motion(MotionCharacterAction::Jump2),
+            pickup_dropped_item: get_motion(MotionCharacterAction::Pickitem),
+            raise: get_motion(MotionCharacterAction::Raise),
+            run: get_motion(MotionCharacterAction::Run),
+            sit: get_motion(MotionCharacterAction::Sit),
+            sitting: get_motion(MotionCharacterAction::Sitting),
+            standup: get_motion(MotionCharacterAction::Standup),
+            stop1: get_motion(MotionCharacterAction::Stop1),
+            stop2: get_motion(MotionCharacterAction::Stop2),
+            stop3: get_motion(MotionCharacterAction::Stop3),
+            walk: get_motion(MotionCharacterAction::Walk),
         })
     }
 }

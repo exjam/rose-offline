@@ -127,7 +127,7 @@ pub use item_database::{
     JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData,
     WeaponItemData,
 };
-pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData};
+pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData, MotionReference};
 pub use npc_database::{
     NpcConversationData, NpcConversationReference, NpcData, NpcDatabase, NpcMotionAction,
     NpcReference,

@@ -1,4 +1,6 @@
-use crate::data::{MotionCharacterAction, MotionDatabase, MotionFileData, NpcMotionAction};
+use crate::data::{
+    MotionCharacterAction, MotionDatabase, MotionFileData, MotionReference, NpcMotionAction,
+};
 
 #[derive(Default)]
 pub struct MotionDataCharacter {
@@ -74,14 +76,15 @@ impl MotionData {
         }
     }
 
+    #[allow(dead_code)]
     pub fn get_motion<'a>(
         &self,
         motion_database: &'a MotionDatabase,
-        action_index: usize,
+        motion: MotionReference,
     ) -> Option<&'a MotionFileData> {
         match self {
             MotionData::Character(character) => motion_database.get_character_motion(
-                action_index,
+                motion,
                 character.weapon_motion_type,
                 character.gender,
             ),
