@@ -111,7 +111,7 @@ pub fn damage(
                     Command::with_die(
                         Some(pending_damage.attacker),
                         motion_data
-                            .and_then(|motion_data| motion_data.die.as_ref())
+                            .and_then(|motion_data| motion_data.get_die())
                             .map(|die_motion| die_motion.duration)
                             .or_else(|| Some(Duration::from_secs(1))),
                     ),

@@ -481,7 +481,7 @@ pub fn command(
 
                                 // Update our current command
                                 let motion_duration =
-                                    motion_data.pickup_dropped_item.as_ref().map_or_else(
+                                    motion_data.get_pickup_dropped_item().map_or_else(
                                         || Duration::from_secs(1),
                                         |motion| motion.duration,
                                     );
@@ -529,7 +529,7 @@ pub fn command(
                         let attack_range = ability_values.attack_range as f32;
                         if distance < attack_range {
                             let (attack_duration, hit_count) = motion_data
-                                .attack
+                                .get_attack()
                                 .as_ref()
                                 .map(|attack_motion| {
                                     (attack_motion.duration, attack_motion.total_attack_frames)

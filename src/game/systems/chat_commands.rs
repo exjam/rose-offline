@@ -175,7 +175,7 @@ fn create_bot_entity(
     let motion_data = chat_command_world
         .game_data
         .motions
-        .get_character_motions(weapon_motion_type, bot_data.info.gender as usize);
+        .get_character_action_motions(weapon_motion_type, bot_data.info.gender as usize);
 
     bot_data.position = position.clone();
     bot_data.health_points.hp = ability_values.max_health as u32;

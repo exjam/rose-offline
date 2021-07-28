@@ -99,7 +99,7 @@ pub fn game_server_authentication(
                                     .unwrap_or(0)
                                     as usize;
 
-                                let motion_data = game_data.motions.get_character_motions(
+                                let motion_data = game_data.motions.get_character_action_motions(
                                     weapon_motion_type,
                                     character.info.gender as usize,
                                 );

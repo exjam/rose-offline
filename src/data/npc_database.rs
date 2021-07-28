@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::{data::MotionFileData, game::components::MotionData};
+use crate::{
+    data::MotionFileData,
+    game::components::{MotionData, MotionDataNpc},
+};
 
 #[derive(Clone, Copy)]
 pub struct NpcReference(pub usize);
@@ -102,14 +105,22 @@ impl NpcDatabase {
     }
 
     pub fn get_npc_motions(&self, id: usize) -> MotionData {
-        if let Some(npc) = self.get_npc(id) {
-            MotionData {
-                attack: npc.motion_data.get(&NpcMotionAction::Attack).cloned(),
-                die: npc.motion_data.get(&NpcMotionAction::Die).cloned(),
-                pickup_dropped_item: None,
-            }
-        } else {
-            MotionData::default()
-        }
+        let npc_data = self.get_npc(id);
+        let get_motion =
+            |action| npc_data.and_then(|npc_data| npc_data.motion_data.get(&action).cloned());
+
+        MotionData::with_npc_motions(MotionDataNpc {
+            stop: get_motion(NpcMotionAction::Stop),
+            walk: get_motion(NpcMotionAction::Move),
+            attack: get_motion(NpcMotionAction::Attack),
+            hit: get_motion(NpcMotionAction::Hit),
+            die: get_motion(NpcMotionAction::Die),
+            run: get_motion(NpcMotionAction::Run),
+            cast1: get_motion(NpcMotionAction::Cast1),
+            skill_action1: get_motion(NpcMotionAction::SkillAction1),
+            cast2: get_motion(NpcMotionAction::Cast2),
+            skill_action2: get_motion(NpcMotionAction::SkillAction2),
+            etc: get_motion(NpcMotionAction::Etc),
+        })
     }
 }

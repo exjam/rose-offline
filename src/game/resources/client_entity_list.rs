@@ -327,4 +327,3 @@ impl ClientEntityList {
             .for_each(ClientEntityZone::process_zone_leavers);
     }
 }
-
