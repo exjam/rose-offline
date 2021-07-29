@@ -13,16 +13,19 @@ use crate::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, SkillList, StatPoints,
-            Team, WorldClient,
+            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, QuestState, SkillList,
+            StatPoints, Team, WorldClient,
         },
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-                JoinZoneResponse, LogoutRequest, PersonalStoreBuyItem, ReviveRequestType,
-                SetHotbarSlot, SetHotbarSlotError,
+                JoinZoneResponse, LogoutRequest, PersonalStoreBuyItem, QuestDelete,
+                ReviveRequestType, SetHotbarSlot, SetHotbarSlotError,
             },
-            server::{self, LogoutReply, ServerMessage, UpdateBasicStat, UpdateInventory},
+            server::{
+                self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat,
+                UpdateInventory,
+            },
         },
         resources::{
             ClientEntityList, GameData, LoginTokens, PendingChatCommandList,
@@ -227,6 +230,7 @@ pub fn game_server_main(
         &CharacterInfo,
         &Level,
         &SkillList,
+        &mut QuestState,
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -256,6 +260,7 @@ pub fn game_server_main(
             character_info,
             level,
             skill_list,
+            quest_state,
         )| {
             if let Ok(message) = client.client_message_rx.try_recv() {
                 match message {
@@ -529,6 +534,23 @@ pub fn game_server_main(
                                 new_position,
                                 Some(client),
                             );
+                        }
+                    }
+                    ClientMessage::QuestDelete(QuestDelete { slot, quest_id }) => {
+                        if let Some(quest_slot) = quest_state.get_quest_slot_mut(slot) {
+                            if let Some(quest) = quest_slot {
+                                if quest.quest_id == quest_id {
+                                    *quest_slot = None;
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::QuestDeleteResult(QuestDeleteResult {
+                                            success: true,
+                                            slot,
+                                            quest_id,
+                                        }))
+                                        .ok();
+                                }
+                            }
                         }
                     }
                     ClientMessage::QuestTrigger(trigger_hash) => {
