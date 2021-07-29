@@ -13,7 +13,7 @@ use crate::{
         SkillData, SkillDatabase, SkillPageType, SkillReference, SkillTargetFilter, SkillType,
         ZoneReference,
     },
-    stb_column, stb_column_array, stb_column_array_vec,
+    stb_column,
 };
 
 pub struct StbSkill(pub StbFile);
@@ -86,22 +86,14 @@ impl StbSkill {
     stb_column! { 9, get_power, u32 }
     stb_column! { 9, get_item_make_number, u32 }
     stb_column! { 10, get_harm, u32 }
-    stb_column_array! { 11..=12, get_status_effect_index, NonZeroUsize }
-
-    pub fn get_status_effects(&self, id: usize) -> ArrayVec<NonZeroUsize, 2> {
-        self.get_status_effect_index(id)
-            .iter()
-            .filter(|x| x.is_some())
-            .map(|x| x.unwrap())
-            .collect()
-    }
+    stb_column! { 11..=12, get_status_effects, ArrayVec<NonZeroUsize, 2> }
 
     stb_column! { 13, get_success_ratio, i32 }
     stb_column! { 14, get_status_effect_duration_ms, i32 }
     stb_column! { 15, get_damage_type, i32 }
 
-    stb_column_array! { (16..=19).skip(2), get_use_ability_type, AbilityType }
-    stb_column_array! { (17..=19).skip(2), get_use_ability_value, i32 }
+    stb_column! { (16..=19).skip(2), get_use_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (17..=19).skip(2), get_use_ability_value, [Option<i32>; 2] }
 
     pub fn get_use_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
         self.get_use_ability_type(id)
@@ -117,9 +109,9 @@ impl StbSkill {
     stb_column! { 22, get_warp_zone_xpos, i32 }
     stb_column! { 23, get_warp_zone_ypos, i32 }
 
-    stb_column_array! { (21..=26).skip(3), get_add_ability_type, AbilityType }
-    stb_column_array! { (22..=26).skip(3), get_add_ability_rate, i32 }
-    stb_column_array! { (23..=26).skip(3), get_add_ability_value, i32 }
+    stb_column! { (21..=26).skip(3), get_add_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (22..=26).skip(3), get_add_ability_rate, [Option<i32>; 2] }
+    stb_column! { (23..=26).skip(3), get_add_ability_value, [Option<i32>; 2] }
 
     pub fn get_add_ability(&self, id: usize) -> ArrayVec<SkillAddAbility, 2> {
         self.get_add_ability_type(id)
@@ -148,12 +140,12 @@ impl StbSkill {
     stb_column! { 28, get_summon_pet, i32 }
     stb_column! { 29, get_action_mode, SkillActionMode }
 
-    stb_column_array_vec! { 30..=34, get_required_weapon_class, ItemClass, 5 }
+    stb_column! { 30..=34, get_required_weapon_class, ArrayVec<ItemClass, 5> }
     stb_column! { 35, get_required_job_set_index, NonZeroUsize }
-    stb_column_array_vec! { 36..=38, get_required_union, NonZeroUsize, 3 }
+    stb_column! { 36..=38, get_required_union, ArrayVec<NonZeroUsize, 3> }
 
-    stb_column_array! { (39..=44).skip(2), get_required_skill_index, NonZeroUsize }
-    stb_column_array! { (40..=44).skip(2), get_required_skill_level, i32 }
+    stb_column! { (39..=44).skip(2), get_required_skill_index, [Option<NonZeroUsize>; 3] }
+    stb_column! { (40..=44).skip(2), get_required_skill_level, [Option<i32>; 3] }
 
     pub fn get_required_skills(&self, id: usize) -> ArrayVec<(SkillReference, i32), 3> {
         self.get_required_skill_index(id)
@@ -164,8 +156,8 @@ impl StbSkill {
             .collect()
     }
 
-    stb_column_array! { (45..=48).skip(2), get_required_ability_type, AbilityType }
-    stb_column_array! { (46..=48).skip(2), get_required_ability_value, i32 }
+    stb_column! { (45..=48).skip(2), get_required_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (46..=48).skip(2), get_required_ability_value, [Option<i32>; 2] }
 
     pub fn get_required_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
         self.get_required_ability_type(id)
@@ -184,9 +176,9 @@ impl StbSkill {
     stb_column! { 54, get_casting_repeat_motion_index, NonZeroUsize }
     stb_column! { 55, get_casting_repeat_motion_count, i32 }
 
-    stb_column_array! { (56..=67).skip(3), get_casting_effect_index, NonZeroUsize }
-    stb_column_array! { (57..=67).skip(3), get_casting_effect_bone_index, usize }
-    stb_column_array! { (58..=67).skip(3), get_casting_sound_index, usize }
+    stb_column! { (56..=67).skip(3), get_casting_effect_index, [Option<NonZeroUsize>; 4] }
+    stb_column! { (57..=67).skip(3), get_casting_effect_bone_index, [Option<usize>; 4] }
+    stb_column! { (58..=67).skip(3), get_casting_sound_index, [Option<usize>; 4] }
 
     stb_column! { 68, get_action_motion_index, NonZeroUsize }
     stb_column! { 69, get_action_motion_speed, i32 }
@@ -198,9 +190,9 @@ impl StbSkill {
     stb_column! { 75, get_hit_effect_linked_point, i32 }
     stb_column! { 76, get_hit_sound, i32 }
 
-    stb_column_array! { (77..=82).skip(3), get_hit_dummy_effect_index, NonZeroUsize }
-    stb_column_array! { (78..=82).skip(3), get_hit_dummy_effect_bone_index, usize }
-    stb_column_array! { (79..=82).skip(3), get_hit_dummy_sound_index, usize }
+    stb_column! { (77..=82).skip(3), get_hit_dummy_effect_index, [Option<NonZeroUsize>; 2] }
+    stb_column! { (78..=82).skip(3), get_hit_dummy_effect_bone_index, [Option<usize>; 2] }
+    stb_column! { (79..=82).skip(3), get_hit_dummy_sound_index, [Option<usize>; 2] }
 
     stb_column! { 83, get_area_hit_effect, i32 }
     stb_column! { 84, get_area_hit_sound, i32 }

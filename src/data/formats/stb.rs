@@ -204,48 +204,38 @@ macro_rules! stb_column {
                 .and_then(|x| x.parse::<$value_type>().ok())
         }
     };
-}
-
-#[macro_export]
-macro_rules! stb_column_array {
     (
-        $range:expr, $name:ident, $value_type:ty
+        $range:expr, $name:ident, ArrayVec< $value_type:ty, $len:literal >
     ) => {
-        pub fn $name(&self, row: usize) -> Vec<Option<$value_type>> {
-            let mut result = Vec::new();
+        pub fn $name(&self, row: usize) -> ArrayVec<$value_type, $len> {
+            let mut result: ArrayVec<$value_type, $len> = ArrayVec::new();
 
-            for i in $range {
+            for column in $range {
                 if let Some(value) = self
                     .0
-                    .try_get(row, i)
+                    .try_get(row, column)
                     .and_then(|x| x.parse::<$value_type>().ok())
                 {
-                    result.push(Some(value));
-                } else {
-                    result.push(None);
+                    result.push(value);
                 }
             }
 
             result
         }
     };
-}
-
-#[macro_export]
-macro_rules! stb_column_array_vec {
     (
-        $range:expr, $name:ident, $value_type:ty, $len:expr
+        $range:expr, $name:ident, [Option<$value_type:ty>; $len:literal]
     ) => {
-        pub fn $name(&self, row: usize) -> ArrayVec<$value_type, $len> {
-            let mut result: ArrayVec<$value_type, $len> = ArrayVec::new();
+        pub fn $name(&self, row: usize) -> [Option<$value_type>; $len] {
+            let mut result: [Option<$value_type>; $len] = Default::default();
 
-            for i in $range {
+            for (i, column) in ($range).enumerate() {
                 if let Some(value) = self
                     .0
-                    .try_get(row, i)
+                    .try_get(row, column)
                     .and_then(|x| x.parse::<$value_type>().ok())
                 {
-                    result.push(value);
+                    result[i] = Some(value);
                 }
             }
 
