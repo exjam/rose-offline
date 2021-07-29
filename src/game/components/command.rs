@@ -36,7 +36,8 @@ pub enum CommandCastSkillTarget {
 pub struct CommandCastSkill {
     pub skill_id: SkillId,
     pub target: Option<CommandCastSkillTarget>,
-    pub casting_duration: Option<Duration>,
+    pub casting_duration: Duration,
+    pub action_duration: Duration,
     pub has_casted_skill: bool,
 }
 
@@ -123,7 +124,8 @@ impl NextCommand {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 target: None,
-                casting_duration: None,
+                casting_duration: Duration::default(),
+                action_duration: Duration::default(),
                 has_casted_skill: false,
             })),
             has_sent_server_message: false,
@@ -135,7 +137,8 @@ impl NextCommand {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 target: Some(CommandCastSkillTarget::Entity(target_entity)),
-                casting_duration: None,
+                casting_duration: Duration::default(),
+                action_duration: Duration::default(),
                 has_casted_skill: false,
             })),
             has_sent_server_message: false,
@@ -147,7 +150,8 @@ impl NextCommand {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 target: Some(CommandCastSkillTarget::Position(position)),
-                casting_duration: None,
+                casting_duration: Duration::default(),
+                action_duration: Duration::default(),
                 has_casted_skill: false,
             })),
             has_sent_server_message: false,
@@ -216,6 +220,24 @@ impl Command {
         Self::new(
             CommandData::PersonalStore,
             Some(Duration::from_secs(u64::MAX)),
+        )
+    }
+
+    pub fn with_cast_skill(
+        skill_id: SkillId,
+        target: Option<CommandCastSkillTarget>,
+        casting_duration: Duration,
+        action_duration: Duration,
+    ) -> Self {
+        Self::new(
+            CommandData::CastSkill(CommandCastSkill {
+                skill_id,
+                target,
+                casting_duration,
+                action_duration,
+                has_casted_skill: false,
+            }),
+            Some(casting_duration + action_duration),
         )
     }
 }

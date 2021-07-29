@@ -67,6 +67,8 @@ pub enum ServerPackets {
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
+    FinishCastingSkill = 0x7b9,
+    StartCastingSkill = 0x7bb,
     OpenPersonalStore = 0x7c2,
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
@@ -1240,6 +1242,32 @@ impl From<&PacketServerCastSkillTargetPosition> for Packet {
         if let Some(npc_motion_id) = packet.npc_motion_id {
             writer.write_u8(npc_motion_id as u8);
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerStartCastingSkill {
+    pub entity_id: ClientEntityId,
+}
+
+impl From<&PacketServerStartCastingSkill> for Packet {
+    fn from(packet: &PacketServerStartCastingSkill) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::StartCastingSkill as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerFinishCastingSkill {
+    pub entity_id: ClientEntityId,
+    pub skill_id: SkillId,
+}
+
+impl From<&PacketServerFinishCastingSkill> for Packet {
+    fn from(packet: &PacketServerFinishCastingSkill) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::FinishCastingSkill as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.skill_id.get() as u16);
         writer.into()
     }
 }

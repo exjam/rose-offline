@@ -1,4 +1,9 @@
-use std::{collections::HashMap, num::NonZeroUsize, str::FromStr, time::Duration};
+use std::{
+    collections::HashMap,
+    num::{NonZeroU32, NonZeroUsize},
+    str::FromStr,
+    time::Duration,
+};
 
 use arrayvec::ArrayVec;
 use log::debug;
@@ -171,16 +176,16 @@ impl StbSkill {
     stb_column! { 50, get_reserve_02, i32 }
     stb_column! { 51, get_icon_number, u32 }
     stb_column! { 52, get_casting_motion_id, MotionId }
-    stb_column! { 53, get_casting_motion_speed, i32 }
+    stb_column! { 53, get_casting_motion_speed, NonZeroU32 }
     stb_column! { 54, get_casting_repeat_motion_id, MotionId }
-    stb_column! { 55, get_casting_repeat_motion_count, i32 }
+    stb_column! { 55, get_casting_repeat_motion_count, NonZeroU32 }
 
     stb_column! { (56..=67).step_by(3), get_casting_effect_index, [Option<NonZeroUsize>; 4] }
     stb_column! { (57..=67).step_by(3), get_casting_effect_bone_index, [Option<usize>; 4] }
     stb_column! { (58..=67).step_by(3), get_casting_sound_index, [Option<usize>; 4] }
 
     stb_column! { 68, get_action_motion_id, MotionId }
-    stb_column! { 69, get_action_motion_speed, i32 }
+    stb_column! { 69, get_action_motion_speed, NonZeroU32 }
     stb_column! { 70, get_action_motion_hit_count, i32 }
     stb_column! { 71, get_bullet_no, i32 }
     stb_column! { 72, get_bullet_linked_point, i32 }
@@ -222,12 +227,23 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         base_skill_id: data.get_base_skill_id(id),
         action_mode: data.get_action_mode(id).unwrap_or(SkillActionMode::Stop),
         action_motion_id: data.get_action_motion_id(id),
-        action_motion_speed: data.get_action_motion_speed(id).unwrap_or(0),
+        action_motion_speed: data
+            .get_action_motion_speed(id)
+            .map(|x| x.get())
+            .unwrap_or(100) as f32
+            / 100.0,
         add_ability: data.get_add_ability(id),
         cast_range: data.get_cast_range(id).unwrap_or(0),
         casting_motion_id: data.get_casting_motion_id(id),
-        casting_motion_speed: data.get_casting_motion_speed(id).unwrap_or(0),
-        casting_repeat_motion_count: data.get_casting_repeat_motion_count(id).unwrap_or(0),
+        casting_motion_speed: data
+            .get_casting_motion_speed(id)
+            .map(|x| x.get())
+            .unwrap_or(100) as f32
+            / 100.0,
+        casting_repeat_motion_count: data
+            .get_casting_repeat_motion_count(id)
+            .map(|x| x.get())
+            .unwrap_or(1),
         casting_repeat_motion_id: data.get_casting_repeat_motion_id(id),
         cooldown: data.get_cooldown(id),
         damage_type: data.get_damage_type(id).unwrap_or(0),

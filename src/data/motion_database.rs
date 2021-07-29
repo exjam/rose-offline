@@ -94,12 +94,8 @@ impl MotionDatabase {
         gender: usize,
     ) -> MotionData {
         let get_motion = |action| {
-            self.get_character_motion(
-                MotionId::new(action as u16),
-                weapon_motion_type,
-                gender,
-            )
-            .cloned()
+            self.get_character_motion(MotionId::new(action as u16), weapon_motion_type, gender)
+                .cloned()
         };
 
         MotionData::with_character_motions(MotionDataCharacter {

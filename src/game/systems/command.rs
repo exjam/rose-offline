@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
+use nalgebra::Point3;
 
 use crate::game::{
     bundles::client_entity_leave_zone,
@@ -95,7 +96,7 @@ fn is_valid_skill_target<'a>(
     if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
         attack_target_query.get(attack_target_query_world, *target_entity)
     {
-        if target_position.zone_id == position.zone_id && target_health.hp > 0 {
+        if target_position.zone_id == position.zone_id {
             return Some((target_client_entity, target_position, target_ability_values));
         }
     }
@@ -330,12 +331,29 @@ pub fn command(
 
             command.duration += server_time.delta;
 
-            let required_duration = match command.command {
+            let required_duration = match &mut command.command {
                 CommandData::Attack(_) => {
                     let attack_speed = i32::max(ability_values.attack_speed, 30) as f32 / 100.0;
                     command
                         .required_duration
                         .map(|duration| duration.div_f32(attack_speed))
+                }
+                CommandData::CastSkill(CommandCastSkill {
+                    skill_id,
+                    casting_duration,
+                    has_casted_skill,
+                    ..
+                }) => {
+                    if !*has_casted_skill && command.duration >= *casting_duration {
+                        // TODO: Apply skill effect
+                        server_messages.send_entity_message(
+                            client_entity,
+                            ServerMessage::FinishCastingSkill(client_entity.id, *skill_id),
+                        );
+
+                        *has_casted_skill = true;
+                    }
+                    command.required_duration
                 }
                 _ => command.required_duration,
             };
@@ -588,11 +606,11 @@ pub fn command(
                 /*
                 TODO:
                 - Save previous command
-                - Move to within cast range
+                + Move to within cast range
                 - Check skill usage requirements to start the casting (eg check mana cost, required weapon equipped)
                 - Deduct skill usage requirements (like mana cost)
-                - If skill on target entity then send GSV_SKILL_START
-                - If the entity has a casting animation - do casting animation for a required_duration
+                + If skill on target entity then send GSV_SKILL_START
+                + If the entity has a casting animation - do casting animation for a required_duration
                 - Apply skill effects (damage, etc) send GSV_DAMAGE_OF_SKILL / GSV_EFFECT_OF_SKILL and GSV_RESULT_OF_SKILL
                 - Start the skill doing animation for a required_duration
                 - Set NextCommand depending on skill action mode
@@ -600,10 +618,94 @@ pub fn command(
                 CommandData::CastSkill(CommandCastSkill {
                     skill_id, target, ..
                 }) => {
-                    warn!("Unimplemented CommandCastSkill(skill: {:?})", *skill_id);
-                    if let Some(_skill_data) = game_data.skills.get_skill(*skill_id) {}
-                    *command = Command::default();
-                    *next_command = NextCommand::default();
+                    if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
+                        let (target_position, target_entity) = match target {
+                            Some(CommandCastSkillTarget::Entity(target_entity)) => {
+                                if let Some((_, target_position, _)) = is_valid_skill_target(
+                                    position,
+                                    target_entity,
+                                    attack_target_query,
+                                    &attack_target_query_world,
+                                ) {
+                                    (Some(target_position.position), Some(*target_entity))
+                                } else {
+                                    (None, None)
+                                }
+                            }
+                            Some(CommandCastSkillTarget::Position(target_position)) => (
+                                Some(Point3::new(target_position.x, target_position.y, 0.0)),
+                                None,
+                            ),
+                            None => (None, None),
+                        };
+
+                        let in_distance = target_position
+                            .map(|target_position| {
+                                (target_position.xy() - position.position.xy()).magnitude()
+                                    < skill_data.cast_range as f32
+                            })
+                            .unwrap_or(true);
+                        if in_distance {
+                            let casting_duration = skill_data
+                                .casting_motion_id
+                                .and_then(|motion_id| {
+                                    game_data.motions.find_first_character_motion(motion_id)
+                                })
+                                .map(|motion_data| motion_data.duration)
+                                .unwrap_or_else(|| Duration::from_secs(0));
+
+                            let action_duration = skill_data
+                                .action_motion_id
+                                .and_then(|motion_id| {
+                                    game_data.motions.find_first_character_motion(motion_id)
+                                })
+                                .map(|motion_data| motion_data.duration)
+                                .unwrap_or_else(|| Duration::from_secs(0));
+
+                            // For skills which target an entity, we must send a message indicating start of skill
+                            if target_entity.is_some() {
+                                server_messages.send_entity_message(
+                                    client_entity,
+                                    ServerMessage::StartCastingSkill(client_entity.id),
+                                );
+                            }
+
+                            // In range, set current command to cast skill
+                            *command = Command::with_cast_skill(
+                                *skill_id,
+                                target.clone(),
+                                casting_duration.mul_f32(skill_data.casting_motion_speed),
+                                action_duration.mul_f32(skill_data.action_motion_speed),
+                            );
+
+                            // TODO: Next comand should be set based on skill_data.action_mode
+                            *next_command = NextCommand::default();
+
+                            // Remove our destination component, as we have reached it!
+                            cmd.remove_component::<Destination>(*entity);
+
+                            // Update target
+                            if let Some(target_entity) = target_entity {
+                                cmd.add_component(*entity, Target::new(target_entity));
+                            } else {
+                                cmd.remove_component::<Target>(*entity);
+                            }
+                        } else {
+                            // Not in range, set current command to move
+                            let target_position = target_position.unwrap();
+                            *command = Command::with_move(target_position, target_entity);
+
+                            // Set destination to move towards
+                            cmd.add_component(*entity, Destination::new(target_position));
+
+                            // Update target
+                            if let Some(target_entity) = target_entity {
+                                cmd.add_component(*entity, Target::new(target_entity));
+                            } else {
+                                cmd.remove_component::<Target>(*entity);
+                            }
+                        }
+                    }
                 }
                 CommandData::PersonalStore => {
                     let personal_store = personal_store.unwrap();

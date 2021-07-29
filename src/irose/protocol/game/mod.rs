@@ -799,6 +799,21 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::StartCastingSkill(entity_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerStartCastingSkill { entity_id }))
+                    .await?;
+            }
+            ServerMessage::FinishCastingSkill(entity_id, skill_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerFinishCastingSkill {
+                        entity_id,
+                        skill_id,
+                    }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

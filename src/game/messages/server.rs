@@ -356,4 +356,6 @@ pub enum ServerMessage {
     CastSkillSelf(CastSkillSelf),
     CastSkillTargetEntity(CastSkillTargetEntity),
     CastSkillTargetPosition(CastSkillTargetPosition),
+    StartCastingSkill(ClientEntityId),
+    FinishCastingSkill(ClientEntityId, SkillId),
 }
