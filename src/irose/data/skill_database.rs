@@ -91,8 +91,8 @@ impl StbSkill {
     stb_column! { 14, get_status_effect_duration_ms, i32 }
     stb_column! { 15, get_damage_type, i32 }
 
-    stb_column! { (16..=19).skip(2), get_use_ability_type, [Option<AbilityType>; 2] }
-    stb_column! { (17..=19).skip(2), get_use_ability_value, [Option<i32>; 2] }
+    stb_column! { (16..=19).step_by(2), get_use_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (17..=19).step_by(2), get_use_ability_value, [Option<i32>; 2] }
 
     pub fn get_use_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
         self.get_use_ability_type(id)
@@ -108,9 +108,9 @@ impl StbSkill {
     stb_column! { 22, get_warp_zone_xpos, i32 }
     stb_column! { 23, get_warp_zone_ypos, i32 }
 
-    stb_column! { (21..=26).skip(3), get_add_ability_type, [Option<AbilityType>; 2] }
-    stb_column! { (22..=26).skip(3), get_add_ability_rate, [Option<i32>; 2] }
-    stb_column! { (23..=26).skip(3), get_add_ability_value, [Option<i32>; 2] }
+    stb_column! { (21..=26).step_by(3), get_add_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (22..=26).step_by(3), get_add_ability_rate, [Option<i32>; 2] }
+    stb_column! { (23..=26).step_by(3), get_add_ability_value, [Option<i32>; 2] }
 
     pub fn get_add_ability(&self, id: usize) -> ArrayVec<SkillAddAbility, 2> {
         self.get_add_ability_type(id)
@@ -143,8 +143,8 @@ impl StbSkill {
     stb_column! { 35, get_required_job_set_index, NonZeroUsize }
     stb_column! { 36..=38, get_required_union, ArrayVec<NonZeroUsize, 3> }
 
-    stb_column! { (39..=44).skip(2), get_required_skill_id, [Option<SkillId>; 3] }
-    stb_column! { (40..=44).skip(2), get_required_skill_level, [Option<i32>; 3] }
+    stb_column! { (39..=44).step_by(2), get_required_skill_id, [Option<SkillId>; 3] }
+    stb_column! { (40..=44).step_by(2), get_required_skill_level, [Option<i32>; 3] }
 
     pub fn get_required_skills(&self, id: usize) -> ArrayVec<(SkillId, i32), 3> {
         self.get_required_skill_id(id)
@@ -155,8 +155,8 @@ impl StbSkill {
             .collect()
     }
 
-    stb_column! { (45..=48).skip(2), get_required_ability_type, [Option<AbilityType>; 2] }
-    stb_column! { (46..=48).skip(2), get_required_ability_value, [Option<i32>; 2] }
+    stb_column! { (45..=48).step_by(2), get_required_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (46..=48).step_by(2), get_required_ability_value, [Option<i32>; 2] }
 
     pub fn get_required_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
         self.get_required_ability_type(id)
@@ -175,9 +175,9 @@ impl StbSkill {
     stb_column! { 54, get_casting_repeat_motion_id, MotionId }
     stb_column! { 55, get_casting_repeat_motion_count, i32 }
 
-    stb_column! { (56..=67).skip(3), get_casting_effect_index, [Option<NonZeroUsize>; 4] }
-    stb_column! { (57..=67).skip(3), get_casting_effect_bone_index, [Option<usize>; 4] }
-    stb_column! { (58..=67).skip(3), get_casting_sound_index, [Option<usize>; 4] }
+    stb_column! { (56..=67).step_by(3), get_casting_effect_index, [Option<NonZeroUsize>; 4] }
+    stb_column! { (57..=67).step_by(3), get_casting_effect_bone_index, [Option<usize>; 4] }
+    stb_column! { (58..=67).step_by(3), get_casting_sound_index, [Option<usize>; 4] }
 
     stb_column! { 68, get_action_motion_id, MotionId }
     stb_column! { 69, get_action_motion_speed, i32 }
@@ -189,9 +189,9 @@ impl StbSkill {
     stb_column! { 75, get_hit_effect_linked_point, i32 }
     stb_column! { 76, get_hit_sound, i32 }
 
-    stb_column! { (77..=82).skip(3), get_hit_dummy_effect_index, [Option<NonZeroUsize>; 2] }
-    stb_column! { (78..=82).skip(3), get_hit_dummy_effect_bone_index, [Option<usize>; 2] }
-    stb_column! { (79..=82).skip(3), get_hit_dummy_sound_index, [Option<usize>; 2] }
+    stb_column! { (77..=82).step_by(3), get_hit_dummy_effect_index, [Option<NonZeroUsize>; 2] }
+    stb_column! { (78..=82).step_by(3), get_hit_dummy_effect_bone_index, [Option<usize>; 2] }
+    stb_column! { (79..=82).step_by(3), get_hit_dummy_sound_index, [Option<usize>; 2] }
 
     stb_column! { 83, get_area_hit_effect, i32 }
     stb_column! { 84, get_area_hit_sound, i32 }
