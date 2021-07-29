@@ -1,17 +1,72 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroUsize, str::FromStr, time::Duration};
 
+use arrayvec::ArrayVec;
 use log::debug;
 use num_traits::FromPrimitive;
 
 use crate::{
     data::{
+        ability::AbilityType,
         formats::{FileReader, StbFile, StlFile, VfsIndex},
-        SkillAddAbility, SkillData, SkillDatabase, SkillPageType, SkillReference, SkillType,
+        item::ItemClass,
+        NpcReference, SkillActionMode, SkillAddAbility, SkillCooldown, SkillCooldownGroup,
+        SkillData, SkillDatabase, SkillPageType, SkillReference, SkillTargetFilter, SkillType,
+        ZoneReference,
     },
-    stb_column,
+    stb_column, stb_column_array, stb_column_array_vec,
 };
 
 pub struct StbSkill(pub StbFile);
+
+impl FromStr for SkillActionMode {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>().map_err(|_| ())?;
+        FromPrimitive::from_u32(value).ok_or(())
+    }
+}
+
+impl FromStr for SkillCooldownGroup {
+    type Err = <NonZeroUsize as std::str::FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(SkillCooldownGroup(s.parse::<NonZeroUsize>()?))
+    }
+}
+
+impl FromStr for SkillType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>().map_err(|_| ())?;
+        FromPrimitive::from_u32(value).ok_or(())
+    }
+}
+
+impl FromStr for SkillTargetFilter {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>().map_err(|_| ())?;
+        FromPrimitive::from_u32(value).ok_or(())
+    }
+}
+
+impl FromStr for SkillPageType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>().map_err(|_| ())?;
+        match value {
+            0 => Ok(SkillPageType::Basic),
+            1 => Ok(SkillPageType::Active),
+            2 => Ok(SkillPageType::Passive),
+            3 => Ok(SkillPageType::Clan),
+            _ => Err(()),
+        }
+    }
+}
 
 #[allow(dead_code)]
 impl StbSkill {
@@ -19,51 +74,152 @@ impl StbSkill {
         self.0.rows()
     }
 
-    stb_column! { 1, get_base_skill_index, u32 }
+    stb_column! { 1, get_base_skill_index, NonZeroUsize } // TODO: SkillReference
     stb_column! { 2, get_skill_level, u32 }
-    stb_column! { 3, get_levelup_skill_points, u32 }
-    stb_column! { 4, get_page, u32 }
-    stb_column! { 5, get_skill_type, u32 }
+    stb_column! { 3, get_learn_skill_points, u32 }
+    stb_column! { 4, get_page, SkillPageType }
+    stb_column! { 5, get_skill_type, SkillType }
     stb_column! { 6, get_cast_range, u32 }
-    stb_column! { 6, get_require_planet_index, u32 }
-    stb_column! { 51, get_icon_number, u32 }
+    stb_column! { 6, get_require_planet_index, NonZeroUsize }
+    stb_column! { 7, get_target_filter, SkillTargetFilter }
+    stb_column! { 8, get_scope, u32 }
+    stb_column! { 9, get_power, u32 }
+    stb_column! { 9, get_item_make_number, u32 }
+    stb_column! { 10, get_harm, u32 }
+    stb_column_array! { 11..=12, get_status_effect_index, NonZeroUsize }
 
-    pub fn get_add_ability(&self, id: usize) -> Vec<SkillAddAbility> {
-        let mut add_ability = Vec::new();
-        for i in 0..2 {
-            if let Some(ability_type) = self
-                .0
-                .try_get_int(id, 21 + i * 3)
-                .and_then(FromPrimitive::from_i32)
-            {
-                let ability_value = self.0.try_get_int(id, 22 + i * 3).unwrap_or(0);
-                let ability_rate = self.0.try_get_int(id, 23 + i * 3).unwrap_or(0);
-                if ability_rate != 0 {
-                    add_ability.push(SkillAddAbility::Rate(ability_type, ability_rate));
-                } else {
-                    add_ability.push(SkillAddAbility::Value(ability_type, ability_value));
-                }
-            }
-        }
-        add_ability
+    pub fn get_status_effects(&self, id: usize) -> ArrayVec<NonZeroUsize, 2> {
+        self.get_status_effect_index(id)
+            .iter()
+            .filter(|x| x.is_some())
+            .map(|x| x.unwrap())
+            .collect()
     }
-}
 
-fn decode_skill_page(value: u32) -> Option<SkillPageType> {
-    match value {
-        0 => Some(SkillPageType::Basic),
-        1 => Some(SkillPageType::Active),
-        2 => Some(SkillPageType::Passive),
-        3 => Some(SkillPageType::Clan),
-        _ => None,
+    stb_column! { 13, get_success_ratio, i32 }
+    stb_column! { 14, get_status_effect_duration_ms, i32 }
+    stb_column! { 15, get_damage_type, i32 }
+
+    stb_column_array! { (16..=19).skip(2), get_use_ability_type, AbilityType }
+    stb_column_array! { (17..=19).skip(2), get_use_ability_value, i32 }
+
+    pub fn get_use_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
+        self.get_use_ability_type(id)
+            .iter()
+            .zip(self.get_use_ability_value(id).iter())
+            .filter(|(a, b)| a.is_some() && b.is_some())
+            .map(|(a, b)| (a.unwrap(), b.unwrap()))
+            .collect()
+    }
+
+    stb_column! { 20, get_cooldown_time_5ms, i32 }
+    stb_column! { 21, get_warp_zone_no, i32 }
+    stb_column! { 22, get_warp_zone_xpos, i32 }
+    stb_column! { 23, get_warp_zone_ypos, i32 }
+
+    stb_column_array! { (21..=26).skip(3), get_add_ability_type, AbilityType }
+    stb_column_array! { (22..=26).skip(3), get_add_ability_rate, i32 }
+    stb_column_array! { (23..=26).skip(3), get_add_ability_value, i32 }
+
+    pub fn get_add_ability(&self, id: usize) -> ArrayVec<SkillAddAbility, 2> {
+        self.get_add_ability_type(id)
+            .iter()
+            .zip(
+                self.get_add_ability_rate(id)
+                    .iter()
+                    .zip(self.get_add_ability_value(id).iter()),
+            )
+            .map(
+                |(ability_type, (rate, value))| match (ability_type, rate, value) {
+                    (Some(ability_type), Some(rate), _) => {
+                        Some(SkillAddAbility::Rate(*ability_type, *rate))
+                    }
+                    (Some(ability_type), None, Some(value)) => {
+                        Some(SkillAddAbility::Value(*ability_type, *value))
+                    }
+                    _ => None,
+                },
+            )
+            .flatten()
+            .collect()
+    }
+
+    stb_column! { 27, get_cooldown_group, SkillCooldownGroup }
+    stb_column! { 28, get_summon_pet, i32 }
+    stb_column! { 29, get_action_mode, SkillActionMode }
+
+    stb_column_array_vec! { 30..=34, get_required_weapon_class, ItemClass, 5 }
+    stb_column! { 35, get_required_job_set_index, NonZeroUsize }
+    stb_column_array_vec! { 36..=38, get_required_union, NonZeroUsize, 3 }
+
+    stb_column_array! { (39..=44).skip(2), get_required_skill_index, NonZeroUsize }
+    stb_column_array! { (40..=44).skip(2), get_required_skill_level, i32 }
+
+    pub fn get_required_skills(&self, id: usize) -> ArrayVec<(SkillReference, i32), 3> {
+        self.get_required_skill_index(id)
+            .iter()
+            .zip(self.get_required_skill_level(id).iter())
+            .filter(|(a, b)| a.is_some() && b.is_some())
+            .map(|(a, b)| (SkillReference(a.unwrap().get()), b.unwrap()))
+            .collect()
+    }
+
+    stb_column_array! { (45..=48).skip(2), get_required_ability_type, AbilityType }
+    stb_column_array! { (46..=48).skip(2), get_required_ability_value, i32 }
+
+    pub fn get_required_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
+        self.get_required_ability_type(id)
+            .iter()
+            .zip(self.get_required_ability_value(id).iter())
+            .filter(|(a, b)| a.is_some() && b.is_some())
+            .map(|(a, b)| (a.unwrap(), b.unwrap()))
+            .collect()
+    }
+
+    stb_column! { 49, get_script1, i32 }
+    stb_column! { 50, get_reserve_02, i32 }
+    stb_column! { 51, get_icon_number, u32 }
+    stb_column! { 52, get_casting_motion_index, NonZeroUsize }
+    stb_column! { 53, get_casting_motion_speed, i32 }
+    stb_column! { 54, get_casting_repeat_motion_index, NonZeroUsize }
+    stb_column! { 55, get_casting_repeat_motion_count, i32 }
+
+    stb_column_array! { (56..=67).skip(3), get_casting_effect_index, NonZeroUsize }
+    stb_column_array! { (57..=67).skip(3), get_casting_effect_bone_index, usize }
+    stb_column_array! { (58..=67).skip(3), get_casting_sound_index, usize }
+
+    stb_column! { 68, get_action_motion_index, NonZeroUsize }
+    stb_column! { 69, get_action_motion_speed, i32 }
+    stb_column! { 70, get_action_motion_hit_count, i32 }
+    stb_column! { 71, get_bullet_no, i32 }
+    stb_column! { 72, get_bullet_linked_point, i32 }
+    stb_column! { 73, get_bullet_fire_sound, i32 }
+    stb_column! { 74, get_hit_effect, i32 }
+    stb_column! { 75, get_hit_effect_linked_point, i32 }
+    stb_column! { 76, get_hit_sound, i32 }
+
+    stb_column_array! { (77..=82).skip(3), get_hit_dummy_effect_index, NonZeroUsize }
+    stb_column_array! { (78..=82).skip(3), get_hit_dummy_effect_bone_index, usize }
+    stb_column_array! { (79..=82).skip(3), get_hit_dummy_sound_index, usize }
+
+    stb_column! { 83, get_area_hit_effect, i32 }
+    stb_column! { 84, get_area_hit_sound, i32 }
+    stb_column! { 85, get_learn_money_cost, u32 }
+    stb_column! { 86, get_attribute, i32 }
+
+    pub fn get_cooldown(&self, id: usize) -> SkillCooldown {
+        let duration =
+            Duration::from_millis(self.get_cooldown_time_5ms(id).unwrap_or(0) as u64 * 200);
+        match self.get_cooldown_group(id) {
+            Some(group) => SkillCooldown::Group(group, duration),
+            None => SkillCooldown::Skill(duration),
+        }
     }
 }
 
 fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
-    let icon_number = data.get_icon_number(id).unwrap_or(0);
-    if icon_number == 0 {
-        return None;
-    }
+    let icon_number = data.get_icon_number(id).filter(|icon| *icon != 0)?;
+    let skill_type = data.get_skill_type(id)?;
 
     Some(SkillData {
         id: SkillReference(id),
@@ -71,12 +227,49 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
             .get_text_string(1, data.0.get(id, data.0.columns() - 1))
             .unwrap_or(&"")
             .to_string(),
-        page: decode_skill_page(data.get_page(id)?)?,
-        icon_number,
+        base_skill: data
+            .get_base_skill_index(id)
+            .map(|x| SkillReference(x.get())),
+        action_mode: data.get_action_mode(id).unwrap_or(SkillActionMode::Stop),
+        action_motion_index: data.get_action_motion_index(id),
+        action_motion_speed: data.get_action_motion_speed(id).unwrap_or(0),
         add_ability: data.get_add_ability(id),
-        skill_type: FromPrimitive::from_u32(data.get_skill_type(id).unwrap_or(0))
-            .unwrap_or(SkillType::Unknown),
-        skill_point_cost: data.get_levelup_skill_points(id).unwrap_or(0),
+        cast_range: data.get_cast_range(id).unwrap_or(0),
+        casting_motion_index: data.get_casting_motion_index(id),
+        casting_motion_speed: data.get_casting_motion_speed(id).unwrap_or(0),
+        casting_repeat_motion_count: data.get_casting_repeat_motion_count(id).unwrap_or(0),
+        casting_repeat_motion_index: data.get_casting_repeat_motion_index(id),
+        cooldown: data.get_cooldown(id),
+        damage_type: data.get_damage_type(id).unwrap_or(0),
+        harm: data.get_harm(id).unwrap_or(0),
+        icon_number,
+        item_make_number: data.get_item_make_number(id).unwrap_or(0),
+        level: data.get_skill_level(id).unwrap_or(1),
+        learn_money_cost: data.get_learn_money_cost(id).unwrap_or(0),
+        page: data.get_page(id).unwrap_or(SkillPageType::Basic),
+        learn_point_cost: data.get_learn_skill_points(id).unwrap_or(0),
+        power: data.get_power(id).unwrap_or(0),
+        required_ability: data.get_required_abilities(id),
+        required_job_set_index: data.get_required_job_set_index(id),
+        required_planet: data.get_require_planet_index(id),
+        required_skills: data.get_required_skills(id),
+        required_union: data.get_required_union(id),
+        required_weapon_class: data.get_required_weapon_class(id),
+        scope: data.get_scope(id).unwrap_or(0),
+        skill_type,
+        status_effect_duration: Duration::from_millis(
+            data.get_status_effect_duration_ms(id).unwrap_or(0) as u64,
+        ),
+        status_effects: data.get_status_effects(id),
+        success_ratio: data.get_success_ratio(id).unwrap_or(0),
+        summon_pet: NpcReference(data.get_summon_pet(id).unwrap_or(0) as usize),
+        target_filter: data
+            .get_target_filter(id)
+            .unwrap_or(SkillTargetFilter::OnlySelf),
+        use_ability: data.get_use_abilities(id),
+        warp_zone_no: ZoneReference(data.get_warp_zone_no(id).unwrap_or(0) as usize),
+        warp_zone_x: data.get_warp_zone_xpos(id).unwrap_or(0),
+        warp_zone_y: data.get_warp_zone_ypos(id).unwrap_or(0),
     })
 }
 

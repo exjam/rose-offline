@@ -21,7 +21,7 @@ fn try_learn_skill(
     }
 
     if let Some(skill_points) = skill_points.as_ref() {
-        if skill_points.points < skill_data.skill_point_cost {
+        if skill_points.points < skill_data.learn_point_cost {
             return Err(LearnSkillError::SkillPointRequirement);
         }
     }
@@ -33,7 +33,7 @@ fn try_learn_skill(
         .ok_or(LearnSkillError::Full)?;
 
     if let Some(skill_points) = skill_points {
-        skill_points.points -= skill_data.skill_point_cost;
+        skill_points.points -= skill_data.learn_point_cost;
     }
 
     Ok(skill_slot)

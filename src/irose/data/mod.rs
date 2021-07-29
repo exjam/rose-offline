@@ -1,3 +1,18 @@
+use crate::{
+    data::{ability::AbilityType, formats::VfsIndex},
+    game::GameData,
+};
+use std::{path::Path, str::FromStr, sync::Arc};
+
+impl FromStr for AbilityType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>().map_err(|_| ())?;
+        FromPrimitive::from_u32(value).ok_or(())
+    }
+}
+
 mod ability_values;
 mod ai_database;
 mod character_creator;
@@ -9,9 +24,6 @@ mod quest_database;
 mod skill_database;
 mod zone_database;
 
-use crate::{data::formats::VfsIndex, game::GameData};
-use std::{path::Path, sync::Arc};
-
 use ability_values::get_ability_value_calculator;
 use ai_database::get_ai_database;
 use character_creator::get_character_creator;
@@ -19,6 +31,7 @@ use drop_table::get_drop_table;
 use item_database::get_item_database;
 use motion_database::get_motion_database;
 use npc_database::get_npc_database;
+use num_traits::FromPrimitive;
 use quest_database::get_quest_database;
 use skill_database::get_skill_database;
 use zone_database::get_zone_database;

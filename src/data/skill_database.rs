@@ -1,8 +1,11 @@
+use arrayvec::ArrayVec;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroUsize, time::Duration};
 
 use crate::data::ability::AbilityType;
+
+use super::{item::ItemClass, NpcReference, ZoneReference};
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct SkillReference(pub usize);
@@ -21,19 +24,102 @@ pub enum SkillAddAbility {
 }
 
 #[derive(FromPrimitive)]
-pub enum SkillType {
-    Unknown = 0,
-    Passive = 15,
+pub enum SkillActionMode {
+    Stop = 0,
+    Attack = 1,
+    Restore = 2,
 }
 
+#[derive(FromPrimitive)]
+pub enum SkillTargetFilter {
+    OnlySelf = 0,
+    Group = 1,
+    Guild = 2,
+    Friend = 3,
+    Monster = 4,
+    Enemy = 5,
+    EnemyCharacter = 6,
+    Character = 7,
+    CharacterOrMonster = 8,
+    DeadCharacter = 9,
+    EnemyMonster = 10,
+}
+
+#[derive(FromPrimitive)]
+pub enum SkillType {
+    BasicAction = 1,
+    CreateWindow = 2,
+    Immediate = 3,
+    EnforceWeapon = 4,
+    EnforceBullet = 5,
+    FireBullet = 6,
+    AreaTarget = 7,
+    SelfBoundDuration = 8,
+    TargetBoundDuration = 9,
+    SelfBound = 10,
+    TargetBound = 11,
+    SelfStateDuration = 12,
+    TargetStateDuration = 13,
+    SummonPet = 14,
+    Passive = 15,
+    Emote = 16,
+    SelfDamage = 17,
+    Warp = 18,
+    SelfAndTarget = 19,
+    Resurrection = 20,
+}
+
+pub struct SkillCooldownGroup(pub NonZeroUsize);
+
+pub enum SkillCooldown {
+    Skill(Duration),
+    Group(SkillCooldownGroup, Duration),
+}
+
+// TODO: Make SkillData an enum on SkillType with relevant fields only?
 pub struct SkillData {
     pub id: SkillReference,
     pub name: String,
+
+    pub base_skill: Option<SkillReference>,
+    pub level: u32,
+    pub learn_point_cost: u32,
+    pub learn_money_cost: u32,
+    pub skill_type: SkillType,
     pub page: SkillPageType,
     pub icon_number: u32,
-    pub add_ability: Vec<SkillAddAbility>,
-    pub skill_type: SkillType,
-    pub skill_point_cost: u32,
+
+    pub use_ability: ArrayVec<(AbilityType, i32), 2>,
+    pub required_ability: ArrayVec<(AbilityType, i32), 2>,
+    pub required_job_set_index: Option<NonZeroUsize>, // TODO: JobSetReference to the job set STB
+    pub required_planet: Option<NonZeroUsize>,
+    pub required_skills: ArrayVec<(SkillReference, i32), 3>,
+    pub required_union: ArrayVec<NonZeroUsize, 3>,
+    pub required_weapon_class: ArrayVec<ItemClass, 5>,
+
+    pub action_mode: SkillActionMode,
+    pub action_motion_index: Option<NonZeroUsize>,
+    pub action_motion_speed: i32,
+    pub add_ability: ArrayVec<SkillAddAbility, 2>,
+    pub cast_range: u32,
+    pub casting_motion_index: Option<NonZeroUsize>,
+    pub casting_motion_speed: i32,
+    pub casting_repeat_motion_index: Option<NonZeroUsize>,
+    pub casting_repeat_motion_count: i32,
+    pub cooldown: SkillCooldown,
+    pub damage_type: i32,
+    pub harm: u32,
+    pub item_make_number: u32,
+    pub power: u32,
+    pub scope: u32,
+    pub status_effects: ArrayVec<NonZeroUsize, 2>, // TODO: StatusEffectReference
+    pub status_effect_duration: Duration,
+    pub success_ratio: i32,
+    pub summon_pet: NpcReference,
+    pub target_filter: SkillTargetFilter,
+    pub warp_zone_no: ZoneReference,
+    pub warp_zone_x: i32,
+    pub warp_zone_y: i32,
 }
 
 pub struct SkillDatabase {
