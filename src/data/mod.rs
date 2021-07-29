@@ -74,6 +74,7 @@ mod motion_database;
 mod npc_database;
 mod quest_database;
 mod skill_database;
+mod status_effect_database;
 mod world;
 mod zone_database;
 
@@ -100,6 +101,10 @@ pub use quest_database::{QuestData, QuestDatabase, QuestTrigger, QuestTriggerHas
 pub use skill_database::{
     SkillActionMode, SkillAddAbility, SkillCooldown, SkillCooldownGroup, SkillData, SkillDatabase,
     SkillId, SkillPageType, SkillTargetFilter, SkillType,
+};
+pub use status_effect_database::{
+    StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
+    StatusEffectType,
 };
 pub use world::{WorldTicks, WORLD_TICK_DURATION};
 pub use zone_database::{ZoneData, ZoneDatabase, ZoneId, ZoneMonsterSpawnPoint, ZoneNpcSpawn};

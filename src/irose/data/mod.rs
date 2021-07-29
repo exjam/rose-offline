@@ -22,6 +22,7 @@ mod motion_database;
 mod npc_database;
 mod quest_database;
 mod skill_database;
+mod status_effect_database;
 mod zone_database;
 
 use ability_values::get_ability_value_calculator;
@@ -34,6 +35,7 @@ use npc_database::get_npc_database;
 use num_traits::FromPrimitive;
 use quest_database::get_quest_database;
 use skill_database::get_skill_database;
+use status_effect_database::get_status_effect_database;
 use zone_database::get_zone_database;
 
 pub fn get_game_data() -> GameData {
@@ -71,6 +73,9 @@ pub fn get_game_data() -> GameData {
         npcs: npc_database,
         quests: Arc::new(get_quest_database(&vfs_index).expect("Failed to load quest database")),
         skills: skill_database,
+        status_effects: Arc::new(
+            get_status_effect_database(&vfs_index).expect("Failed to load status effect database"),
+        ),
         zones: zone_database,
     }
 }
