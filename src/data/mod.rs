@@ -24,6 +24,26 @@ macro_rules! id_wrapper_impl {
             }
         }
     };
+    ($name:ident, $value_type:ty) => {
+        impl $name {
+            pub fn new(value: $value_type) -> Self {
+                Self(value)
+            }
+
+            #[allow(dead_code)]
+            pub fn get(&self) -> $value_type {
+                self.0
+            }
+        }
+
+        impl FromStr for $name {
+            type Err = <$value_type as std::str::FromStr>::Err;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok($name(s.parse::<$value_type>()?))
+            }
+        }
+    };
     ($name:ident, $inner_type:ty, $value_type:ty) => {
         impl $name {
             pub fn new(value: $value_type) -> Option<Self> {

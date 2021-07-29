@@ -1,11 +1,11 @@
-use std::{collections::HashMap, num::NonZeroU16, str::FromStr, time::Duration};
+use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use crate::game::components::{MotionData, MotionDataCharacter};
 
 #[derive(Copy, Clone)]
-pub struct MotionId(NonZeroU16);
+pub struct MotionId(u16);
 
-id_wrapper_impl!(MotionId, NonZeroU16, u16);
+id_wrapper_impl!(MotionId, u16);
 
 #[derive(Clone)]
 pub struct MotionFileData {
@@ -95,7 +95,7 @@ impl MotionDatabase {
     ) -> MotionData {
         let get_motion = |action| {
             self.get_character_motion(
-                MotionId::new(action as u16).unwrap(),
+                MotionId::new(action as u16),
                 weapon_motion_type,
                 gender,
             )
