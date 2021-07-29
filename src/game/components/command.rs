@@ -27,10 +27,17 @@ pub struct CommandPickupDroppedItem {
 }
 
 #[derive(Clone)]
-pub enum CommandCastSkill {
-    TargetSelf(SkillReference),
-    TargetEntity(SkillReference, Entity),
-    TargetPosition(SkillReference, Point2<f32>),
+pub enum CommandCastSkillTarget {
+    Entity(Entity),
+    Position(Point2<f32>),
+}
+
+#[derive(Clone)]
+pub struct CommandCastSkill {
+    pub skill: SkillReference,
+    pub target: Option<CommandCastSkillTarget>,
+    pub casting_duration: Option<Duration>,
+    pub has_casted_skill: bool,
 }
 
 #[derive(Clone)]
@@ -113,26 +120,36 @@ impl NextCommand {
 
     pub fn with_cast_skill_target_self(skill: SkillReference) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill::TargetSelf(skill))),
+            command: Some(CommandData::CastSkill(CommandCastSkill {
+                skill,
+                target: None,
+                casting_duration: None,
+                has_casted_skill: false,
+            })),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_cast_skill_target_entity(skill: SkillReference, target_entity: Entity) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill::TargetEntity(
+            command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill,
-                target_entity,
-            ))),
+                target: Some(CommandCastSkillTarget::Entity(target_entity)),
+                casting_duration: None,
+                has_casted_skill: false,
+            })),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_cast_skill_target_position(skill: SkillReference, position: Point2<f32>) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill::TargetPosition(
-                skill, position,
-            ))),
+            command: Some(CommandData::CastSkill(CommandCastSkill {
+                skill,
+                target: Some(CommandCastSkillTarget::Position(position)),
+                casting_duration: None,
+                has_casted_skill: false,
+            })),
             has_sent_server_message: false,
         }
     }

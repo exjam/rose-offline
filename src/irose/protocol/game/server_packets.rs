@@ -13,10 +13,11 @@ use crate::{
     game::{
         components::{
             AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
-            CommandCastSkill, CommandData, Destination, DroppedItem, Equipment, EquipmentIndex,
-            ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
-            ManaPoints, Money, Npc, NpcStandingDirection, Position, QuestState, SkillList,
-            SkillPage, SkillPoints, Stamina, StatPoints, Team, UnionMembership, VehiclePartIndex,
+            CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
+            Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
+            Inventory, ItemSlot, Level, ManaPoints, Money, Npc, NpcStandingDirection, Position,
+            QuestState, SkillList, SkillPage, SkillPoints, Stamina, StatPoints, Team,
+            UnionMembership, VehiclePartIndex,
         },
         messages::server::{
             LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
@@ -603,9 +604,15 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Die(_) => 3,
             CommandData::PickupDroppedItem(_) => 4,
             CommandData::PersonalStore => 11,
-            CommandData::CastSkill(CommandCastSkill::TargetSelf(_)) => 6,
-            CommandData::CastSkill(CommandCastSkill::TargetEntity(_, _)) => 7,
-            CommandData::CastSkill(CommandCastSkill::TargetPosition(_, _)) => 8,
+            CommandData::CastSkill(CommandCastSkill { target: None, .. }) => 6,
+            CommandData::CastSkill(CommandCastSkill {
+                target: Some(CommandCastSkillTarget::Entity(_)),
+                ..
+            }) => 7,
+            CommandData::CastSkill(CommandCastSkill {
+                target: Some(CommandCastSkillTarget::Position(_)),
+                ..
+            }) => 8,
             // 9 = Run away
             // 10 = Sit
         };

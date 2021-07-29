@@ -7,8 +7,9 @@ use crate::game::{
     bundles::client_entity_leave_zone,
     components::{
         AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
-        CommandData, CommandMove, CommandPickupDroppedItem, Destination, DroppedItem, GameClient,
-        HealthPoints, Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, Target,
+        CommandCastSkillTarget, CommandData, CommandMove, CommandPickupDroppedItem, Destination,
+        DroppedItem, GameClient, HealthPoints, Inventory, MotionData, NextCommand, Owner,
+        PersonalStore, Position, Target,
     },
     messages::server::{
         self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
@@ -258,7 +259,11 @@ pub fn command(
                             next_command.command = Some(CommandData::Stop);
                         }
                     }
-                    CommandData::CastSkill(CommandCastSkill::TargetSelf(skill)) => {
+                    CommandData::CastSkill(CommandCastSkill {
+                        skill,
+                        target: None,
+                        ..
+                    }) => {
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::CastSkillSelf(server::CastSkillSelf {
@@ -268,10 +273,11 @@ pub fn command(
                             }),
                         );
                     }
-                    CommandData::CastSkill(CommandCastSkill::TargetEntity(
+                    CommandData::CastSkill(CommandCastSkill {
                         skill,
-                        target_entity,
-                    )) => {
+                        target: Some(CommandCastSkillTarget::Entity(target_entity)),
+                        ..
+                    }) => {
                         if let Some((target_client_entity, target_position, _)) =
                             is_valid_skill_target(
                                 position,
@@ -300,10 +306,11 @@ pub fn command(
                             next_command.command = Some(CommandData::Stop);
                         }
                     }
-                    CommandData::CastSkill(CommandCastSkill::TargetPosition(
+                    CommandData::CastSkill(CommandCastSkill {
                         skill,
-                        target_position,
-                    )) => {
+                        target: Some(CommandCastSkillTarget::Position(target_position)),
+                        ..
+                    }) => {
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::CastSkillTargetPosition(
@@ -578,27 +585,21 @@ pub fn command(
                         *next_command = NextCommand::default();
                     }
                 }
-                CommandData::CastSkill(CommandCastSkill::TargetSelf(skill)) => {
-                    warn!("Unimplemented CommandCastSkill::TargetSelf({:?})", skill);
-                    *command = Command::default();
-                    *next_command = NextCommand::default();
-                }
-                CommandData::CastSkill(CommandCastSkill::TargetEntity(skill, target_entity)) => {
-                    warn!(
-                        "Unimplemented CommandCastSkill::TargetEntity({:?}, {:?})",
-                        skill, target_entity
-                    );
-                    *command = Command::default();
-                    *next_command = NextCommand::default();
-                }
-                CommandData::CastSkill(CommandCastSkill::TargetPosition(
-                    skill,
-                    target_position,
-                )) => {
-                    warn!(
-                        "Unimplemented CommandData::CastSkill({:?}, {:?})",
-                        skill, target_position
-                    );
+                /*
+                TODO:
+                - Save previous command
+                - Move to within cast range
+                - Check skill usage requirements to start the casting (eg check mana cost, required weapon equipped)
+                - Deduct skill usage requirements (like mana cost)
+                - If skill on target entity then send GSV_SKILL_START
+                - If the entity has a casting animation - do casting animation for a required_duration
+                - Apply skill effects (damage, etc) send GSV_DAMAGE_OF_SKILL / GSV_EFFECT_OF_SKILL and GSV_RESULT_OF_SKILL
+                - Start the skill doing animation for a required_duration
+                - Set NextCommand depending on skill action mode
+                */
+                CommandData::CastSkill(CommandCastSkill { skill, target, .. }) => {
+                    warn!("Unimplemented CommandCastSkill(skill: {:?})", skill);
+                    if let Some(_skill_data) = game_data.skills.get_skill(&skill) {}
                     *command = Command::default();
                     *next_command = NextCommand::default();
                 }
