@@ -1,5 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
+use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
@@ -59,10 +60,10 @@ pub struct BaseItemData {
     pub craft_material: u32,
     pub craft_difficulty: u32,
     pub equip_class_requirement: u32,
-    pub equip_union_requirement: Vec<u32>,
-    pub equip_ability_requirement: Vec<(AbilityType, u32)>,
-    pub add_ability_union_requirement: Vec<u32>,
-    pub add_ability: Vec<(AbilityType, i32)>,
+    pub equip_union_requirement: ArrayVec<u32, 2>,
+    pub equip_ability_requirement: ArrayVec<(AbilityType, u32), 2>,
+    pub add_ability_union_requirement: ArrayVec<u32, 2>,
+    pub add_ability: ArrayVec<(AbilityType, i32), 2>,
     pub durability: u32,
     pub rare_type: u32,
     pub defence: u32,
@@ -101,7 +102,7 @@ pub struct JewelleryItemData {
 
 pub struct GemItemData {
     pub item_data: BaseItemData,
-    pub gem_add_ability: Vec<(AbilityType, i32)>,
+    pub gem_add_ability: ArrayVec<(AbilityType, i32), 2>,
 }
 
 pub struct WeaponItemData {

@@ -1,3 +1,4 @@
+use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
@@ -43,8 +44,8 @@ impl StbItem {
     stb_column! { 15, get_craft_difficulty, u32 }
     stb_column! { 16, get_equip_class_requirement, u32 }
 
-    pub fn get_equip_union_requirement(&self, id: usize) -> Vec<u32> {
-        let mut requirements = Vec::new();
+    pub fn get_equip_union_requirement(&self, id: usize) -> ArrayVec<u32, 2> {
+        let mut requirements = ArrayVec::new();
         for i in 0..2 {
             if let Some(union) = self.0.try_get_int(id, 17 + i) {
                 if union != 0 {
@@ -55,8 +56,8 @@ impl StbItem {
         requirements
     }
 
-    pub fn get_equip_ability_requirement(&self, id: usize) -> Vec<(AbilityType, u32)> {
-        let mut requirements = Vec::new();
+    pub fn get_equip_ability_requirement(&self, id: usize) -> ArrayVec<(AbilityType, u32), 2> {
+        let mut requirements = ArrayVec::new();
         for i in 0..2 {
             let ability_type: Option<AbilityType> = self
                 .0
@@ -72,8 +73,8 @@ impl StbItem {
         requirements
     }
 
-    pub fn get_add_ability_union_requirement(&self, id: usize) -> Vec<u32> {
-        let mut requirements = Vec::new();
+    pub fn get_add_ability_union_requirement(&self, id: usize) -> ArrayVec<u32, 2> {
+        let mut requirements = ArrayVec::new();
         for i in 0..2 {
             if let Some(union) = self.0.try_get_int(id, 23 + i * 3) {
                 if union != 0 {
@@ -84,8 +85,8 @@ impl StbItem {
         requirements
     }
 
-    pub fn get_add_ability(&self, id: usize) -> Vec<(AbilityType, i32)> {
-        let mut add_ability = Vec::new();
+    pub fn get_add_ability(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
+        let mut add_ability = ArrayVec::new();
         for i in 0..2 {
             let ability_type: Option<AbilityType> = self
                 .0
@@ -161,8 +162,8 @@ impl StbItem {
     stb_column! { 26, get_consumeable_cooldown_duration_seconds, u32 }
 
     // LIST_JEMITEM
-    pub fn get_gem_add_ability(&self, id: usize) -> Vec<(AbilityType, i32)> {
-        let mut add_ability = Vec::new();
+    pub fn get_gem_add_ability(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
+        let mut add_ability = ArrayVec::new();
         for i in 0..2 {
             let ability_type: Option<AbilityType> = self
                 .0
