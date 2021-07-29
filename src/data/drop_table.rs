@@ -1,5 +1,5 @@
 use crate::{
-    data::{NpcReference, ZoneReference},
+    data::{NpcId, ZoneId},
     game::components::DroppedItem,
 };
 
@@ -8,8 +8,8 @@ pub trait DropTable {
         &self,
         world_drop_item_rate: i32,
         world_drop_money_rate: i32,
-        npc: NpcReference,
-        zone: ZoneReference,
+        npc_id: NpcId,
+        zone_id: ZoneId,
         level_difference: i32,
         character_drop_rate: i32,
         character_charm: i32,

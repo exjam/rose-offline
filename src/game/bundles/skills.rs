@@ -1,5 +1,5 @@
 use crate::{
-    data::{SkillDatabase, SkillReference},
+    data::{SkillDatabase, SkillId},
     game::{
         components::{GameClient, SkillList, SkillPoints, SkillSlot},
         messages::server::{LearnSkillError, LearnSkillSuccess, ServerMessage},
@@ -8,12 +8,12 @@ use crate::{
 
 fn try_learn_skill(
     skill_database: &SkillDatabase,
-    skill: SkillReference,
+    skill_id: SkillId,
     skill_list: &mut SkillList,
     skill_points: Option<&mut SkillPoints>,
 ) -> Result<SkillSlot, LearnSkillError> {
     let skill_data = skill_database
-        .get_skill(&skill)
+        .get_skill(skill_id)
         .ok_or(LearnSkillError::InvalidSkillId)?;
 
     if skill_list.find_skill(skill_data).is_some() {
@@ -41,14 +41,14 @@ fn try_learn_skill(
 
 pub fn skill_list_try_learn_skill(
     skill_database: &SkillDatabase,
-    skill: SkillReference,
+    skill_id: SkillId,
     skill_list: &mut SkillList,
     mut skill_points: Option<&mut SkillPoints>,
     game_client: Option<&GameClient>,
 ) -> Result<SkillSlot, LearnSkillError> {
     let result = try_learn_skill(
         skill_database,
-        skill,
+        skill_id,
         skill_list,
         skill_points.as_deref_mut(),
     );
@@ -60,7 +60,7 @@ pub fn skill_list_try_learn_skill(
                     .server_message_tx
                     .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
                         skill_slot,
-                        skill,
+                        skill_id,
                         updated_skill_points: skill_points
                             .cloned()
                             .unwrap_or_else(SkillPoints::new),

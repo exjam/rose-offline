@@ -1,3 +1,5 @@
+use crate::data::ZoneId;
+
 pub struct Zone {
-    pub id: u16,
+    pub id: ZoneId,
 }

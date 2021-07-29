@@ -1,5 +1,13 @@
 use num_derive::FromPrimitive;
 
+use crate::{
+    data::NpcId,
+    game::components::{
+        AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Inventory, Level,
+        SkillList,
+    },
+};
+
 #[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum AbilityType {
     Gender = 2,
@@ -109,4 +117,70 @@ pub enum AbilityType {
     PassiveImmunity = 103,
 
     Max = 105,
+}
+
+#[derive(Clone, Copy)]
+pub struct Damage {
+    pub amount: u32,
+    pub is_critical: bool,
+    pub apply_hit_stun: bool,
+}
+
+pub trait AbilityValueCalculator {
+    fn calculate(
+        &self,
+        character_info: &CharacterInfo,
+        level: &Level,
+        equipment: &Equipment,
+        inventory: &Inventory,
+        basic_stats: &BasicStats,
+        skill_list: &SkillList,
+    ) -> AbilityValues;
+
+    fn calculate_npc(&self, npc_id: NpcId) -> Option<AbilityValues>;
+
+    fn calculate_damage(
+        &self,
+        attacker: &AbilityValues,
+        defender: &AbilityValues,
+        hit_count: i32,
+    ) -> Damage;
+
+    fn calculate_give_xp(
+        &self,
+        attacker_level: i32,
+        attacker_damage: i32,
+        defender_level: i32,
+        defender_max_hp: i32,
+        defender_reward_xp: i32,
+        world_xp_rate: i32,
+    ) -> i32;
+
+    fn calculate_give_stamina(
+        &self,
+        experience_points: i32,
+        level: i32,
+        world_stamina_rate: i32,
+    ) -> i32;
+
+    fn calculate_basic_stat_increase_cost(
+        &self,
+        basic_stats: &BasicStats,
+        basic_stat_type: BasicStatType,
+    ) -> Option<u32>;
+
+    fn calculate_levelup_require_xp(&self, level: u32) -> u64;
+    fn calculate_levelup_reward_skill_points(&self, level: u32) -> u32;
+    fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32;
+
+    fn calculate_reward_value(
+        &self,
+        equation_id: usize,
+        base_reward_value: i32,
+        dup_count: i32,
+        level: i32,
+        charm: i32,
+        fame: i32,
+        world_reward_rate: i32,
+    ) -> i32;
 }

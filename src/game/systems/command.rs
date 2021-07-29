@@ -59,7 +59,7 @@ fn is_valid_move_target<'a>(
     if let Ok((target_client_entity, target_position)) =
         move_target_query.get(move_target_query_world, *target_entity)
     {
-        if target_position.zone == position.zone {
+        if target_position.zone_id == position.zone_id {
             return Some((target_client_entity, target_position));
         }
     }
@@ -77,7 +77,7 @@ fn is_valid_attack_target<'a>(
     if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
         attack_target_query.get(attack_target_query_world, *target_entity)
     {
-        if target_position.zone == position.zone && target_health.hp > 0 {
+        if target_position.zone_id == position.zone_id && target_health.hp > 0 {
             return Some((target_client_entity, target_position, target_ability_values));
         }
     }
@@ -95,7 +95,7 @@ fn is_valid_skill_target<'a>(
     if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
         attack_target_query.get(attack_target_query_world, *target_entity)
     {
-        if target_position.zone == position.zone && target_health.hp > 0 {
+        if target_position.zone_id == position.zone_id && target_health.hp > 0 {
             return Some((target_client_entity, target_position, target_ability_values));
         }
     }
@@ -124,7 +124,7 @@ fn is_valid_pickup_target<'a>(
     {
         // Check distance to target
         let distance = (position.position.xy() - target_position.position.xy()).magnitude();
-        if position.zone == target_position.zone && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
+        if position.zone_id == target_position.zone_id && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
             return Some((
                 target_client_entity,
                 target_position,
@@ -260,7 +260,7 @@ pub fn command(
                         }
                     }
                     CommandData::CastSkill(CommandCastSkill {
-                        skill,
+                        skill_id,
                         target: None,
                         ..
                     }) => {
@@ -268,13 +268,13 @@ pub fn command(
                             client_entity,
                             ServerMessage::CastSkillSelf(server::CastSkillSelf {
                                 entity_id: client_entity.id,
-                                skill: *skill,
+                                skill_id: *skill_id,
                                 npc_motion_id: None, // TODO: CastSkillSelf npc_motion_id
                             }),
                         );
                     }
                     CommandData::CastSkill(CommandCastSkill {
-                        skill,
+                        skill_id,
                         target: Some(CommandCastSkillTarget::Entity(target_entity)),
                         ..
                     }) => {
@@ -294,7 +294,7 @@ pub fn command(
                                 ServerMessage::CastSkillTargetEntity(
                                     server::CastSkillTargetEntity {
                                         entity_id: client_entity.id,
-                                        skill: *skill,
+                                        skill_id: *skill_id,
                                         target_entity_id: target_client_entity.id,
                                         target_distance: distance,
                                         target_position: target_position.position.xy(),
@@ -307,7 +307,7 @@ pub fn command(
                         }
                     }
                     CommandData::CastSkill(CommandCastSkill {
-                        skill,
+                        skill_id,
                         target: Some(CommandCastSkillTarget::Position(target_position)),
                         ..
                     }) => {
@@ -316,7 +316,7 @@ pub fn command(
                             ServerMessage::CastSkillTargetPosition(
                                 server::CastSkillTargetPosition {
                                     entity_id: client_entity.id,
-                                    skill: *skill,
+                                    skill_id: *skill_id,
                                     target_position: *target_position,
                                     npc_motion_id: None, // TODO: CastSkillTargetPosition npc_motion_id
                                 },
@@ -597,9 +597,11 @@ pub fn command(
                 - Start the skill doing animation for a required_duration
                 - Set NextCommand depending on skill action mode
                 */
-                CommandData::CastSkill(CommandCastSkill { skill, target, .. }) => {
-                    warn!("Unimplemented CommandCastSkill(skill: {:?})", skill);
-                    if let Some(_skill_data) = game_data.skills.get_skill(&skill) {}
+                CommandData::CastSkill(CommandCastSkill {
+                    skill_id, target, ..
+                }) => {
+                    warn!("Unimplemented CommandCastSkill(skill: {:?})", *skill_id);
+                    if let Some(_skill_data) = game_data.skills.get_skill(*skill_id) {}
                     *command = Command::default();
                     *next_command = NextCommand::default();
                 }

@@ -49,7 +49,7 @@ pub fn bot_ai(
                             let mut rng = rand::thread_rng();
 
                             if let Some(zone_entities) =
-                                client_entity_list.get_zone(position.zone as usize)
+                                client_entity_list.get_zone(position.zone_id)
                             {
                                 let mut nearby_items = Vec::new();
                                 let mut nearby_monsters = Vec::new();
@@ -85,7 +85,7 @@ pub fn bot_ai(
                                         // Find valid nearby enemy entities that we can attack
                                         let is_untargetable = nearby_npc
                                             .and_then(|nearby_npc| {
-                                                game_data.npcs.get_npc(nearby_npc.id as usize)
+                                                game_data.npcs.get_npc(nearby_npc.id)
                                             })
                                             .map_or(false, |nearby_npc_data| {
                                                 nearby_npc_data.is_untargetable

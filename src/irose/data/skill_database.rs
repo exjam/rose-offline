@@ -6,12 +6,11 @@ use num_traits::FromPrimitive;
 
 use crate::{
     data::{
-        ability::AbilityType,
         formats::{FileReader, StbFile, StlFile, VfsIndex},
         item::ItemClass,
-        NpcReference, SkillActionMode, SkillAddAbility, SkillCooldown, SkillCooldownGroup,
-        SkillData, SkillDatabase, SkillPageType, SkillReference, SkillTargetFilter, SkillType,
-        ZoneReference,
+        AbilityType, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
+        SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
+        SkillType, ZoneId,
     },
     stb_column,
 };
@@ -74,7 +73,7 @@ impl StbSkill {
         self.0.rows()
     }
 
-    stb_column! { 1, get_base_skill_index, NonZeroUsize } // TODO: SkillReference
+    stb_column! { 1, get_base_skill_id, SkillId }
     stb_column! { 2, get_skill_level, u32 }
     stb_column! { 3, get_learn_skill_points, u32 }
     stb_column! { 4, get_page, SkillPageType }
@@ -105,7 +104,7 @@ impl StbSkill {
     }
 
     stb_column! { 20, get_cooldown_time_5ms, i32 }
-    stb_column! { 21, get_warp_zone_no, i32 }
+    stb_column! { 21, get_warp_zone_id, ZoneId }
     stb_column! { 22, get_warp_zone_xpos, i32 }
     stb_column! { 23, get_warp_zone_ypos, i32 }
 
@@ -137,22 +136,22 @@ impl StbSkill {
     }
 
     stb_column! { 27, get_cooldown_group, SkillCooldownGroup }
-    stb_column! { 28, get_summon_pet, i32 }
+    stb_column! { 28, get_summon_pet_npc_id, NpcId }
     stb_column! { 29, get_action_mode, SkillActionMode }
 
     stb_column! { 30..=34, get_required_weapon_class, ArrayVec<ItemClass, 5> }
     stb_column! { 35, get_required_job_set_index, NonZeroUsize }
     stb_column! { 36..=38, get_required_union, ArrayVec<NonZeroUsize, 3> }
 
-    stb_column! { (39..=44).skip(2), get_required_skill_index, [Option<NonZeroUsize>; 3] }
+    stb_column! { (39..=44).skip(2), get_required_skill_id, [Option<SkillId>; 3] }
     stb_column! { (40..=44).skip(2), get_required_skill_level, [Option<i32>; 3] }
 
-    pub fn get_required_skills(&self, id: usize) -> ArrayVec<(SkillReference, i32), 3> {
-        self.get_required_skill_index(id)
+    pub fn get_required_skills(&self, id: usize) -> ArrayVec<(SkillId, i32), 3> {
+        self.get_required_skill_id(id)
             .iter()
             .zip(self.get_required_skill_level(id).iter())
             .filter(|(a, b)| a.is_some() && b.is_some())
-            .map(|(a, b)| (SkillReference(a.unwrap().get()), b.unwrap()))
+            .map(|(a, b)| (a.unwrap(), b.unwrap()))
             .collect()
     }
 
@@ -171,16 +170,16 @@ impl StbSkill {
     stb_column! { 49, get_script1, i32 }
     stb_column! { 50, get_reserve_02, i32 }
     stb_column! { 51, get_icon_number, u32 }
-    stb_column! { 52, get_casting_motion_index, NonZeroUsize }
+    stb_column! { 52, get_casting_motion_id, MotionId }
     stb_column! { 53, get_casting_motion_speed, i32 }
-    stb_column! { 54, get_casting_repeat_motion_index, NonZeroUsize }
+    stb_column! { 54, get_casting_repeat_motion_id, MotionId }
     stb_column! { 55, get_casting_repeat_motion_count, i32 }
 
     stb_column! { (56..=67).skip(3), get_casting_effect_index, [Option<NonZeroUsize>; 4] }
     stb_column! { (57..=67).skip(3), get_casting_effect_bone_index, [Option<usize>; 4] }
     stb_column! { (58..=67).skip(3), get_casting_sound_index, [Option<usize>; 4] }
 
-    stb_column! { 68, get_action_motion_index, NonZeroUsize }
+    stb_column! { 68, get_action_motion_id, MotionId }
     stb_column! { 69, get_action_motion_speed, i32 }
     stb_column! { 70, get_action_motion_hit_count, i32 }
     stb_column! { 71, get_bullet_no, i32 }
@@ -210,27 +209,26 @@ impl StbSkill {
 }
 
 fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
+    let skill_id = SkillId::new(id as u16)?;
     let icon_number = data.get_icon_number(id).filter(|icon| *icon != 0)?;
     let skill_type = data.get_skill_type(id)?;
 
     Some(SkillData {
-        id: SkillReference(id),
+        id: skill_id,
         name: stl
             .get_text_string(1, data.0.get(id, data.0.columns() - 1))
             .unwrap_or(&"")
             .to_string(),
-        base_skill: data
-            .get_base_skill_index(id)
-            .map(|x| SkillReference(x.get())),
+        base_skill_id: data.get_base_skill_id(id),
         action_mode: data.get_action_mode(id).unwrap_or(SkillActionMode::Stop),
-        action_motion_index: data.get_action_motion_index(id),
+        action_motion_id: data.get_action_motion_id(id),
         action_motion_speed: data.get_action_motion_speed(id).unwrap_or(0),
         add_ability: data.get_add_ability(id),
         cast_range: data.get_cast_range(id).unwrap_or(0),
-        casting_motion_index: data.get_casting_motion_index(id),
+        casting_motion_id: data.get_casting_motion_id(id),
         casting_motion_speed: data.get_casting_motion_speed(id).unwrap_or(0),
         casting_repeat_motion_count: data.get_casting_repeat_motion_count(id).unwrap_or(0),
-        casting_repeat_motion_index: data.get_casting_repeat_motion_index(id),
+        casting_repeat_motion_id: data.get_casting_repeat_motion_id(id),
         cooldown: data.get_cooldown(id),
         damage_type: data.get_damage_type(id).unwrap_or(0),
         harm: data.get_harm(id).unwrap_or(0),
@@ -254,12 +252,12 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         ),
         status_effects: data.get_status_effects(id),
         success_ratio: data.get_success_ratio(id).unwrap_or(0),
-        summon_pet: NpcReference(data.get_summon_pet(id).unwrap_or(0) as usize),
+        summon_npc_id: data.get_summon_pet_npc_id(id),
         target_filter: data
             .get_target_filter(id)
             .unwrap_or(SkillTargetFilter::OnlySelf),
         use_ability: data.get_use_abilities(id),
-        warp_zone_no: ZoneReference(data.get_warp_zone_no(id).unwrap_or(0) as usize),
+        warp_zone_id: data.get_warp_zone_id(id),
         warp_zone_x: data.get_warp_zone_xpos(id).unwrap_or(0),
         warp_zone_y: data.get_warp_zone_ypos(id).unwrap_or(0),
     })
@@ -272,7 +270,7 @@ pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
     let file = vfs.open_file("3DDATA/STB/LIST_SKILL.STB")?;
     let data = StbSkill(StbFile::read(FileReader::from(&file)).ok()?);
     let mut skills = HashMap::new();
-    for id in 0..data.rows() {
+    for id in 1..data.rows() {
         if let Some(skill) = load_skill(&data, &stl, id) {
             skills.insert(id as u16, skill);
         }

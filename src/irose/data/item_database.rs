@@ -2,12 +2,12 @@ use num_traits::FromPrimitive;
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use crate::data::{
-    ability::AbilityType,
     formats::{FileReader, StbFile, StlFile, VfsIndex},
     item::ItemClass,
-    BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
-    GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData, JewelleryItemData,
-    MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData, WeaponItemData,
+    AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
+    FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData,
+    JewelleryItemData, MaterialItemData, QuestItemData, SkillId, SubWeaponItemData,
+    VehicleItemData, WeaponItemData,
 };
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
@@ -151,8 +151,8 @@ impl StbItem {
         })
     }
 
-    stb_column! { 20, get_consumeable_learn_skill_id, usize }
-    stb_column! { 20, get_consumeable_use_skill_id, usize }
+    stb_column! { 20, get_consumeable_learn_skill_id, SkillId }
+    stb_column! { 20, get_consumeable_use_skill_id, SkillId }
     stb_column! { 21, get_consumeable_use_script_index, usize }
     stb_column! { 22, get_consumeable_use_effect_index, usize }
     stb_column! { 23, get_consumeable_use_sound_index, usize }
@@ -287,8 +287,8 @@ fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Con
         confile_index: data.get_consumeable_confile_index(id).unwrap_or(0),
         ability_requirement: data.get_consumeable_ability_requirement(id),
         add_ability: data.get_consumeable_add_ability(id),
-        learn_skill_id: data.get_consumeable_learn_skill_id(id).unwrap_or(0),
-        use_skill_id: data.get_consumeable_use_skill_id(id).unwrap_or(0),
+        learn_skill_id: data.get_consumeable_learn_skill_id(id),
+        use_skill_id: data.get_consumeable_use_skill_id(id),
         apply_status_effect_id: data
             .get_consumeable_apply_status_effect_id(id)
             .filter(|value| *value != 0),

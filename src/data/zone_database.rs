@@ -1,16 +1,23 @@
-use std::collections::{hash_map::Iter, HashMap};
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::{hash_map::Iter, HashMap},
+    num::NonZeroU16,
+    str::FromStr,
+};
 
 use nalgebra::{distance, Point2, Point3};
 
-use super::npc_database::{NpcConversationReference, NpcReference};
+use super::npc_database::{NpcConversationId, NpcId};
 
-#[derive(Clone, Copy)]
-pub struct ZoneReference(pub usize);
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
+pub struct ZoneId(pub NonZeroU16);
+
+id_wrapper_impl!(ZoneId, NonZeroU16, u16);
 
 pub struct ZoneMonsterSpawnPoint {
     pub position: Point3<f32>,
-    pub basic_spawns: Vec<(NpcReference, usize)>,
-    pub tactic_spawns: Vec<(NpcReference, usize)>,
+    pub basic_spawns: Vec<(NpcId, usize)>,
+    pub tactic_spawns: Vec<(NpcId, usize)>,
     pub interval: u32,
     pub limit_count: u32,
     pub range: u32,
@@ -18,14 +25,14 @@ pub struct ZoneMonsterSpawnPoint {
 }
 
 pub struct ZoneNpcSpawn {
-    pub npc: NpcReference,
+    pub npc_id: NpcId,
     pub position: Point3<f32>,
     pub direction: f32,
-    pub conversation: NpcConversationReference,
+    pub conversation: NpcConversationId,
 }
 
 pub struct ZoneData {
-    pub id: u16,
+    pub id: ZoneId,
     pub name: String,
     pub sector_size: u32,
     pub grid_per_patch: f32,
@@ -56,20 +63,19 @@ impl ZoneData {
 }
 
 pub struct ZoneDatabase {
-    zones: HashMap<u16, ZoneData>,
+    zones: HashMap<ZoneId, ZoneData>,
 }
 
 impl ZoneDatabase {
-    pub fn new(zones: HashMap<u16, ZoneData>) -> Self {
+    pub fn new(zones: HashMap<ZoneId, ZoneData>) -> Self {
         Self { zones }
     }
 
-    pub fn iter(&self) -> Iter<'_, u16, ZoneData> {
+    pub fn iter(&self) -> Iter<'_, ZoneId, ZoneData> {
         self.zones.iter()
     }
 
-    #[allow(dead_code)]
-    pub fn get_zone(&self, id: usize) -> Option<&ZoneData> {
-        self.zones.get(&(id as u16))
+    pub fn get_zone(&self, id: ZoneId) -> Option<&ZoneData> {
+        self.zones.get(&id)
     }
 }

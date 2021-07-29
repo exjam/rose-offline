@@ -72,7 +72,7 @@ pub fn client_entity_visibility(
         &mut clients_query_world,
         |(visibility, visibility_game_client, visibility_client_entity, visibility_position)| {
             if let Some(client_entity_zone) =
-                client_entity_list.get_zone(visibility_position.zone as usize)
+                client_entity_list.get_zone(visibility_position.zone_id)
             {
                 let sector_visible_entities =
                     client_entity_zone.get_sector_visible_entities(visibility_client_entity.sector);

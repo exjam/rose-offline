@@ -78,7 +78,7 @@ pub fn game_server_authentication(
                                             ManaPoints::new(ability_values.max_mana as u32),
                                             Position::new(
                                                 character.info.revive_position,
-                                                character.info.revive_zone,
+                                                character.info.revive_zone_id,
                                             ),
                                         )
                                     } else {
@@ -276,7 +276,7 @@ pub fn game_server_main(
                         let mut move_target_entity = None;
                         if let Some(target_entity_id) = message.target_entity_id {
                             if let Some((target_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone as usize)
+                                .get_zone(position.zone_id)
                                 .and_then(|zone| zone.get_entity(target_entity_id))
                             {
                                 move_target_entity = Some(*target_entity);
@@ -291,7 +291,7 @@ pub fn game_server_main(
                     }
                     ClientMessage::Attack(message) => {
                         if let Some((target_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone as usize)
+                            .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(message.target_entity_id))
                         {
                             cmd.add_component(*entity, NextCommand::with_attack(*target_entity));
@@ -446,7 +446,7 @@ pub fn game_server_main(
                     }
                     ClientMessage::PickupDroppedItem(message) => {
                         if let Some((target_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone as usize)
+                            .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(message.target_entity_id))
                         {
                             cmd.add_component(
@@ -491,7 +491,7 @@ pub fn game_server_main(
                             let new_position = match revive_request_type {
                                 ReviveRequestType::RevivePosition => {
                                     let revive_position = if let Some(zone_data) =
-                                        game_data.zones.get_zone(position.zone as usize)
+                                        game_data.zones.get_zone(position.zone_id)
                                     {
                                         if let Some(revive_position) =
                                             zone_data.get_closest_revive_position(position.position)
@@ -504,11 +504,11 @@ pub fn game_server_main(
                                         position.position
                                     };
 
-                                    Position::new(revive_position, position.zone)
+                                    Position::new(revive_position, position.zone_id)
                                 }
                                 ReviveRequestType::SavePosition => Position::new(
                                     character_info.revive_position,
-                                    character_info.revive_zone,
+                                    character_info.revive_zone_id,
                                 ),
                             };
 
@@ -539,7 +539,7 @@ pub fn game_server_main(
                     }
                     ClientMessage::PersonalStoreListItems(store_entity_id) => {
                         if let Some((store_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone as usize)
+                            .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(store_entity_id))
                         {
                             pending_store_event_list.push(PendingPersonalStoreEvent::ListItems(
@@ -556,7 +556,7 @@ pub fn game_server_main(
                         buy_item,
                     }) => {
                         if let Some((store_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone as usize)
+                            .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(store_entity_id))
                         {
                             pending_store_event_list.push(PendingPersonalStoreEvent::BuyItem(
@@ -573,7 +573,7 @@ pub fn game_server_main(
                         let target_entity = target_entity_id
                             .and_then(|target_entity_id| {
                                 client_entity_list
-                                    .get_zone(position.zone as usize)
+                                    .get_zone(position.zone_id)
                                     .and_then(|zone| zone.get_entity(target_entity_id))
                             })
                             .map(|(target_entity, _, _)| *target_entity);
@@ -595,7 +595,7 @@ pub fn game_server_main(
                     ClientMessage::CastSkillTargetEntity(skill_slot, target_entity_id) => {
                         if let Some(skill) = skill_list.get_skill(skill_slot) {
                             if let Some((target_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone as usize)
+                                .get_zone(position.zone_id)
                                 .and_then(|zone| zone.get_entity(target_entity_id))
                             {
                                 cmd.add_component(

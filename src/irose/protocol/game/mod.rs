@@ -366,7 +366,7 @@ impl GameClient {
                     .connection
                     .write_packet(Packet::from(&PacketServerTeleport {
                         entity_id: message.entity_id,
-                        zone_no: message.zone_no,
+                        zone_id: message.zone_id,
                         x: message.x,
                         y: message.y,
                         run_mode: message.run_mode,
@@ -644,10 +644,10 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerLearnSkillResult { result }))
                     .await?;
             }
-            ServerMessage::RunNpcDeathTrigger(npc) => {
+            ServerMessage::RunNpcDeathTrigger(npc_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerRunNpcDeathTrigger { npc }))
+                    .write_packet(Packet::from(&PacketServerRunNpcDeathTrigger { npc_id }))
                     .await?;
             }
             ServerMessage::OpenPersonalStore(OpenPersonalStore {
@@ -751,21 +751,21 @@ impl GameClient {
             }
             ServerMessage::CastSkillSelf(CastSkillSelf {
                 entity_id,
-                skill,
+                skill_id,
                 npc_motion_id,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerCastSkillSelf {
                         entity_id,
-                        skill,
+                        skill_id,
                         npc_motion_id,
                     }))
                     .await?;
             }
             ServerMessage::CastSkillTargetEntity(CastSkillTargetEntity {
                 entity_id,
-                skill,
+                skill_id,
                 target_entity_id,
                 target_distance,
                 target_position,
@@ -775,7 +775,7 @@ impl GameClient {
                     .connection
                     .write_packet(Packet::from(&PacketServerCastSkillTargetEntity {
                         entity_id,
-                        skill,
+                        skill_id,
                         target_entity_id,
                         target_distance,
                         target_position,
@@ -785,7 +785,7 @@ impl GameClient {
             }
             ServerMessage::CastSkillTargetPosition(CastSkillTargetPosition {
                 entity_id,
-                skill,
+                skill_id,
                 target_position,
                 npc_motion_id,
             }) => {
@@ -793,7 +793,7 @@ impl GameClient {
                     .connection
                     .write_packet(Packet::from(&PacketServerCastSkillTargetPosition {
                         entity_id,
-                        skill,
+                        skill_id,
                         target_position,
                         npc_motion_id,
                     }))

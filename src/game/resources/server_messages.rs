@@ -1,6 +1,9 @@
-use crate::game::{
-    components::{ClientEntity, ClientEntityId},
-    messages::server::ServerMessage,
+use crate::{
+    data::ZoneId,
+    game::{
+        components::{ClientEntity, ClientEntityId},
+        messages::server::ServerMessage,
+    },
 };
 
 pub struct GlobalMessage {
@@ -8,12 +11,12 @@ pub struct GlobalMessage {
 }
 
 pub struct ZoneMessage {
-    pub zone: u16,
+    pub zone_id: ZoneId,
     pub message: ServerMessage,
 }
 
 pub struct EntityMessage {
-    pub zone: u16,
+    pub zone_id: ZoneId,
     pub entity_id: ClientEntityId,
     pub message: ServerMessage,
 }
@@ -35,14 +38,14 @@ impl ServerMessages {
         self.pending_global_messages.push(GlobalMessage { message });
     }
 
-    pub fn send_zone_message(&mut self, zone: u16, message: ServerMessage) {
+    pub fn send_zone_message(&mut self, zone_id: ZoneId, message: ServerMessage) {
         self.pending_zone_messages
-            .push(ZoneMessage { zone, message });
+            .push(ZoneMessage { zone_id, message });
     }
 
     pub fn send_entity_message(&mut self, entity: &ClientEntity, message: ServerMessage) {
         self.pending_entity_messages.push(EntityMessage {
-            zone: entity.zone,
+            zone_id: entity.zone_id,
             entity_id: entity.id,
             message,
         });

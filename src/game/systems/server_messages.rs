@@ -17,13 +17,13 @@ pub fn server_messages_sender(
         }
 
         for message in server_messages.pending_zone_messages.iter() {
-            if position.zone == message.zone {
+            if position.zone_id == message.zone_id {
                 client.server_message_tx.send(message.message.clone()).ok();
             }
         }
 
         for message in server_messages.pending_entity_messages.iter() {
-            if position.zone == message.zone
+            if position.zone_id == message.zone_id
                 && client_visibility
                     .entities
                     .get(message.entity_id.0)

@@ -3,7 +3,7 @@ use std::time::Duration;
 use legion::Entity;
 use nalgebra::{Point2, Point3};
 
-use crate::data::SkillReference;
+use crate::data::SkillId;
 
 #[derive(Clone)]
 pub struct CommandMove {
@@ -34,7 +34,7 @@ pub enum CommandCastSkillTarget {
 
 #[derive(Clone)]
 pub struct CommandCastSkill {
-    pub skill: SkillReference,
+    pub skill_id: SkillId,
     pub target: Option<CommandCastSkillTarget>,
     pub casting_duration: Option<Duration>,
     pub has_casted_skill: bool,
@@ -118,10 +118,10 @@ impl NextCommand {
         }
     }
 
-    pub fn with_cast_skill_target_self(skill: SkillReference) -> Self {
+    pub fn with_cast_skill_target_self(skill_id: SkillId) -> Self {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
-                skill,
+                skill_id,
                 target: None,
                 casting_duration: None,
                 has_casted_skill: false,
@@ -130,10 +130,10 @@ impl NextCommand {
         }
     }
 
-    pub fn with_cast_skill_target_entity(skill: SkillReference, target_entity: Entity) -> Self {
+    pub fn with_cast_skill_target_entity(skill_id: SkillId, target_entity: Entity) -> Self {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
-                skill,
+                skill_id,
                 target: Some(CommandCastSkillTarget::Entity(target_entity)),
                 casting_duration: None,
                 has_casted_skill: false,
@@ -142,10 +142,10 @@ impl NextCommand {
         }
     }
 
-    pub fn with_cast_skill_target_position(skill: SkillReference, position: Point2<f32>) -> Self {
+    pub fn with_cast_skill_target_position(skill_id: SkillId, position: Point2<f32>) -> Self {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
-                skill,
+                skill_id,
                 target: Some(CommandCastSkillTarget::Position(position)),
                 casting_duration: None,
                 has_casted_skill: false,

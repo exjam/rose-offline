@@ -13,7 +13,7 @@ use crate::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
             AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
         },
-        Damage, NpcReference, ZoneReference,
+        Damage,
     },
     game::{
         bundles::client_entity_leave_zone,
@@ -102,7 +102,7 @@ fn ai_condition_count_nearby_entities(
 
     let zone_entities = ai_world
         .client_entity_list
-        .get_zone(ai_parameters.source.position.zone as usize)
+        .get_zone(ai_parameters.source.position.zone_id)
         .ok_or(AiConditionResult::Failed)?;
 
     for (entity, position) in zone_entities
@@ -728,7 +728,7 @@ pub fn npc_ai(
                         }
 
                         if let Some(damage_sources) = damage_sources {
-                            if let Some(npc_data) = game_data.npcs.get_npc(npc.id as usize) {
+                            if let Some(npc_data) = game_data.npcs.get_npc(npc.id) {
                                 // Reward XP to all attackers
                                 for damage_source in damage_sources.damage_sources.iter() {
                                     let time_since_damage =
@@ -789,9 +789,7 @@ pub fn npc_ai(
                                                 // Send to only client
                                                 killer_game_client
                                                     .server_message_tx
-                                                    .send(ServerMessage::RunNpcDeathTrigger(
-                                                        NpcReference(npc.id as usize),
-                                                    ))
+                                                    .send(ServerMessage::RunNpcDeathTrigger(npc.id))
                                                     .ok();
                                             }
                                         }
@@ -802,15 +800,15 @@ pub fn npc_ai(
                                         if let Some(drop_item) = game_data.drop_table.get_drop(
                                             world_rates.drop_rate,
                                             world_rates.drop_money_rate,
-                                            NpcReference(npc.id as usize),
-                                            ZoneReference(position.zone as usize),
+                                            npc.id,
+                                            position.zone_id,
                                             level_difference,
                                             killer_ability_values.drop_rate as i32,
                                             killer_ability_values.charm as i32,
                                         ) {
                                             let mut rng = rand::thread_rng();
                                             let client_entity_zone = client_entity_list
-                                                .get_zone_mut(position.zone as usize)
+                                                .get_zone_mut(position.zone_id)
                                                 .unwrap();
                                             let drop_position = Point3::new(
                                                 position.position.x
@@ -827,7 +825,7 @@ pub fn npc_ai(
                                             );
                                             let drop_entity = cmd.push((
                                                 Some(drop_item),
-                                                Position::new(drop_position, position.zone),
+                                                Position::new(drop_position, position.zone_id),
                                                 Owner::new(killer_entity),
                                                 ExpireTime::new(
                                                     server_time.now + DROPPED_ITEM_EXPIRE_TIME,

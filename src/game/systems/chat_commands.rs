@@ -12,7 +12,7 @@ use std::{
 use crate::{
     data::{
         item::{Item, ItemType},
-        ItemReference,
+        ItemReference, ZoneId,
     },
     game::{
         bundles::{client_entity_join_zone, client_entity_teleport_zone, create_character_entity},
@@ -280,7 +280,7 @@ fn handle_gm_command(
         ("where", _) => {
             let sector = chat_command_world
                 .client_entity_list
-                .get_zone(chat_command_user.position.zone as usize)
+                .get_zone(chat_command_user.position.zone_id)
                 .map(|client_entity_zone| {
                     client_entity_zone.calculate_sector(chat_command_user.position.position.xy())
                 })
@@ -293,7 +293,7 @@ fn handle_gm_command(
                     from: String::from("SERVER"),
                     text: format!(
                         "zone: {} position: ({}, {}, {}) sector: ({}, {})",
-                        chat_command_user.position.zone,
+                        chat_command_user.position.zone_id.get(),
                         chat_command_user.position.position.x,
                         chat_command_user.position.position.y,
                         chat_command_user.position.position.z,
@@ -304,14 +304,12 @@ fn handle_gm_command(
                 .ok();
         }
         ("mm", arg_matches) => {
-            let zone = arg_matches.value_of("zone").unwrap().parse::<u16>()?;
+            let zone_id = arg_matches.value_of("zone").unwrap().parse::<ZoneId>()?;
             let (x, y) = if let (Some(x), Some(y)) =
                 (arg_matches.value_of("x"), arg_matches.value_of("y"))
             {
                 (x.parse::<f32>()? * 1000.0, y.parse::<f32>()? * 1000.0)
-            } else if let Some(zone_data) =
-                chat_command_world.game_data.zones.get_zone(zone as usize)
-            {
+            } else if let Some(zone_data) = chat_command_world.game_data.zones.get_zone(zone_id) {
                 (zone_data.start_position.x, zone_data.start_position.y)
             } else {
                 (520.0, 520.0)
@@ -319,7 +317,7 @@ fn handle_gm_command(
 
             if chat_command_world
                 .client_entity_list
-                .get_zone(zone as usize)
+                .get_zone(zone_id)
                 .is_some()
             {
                 client_entity_teleport_zone(
@@ -328,13 +326,13 @@ fn handle_gm_command(
                     chat_command_user.entity,
                     chat_command_user.client_entity,
                     chat_command_user.position,
-                    Position::new(Point3::new(x, y, 0.0), zone),
+                    Position::new(Point3::new(x, y, 0.0), zone_id),
                     Some(chat_command_user.game_client),
                 );
             } else {
                 send_multiline_whisper(
                     chat_command_user.game_client,
-                    &format!("Invalid zone id {}", zone),
+                    &format!("Invalid zone id {}", zone_id.get()),
                 );
             }
         }

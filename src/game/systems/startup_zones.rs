@@ -16,45 +16,50 @@ pub fn startup_zones(
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] game_data: &GameData,
 ) {
-    for (zone_id, zone_data) in game_data.zones.iter() {
-        let zone_id = *zone_id as usize;
-
+    for (&zone_id, zone_data) in game_data.zones.iter() {
         // Create the Zone entity
-        cmd.push((Zone { id: zone_id as u16 },));
+        cmd.push((Zone { id: zone_id },));
 
         // Create the MonsterSpawnPoint entities
         for spawn in zone_data.monster_spawns.iter() {
             // Verify basic_spawns
             for (npc, _) in &spawn.basic_spawns {
-                if game_data.npcs.get_npc(npc.0).is_none() {
-                    warn!("Invalid monster spawn {} in zone {}", npc.0, zone_id);
+                if game_data.npcs.get_npc(*npc).is_none() {
+                    warn!(
+                        "Invalid monster spawn {} in zone {}",
+                        npc.get(),
+                        zone_id.get()
+                    );
                 }
             }
 
             // Verify tactic_spawns
             for (npc, _) in &spawn.tactic_spawns {
-                if game_data.npcs.get_npc(npc.0).is_none() {
-                    warn!("Invalid monster spawn {} in zone {}", npc.0, zone_id);
+                if game_data.npcs.get_npc(*npc).is_none() {
+                    warn!(
+                        "Invalid monster spawn {} in zone {}",
+                        npc.get(),
+                        zone_id.get()
+                    );
                 }
             }
 
             cmd.push((
                 MonsterSpawnPoint::from(spawn),
-                Position::new(spawn.position, zone_id as u16),
+                Position::new(spawn.position, zone_id),
             ));
         }
 
         // Spawn all NPCs
         for npc in zone_data.npcs.iter() {
-            let npc_data = game_data.npcs.get_npc(npc.npc.0);
-            let ability_values = game_data
-                .ability_value_calculator
-                .calculate_npc(npc.npc.0 as usize);
+            let npc_data = game_data.npcs.get_npc(npc.npc_id);
+            let ability_values = game_data.ability_value_calculator.calculate_npc(npc.npc_id);
 
             if npc_data.is_none() || ability_values.is_none() {
                 warn!(
                     "Tried to spawn invalid npc id {} for zone {}",
-                    npc.npc.0, zone_id
+                    npc.npc_id.get(),
+                    zone_id.get()
                 );
                 continue;
             }
@@ -70,7 +75,7 @@ pub fn startup_zones(
                 .filter(|ai_file_index| *ai_file_index != 0)
                 .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
-            let position = Position::new(npc.position, zone_id as u16);
+            let position = Position::new(npc.position, zone_id);
 
             let ability_values = ability_values.unwrap();
             let health_points = HealthPoints::new(ability_values.max_health as u32);
@@ -86,10 +91,10 @@ pub fn startup_zones(
                 Command::default(),
                 health_points,
                 level,
-                game_data.npcs.get_npc_motions(npc.npc.0),
+                game_data.npcs.get_npc_motions(npc.npc_id),
                 move_speed,
                 NextCommand::default(),
-                Npc::new(npc.npc.0 as u32, conversation_index as u16),
+                Npc::new(npc.npc_id, conversation_index as u16),
                 npc_ai,
                 position.clone(),
                 NpcStandingDirection::new(npc.direction),

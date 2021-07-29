@@ -8,7 +8,7 @@ use crate::{
             ifo::{self, IfoReadError, MonsterSpawn},
             FileReader, IfoFile, StbFile, StlFile, VfsIndex, ZonFile, ZonReadError,
         },
-        NpcConversationReference, NpcReference, ZoneData, ZoneDatabase, ZoneMonsterSpawnPoint,
+        NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneId, ZoneMonsterSpawnPoint,
         ZoneNpcSpawn,
     },
     stb_column,
@@ -86,7 +86,7 @@ impl From<&ifo::MonsterSpawnPoint> for ZoneMonsterSpawnPoint {
             spawn_list
                 .iter()
                 .map(|ifo::MonsterSpawn { id, count }| {
-                    (NpcReference(*id as usize), *count as usize)
+                    (NpcId::new(*id as u16).unwrap(), *count as usize)
                 })
                 .collect()
         };
@@ -109,7 +109,9 @@ fn create_monster_spawn(
     let transform_spawn_list = |spawn_list: &Vec<MonsterSpawn>| {
         spawn_list
             .iter()
-            .map(|ifo::MonsterSpawn { id, count }| (NpcReference(*id as usize), *count as usize))
+            .map(|ifo::MonsterSpawn { id, count }| {
+                (NpcId::new(*id as u16).unwrap(), *count as usize)
+            })
             .collect()
     };
 
@@ -126,10 +128,10 @@ fn create_monster_spawn(
 
 fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn {
     ZoneNpcSpawn {
-        npc: NpcReference(npc.object.object_id as usize),
+        npc_id: NpcId::new(npc.object.object_id as u16).unwrap(),
         position: npc.object.position + object_offset,
         direction: npc.object.rotation.euler_angles().2.to_degrees(),
-        conversation: NpcConversationReference(npc.quest_file_name.to_string()),
+        conversation: NpcConversationId::new(npc.quest_file_name.to_string()),
     }
 }
 
@@ -248,7 +250,7 @@ fn load_zone(
         start_position.xy(),
     );
     Ok(ZoneData {
-        id: id as u16,
+        id: ZoneId::new(id as u16).unwrap(),
         name,
         sector_size,
         grid_per_patch: zon_file.grid_per_patch,
@@ -273,14 +275,14 @@ pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
     let file = vfs.open_file("3DDATA/STB/LIST_ZONE.STB")?;
     let data = StbZone(StbFile::read(FileReader::from(&file)).ok()?);
     let mut zones = HashMap::new();
-    for id in 0..data.rows() {
+    for id in 1..data.rows() {
         let zone_file = data.get_zone_file(id);
         if zone_file.is_none() {
             continue;
         }
 
         if let Ok(zone_data) = load_zone(vfs, &data, &stl, id) {
-            zones.insert(id as u16, zone_data);
+            zones.insert(ZoneId::new(id as u16).unwrap(), zone_data);
         }
     }
 

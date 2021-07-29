@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::data::{SkillData, SkillPageType, SkillReference};
+use crate::data::{SkillData, SkillId, SkillPageType};
 
 const SKILL_PAGE_SIZE: usize = 30;
 
@@ -10,7 +10,7 @@ pub struct SkillSlot(pub SkillPageType, pub usize);
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SkillPage {
     pub page_type: SkillPageType,
-    pub skills: [Option<SkillReference>; SKILL_PAGE_SIZE],
+    pub skills: [Option<SkillId>; SKILL_PAGE_SIZE],
 }
 
 impl SkillPage {
@@ -21,7 +21,7 @@ impl SkillPage {
         }
     }
 
-    pub fn add_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillReference)> {
+    pub fn add_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         let (index, empty_slot) = self
             .skills
             .iter_mut()
@@ -31,7 +31,7 @@ impl SkillPage {
         Some((SkillSlot(self.page_type, index), skill_data.id))
     }
 
-    pub fn find_skill(&self, skill_data: &SkillData) -> Option<(SkillSlot, SkillReference)> {
+    pub fn find_skill(&self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         self.skills
             .iter()
             .enumerate()
@@ -77,15 +77,15 @@ impl SkillList {
         }
     }
 
-    pub fn add_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillReference)> {
+    pub fn add_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         self.get_page_mut(skill_data.page).add_skill(skill_data)
     }
 
-    pub fn find_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillReference)> {
+    pub fn find_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         self.get_page_mut(skill_data.page).find_skill(skill_data)
     }
 
-    pub fn get_skill(&self, skill_slot: SkillSlot) -> Option<SkillReference> {
+    pub fn get_skill(&self, skill_slot: SkillSlot) -> Option<SkillId> {
         self.get_page(skill_slot.0)
             .skills
             .get(skill_slot.1)
@@ -93,7 +93,7 @@ impl SkillList {
             .flatten()
     }
 
-    pub fn get_passive_skills(&self) -> impl Iterator<Item = &SkillReference> + '_ {
+    pub fn get_passive_skills(&self) -> impl Iterator<Item = &SkillId> + '_ {
         self.passive.skills.iter().filter_map(|x| x.as_ref())
     }
 }

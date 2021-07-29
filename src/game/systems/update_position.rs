@@ -35,7 +35,7 @@ pub fn update_position(
     }
 
     if let Some(client_entity) = client_entity {
-        if let Some(zone) = client_entity_list.get_zone_mut(position.zone as usize) {
+        if let Some(zone) = client_entity_list.get_zone_mut(position.zone_id) {
             zone.update_position(entity, client_entity, position.position)
         }
     }

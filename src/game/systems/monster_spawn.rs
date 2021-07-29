@@ -3,7 +3,7 @@ use nalgebra::Point3;
 use rand::Rng;
 
 use crate::{
-    data::NpcReference,
+    data::NpcId,
     game::{
         bundles::{client_entity_join_zone, create_monster_entity},
         components::{
@@ -40,7 +40,7 @@ pub fn monster_spawn(
         ((spawn_point.limit_count * 2 - live_count) * spawn_point.current_tactics_value * 50)
             / (spawn_point.limit_count * spawn_point.tactic_points);
 
-    let mut spawn_queue: Vec<(NpcReference, usize)> = Vec::new();
+    let mut spawn_queue: Vec<(NpcId, usize)> = Vec::new();
     match regen_value {
         0..=10 => {
             // Spawn basic[0]
@@ -158,16 +158,14 @@ pub fn monster_spawn(
         spawn_point.current_tactics_value = 500;
     }
 
-    let spawn_point_zone = spawn_point_position.zone;
+    let spawn_point_zone = spawn_point_position.zone_id;
     let spawn_point_position = spawn_point_position.position;
     let spawn_range = (spawn_point.range * 100) as i32;
 
     for (id, count) in spawn_queue {
         for _ in 0..count {
-            let npc_data = game_data.npcs.get_npc(id.0);
-            let ability_values = game_data
-                .ability_value_calculator
-                .calculate_npc(id.0 as usize);
+            let npc_data = game_data.npcs.get_npc(id);
+            let ability_values = game_data.ability_value_calculator.calculate_npc(id);
 
             if let (Some(npc_data), Some(ability_values)) = (npc_data, ability_values) {
                 let npc_ai = Some(npc_data.ai_file_index)
@@ -202,10 +200,10 @@ pub fn monster_spawn(
                     damage_sources,
                     health_points,
                     level,
-                    game_data.npcs.get_npc_motions(id.0),
+                    game_data.npcs.get_npc_motions(id),
                     move_speed,
                     NextCommand::default(),
-                    Npc::new(id.0 as u32, 0),
+                    Npc::new(id, 0),
                     npc_ai,
                     position.clone(),
                     SpawnOrigin::MonsterSpawnPoint(*spawn_point_entity, spawn_point_position),

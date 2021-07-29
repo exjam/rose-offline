@@ -1,5 +1,5 @@
 use crate::data::{
-    MotionCharacterAction, MotionDatabase, MotionFileData, MotionReference, NpcMotionAction,
+    MotionCharacterAction, MotionDatabase, MotionFileData, MotionId, NpcMotionAction,
 };
 
 #[derive(Default)]
@@ -80,11 +80,11 @@ impl MotionData {
     pub fn get_motion<'a>(
         &self,
         motion_database: &'a MotionDatabase,
-        motion: MotionReference,
+        motion_id: MotionId,
     ) -> Option<&'a MotionFileData> {
         match self {
             MotionData::Character(character) => motion_database.get_character_motion(
-                motion,
+                motion_id,
                 character.weapon_motion_type,
                 character.gender,
             ),

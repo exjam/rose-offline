@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use crate::data::{NpcReference, ZoneMonsterSpawnPoint};
+use crate::data::{NpcId, ZoneMonsterSpawnPoint};
 
 pub struct MonsterSpawnPoint {
-    pub basic_spawns: Vec<(NpcReference, usize)>,
-    pub tactic_spawns: Vec<(NpcReference, usize)>,
+    pub basic_spawns: Vec<(NpcId, usize)>,
+    pub tactic_spawns: Vec<(NpcId, usize)>,
     pub interval: Duration,
     pub limit_count: u32,
     pub range: u32,

@@ -4,9 +4,8 @@ use nalgebra::Point2;
 
 use crate::{
     data::{
-        ability::AbilityType,
         item::{EquipmentItem, Item},
-        Damage, ItemReference, NpcReference, QuestTriggerHash, SkillReference,
+        AbilityType, Damage, ItemReference, NpcId, QuestTriggerHash, SkillId, ZoneId,
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
@@ -154,7 +153,7 @@ pub struct Whisper {
 #[derive(Clone)]
 pub struct Teleport {
     pub entity_id: ClientEntityId,
-    pub zone_no: u16,
+    pub zone_id: ZoneId,
     pub x: f32,
     pub y: f32,
     pub run_mode: u8,
@@ -241,7 +240,7 @@ pub enum LearnSkillError {
 #[derive(Clone)]
 pub struct LearnSkillSuccess {
     pub skill_slot: SkillSlot,
-    pub skill: SkillReference,
+    pub skill_id: SkillId,
     pub updated_skill_points: SkillPoints,
 }
 
@@ -300,14 +299,14 @@ pub struct UseItem {
 #[derive(Clone)]
 pub struct CastSkillSelf {
     pub entity_id: ClientEntityId,
-    pub skill: SkillReference,
+    pub skill_id: SkillId,
     pub npc_motion_id: Option<usize>,
 }
 
 #[derive(Clone)]
 pub struct CastSkillTargetEntity {
     pub entity_id: ClientEntityId,
-    pub skill: SkillReference,
+    pub skill_id: SkillId,
     pub target_entity_id: ClientEntityId,
     pub target_distance: f32,
     pub target_position: Point2<f32>,
@@ -317,7 +316,7 @@ pub struct CastSkillTargetEntity {
 #[derive(Clone)]
 pub struct CastSkillTargetPosition {
     pub entity_id: ClientEntityId,
-    pub skill: SkillReference,
+    pub skill_id: SkillId,
     pub target_position: Point2<f32>,
     pub npc_motion_id: Option<usize>,
 }
@@ -349,7 +348,7 @@ pub enum ServerMessage {
     QuestTriggerResult(QuestTriggerResult),
     QuestDeleteResult(QuestDeleteResult),
     LearnSkillResult(Result<LearnSkillSuccess, LearnSkillError>),
-    RunNpcDeathTrigger(NpcReference),
+    RunNpcDeathTrigger(NpcId),
     OpenPersonalStore(OpenPersonalStore),
     PersonalStoreItemList(PersonalStoreItemList),
     PersonalStoreTransactionResult(PersonalStoreTransactionResult),

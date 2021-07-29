@@ -5,13 +5,13 @@ use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
     data::{
-        ability::AbilityType,
         formats::qsd::{
             QsdCondition, QsdConditionOperator, QsdConditionQuestItem, QsdReward,
             QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
+            QsdSkillId,
         },
         item::{EquipmentItem, Item},
-        ItemReference, QuestTrigger, SkillReference, WorldTicks, ZoneReference,
+        AbilityType, ItemReference, QuestTrigger, SkillId, WorldTicks, ZoneId,
     },
     game::{
         bundles::{
@@ -628,13 +628,14 @@ fn quest_reward_add_item(
 fn quest_reward_add_skill(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
-    skill_id: usize,
+    skill_id: QsdSkillId,
 ) -> Option<()> {
-    let skill = SkillReference(skill_id);
+    let skill_id = SkillId::new(skill_id as u16)?;
+
     if let Some(skill_list) = quest_parameters.source.skill_list.as_deref_mut() {
         skill_list_try_learn_skill(
             quest_world.game_data.skills.as_ref(),
-            skill,
+            skill_id,
             skill_list,
             quest_parameters.source.skill_points.as_deref_mut(),
             quest_parameters.source.game_client,
@@ -649,7 +650,7 @@ fn quest_reward_add_skill(
 fn quest_reward_teleport(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
-    new_zone: ZoneReference,
+    new_zone_id: ZoneId,
     new_position: Point3<f32>,
 ) -> bool {
     if let (Some(client_entity), Some(position)) = (
@@ -662,7 +663,7 @@ fn quest_reward_teleport(
             quest_parameters.source.entity,
             client_entity,
             position,
-            Position::new(new_position, new_zone.0 as u16),
+            Position::new(new_position, new_zone_id),
             quest_parameters.source.game_client,
         );
         true
@@ -787,7 +788,7 @@ fn quest_trigger_apply_rewards(
             &QsdReward::Teleport(_reward_target, zone_id, position) => quest_reward_teleport(
                 quest_world,
                 quest_parameters,
-                ZoneReference(zone_id),
+                ZoneId::new(zone_id as u16).unwrap(),
                 Point3::new(position.x, position.y, 0.0),
             ),
             QsdReward::Trigger(name) => {

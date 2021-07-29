@@ -4,8 +4,8 @@ use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{
-    ability::AbilityType,
     item::{ItemClass, ItemType},
+    AbilityType, SkillId,
 };
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -123,8 +123,8 @@ pub struct ConsumableItemData {
     pub confile_index: usize,
     pub ability_requirement: Option<(AbilityType, i32)>,
     pub add_ability: Option<(AbilityType, i32)>,
-    pub learn_skill_id: usize,
-    pub use_skill_id: usize,
+    pub learn_skill_id: Option<SkillId>,
+    pub use_skill_id: Option<SkillId>,
     pub apply_status_effect_id: Option<usize>,
     pub cooldown_type_id: usize,
     pub cooldown_duration: Duration,

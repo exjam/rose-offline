@@ -1,15 +1,19 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
 use crate::{
     data::MotionFileData,
     game::components::{MotionData, MotionDataNpc},
 };
 
-#[derive(Clone, Copy)]
-pub struct NpcReference(pub usize);
+#[derive(Copy, Clone)]
+pub struct NpcId(NonZeroU16);
 
-#[derive(Clone)]
-pub struct NpcConversationReference(pub String);
+id_wrapper_impl!(NpcId, NonZeroU16, u16);
+
+#[derive(Clone, Debug)]
+pub struct NpcConversationId(String);
+
+id_wrapper_impl!(NpcConversationId, String);
 
 #[derive(Hash, PartialEq, Eq)]
 pub enum NpcMotionAction {
@@ -96,15 +100,15 @@ impl NpcDatabase {
         }
     }
 
-    pub fn get_npc(&self, id: usize) -> Option<&NpcData> {
-        self.npcs.get(&(id as u16))
+    pub fn get_npc(&self, id: NpcId) -> Option<&NpcData> {
+        self.npcs.get(&(id.get() as u16))
     }
 
-    pub fn get_conversation(&self, key: &NpcConversationReference) -> Option<&NpcConversationData> {
+    pub fn get_conversation(&self, key: &NpcConversationId) -> Option<&NpcConversationData> {
         self.conversation_files.get(&key.0)
     }
 
-    pub fn get_npc_motions(&self, id: usize) -> MotionData {
+    pub fn get_npc_motions(&self, id: NpcId) -> MotionData {
         let npc_data = self.get_npc(id);
         let get_motion =
             |action| npc_data.and_then(|npc_data| npc_data.motion_data.get(&action).cloned());

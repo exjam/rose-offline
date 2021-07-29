@@ -144,7 +144,7 @@ pub fn client_entity_join_zone(
     position: &Position,
 ) -> Result<ClientEntityId, ClientEntityJoinZoneError> {
     let zone = client_entity_list
-        .get_zone_mut(position.zone as usize)
+        .get_zone_mut(position.zone_id)
         .ok_or(ClientEntityJoinZoneError::InvalidZone)?;
     let client_entity = zone
         .join_zone(client_entity_type, *entity, position.position)
@@ -162,7 +162,7 @@ pub fn client_entity_leave_zone(
     client_entity: &ClientEntity,
     position: &Position,
 ) {
-    if let Some(client_entity_zone) = client_entity_list.get_zone_mut(position.zone as usize) {
+    if let Some(client_entity_zone) = client_entity_list.get_zone_mut(position.zone_id) {
         client_entity_zone.leave_zone(entity, client_entity);
     }
     cmd.remove_component::<ClientEntity>(*entity);
@@ -194,7 +194,7 @@ pub fn client_entity_teleport_zone(
             .server_message_tx
             .send(ServerMessage::Teleport(Teleport {
                 entity_id: client_entity.id,
-                zone_no: new_position.zone,
+                zone_id: new_position.zone_id,
                 x: new_position.position.x,
                 y: new_position.position.y,
                 run_mode: 1,  // TODO: Run mode

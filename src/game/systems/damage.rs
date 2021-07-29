@@ -53,7 +53,7 @@ pub fn damage(
 
             if let Some(attacker_entity_id) = attacker_entity_id {
                 server_messages.send_zone_message(
-                    position.zone,
+                    position.zone_id,
                     ServerMessage::DamageEntity(DamageEntity {
                         attacker_entity_id,
                         defender_entity_id: client_entity.id,

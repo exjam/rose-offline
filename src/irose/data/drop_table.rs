@@ -6,7 +6,7 @@ use crate::{
     data::{
         formats::{FileReader, StbFile, VfsIndex},
         item::{EquipmentItem, Item, ItemType},
-        DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcReference, ZoneReference,
+        DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcId, ZoneId,
     },
     game::components::{DroppedItem, Money},
 };
@@ -30,8 +30,8 @@ impl DropTable for DropTableData {
         &self,
         world_drop_item_rate: i32,
         world_drop_money_rate: i32,
-        npc: NpcReference,
-        zone: ZoneReference,
+        npc_id: NpcId,
+        zone_id: ZoneId,
         level_difference: i32,
         character_drop_rate: i32,
         character_charm: i32,
@@ -41,7 +41,7 @@ impl DropTable for DropTableData {
             return None;
         }
 
-        let npc_data = self.npc_database.get_npc(npc.0);
+        let npc_data = self.npc_database.get_npc(npc_id);
         let npc_drop_item_rate = npc_data.map_or(0, |n| n.drop_item_rate);
         let npc_drop_money_rate = npc_data.map_or(0, |n| n.drop_money_rate);
         let npc_level = npc_data.map_or(0, |n| n.level);
@@ -69,9 +69,9 @@ impl DropTable for DropTableData {
         }
 
         let drop_table_row = if rng.gen_range(1..=100) <= npc_drop_item_rate {
-            npc_data.map_or(zone.0, |n| n.drop_table_index as usize)
+            npc_data.map_or(zone_id.get() as usize, |n| n.drop_table_index as usize)
         } else {
-            zone.0
+            zone_id.get() as usize
         };
         let drop_table_column = rng.gen_range(0..drop_var.min(30)) as usize;
         let mut drop_value = self

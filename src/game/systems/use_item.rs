@@ -3,9 +3,8 @@ use log::warn;
 
 use crate::{
     data::{
-        ability::AbilityType,
         item::{ItemClass, ItemType},
-        SkillReference,
+        AbilityType,
     },
     game::{
         bundles::{ability_values_add_value, ability_values_get_value, skill_list_try_learn_skill},
@@ -114,17 +113,23 @@ fn use_inventory_item(
             // TODO: Set NextCommand to UseSkill(UseSkill::ItemSelf(item_slot)) / UseSkill(UseSkill::ItemTarget(item_slot))
             (false, false)
         }*/
-        ItemClass::SkillBook => (
-            skill_list_try_learn_skill(
-                use_item_world.game_data.skills.as_ref(),
-                SkillReference(item_data.learn_skill_id),
-                use_item_user.skill_list,
-                Some(use_item_user.skill_points),
-                use_item_user.game_client,
-            )
-            .is_ok(),
-            false,
-        ),
+        ItemClass::SkillBook => {
+            if let Some(skill_id) = item_data.learn_skill_id {
+                (
+                    skill_list_try_learn_skill(
+                        use_item_world.game_data.skills.as_ref(),
+                        skill_id,
+                        use_item_user.skill_list,
+                        Some(use_item_user.skill_points),
+                        use_item_user.game_client,
+                    )
+                    .is_ok(),
+                    false,
+                )
+            } else {
+                (false, false)
+            }
+        }
         ItemClass::MagicItem
         | ItemClass::RepairTool
         | ItemClass::EngineFuel

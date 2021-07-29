@@ -1,5 +1,5 @@
 use crate::{
-    data::{ability::AbilityType, formats::VfsIndex},
+    data::{formats::VfsIndex, AbilityType},
     game::GameData,
 };
 use std::{path::Path, str::FromStr, sync::Arc};

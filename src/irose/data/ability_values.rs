@@ -5,10 +5,9 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        ability::AbilityType,
         item::{ItemClass, ItemWeaponType},
-        AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, SkillAddAbility, SkillDatabase,
-        SkillReference,
+        AbilityType, AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, NpcId,
+        SkillAddAbility, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
@@ -37,7 +36,7 @@ pub fn get_ability_value_calculator(
 }
 
 impl AbilityValueCalculator for AbilityValuesData {
-    fn calculate_npc(&self, npc_id: usize) -> Option<AbilityValues> {
+    fn calculate_npc(&self, npc_id: NpcId) -> Option<AbilityValues> {
         let npc_data = self.npc_database.get_npc(npc_id)?;
         Some(AbilityValues {
             damage_category: DamageCategory::Npc,
@@ -893,12 +892,12 @@ impl PassiveSkillAbilityValues {
 
 fn calculate_passive_skill_ability_values<'a>(
     skill_database: &SkillDatabase,
-    passive_skills: impl Iterator<Item = &'a SkillReference>,
+    passive_skills: impl Iterator<Item = &'a SkillId>,
 ) -> PassiveSkillAbilityValues {
     let mut result = PassiveSkillAbilityValues::new();
 
-    for skill_reference in passive_skills {
-        if let Some(skill_data) = skill_database.get_skill(skill_reference) {
+    for &skill_id in passive_skills {
+        if let Some(skill_data) = skill_database.get_skill(skill_id) {
             for add_ability in &skill_data.add_ability {
                 match add_ability {
                     SkillAddAbility::Rate(ability_type, rate) => {

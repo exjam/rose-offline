@@ -5,7 +5,7 @@ use legion::Entity;
 use nalgebra::{Point2, Point3, Vector2};
 
 use crate::{
-    data::{ZoneData, ZoneDatabase},
+    data::{ZoneData, ZoneDatabase, ZoneId},
     game::components::{ClientEntity, ClientEntityId, ClientEntityType},
 };
 
@@ -47,7 +47,7 @@ impl ClientEntityZoneSector {
 
 pub struct ClientEntityZone {
     // Current zone id
-    zone_id: u16,
+    zone_id: ZoneId,
 
     // The size (width and height) of a sector
     sector_size: f32,
@@ -301,7 +301,7 @@ impl Iterator for ClientEntityZoneEntityIterator<'_> {
 }
 
 pub struct ClientEntityList {
-    pub zones: HashMap<u16, ClientEntityZone>,
+    pub zones: HashMap<ZoneId, ClientEntityZone>,
 }
 
 impl ClientEntityList {
@@ -313,12 +313,12 @@ impl ClientEntityList {
         Self { zones }
     }
 
-    pub fn get_zone(&self, zone: usize) -> Option<&ClientEntityZone> {
-        self.zones.get(&(zone as u16))
+    pub fn get_zone(&self, zone_id: ZoneId) -> Option<&ClientEntityZone> {
+        self.zones.get(&zone_id)
     }
 
-    pub fn get_zone_mut(&mut self, zone: usize) -> Option<&mut ClientEntityZone> {
-        self.zones.get_mut(&(zone as u16))
+    pub fn get_zone_mut(&mut self, zone_id: ZoneId) -> Option<&mut ClientEntityZone> {
+        self.zones.get_mut(&zone_id)
     }
 
     pub fn process_zone_leavers(&mut self) {

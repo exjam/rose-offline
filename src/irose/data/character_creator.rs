@@ -1,27 +1,18 @@
-use std::sync::Arc;
-
 use nalgebra::Point3;
-
-use crate::{
-    data::{
-        formats::{FileReader, VfsIndex},
-        ItemReference, SkillDatabase, ZoneDatabase,
-    },
-    game::components::{
-        ExperiencePoints, QuestState, SkillPoints, Stamina, StatPoints, UnionMembership,
-    },
-};
+use std::sync::Arc;
 
 use crate::{
     data::{
         character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
         formats::StbFile,
+        formats::{FileReader, VfsIndex},
         item::{EquipmentItem, Item},
-        SkillReference,
+        ItemReference, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
     },
     game::components::{
-        BasicStats, CharacterInfo, Equipment, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
-        Position, SkillList,
+        BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar, Inventory,
+        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
+        UnionMembership,
     },
     stb_column,
 };
@@ -35,7 +26,7 @@ struct CharacterGenderData {
 struct CharacterCreatorData {
     skill_database: Arc<SkillDatabase>,
     gender_data: Vec<CharacterGenderData>,
-    skills: Vec<SkillReference>,
+    skills: Vec<SkillId>,
     start_position: Position,
     revive_position: Position,
 }
@@ -149,7 +140,7 @@ impl CharacterCreator for CharacterCreatorData {
                 job: 0,
                 face,
                 hair,
-                revive_zone: self.revive_position.zone,
+                revive_zone_id: self.revive_position.zone_id,
                 revive_position: self.revive_position.position,
                 fame: 0,
                 fame_b: 0,
@@ -174,8 +165,8 @@ impl CharacterCreator for CharacterCreatorData {
             stamina: Stamina::new(),
         };
 
-        for skill in &self.skills {
-            if let Some(skill_data) = self.skill_database.get_skill(skill) {
+        for &skill_id in &self.skills {
+            if let Some(skill_data) = self.skill_database.get_skill(skill_id) {
                 character.skill_list.add_skill(skill_data);
             }
         }
@@ -219,15 +210,15 @@ pub fn get_character_creator(
     }
 
     let skills = vec![
-        SkillReference(11), // Sit
-        SkillReference(12), // Pick Up
-        SkillReference(16), // Attack
-        SkillReference(20), // Trade
+        SkillId::new(11).unwrap(), // Sit
+        SkillId::new(12).unwrap(), // Pick Up
+        SkillId::new(16).unwrap(), // Attack
+        SkillId::new(20).unwrap(), // Trade
     ];
 
-    let start_zone_id = 20;
+    let start_zone = ZoneId::new(20).unwrap();
     let zone_data = zone_database
-        .get_zone(start_zone_id as usize)
+        .get_zone(start_zone)
         .expect("Could not find start zone");
 
     let revive_position = zone_data
@@ -239,7 +230,7 @@ pub fn get_character_creator(
         skill_database,
         gender_data,
         skills,
-        start_position: Position::new(start_position, start_zone_id as u16),
-        revive_position: Position::new(revive_position, start_zone_id as u16),
+        start_position: Position::new(start_position, start_zone),
+        revive_position: Position::new(revive_position, start_zone),
     }))
 }

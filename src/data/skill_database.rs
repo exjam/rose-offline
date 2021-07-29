@@ -1,14 +1,19 @@
 use arrayvec::ArrayVec;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, num::NonZeroUsize, time::Duration};
+use std::{
+    collections::HashMap,
+    num::{NonZeroU16, NonZeroUsize},
+    str::FromStr,
+    time::Duration,
+};
 
-use crate::data::ability::AbilityType;
+use crate::data::{item::ItemClass, AbilityType, MotionId, NpcId, ZoneId};
 
-use super::{item::ItemClass, NpcReference, ZoneReference};
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
+pub struct SkillId(NonZeroU16);
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub struct SkillReference(pub usize);
+id_wrapper_impl!(SkillId, NonZeroU16, u16);
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub enum SkillPageType {
@@ -78,10 +83,10 @@ pub enum SkillCooldown {
 
 // TODO: Make SkillData an enum on SkillType with relevant fields only?
 pub struct SkillData {
-    pub id: SkillReference,
+    pub id: SkillId,
     pub name: String,
 
-    pub base_skill: Option<SkillReference>,
+    pub base_skill_id: Option<SkillId>,
     pub level: u32,
     pub learn_point_cost: u32,
     pub learn_money_cost: u32,
@@ -93,18 +98,18 @@ pub struct SkillData {
     pub required_ability: ArrayVec<(AbilityType, i32), 2>,
     pub required_job_set_index: Option<NonZeroUsize>, // TODO: JobSetReference to the job set STB
     pub required_planet: Option<NonZeroUsize>,
-    pub required_skills: ArrayVec<(SkillReference, i32), 3>,
+    pub required_skills: ArrayVec<(SkillId, i32), 3>,
     pub required_union: ArrayVec<NonZeroUsize, 3>,
     pub required_weapon_class: ArrayVec<ItemClass, 5>,
 
     pub action_mode: SkillActionMode,
-    pub action_motion_index: Option<NonZeroUsize>,
+    pub action_motion_id: Option<MotionId>,
     pub action_motion_speed: i32,
     pub add_ability: ArrayVec<SkillAddAbility, 2>,
     pub cast_range: u32,
-    pub casting_motion_index: Option<NonZeroUsize>,
+    pub casting_motion_id: Option<MotionId>,
     pub casting_motion_speed: i32,
-    pub casting_repeat_motion_index: Option<NonZeroUsize>,
+    pub casting_repeat_motion_id: Option<MotionId>,
     pub casting_repeat_motion_count: i32,
     pub cooldown: SkillCooldown,
     pub damage_type: i32,
@@ -115,9 +120,9 @@ pub struct SkillData {
     pub status_effects: ArrayVec<NonZeroUsize, 2>, // TODO: StatusEffectReference
     pub status_effect_duration: Duration,
     pub success_ratio: i32,
-    pub summon_pet: NpcReference,
+    pub summon_npc_id: Option<NpcId>,
     pub target_filter: SkillTargetFilter,
-    pub warp_zone_no: ZoneReference,
+    pub warp_zone_id: Option<ZoneId>,
     pub warp_zone_x: i32,
     pub warp_zone_y: i32,
 }
@@ -131,7 +136,7 @@ impl SkillDatabase {
         Self { skills }
     }
 
-    pub fn get_skill(&self, id: &SkillReference) -> Option<&SkillData> {
-        self.skills.get(&(id.0 as u16))
+    pub fn get_skill(&self, id: SkillId) -> Option<&SkillData> {
+        self.skills.get(&id.get())
     }
 }
