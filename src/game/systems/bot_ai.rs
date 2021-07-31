@@ -17,7 +17,7 @@ pub fn bot_ai(
     cmd: &mut CommandBuffer,
     bot_query: &mut Query<(
         Entity,
-        &mut BotAi,
+        &BotAi,
         &Command,
         &NextCommand,
         &Inventory,
@@ -108,7 +108,7 @@ pub fn bot_ai(
                                         *entity,
                                         NextCommand::with_move(*target_position, Some(*target)),
                                     );
-                                    bot_ai.state = BotAiState::PickupItem(*target);
+                                    cmd.add_component(*entity, BotAiState::PickupItem(*target));
                                 } else if let Some((target, _)) = nearby_monsters.choose(&mut rng) {
                                     cmd.add_component(*entity, NextCommand::with_attack(*target));
                                 }
@@ -119,7 +119,7 @@ pub fn bot_ai(
                                 *entity,
                                 NextCommand::with_pickup_dropped_item(target_item),
                             );
-                            bot_ai.state = BotAiState::Default;
+                            cmd.add_component(*entity, BotAiState::Default);
                         }
                     }
                 }
