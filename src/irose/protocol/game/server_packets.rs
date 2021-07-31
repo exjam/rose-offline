@@ -67,6 +67,7 @@ pub enum ServerPackets {
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
+    ApplySkillEffect = 0x7b5,
     FinishCastingSkill = 0x7b9,
     StartCastingSkill = 0x7bb,
     OpenPersonalStore = 0x7c2,
@@ -1254,6 +1255,46 @@ impl From<&PacketServerStartCastingSkill> for Packet {
     fn from(packet: &PacketServerStartCastingSkill) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::StartCastingSkill as u16);
         writer.write_entity_id(packet.entity_id);
+        writer.into()
+    }
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct SkillEffectData {
+    #[skip(getters)]
+    skill_id: B12,
+    #[skip(getters)]
+    effect_success_1: bool,
+    #[skip(getters)]
+    effect_success_2: bool,
+    #[skip(getters)]
+    caster_intelligence: B10,
+}
+
+pub struct PacketServerApplySkillEffect {
+    pub entity_id: ClientEntityId,
+    pub caster_entity_id: ClientEntityId,
+    pub caster_intelligence: i32,
+    pub skill_id: SkillId,
+    pub effect_success: [bool; 2],
+}
+
+impl From<&PacketServerApplySkillEffect> for Packet {
+    fn from(packet: &PacketServerApplySkillEffect) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ApplySkillEffect as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_entity_id(packet.caster_entity_id);
+
+        let data = SkillEffectData::new()
+            .with_skill_id(packet.skill_id.get() as u16)
+            .with_effect_success_1(packet.effect_success[0])
+            .with_effect_success_2(packet.effect_success[1])
+            .with_caster_intelligence(packet.caster_intelligence as u16);
+        for b in data.into_bytes().iter() {
+            writer.write_u8(*b);
+        }
+
         writer.into()
     }
 }

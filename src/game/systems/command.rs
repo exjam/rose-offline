@@ -4,20 +4,24 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
 use nalgebra::Point3;
 
-use crate::game::{
-    bundles::client_entity_leave_zone,
-    components::{
-        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
-        CommandCastSkillTarget, CommandData, CommandMove, CommandPickupDroppedItem, Destination,
-        DroppedItem, GameClient, HealthPoints, Inventory, MotionData, NextCommand, Owner,
-        PersonalStore, Position, Target,
-    },
-    messages::server::{
-        self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
-        ServerMessage,
-    },
-    resources::{
-        ClientEntityList, GameData, PendingDamage, PendingDamageList, ServerMessages, ServerTime,
+use crate::{
+    data::SkillType,
+    game::{
+        bundles::client_entity_leave_zone,
+        components::{
+            AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack,
+            CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
+            CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
+            Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, Target,
+        },
+        messages::server::{
+            self, ApplySkillEffect, PickupDroppedItemContent, PickupDroppedItemError,
+            PickupDroppedItemResult, ServerMessage,
+        },
+        resources::{
+            ClientEntityList, GameData, PendingDamage, PendingDamageList, ServerMessages,
+            ServerTime,
+        },
     },
 };
 
@@ -93,7 +97,7 @@ fn is_valid_skill_target<'a>(
     attack_target_query_world: &'a SubWorld,
 ) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
     // TODO: Check Team
-    if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
+    if let Ok((target_client_entity, target_position, target_ability_values, _target_health)) =
         attack_target_query.get(attack_target_query_world, *target_entity)
     {
         if target_position.zone_id == position.zone_id {
@@ -346,6 +350,54 @@ pub fn command(
                 }) => {
                     if !*has_casted_skill && command.duration >= *casting_duration {
                         // TODO: Apply skill effect
+                        if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
+                            match skill_data.skill_type {
+                                SkillType::SelfBoundDuration | SkillType::SelfStateDuration => {
+                                    if skill_data.scope > 0 {
+                                        // Apply in AOE around current character
+                                        if let Some(client_entity_zone) =
+                                            client_entity_list.get_zone(position.zone_id)
+                                        {
+                                            for (nearby_entity, _) in client_entity_zone
+                                                .iter_entities_within_distance(
+                                                    position.position.xy(),
+                                                    skill_data.scope as f32,
+                                                )
+                                            {
+                                                // TODO: Check skill_data.target_filter
+
+                                                // TODO: Apply skill status
+                                                if let Ok((target_client_entity, _, _, _)) =
+                                                    attack_target_query.get(
+                                                        &attack_target_query_world,
+                                                        nearby_entity,
+                                                    )
+                                                {
+                                                    server_messages.send_entity_message(
+                                                        target_client_entity,
+                                                        ServerMessage::ApplySkillEffect(
+                                                            ApplySkillEffect {
+                                                                entity_id: target_client_entity.id,
+                                                                caster_entity_id: client_entity.id,
+                                                                caster_intelligence: ability_values
+                                                                    .intelligence
+                                                                    as i32,
+                                                                skill_id: *skill_id,
+                                                                effect_success: [true, true],
+                                                            },
+                                                        ),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // Apply only to self
+                                        // TODO: Check skill_data.target_filter
+                                    }
+                                }
+                                _ => warn!("Unimplemented skill used {:?}", skill_data),
+                            }
+                        }
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::FinishCastingSkill(client_entity.id, *skill_id),

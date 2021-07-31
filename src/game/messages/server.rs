@@ -322,6 +322,15 @@ pub struct CastSkillTargetPosition {
 }
 
 #[derive(Clone)]
+pub struct ApplySkillEffect {
+    pub entity_id: ClientEntityId,
+    pub caster_entity_id: ClientEntityId,
+    pub caster_intelligence: i32,
+    pub skill_id: SkillId,
+    pub effect_success: [bool; 2],
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -357,5 +366,6 @@ pub enum ServerMessage {
     CastSkillTargetEntity(CastSkillTargetEntity),
     CastSkillTargetPosition(CastSkillTargetPosition),
     StartCastingSkill(ClientEntityId),
+    ApplySkillEffect(ApplySkillEffect),
     FinishCastingSkill(ClientEntityId, SkillId),
 }

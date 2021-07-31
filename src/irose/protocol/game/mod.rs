@@ -13,13 +13,14 @@ use crate::{
             SetHotbarSlot,
         },
         server::{
-            CastSkillSelf, CastSkillTargetEntity, CastSkillTargetPosition, LocalChat, LogoutReply,
-            OpenPersonalStore, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
-            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
-            PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
-            ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
-            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
-            UpdateMoney, UpdateXpStamina, UseItem, Whisper,
+            ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity, CastSkillTargetPosition,
+            LocalChat, LogoutReply, OpenPersonalStore, PersonalStoreTransactionCancelled,
+            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
+            PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
+            QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
+            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
+            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateXpStamina, UseItem,
+            Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -803,6 +804,24 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerStartCastingSkill { entity_id }))
+                    .await?;
+            }
+            ServerMessage::ApplySkillEffect(ApplySkillEffect {
+                entity_id,
+                caster_entity_id,
+                caster_intelligence,
+                skill_id,
+                effect_success,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerApplySkillEffect {
+                        entity_id,
+                        caster_entity_id,
+                        caster_intelligence,
+                        skill_id,
+                        effect_success,
+                    }))
                     .await?;
             }
             ServerMessage::FinishCastingSkill(entity_id, skill_id) => {
