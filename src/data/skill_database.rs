@@ -23,19 +23,20 @@ pub enum SkillPageType {
     Clan,
 }
 
+#[derive(Debug)]
 pub enum SkillAddAbility {
     Value(AbilityType, i32),
     Rate(AbilityType, i32),
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 pub enum SkillActionMode {
     Stop = 0,
     Attack = 1,
     Restore = 2,
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 pub enum SkillTargetFilter {
     OnlySelf = 0,
     Group = 1,
@@ -50,7 +51,7 @@ pub enum SkillTargetFilter {
     EnemyMonster = 10,
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 pub enum SkillType {
     BasicAction = 1,
     CreateWindow = 2,
@@ -74,14 +75,17 @@ pub enum SkillType {
     Resurrection = 20,
 }
 
+#[derive(Debug)]
 pub struct SkillCooldownGroup(pub NonZeroUsize);
 
+#[derive(Debug)]
 pub enum SkillCooldown {
     Skill(Duration),
     Group(SkillCooldownGroup, Duration),
 }
 
 // TODO: Make SkillData an enum on SkillType with relevant fields only?
+#[derive(Debug)]
 pub struct SkillData {
     pub id: SkillId,
     pub name: String,

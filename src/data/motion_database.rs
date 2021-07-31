@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use crate::game::components::{MotionData, MotionDataCharacter};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct MotionId(u16);
 
 id_wrapper_impl!(MotionId, u16);
