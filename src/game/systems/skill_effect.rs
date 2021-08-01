@@ -75,11 +75,16 @@ fn apply_skill_status_effects_to_entity(
     }
 
     let mut effect_success = [false, false];
-    for (effect_index, status_effect_id) in skill_data.status_effects.iter().enumerate() {
+    for (effect_index, status_effect_id) in skill_data
+        .status_effects
+        .iter()
+        .enumerate()
+        .filter_map(|(index, id)| id.map(|id| (index, id)))
+    {
         if let Some(status_effect_data) = skill_world
             .game_data
             .status_effects
-            .get_status_effect(*status_effect_id)
+            .get_status_effect(status_effect_id)
         {
             if skill_data.success_ratio > 0 {
                 // TODO: Check success chance

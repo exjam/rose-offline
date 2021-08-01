@@ -121,7 +121,7 @@ pub struct SkillData {
     pub item_make_number: u32,
     pub power: u32,
     pub scope: u32,
-    pub status_effects: ArrayVec<StatusEffectId, 2>,
+    pub status_effects: [Option<StatusEffectId>; 2],
     pub status_effect_duration: Duration,
     pub success_ratio: i32,
     pub summon_npc_id: Option<NpcId>,

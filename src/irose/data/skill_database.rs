@@ -90,7 +90,7 @@ impl StbSkill {
     stb_column! { 9, get_power, u32 }
     stb_column! { 9, get_item_make_number, u32 }
     stb_column! { 10, get_harm, u32 }
-    stb_column! { 11..=12, get_status_effects, ArrayVec<StatusEffectId, 2> }
+    stb_column! { 11..=12, get_status_effects, [Option<StatusEffectId>; 2] }
 
     stb_column! { 13, get_success_ratio, i32 }
     stb_column! { 14, get_status_effect_duration_ms, i32 }
