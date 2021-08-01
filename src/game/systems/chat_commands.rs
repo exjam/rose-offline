@@ -12,14 +12,18 @@ use std::{
 use crate::{
     data::{
         item::{Item, ItemType},
-        ItemReference, ZoneId,
+        AbilityType, ItemReference, ZoneId,
     },
     game::{
-        bundles::{client_entity_join_zone, client_entity_teleport_zone, create_character_entity},
+        bundles::{
+            ability_values_add_value, client_entity_join_zone, client_entity_teleport_zone,
+            create_character_entity,
+        },
         components::{
-            AbilityValues, BotAi, ClientEntity, ClientEntityType, Command, EquipmentIndex,
-            EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveSpeed, NextCommand,
-            Owner, PersonalStore, Position, Team, PERSONAL_STORE_ITEM_SLOTS,
+            AbilityValues, BasicStats, BotAi, ClientEntity, ClientEntityType, Command,
+            EquipmentIndex, EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveSpeed,
+            NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina, StatPoints, Team,
+            UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
         messages::server::{ServerMessage, Whisper},
         resources::{
@@ -45,6 +49,12 @@ pub struct ChatCommandUser<'a> {
     game_client: &'a GameClient,
     level: &'a Level,
     position: &'a Position,
+    basic_stats: &'a mut BasicStats,
+    inventory: &'a mut Inventory,
+    skill_points: &'a mut SkillPoints,
+    stamina: &'a mut Stamina,
+    stat_points: &'a mut StatPoints,
+    union_membership: &'a mut UnionMembership,
 }
 
 lazy_static! {
@@ -62,6 +72,11 @@ lazy_static! {
             .subcommand(App::new("level").arg(Arg::new("level").required(true)))
             .subcommand(App::new("bot").arg(Arg::new("n").required(true)))
             .subcommand(App::new("shop").arg(Arg::new("item_type").required(true)))
+            .subcommand(
+                App::new("add")
+                    .arg(Arg::new("ability_type").required(true))
+                    .arg(Arg::new("value").required(true)),
+            )
     };
 }
 
@@ -266,7 +281,7 @@ fn create_random_bot_entities(
 
 fn handle_gm_command(
     chat_command_world: &mut ChatCommandWorld,
-    chat_command_user: &ChatCommandUser,
+    chat_command_user: &mut ChatCommandUser,
     command_text: &str,
 ) -> Result<(), GMCommandError> {
     let mut args = shellwords::split(command_text)?;
@@ -415,6 +430,54 @@ fn handle_gm_command(
                 }
             }
         }
+        ("add", arg_matches) => {
+            let ability_type_str = arg_matches.value_of("ability_type").unwrap();
+            let value = arg_matches.value_of("value").unwrap().parse::<i32>()?;
+            let ability_type = match ability_type_str {
+                "strength" => AbilityType::Strength,
+                "dexterity" => AbilityType::Dexterity,
+                "intelligence" => AbilityType::Intelligence,
+                "concentration" => AbilityType::Concentration,
+                "charm" => AbilityType::Charm,
+                "sense" => AbilityType::Sense,
+                "bonus_point" => AbilityType::BonusPoint,
+                "skillpoint" => AbilityType::Skillpoint,
+                "money" => AbilityType::Money,
+                "stamina" => AbilityType::Stamina,
+                "health" => AbilityType::Health,
+                "mana" => AbilityType::Mana,
+                "experience" => AbilityType::Experience,
+                "level" => AbilityType::Level,
+                "union_point1" => AbilityType::UnionPoint1,
+                "union_point2" => AbilityType::UnionPoint2,
+                "union_point3" => AbilityType::UnionPoint3,
+                "union_point4" => AbilityType::UnionPoint4,
+                "union_point5" => AbilityType::UnionPoint5,
+                "union_point6" => AbilityType::UnionPoint6,
+                "union_point7" => AbilityType::UnionPoint7,
+                "union_point8" => AbilityType::UnionPoint8,
+                "union_point9" => AbilityType::UnionPoint9,
+                "union_point10" => AbilityType::UnionPoint10,
+                _ => return Err(GMCommandError::InvalidArguments),
+            };
+
+            if ability_values_add_value(
+                ability_type,
+                value,
+                Some(chat_command_user.basic_stats),
+                Some(chat_command_user.inventory),
+                Some(chat_command_user.skill_points),
+                Some(chat_command_user.stamina),
+                Some(chat_command_user.stat_points),
+                Some(chat_command_user.union_membership),
+                Some(chat_command_user.game_client),
+            ) {
+                send_multiline_whisper(
+                    chat_command_user.game_client,
+                    &format!("Success: /add {} {}", ability_type_str, value),
+                );
+            }
+        }
         _ => return Err(GMCommandError::InvalidCommand),
     }
 
@@ -432,6 +495,12 @@ pub fn chat_commands(
         &GameClient,
         &Level,
         &Position,
+        &mut BasicStats,
+        &mut Inventory,
+        &mut SkillPoints,
+        &mut Stamina,
+        &mut StatPoints,
+        &mut UnionMembership,
     )>,
     #[resource] bot_list: &mut BotList,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -448,20 +517,41 @@ pub fn chat_commands(
     };
 
     for (entity, command) in pending_chat_commands.iter() {
-        if let Ok((ability_values, client_entity, game_client, level, position)) =
-            user_query.get(world, *entity)
+        if let Ok((
+            ability_values,
+            client_entity,
+            game_client,
+            level,
+            position,
+            basic_stats,
+            inventory,
+            skill_points,
+            stamina,
+            stat_points,
+            union_membership,
+        )) = user_query.get_mut(world, *entity)
         {
-            let chat_command_user = ChatCommandUser {
+            let mut chat_command_user = ChatCommandUser {
                 ability_values,
                 client_entity,
                 entity,
                 game_client,
                 level,
                 position,
+                basic_stats,
+                inventory,
+                skill_points,
+                stamina,
+                stat_points,
+                union_membership,
             };
 
-            if handle_gm_command(&mut chat_command_world, &chat_command_user, &command[1..])
-                .is_err()
+            if handle_gm_command(
+                &mut chat_command_world,
+                &mut chat_command_user,
+                &command[1..],
+            )
+            .is_err()
             {
                 send_gm_commands_help(chat_command_user.game_client);
             }
