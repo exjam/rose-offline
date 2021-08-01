@@ -1,6 +1,7 @@
 use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
 use arrayvec::ArrayVec;
+use enum_map::Enum;
 use num_derive::FromPrimitive;
 
 #[derive(Copy, Clone, Debug)]
@@ -8,7 +9,7 @@ pub struct StatusEffectId(NonZeroU16);
 
 id_wrapper_impl!(StatusEffectId, NonZeroU16, u16);
 
-#[derive(FromPrimitive)]
+#[derive(Copy, Clone, Debug, Enum, FromPrimitive)]
 pub enum StatusEffectType {
     IncreaseHp = 1,
     IncreaseMp = 2,
@@ -116,5 +117,9 @@ pub struct StatusEffectDatabase {
 impl StatusEffectDatabase {
     pub fn new(status_effects: HashMap<u16, StatusEffectData>) -> Self {
         Self { status_effects }
+    }
+
+    pub fn get_status_effect(&self, id: StatusEffectId) -> Option<&StatusEffectData> {
+        self.status_effects.get(&(id.get() as u16))
     }
 }

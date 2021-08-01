@@ -606,13 +606,15 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Die(_) => 3,
             CommandData::PickupDroppedItem(_) => 4,
             CommandData::PersonalStore => 11,
-            CommandData::CastSkill(CommandCastSkill { target: None, .. }) => 6,
             CommandData::CastSkill(CommandCastSkill {
-                target: Some(CommandCastSkillTarget::Entity(_)),
+                skill_target: None, ..
+            }) => 6,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: Some(CommandCastSkillTarget::Entity(_)),
                 ..
             }) => 7,
             CommandData::CastSkill(CommandCastSkill {
-                target: Some(CommandCastSkillTarget::Position(_)),
+                skill_target: Some(CommandCastSkillTarget::Position(_)),
                 ..
             }) => 8,
             // 9 = Run away

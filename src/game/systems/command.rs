@@ -1,27 +1,23 @@
 use std::time::Duration;
 
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
-use log::warn;
 use nalgebra::Point3;
 
-use crate::{
-    data::SkillType,
-    game::{
-        bundles::client_entity_leave_zone,
-        components::{
-            AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack,
-            CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
-            CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
-            Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, Target,
-        },
-        messages::server::{
-            self, ApplySkillEffect, PickupDroppedItemContent, PickupDroppedItemError,
-            PickupDroppedItemResult, ServerMessage,
-        },
-        resources::{
-            ClientEntityList, GameData, PendingDamage, PendingDamageList, ServerMessages,
-            ServerTime,
-        },
+use crate::game::{
+    bundles::client_entity_leave_zone,
+    components::{
+        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
+        CommandCastSkillTarget, CommandData, CommandMove, CommandPickupDroppedItem, Destination,
+        DroppedItem, GameClient, HealthPoints, Inventory, MotionData, NextCommand, Owner,
+        PersonalStore, Position, Target,
+    },
+    messages::server::{
+        self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
+        ServerMessage,
+    },
+    resources::{
+        ClientEntityList, GameData, PendingDamage, PendingDamageList, PendingSkillEffect,
+        PendingSkillEffectList, PendingSkillEffectTarget, ServerMessages, ServerTime,
     },
 };
 
@@ -170,6 +166,7 @@ pub fn command(
     #[resource] server_time: &ServerTime,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] pending_damage_list: &mut PendingDamageList,
+    #[resource] pending_skill_effect_list: &mut PendingSkillEffectList,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] game_data: &GameData,
 ) {
@@ -266,7 +263,7 @@ pub fn command(
                     }
                     CommandData::CastSkill(CommandCastSkill {
                         skill_id,
-                        target: None,
+                        skill_target: None,
                         ..
                     }) => {
                         server_messages.send_entity_message(
@@ -280,7 +277,7 @@ pub fn command(
                     }
                     CommandData::CastSkill(CommandCastSkill {
                         skill_id,
-                        target: Some(CommandCastSkillTarget::Entity(target_entity)),
+                        skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                         ..
                     }) => {
                         if let Some((target_client_entity, target_position, _)) =
@@ -313,7 +310,7 @@ pub fn command(
                     }
                     CommandData::CastSkill(CommandCastSkill {
                         skill_id,
-                        target: Some(CommandCastSkillTarget::Position(target_position)),
+                        skill_target: Some(CommandCastSkillTarget::Position(target_position)),
                         ..
                     }) => {
                         server_messages.send_entity_message(
@@ -341,71 +338,6 @@ pub fn command(
                     command
                         .required_duration
                         .map(|duration| duration.div_f32(attack_speed))
-                }
-                CommandData::CastSkill(CommandCastSkill {
-                    skill_id,
-                    casting_duration,
-                    has_casted_skill,
-                    ..
-                }) => {
-                    if !*has_casted_skill && command.duration >= *casting_duration {
-                        // TODO: Apply skill effect
-                        if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
-                            match skill_data.skill_type {
-                                SkillType::SelfBoundDuration | SkillType::SelfStateDuration => {
-                                    if skill_data.scope > 0 {
-                                        // Apply in AOE around current character
-                                        if let Some(client_entity_zone) =
-                                            client_entity_list.get_zone(position.zone_id)
-                                        {
-                                            for (nearby_entity, _) in client_entity_zone
-                                                .iter_entities_within_distance(
-                                                    position.position.xy(),
-                                                    skill_data.scope as f32,
-                                                )
-                                            {
-                                                // TODO: Check skill_data.target_filter
-
-                                                // TODO: Apply skill status
-                                                if let Ok((target_client_entity, _, _, _)) =
-                                                    attack_target_query.get(
-                                                        &attack_target_query_world,
-                                                        nearby_entity,
-                                                    )
-                                                {
-                                                    server_messages.send_entity_message(
-                                                        target_client_entity,
-                                                        ServerMessage::ApplySkillEffect(
-                                                            ApplySkillEffect {
-                                                                entity_id: target_client_entity.id,
-                                                                caster_entity_id: client_entity.id,
-                                                                caster_intelligence: ability_values
-                                                                    .intelligence
-                                                                    as i32,
-                                                                skill_id: *skill_id,
-                                                                effect_success: [true, true],
-                                                            },
-                                                        ),
-                                                    );
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        // Apply only to self
-                                        // TODO: Check skill_data.target_filter
-                                    }
-                                }
-                                _ => warn!("Unimplemented skill used {:?}", skill_data),
-                            }
-                        }
-                        server_messages.send_entity_message(
-                            client_entity,
-                            ServerMessage::FinishCastingSkill(client_entity.id, *skill_id),
-                        );
-
-                        *has_casted_skill = true;
-                    }
-                    command.required_duration
                 }
                 _ => command.required_duration,
             };
@@ -622,7 +554,7 @@ pub fn command(
                             // Update target
                             cmd.add_component(*entity, Target::new(*target_entity));
 
-                            // Spawn an entity for DamageSystem to apply damage
+                            // Queue up pending damage for damage system to process
                             pending_damage_list.push(PendingDamage {
                                 attacker: *entity,
                                 defender: *target_entity,
@@ -664,14 +596,16 @@ pub fn command(
                 + If skill on target entity then send GSV_SKILL_START
                 + If the entity has a casting animation - do casting animation for a required_duration
                 - Apply skill effects (damage, etc) send GSV_DAMAGE_OF_SKILL / GSV_EFFECT_OF_SKILL and GSV_RESULT_OF_SKILL
-                - Start the skill doing animation for a required_duration
+                + Start the skill doing animation for a required_duration
                 - Set NextCommand depending on skill action mode
                 */
                 CommandData::CastSkill(CommandCastSkill {
-                    skill_id, target, ..
+                    skill_id,
+                    skill_target,
+                    ..
                 }) => {
                     if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
-                        let (target_position, target_entity) = match target {
+                        let (target_position, target_entity) = match skill_target {
                             Some(CommandCastSkillTarget::Entity(target_entity)) => {
                                 if let Some((_, target_position, _)) = is_valid_skill_target(
                                     position,
@@ -704,7 +638,8 @@ pub fn command(
                                     game_data.motions.find_first_character_motion(motion_id)
                                 })
                                 .map(|motion_data| motion_data.duration)
-                                .unwrap_or_else(|| Duration::from_secs(0));
+                                .unwrap_or_else(|| Duration::from_secs(0))
+                                .mul_f32(skill_data.casting_motion_speed);
 
                             let action_duration = skill_data
                                 .action_motion_id
@@ -712,7 +647,8 @@ pub fn command(
                                     game_data.motions.find_first_character_motion(motion_id)
                                 })
                                 .map(|motion_data| motion_data.duration)
-                                .unwrap_or_else(|| Duration::from_secs(0));
+                                .unwrap_or_else(|| Duration::from_secs(0))
+                                .mul_f32(skill_data.action_motion_speed);
 
                             // For skills which target an entity, we must send a message indicating start of skill
                             if target_entity.is_some() {
@@ -722,12 +658,28 @@ pub fn command(
                                 );
                             }
 
-                            // In range, set current command to cast skill
+                            // Queue up pending skill for the skill effect to be applied after casting motion
+                            pending_skill_effect_list.push(PendingSkillEffect {
+                                caster_entity: *entity,
+                                when: server_time.now + casting_duration,
+                                skill_id: *skill_id,
+                                skill_target: match skill_target {
+                                    None => PendingSkillEffectTarget::Entity(*entity),
+                                    Some(CommandCastSkillTarget::Entity(target_entity)) => {
+                                        PendingSkillEffectTarget::Entity(*target_entity)
+                                    }
+                                    Some(CommandCastSkillTarget::Position(target_position)) => {
+                                        PendingSkillEffectTarget::Position(*target_position)
+                                    }
+                                },
+                            });
+
+                            // Set current command to cast skill
                             *command = Command::with_cast_skill(
                                 *skill_id,
-                                target.clone(),
-                                casting_duration.mul_f32(skill_data.casting_motion_speed),
-                                action_duration.mul_f32(skill_data.action_motion_speed),
+                                *skill_target,
+                                casting_duration,
+                                action_duration,
                             );
 
                             // TODO: Next comand should be set based on skill_data.action_mode

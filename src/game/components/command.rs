@@ -26,7 +26,7 @@ pub struct CommandPickupDroppedItem {
     pub target: Entity,
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub enum CommandCastSkillTarget {
     Entity(Entity),
     Position(Point2<f32>),
@@ -35,10 +35,7 @@ pub enum CommandCastSkillTarget {
 #[derive(Clone)]
 pub struct CommandCastSkill {
     pub skill_id: SkillId,
-    pub target: Option<CommandCastSkillTarget>,
-    pub casting_duration: Duration,
-    pub action_duration: Duration,
-    pub has_casted_skill: bool,
+    pub skill_target: Option<CommandCastSkillTarget>,
 }
 
 #[derive(Clone)]
@@ -123,10 +120,7 @@ impl NextCommand {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
-                target: None,
-                casting_duration: Duration::default(),
-                action_duration: Duration::default(),
-                has_casted_skill: false,
+                skill_target: None,
             })),
             has_sent_server_message: false,
         }
@@ -136,10 +130,7 @@ impl NextCommand {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
-                target: Some(CommandCastSkillTarget::Entity(target_entity)),
-                casting_duration: Duration::default(),
-                action_duration: Duration::default(),
-                has_casted_skill: false,
+                skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
             })),
             has_sent_server_message: false,
         }
@@ -149,10 +140,7 @@ impl NextCommand {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
-                target: Some(CommandCastSkillTarget::Position(position)),
-                casting_duration: Duration::default(),
-                action_duration: Duration::default(),
-                has_casted_skill: false,
+                skill_target: Some(CommandCastSkillTarget::Position(position)),
             })),
             has_sent_server_message: false,
         }
@@ -225,17 +213,14 @@ impl Command {
 
     pub fn with_cast_skill(
         skill_id: SkillId,
-        target: Option<CommandCastSkillTarget>,
+        skill_target: Option<CommandCastSkillTarget>,
         casting_duration: Duration,
         action_duration: Duration,
     ) -> Self {
         Self::new(
             CommandData::CastSkill(CommandCastSkill {
                 skill_id,
-                target,
-                casting_duration,
-                action_duration,
-                has_casted_skill: false,
+                skill_target,
             }),
             Some(casting_duration + action_duration),
         )

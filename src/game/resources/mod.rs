@@ -8,6 +8,7 @@ mod pending_damage_list;
 mod pending_personal_store_event;
 mod pending_quest_trigger_list;
 mod pending_save_list;
+mod pending_skill_effect_list;
 mod pending_use_item_list;
 mod pending_xp_list;
 mod server_list;
@@ -17,7 +18,7 @@ mod world_rates;
 mod world_time;
 
 pub use bot_list::{BotList, BotListEntry};
-pub use client_entity_list::{ClientEntityList, ClientEntitySet};
+pub use client_entity_list::{ClientEntityList, ClientEntitySet, ClientEntityZone};
 pub use control_channel::ControlChannel;
 pub use game_data::GameData;
 pub use login_tokens::{LoginToken, LoginTokens};
@@ -29,6 +30,9 @@ pub use pending_personal_store_event::{
 };
 pub use pending_quest_trigger_list::{PendingQuestTrigger, PendingQuestTriggerList};
 pub use pending_save_list::{PendingCharacterSave, PendingSave, PendingSaveList};
+pub use pending_skill_effect_list::{
+    PendingSkillEffect, PendingSkillEffectList, PendingSkillEffectTarget,
+};
 pub use pending_use_item_list::{PendingUseItem, PendingUseItemList};
 pub use pending_xp_list::{PendingXp, PendingXpList};
 pub use server_list::{GameServer, ServerList, WorldServer};
