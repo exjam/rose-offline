@@ -9,7 +9,7 @@ use crate::{
             Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership,
             MAX_STAMINA,
         },
-        messages::server::{ServerMessage, UpdateAbilityValue},
+        messages::server::{ServerMessage, UpdateAbilityValue, UpdateMoney},
     },
 };
 
@@ -301,12 +301,22 @@ pub fn ability_values_add_value(
 
     if result {
         if let Some(game_client) = game_client {
-            game_client
-                .server_message_tx
-                .send(ServerMessage::UpdateAbilityValue(
-                    UpdateAbilityValue::RewardAdd(ability_type, value),
-                ))
-                .ok();
+            if matches!(ability_type, AbilityType::Money) {
+                game_client
+                    .server_message_tx
+                    .send(ServerMessage::UpdateMoney(UpdateMoney {
+                        is_reward: true,
+                        money: inventory.unwrap().money,
+                    }))
+                    .ok();
+            } else {
+                game_client
+                    .server_message_tx
+                    .send(ServerMessage::UpdateAbilityValue(
+                        UpdateAbilityValue::RewardAdd(ability_type, value),
+                    ))
+                    .ok();
+            }
         }
     }
 
