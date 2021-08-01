@@ -6,7 +6,7 @@ use crate::game::{
         ClientEntityVisibility, Command, DamageSources, Equipment, ExperiencePoints, GameClient,
         HealthPoints, Hotbar, Inventory, Level, ManaPoints, MotionData, MoveSpeed, NextCommand,
         Npc, NpcAi, NpcStandingDirection, Position, QuestState, SkillList, SkillPoints,
-        SpawnOrigin, Stamina, StatPoints, Team, UnionMembership,
+        SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
     },
     messages::server::{ServerMessage, Teleport},
     resources::ClientEntityList,
@@ -60,6 +60,7 @@ pub fn create_character_entity(
     cmd.add_component(*entity, stat_points);
     cmd.add_component(*entity, team);
     cmd.add_component(*entity, union_membership);
+    cmd.add_component(*entity, StatusEffects::new());
 }
 
 pub fn create_npc_entity(
@@ -92,6 +93,7 @@ pub fn create_npc_entity(
     cmd.add_component(*entity, position);
     cmd.add_component(*entity, standing_direction);
     cmd.add_component(*entity, team);
+    cmd.add_component(*entity, StatusEffects::new());
 }
 
 pub fn create_monster_entity(
@@ -128,6 +130,7 @@ pub fn create_monster_entity(
     cmd.add_component(*entity, position);
     cmd.add_component(*entity, spawn_origin);
     cmd.add_component(*entity, team);
+    cmd.add_component(*entity, StatusEffects::new());
 }
 
 #[derive(Copy, Clone, Debug)]
