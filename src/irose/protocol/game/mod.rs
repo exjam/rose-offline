@@ -824,6 +824,15 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::CancelCastingSkill(entity_id, reason) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCancelCastingSkill {
+                        entity_id,
+                        reason,
+                    }))
+                    .await?;
+            }
             ServerMessage::FinishCastingSkill(entity_id, skill_id) => {
                 client
                     .connection

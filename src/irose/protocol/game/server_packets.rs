@@ -19,7 +19,8 @@ use crate::{
             UnionMembership, VehiclePartIndex,
         },
         messages::server::{
-            LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent, PickupDroppedItemError,
+            CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent,
+            PickupDroppedItemError,
         },
     },
     irose::protocol::game::common_packets::{
@@ -70,6 +71,7 @@ pub enum ServerPackets {
     ApplySkillEffect = 0x7b5,
     FinishCastingSkill = 0x7b9,
     StartCastingSkill = 0x7bb,
+    CancelCastingSkill = 0x7bd,
     OpenPersonalStore = 0x7c2,
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
@@ -1297,6 +1299,24 @@ impl From<&PacketServerApplySkillEffect> for Packet {
             writer.write_u8(*b);
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketServerCancelCastingSkill {
+    pub entity_id: ClientEntityId,
+    pub reason: CancelCastingSkillReason,
+}
+
+impl From<&PacketServerCancelCastingSkill> for Packet {
+    fn from(packet: &PacketServerCancelCastingSkill) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::CancelCastingSkill as u16);
+        writer.write_entity_id(packet.entity_id);
+        match packet.reason {
+            CancelCastingSkillReason::NeedAbility => writer.write_u8(1),
+            CancelCastingSkillReason::NeedTarget => writer.write_u8(2),
+            CancelCastingSkillReason::InvalidTarget => writer.write_u8(3),
+        }
         writer.into()
     }
 }

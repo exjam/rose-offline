@@ -331,6 +331,13 @@ pub struct ApplySkillEffect {
 }
 
 #[derive(Clone)]
+pub enum CancelCastingSkillReason {
+    NeedAbility,
+    NeedTarget,
+    InvalidTarget,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -368,4 +375,5 @@ pub enum ServerMessage {
     StartCastingSkill(ClientEntityId),
     ApplySkillEffect(ApplySkillEffect),
     FinishCastingSkill(ClientEntityId, SkillId),
+    CancelCastingSkill(ClientEntityId, CancelCastingSkillReason),
 }

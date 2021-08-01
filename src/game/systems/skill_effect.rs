@@ -5,7 +5,7 @@ use crate::{
     data::{SkillAddAbility, SkillData, SkillType, StatusEffectType},
     game::{
         components::{AbilityValues, ClientEntity, Position, StatusEffects},
-        messages::server::{ApplySkillEffect, ServerMessage},
+        messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage},
         resources::{
             ClientEntityList, PendingSkillEffect, PendingSkillEffectList, PendingSkillEffectTarget,
             ServerMessages, ServerTime,
@@ -49,7 +49,7 @@ fn apply_skill_status_effects_to_entity(
     // TODO: Check skill_data.target_filter
 
     if skill_data.harm > 0 {
-        // Apply damage to target
+        // TODO: Apply damage to target
     }
 
     // TODO: Apply skill status
@@ -286,9 +286,18 @@ pub fn skill_effect(
                     caster_client_entity,
                     ServerMessage::FinishCastingSkill(caster_client_entity.id, skill_id),
                 ),
-                Err(_) => {
-                    // TODO: Send skill cast cancel
-                }
+                Err(error) => skill_world.server_messages.send_entity_message(
+                    caster_client_entity,
+                    ServerMessage::CancelCastingSkill(
+                        caster_client_entity.id,
+                        match error {
+                            SkillCastError::NotEnoughUseAbility => {
+                                CancelCastingSkillReason::NeedAbility
+                            }
+                            _ => CancelCastingSkillReason::NeedTarget,
+                        },
+                    ),
+                ),
             }
         }
     }
