@@ -2,9 +2,12 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
 
 use crate::{
-    data::{SkillAddAbility, SkillData, SkillType, StatusEffectType},
+    data::{SkillAddAbility, SkillData, SkillTargetFilter, SkillType, StatusEffectType},
     game::{
-        components::{AbilityValues, ClientEntity, Position, StatusEffects},
+        components::{
+            AbilityValues, ClientEntity, ClientEntityType, HealthPoints, Position, StatusEffects,
+            Team,
+        },
         messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage},
         resources::{
             ClientEntityList, PendingSkillEffect, PendingSkillEffectList, PendingSkillEffectTarget,
@@ -31,6 +34,7 @@ struct SkillCaster<'a> {
     client_entity: &'a ClientEntity,
     position: &'a Position,
     ability_values: &'a AbilityValues,
+    team: &'a Team,
 }
 
 struct SkillTargetEntity<'a> {
@@ -38,6 +42,57 @@ struct SkillTargetEntity<'a> {
     client_entity: &'a ClientEntity,
     position: &'a Position,
     status_effects: &'a mut StatusEffects,
+    team: &'a Team,
+    health_points: &'a HealthPoints,
+}
+
+fn check_skill_target_filter(
+    skill_world: &mut SkillWorld,
+    skill_caster: &SkillCaster,
+    skill_target: &mut SkillTargetEntity,
+    skill_data: &SkillData,
+) -> bool {
+    match skill_data.target_filter {
+        SkillTargetFilter::OnlySelf => skill_caster.entity == skill_target.entity,
+        SkillTargetFilter::Group => true, // TODO: Implement SkillTargetFilter::Group
+        SkillTargetFilter::Guild => true, // TODO: Implement SkillTargetFilter::Guild
+        SkillTargetFilter::Allied => skill_caster.team.id == skill_target.team.id,
+        SkillTargetFilter::Monster => matches!(
+            skill_target.client_entity.entity_type,
+            ClientEntityType::Monster
+        ),
+        SkillTargetFilter::Enemy => skill_caster.team.id != skill_target.team.id,
+        SkillTargetFilter::EnemyCharacter => {
+            skill_caster.team.id != skill_target.team.id
+                && matches!(
+                    skill_target.client_entity.entity_type,
+                    ClientEntityType::Character
+                )
+        }
+        SkillTargetFilter::Character => matches!(
+            skill_target.client_entity.entity_type,
+            ClientEntityType::Character
+        ),
+        SkillTargetFilter::CharacterOrMonster => matches!(
+            skill_target.client_entity.entity_type,
+            ClientEntityType::Character | ClientEntityType::Monster
+        ),
+        SkillTargetFilter::DeadAlliedCharacter => {
+            skill_caster.team.id == skill_target.team.id
+                && skill_target.health_points.hp == 0
+                && matches!(
+                    skill_target.client_entity.entity_type,
+                    ClientEntityType::Character
+                )
+        }
+        SkillTargetFilter::EnemyMonster => {
+            skill_caster.team.id != skill_target.team.id
+                && matches!(
+                    skill_target.client_entity.entity_type,
+                    ClientEntityType::Monster
+                )
+        }
+    }
 }
 
 fn apply_skill_status_effects_to_entity(
@@ -46,7 +101,9 @@ fn apply_skill_status_effects_to_entity(
     skill_target: &mut SkillTargetEntity,
     skill_data: &SkillData,
 ) -> Result<(), SkillCastError> {
-    // TODO: Check skill_data.target_filter
+    if !check_skill_target_filter(skill_world, skill_caster, skill_target, skill_data) {
+        return Err(SkillCastError::InvalidTarget);
+    }
 
     if skill_data.harm > 0 {
         // TODO: Apply damage to target
@@ -140,7 +197,13 @@ fn apply_skill_status_effects(
     skill_caster: &SkillCaster,
     skill_target: &PendingSkillEffectTarget,
     skill_data: &SkillData,
-    target_query: &mut Query<(&ClientEntity, &Position, &mut StatusEffects)>,
+    target_query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &mut StatusEffects,
+        &Team,
+        &HealthPoints,
+    )>,
     target_query_world: &mut SubWorld,
 ) -> Result<(), SkillCastError> {
     if skill_data.scope > 0 {
@@ -152,7 +215,7 @@ fn apply_skill_status_effects(
 
         let skill_position = match skill_target {
             PendingSkillEffectTarget::Entity(target_entity) => {
-                if let Ok((_, target_position, _)) =
+                if let Ok((_, target_position, _, _, _)) =
                     target_query.get_mut(target_query_world, *target_entity)
                 {
                     Some(target_position.position.xy())
@@ -167,8 +230,13 @@ fn apply_skill_status_effects(
         for (target_entity, _) in client_entity_zone
             .iter_entities_within_distance(skill_position, skill_data.scope as f32)
         {
-            if let Ok((target_client_entity, target_position, target_status_effects)) =
-                target_query.get_mut(target_query_world, target_entity)
+            if let Ok((
+                target_client_entity,
+                target_position,
+                target_status_effects,
+                target_team,
+                target_health_points,
+            )) = target_query.get_mut(target_query_world, target_entity)
             {
                 apply_skill_status_effects_to_entity(
                     skill_world,
@@ -178,6 +246,8 @@ fn apply_skill_status_effects(
                         client_entity: target_client_entity,
                         position: target_position,
                         status_effects: target_status_effects,
+                        team: target_team,
+                        health_points: target_health_points,
                     },
                     skill_data,
                 )
@@ -187,8 +257,13 @@ fn apply_skill_status_effects(
 
         Ok(())
     } else if let PendingSkillEffectTarget::Entity(target_entity) = skill_target {
-        if let Ok((target_client_entity, target_position, target_status_effects)) =
-            target_query.get_mut(target_query_world, *target_entity)
+        if let Ok((
+            target_client_entity,
+            target_position,
+            target_status_effects,
+            target_team,
+            target_health_points,
+        )) = target_query.get_mut(target_query_world, *target_entity)
         {
             // Apply only to target entity
             apply_skill_status_effects_to_entity(
@@ -199,6 +274,8 @@ fn apply_skill_status_effects(
                     client_entity: target_client_entity,
                     position: target_position,
                     status_effects: target_status_effects,
+                    team: target_team,
+                    health_points: target_health_points,
                 },
                 skill_data,
             )
@@ -215,8 +292,14 @@ fn apply_skill_status_effects(
 pub fn skill_effect(
     world: &mut SubWorld,
     cmd: &mut CommandBuffer,
-    caster_query: &mut Query<(&ClientEntity, &Position, &AbilityValues)>,
-    target_query: &mut Query<(&ClientEntity, &Position, &mut StatusEffects)>,
+    caster_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &Team)>,
+    target_query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &mut StatusEffects,
+        &Team,
+        &HealthPoints,
+    )>,
     #[resource] game_data: &GameData,
     #[resource] client_entity_list: &ClientEntityList,
     #[resource] pending_skill_effect_list: &mut PendingSkillEffectList,
@@ -253,7 +336,7 @@ pub fn skill_effect(
         }
         let skill_data = skill_data.unwrap();
 
-        if let Ok((caster_client_entity, caster_position, caster_ability_values)) =
+        if let Ok((caster_client_entity, caster_position, caster_ability_values, caster_team)) =
             caster_query.get(&caster_world, caster_entity)
         {
             let skill_caster = SkillCaster {
@@ -261,6 +344,7 @@ pub fn skill_effect(
                 client_entity: caster_client_entity,
                 position: caster_position,
                 ability_values: caster_ability_values,
+                team: caster_team,
             };
 
             let result = match skill_data.skill_type {

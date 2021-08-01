@@ -41,13 +41,13 @@ pub enum SkillTargetFilter {
     OnlySelf = 0,
     Group = 1,
     Guild = 2,
-    Friend = 3,
+    Allied = 3,
     Monster = 4,
     Enemy = 5,
     EnemyCharacter = 6,
     Character = 7,
     CharacterOrMonster = 8,
-    DeadCharacter = 9,
+    DeadAlliedCharacter = 9,
     EnemyMonster = 10,
 }
 
