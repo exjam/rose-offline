@@ -8,6 +8,7 @@ use crate::game::components::{
     StatPoints, UnionMembership,
 };
 
+#[derive(Debug)]
 pub enum CharacterStorageError {
     NotFound,
     IoError,

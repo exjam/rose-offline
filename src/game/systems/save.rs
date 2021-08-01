@@ -1,4 +1,5 @@
 use legion::{system, systems::CommandBuffer, world::SubWorld, Query};
+use log::{error, info};
 
 use crate::{
     data::character::CharacterStorage,
@@ -85,7 +86,14 @@ pub fn save(
                         union_membership: union_membership.clone(),
                         stamina: *stamina,
                     };
-                    storage.save().ok();
+
+                    match storage.save() {
+                        Ok(_) => info!("Saved character {}", character_info.name),
+                        Err(error) => error!(
+                            "Failed to save character {} with error: {:?}",
+                            character_info.name, error
+                        ),
+                    }
 
                     (client_entity, Some(position))
                 } else {
