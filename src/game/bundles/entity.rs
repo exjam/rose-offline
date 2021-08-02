@@ -1,15 +1,19 @@
 use legion::{systems::CommandBuffer, Entity};
 
-use crate::game::{
-    components::{
-        AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
-        ClientEntityVisibility, Command, DamageSources, Equipment, ExperiencePoints, GameClient,
-        HealthPoints, Hotbar, Inventory, Level, ManaPoints, MotionData, MoveSpeed, NextCommand,
-        Npc, NpcAi, NpcStandingDirection, Position, QuestState, SkillList, SkillPoints,
-        SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+use crate::{
+    data::AbilityValueCalculator,
+    game::{
+        components::{
+            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
+            ClientEntityType, ClientEntityVisibility, Command, DamageSources, Equipment,
+            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
+            MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection,
+            Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
+            StatusEffects, Team, UnionMembership,
+        },
+        messages::server::{ServerMessage, Teleport},
+        resources::ClientEntityList,
     },
-    messages::server::{ServerMessage, Teleport},
-    resources::ClientEntityList,
 };
 
 pub fn create_character_entity(
@@ -27,6 +31,7 @@ pub fn create_character_entity(
     level: Level,
     mana_points: ManaPoints,
     motion_data: MotionData,
+    move_mode: MoveMode,
     move_speed: MoveSpeed,
     next_command: NextCommand,
     position: Position,
@@ -50,6 +55,7 @@ pub fn create_character_entity(
     cmd.add_component(*entity, level);
     cmd.add_component(*entity, mana_points);
     cmd.add_component(*entity, motion_data);
+    cmd.add_component(*entity, move_mode);
     cmd.add_component(*entity, move_speed);
     cmd.add_component(*entity, next_command);
     cmd.add_component(*entity, position);
@@ -71,6 +77,7 @@ pub fn create_npc_entity(
     health_points: HealthPoints,
     level: Level,
     motion_data: MotionData,
+    move_mode: MoveMode,
     move_speed: MoveSpeed,
     next_command: NextCommand,
     npc: Npc,
@@ -84,6 +91,7 @@ pub fn create_npc_entity(
     cmd.add_component(*entity, health_points);
     cmd.add_component(*entity, level);
     cmd.add_component(*entity, motion_data);
+    cmd.add_component(*entity, move_mode);
     cmd.add_component(*entity, move_speed);
     cmd.add_component(*entity, next_command);
     cmd.add_component(*entity, npc);
@@ -105,6 +113,7 @@ pub fn create_monster_entity(
     health_points: HealthPoints,
     level: Level,
     motion_data: MotionData,
+    move_mode: MoveMode,
     move_speed: MoveSpeed,
     next_command: NextCommand,
     npc: Npc,
@@ -121,6 +130,7 @@ pub fn create_monster_entity(
     cmd.add_component(*entity, health_points);
     cmd.add_component(*entity, level);
     cmd.add_component(*entity, motion_data);
+    cmd.add_component(*entity, move_mode);
     cmd.add_component(*entity, move_speed);
     cmd.add_component(*entity, next_command);
     cmd.add_component(*entity, npc);

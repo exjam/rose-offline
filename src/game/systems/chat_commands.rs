@@ -21,9 +21,9 @@ use crate::{
         },
         components::{
             AbilityValues, BasicStats, BotAi, ClientEntity, ClientEntityType, Command,
-            EquipmentIndex, EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveSpeed,
-            NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina, StatPoints, Team,
-            UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+            EquipmentIndex, EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveMode,
+            MoveSpeed, NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina,
+            StatPoints, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
         messages::server::{ServerMessage, Whisper},
         resources::{
@@ -177,6 +177,7 @@ fn create_bot_entity(
 
     let command = Command::default();
     let next_command = NextCommand::default();
+    let move_mode = MoveMode::Run;
     let move_speed = MoveSpeed::new(ability_values.run_speed as f32);
     let team = Team::default_character();
 
@@ -215,6 +216,7 @@ fn create_bot_entity(
         bot_data.level,
         bot_data.mana_points,
         motion_data,
+        move_mode,
         move_speed,
         next_command,
         bot_data.position,

@@ -13,8 +13,8 @@ use crate::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemSlot, Level, ManaPoints, MoveSpeed, NextCommand, Position, QuestState, SkillList,
-            StatPoints, Team, WorldClient,
+            ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed, NextCommand, Position, QuestState,
+            SkillList, StatPoints, Team, WorldClient,
         },
         messages::{
             client::{
@@ -107,6 +107,7 @@ pub fn game_server_authentication(
                                     character.info.gender as usize,
                                 );
 
+                                let move_mode = MoveMode::Run;
                                 let move_speed = MoveSpeed::new(ability_values.run_speed);
 
                                 create_character_entity(
@@ -124,6 +125,7 @@ pub fn game_server_authentication(
                                     character.level.clone(),
                                     mana_points,
                                     motion_data,
+                                    move_mode,
                                     move_speed,
                                     NextCommand::default(),
                                     position.clone(),

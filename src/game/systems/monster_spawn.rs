@@ -8,7 +8,7 @@ use crate::{
         bundles::{client_entity_join_zone, create_monster_entity},
         components::{
             ClientEntityType, Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint,
-            MoveSpeed, NextCommand, Npc, NpcAi, Position, SpawnOrigin, Team,
+            MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, Position, SpawnOrigin, Team,
         },
         resources::{ClientEntityList, GameData, ServerTime},
     },
@@ -177,6 +177,7 @@ pub fn monster_spawn(
                     .map(DamageSources::new);
                 let health_points = HealthPoints::new(ability_values.max_health as u32);
                 let level = Level::new(ability_values.level as u32);
+                let move_mode = MoveMode::Walk;
                 let move_speed = MoveSpeed::new(ability_values.walk_speed as f32);
 
                 let position = Position::new(
@@ -201,6 +202,7 @@ pub fn monster_spawn(
                     health_points,
                     level,
                     game_data.npcs.get_npc_motions(id),
+                    move_mode,
                     move_speed,
                     NextCommand::default(),
                     Npc::new(id, 0),

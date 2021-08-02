@@ -4,8 +4,8 @@ use log::warn;
 use crate::game::{
     bundles::{client_entity_join_zone, create_npc_entity},
     components::{
-        ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveSpeed, NextCommand,
-        Npc, NpcAi, NpcStandingDirection, Position, Team, Zone,
+        ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveMode, MoveSpeed,
+        NextCommand, Npc, NpcAi, NpcStandingDirection, Position, Team, Zone,
     },
     resources::{ClientEntityList, GameData},
 };
@@ -80,6 +80,7 @@ pub fn startup_zones(
             let ability_values = ability_values.unwrap();
             let health_points = HealthPoints::new(ability_values.max_health as u32);
             let level = Level::new(ability_values.level as u32);
+            let move_mode = MoveMode::Walk;
             let move_speed = MoveSpeed::new(ability_values.walk_speed as f32);
 
             let entity = cmd.push(());
@@ -92,6 +93,7 @@ pub fn startup_zones(
                 health_points,
                 level,
                 game_data.npcs.get_npc_motions(npc.npc_id),
+                move_mode,
                 move_speed,
                 NextCommand::default(),
                 Npc::new(npc.npc_id, conversation_index as u16),
