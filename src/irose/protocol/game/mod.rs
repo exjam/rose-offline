@@ -408,6 +408,7 @@ impl GameClient {
                         move_speed: data.move_speed,
                         target_entity_id: data.target_entity_id,
                         team: &data.team,
+                        personal_store_info: &data.personal_store_info,
                     }))
                     .await?;
             }

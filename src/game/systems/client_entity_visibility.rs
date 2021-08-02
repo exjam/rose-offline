@@ -5,7 +5,7 @@ use crate::game::{
         AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
         ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, ExpireTime,
         GameClient, HealthPoints, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
-        Position, StatusEffects, Target, Team,
+        PersonalStore, Position, StatusEffects, Target, Team,
     },
     messages::server::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
@@ -40,6 +40,7 @@ pub fn client_entity_visibility(
         &Team,
         Option<&Destination>,
         Option<&Target>,
+        Option<&PersonalStore>,
     )>,
     dropped_item_query: &mut Query<(&Option<DroppedItem>, &Position, &ExpireTime, Option<&Owner>)>,
     monsters_query: &mut Query<(
@@ -116,6 +117,7 @@ pub fn client_entity_visibility(
                                     spawn_team,
                                     spawn_destination,
                                     spawn_target,
+                                    spawn_personal_store,
                                 )) = characters_query.get(&characters_query_world, *spawn_entity)
                                 {
                                     let target_entity_id = spawn_target
@@ -147,6 +149,14 @@ pub fn client_entity_visibility(
                                                 status_effects: spawn_status_effects.clone(),
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
+                                                personal_store_info: spawn_personal_store.map(
+                                                    |personal_store| {
+                                                        (
+                                                            personal_store.skin,
+                                                            personal_store.title.clone(),
+                                                        )
+                                                    },
+                                                ),
                                             },
                                         )))
                                         .ok();

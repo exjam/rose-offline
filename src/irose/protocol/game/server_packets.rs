@@ -740,6 +740,7 @@ pub struct PacketServerSpawnEntityCharacter<'a> {
     pub status_effects: &'a StatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: &'a Team,
+    pub personal_store_info: &'a Option<(i32, String)>,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
@@ -781,13 +782,30 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
             writer.write_equipment_item_part(packet.equipment.get_vehicle_item(*index));
         }
 
-        writer.write_u16(packet.position.position.z as u16); // z
-        writer.write_u32(0); // sub flag
+        writer.write_u16(packet.position.position.z as u16);
+
+        /*
+        TODO Sub flags:
+        Hide = 1,
+        PersonalStore = 2,
+        IntroChat = 4,
+        AruaFairy = 0x40000000,
+        */
+        let mut sub_flags = 0;
+        if packet.personal_store_info.is_some() {
+            sub_flags |= 0x2;
+        }
+        writer.write_u32(sub_flags);
         writer.write_null_terminated_utf8(&packet.character_info.name);
 
         writer.write_status_effects_values(packet.status_effects);
-        // if sub flag == store then u16 type, str shop name
-        // optional clan info of u32 clan id, u32 clan mark, u8 clan level, u8 clan rank
+
+        if let Some((personal_store_skin, personal_store_title)) = packet.personal_store_info {
+            writer.write_u16(*personal_store_skin as u16);
+            writer.write_null_terminated_utf8(personal_store_title);
+        }
+
+        // TODO: Clan info - u32 clan id, u32 clan mark, u8 clan level, u8 clan rank
         writer.into()
     }
 }

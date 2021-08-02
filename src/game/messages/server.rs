@@ -104,6 +104,7 @@ pub struct SpawnEntityCharacter {
     pub status_effects: StatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
+    pub personal_store_info: Option<(i32, String)>,
 }
 
 #[derive(Clone)]
