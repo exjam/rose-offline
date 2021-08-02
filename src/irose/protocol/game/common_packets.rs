@@ -5,11 +5,11 @@ use std::convert::TryInto;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        ItemReference, SkillPageType,
+        ItemReference, SkillPageType, StatusEffectType,
     },
     game::components::{
         Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
-        SkillSlot, INVENTORY_PAGE_SIZE,
+        SkillSlot, StatusEffects, INVENTORY_PAGE_SIZE,
     },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
@@ -399,5 +399,60 @@ impl PacketWriteMoveMode for PacketWriter {
             MoveMode::Walk => 0,
             MoveMode::Run => 1,
         })
+    }
+}
+
+pub trait PacketWriteStatusEffects {
+    fn write_status_effects_flags_u32(&mut self, status_effects: &StatusEffects);
+}
+
+fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
+    match status_effect_type {
+        StatusEffectType::IncreaseHp => 0x00000001,
+        StatusEffectType::IncreaseMp => 0x00000002,
+        StatusEffectType::Poisoned => 0x00000004,
+        StatusEffectType::IncreaseMaxHp => 0x00000010,
+        StatusEffectType::IncreaseMaxMp => 0x00000020,
+        StatusEffectType::IncreaseMoveSpeed => 0x00000040,
+        StatusEffectType::DecreaseMoveSpeed => 0x00000080,
+        StatusEffectType::IncreaseAttackSpeed => 0x00000100,
+        StatusEffectType::DecreaseAttackSpeed => 0x00000200,
+        StatusEffectType::IncreaseAttackPower => 0x00000400,
+        StatusEffectType::DecreaseAttackPower => 0x00000800,
+        StatusEffectType::IncreaseDefence => 0x00001000,
+        StatusEffectType::DecreaseDefence => 0x00002000,
+        StatusEffectType::IncreaseResistance => 0x00004000,
+        StatusEffectType::DecreaseResistance => 0x00008000,
+        StatusEffectType::IncreaseHit => 0x00010000,
+        StatusEffectType::DecreaseHit => 0x00020000,
+        StatusEffectType::IncreaseCritical => 0x00040000,
+        StatusEffectType::DecreaseCritical => 0x00080000,
+        StatusEffectType::IncreaseAvoid => 0x00100000,
+        StatusEffectType::DecreaseAvoid => 0x00200000,
+        StatusEffectType::Dumb => 0x00400000,
+        StatusEffectType::Sleep => 0x00800000,
+        StatusEffectType::Fainting => 0x01000000,
+        StatusEffectType::Disguise => 0x02000000,
+        StatusEffectType::Transparent => 0x04000000,
+        StatusEffectType::ShieldDamage => 0x08000000,
+        StatusEffectType::DummyDamage => 0x10000000,
+        StatusEffectType::DecreaseLifeTime => 0x20000000,
+        StatusEffectType::Revive => 0x40000000,
+        StatusEffectType::Taunt => 0x80000000,
+        _ => 0,
+    }
+}
+
+impl PacketWriteStatusEffects for PacketWriter {
+    fn write_status_effects_flags_u32(&mut self, status_effects: &StatusEffects) {
+        let mut status_effect_flags = 0u32;
+
+        for (status_effect_type, status_effect) in status_effects.active.iter() {
+            if status_effect.is_some() {
+                status_effect_flags |= get_status_effect_type_flag(status_effect_type);
+            }
+        }
+
+        self.write_u32(status_effect_flags);
     }
 }
