@@ -263,7 +263,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         required_weapon_class: data.get_required_weapon_class(id),
         scope: data.get_scope(id).unwrap_or(0),
         skill_type,
-        status_effect_duration: Duration::from_millis(
+        status_effect_duration: Duration::from_secs(
             data.get_status_effect_duration_ms(id).unwrap_or(0) as u64,
         ),
         status_effects: data.get_status_effects(id),
