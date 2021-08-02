@@ -9,8 +9,9 @@ use crate::{
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
-        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money, Npc,
-        NpcStandingDirection, Position, SkillPoints, SkillSlot, StatPoints, StatusEffects, Team,
+        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,
+        MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot,
+        StatPoints, StatusEffects, Team,
     },
 };
 
@@ -98,7 +99,8 @@ pub struct SpawnEntityCharacter {
     pub level: Level,
     pub passive_attack_speed: i32,
     pub position: Position,
-    pub run_speed: f32,
+    pub move_mode: MoveMode,
+    pub move_speed: MoveSpeed,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
 }
@@ -114,6 +116,7 @@ pub struct SpawnEntityNpc {
     pub destination: Option<Destination>,
     pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
+    pub move_mode: MoveMode,
 }
 
 #[derive(Clone)]
@@ -126,6 +129,7 @@ pub struct SpawnEntityMonster {
     pub destination: Option<Destination>,
     pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
+    pub move_mode: MoveMode,
 }
 
 #[derive(Clone)]

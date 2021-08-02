@@ -4,8 +4,8 @@ use crate::game::{
     components::{
         AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
         ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, ExpireTime,
-        GameClient, HealthPoints, Level, MoveSpeed, Npc, NpcStandingDirection, Owner, Position,
-        Target, Team,
+        GameClient, HealthPoints, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
+        Position, Target, Team,
     },
     messages::server::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
@@ -33,6 +33,7 @@ pub fn client_entity_visibility(
         &Equipment,
         &HealthPoints,
         &Level,
+        &MoveMode,
         &MoveSpeed,
         &Position,
         &Team,
@@ -46,6 +47,7 @@ pub fn client_entity_visibility(
         &Team,
         &HealthPoints,
         &Command,
+        &MoveMode,
         Option<&Destination>,
         Option<&Target>,
     )>,
@@ -56,6 +58,7 @@ pub fn client_entity_visibility(
         &Team,
         &HealthPoints,
         &Command,
+        &MoveMode,
         Option<&Destination>,
         Option<&Target>,
     )>,
@@ -103,6 +106,7 @@ pub fn client_entity_visibility(
                                     spawn_equipment,
                                     spawn_health_points,
                                     spawn_level,
+                                    spawn_move_mode,
                                     spawn_move_speed,
                                     spawn_position,
                                     spawn_team,
@@ -132,7 +136,8 @@ pub fn client_entity_visibility(
                                                 team: spawn_team.clone(),
                                                 equipment: spawn_equipment.clone(),
                                                 level: spawn_level.clone(),
-                                                run_speed: spawn_move_speed.speed as f32,
+                                                move_mode: *spawn_move_mode,
+                                                move_speed: *spawn_move_speed,
                                                 passive_attack_speed: spawn_ability_values
                                                     .passive_attack_speed,
                                                 command: spawn_command.clone(),
@@ -183,6 +188,7 @@ pub fn client_entity_visibility(
                                     spawn_team,
                                     spawn_health,
                                     spawn_command,
+                                    spawn_move_mode,
                                     spawn_destination,
                                     spawn_target,
                                 )) = monsters_query.get(&monster_query_world, *spawn_entity)
@@ -209,6 +215,7 @@ pub fn client_entity_visibility(
                                                 destination: spawn_destination.cloned(),
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
+                                                move_mode: *spawn_move_mode,
                                             },
                                         ))
                                         .ok();
@@ -222,6 +229,7 @@ pub fn client_entity_visibility(
                                     spawn_team,
                                     spawn_health,
                                     spawn_command,
+                                    spawn_move_mode,
                                     spawn_destination,
                                     spawn_target,
                                 )) = npcs_query.get(&npc_query_world, *spawn_entity)
@@ -248,6 +256,7 @@ pub fn client_entity_visibility(
                                             destination: spawn_destination.cloned(),
                                             command: spawn_command.clone(),
                                             target_entity_id,
+                                            move_mode: *spawn_move_mode,
                                         }))
                                         .ok();
                                 }

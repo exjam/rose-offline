@@ -1,3 +1,4 @@
+#[derive(Copy, Clone)]
 pub struct MoveSpeed {
     pub speed: f32,
 }

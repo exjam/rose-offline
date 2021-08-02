@@ -403,7 +403,8 @@ impl GameClient {
                         level: &data.level,
                         passive_attack_speed: data.passive_attack_speed,
                         position: &data.position,
-                        run_speed: data.run_speed,
+                        move_mode: data.move_mode,
+                        move_speed: data.move_speed,
                         target_entity_id: data.target_entity_id,
                         team: &data.team,
                     }))
@@ -437,6 +438,7 @@ impl GameClient {
                 destination,
                 ref command,
                 target_entity_id,
+                move_mode,
             }) => {
                 client
                     .connection
@@ -450,6 +452,7 @@ impl GameClient {
                         destination: destination.as_ref(),
                         command,
                         target_entity_id,
+                        move_mode,
                     }))
                     .await?;
             }
@@ -462,6 +465,7 @@ impl GameClient {
                 destination,
                 ref command,
                 target_entity_id,
+                move_mode,
             }) => {
                 client
                     .connection
@@ -474,6 +478,7 @@ impl GameClient {
                         destination: destination.as_ref(),
                         command,
                         target_entity_id,
+                        move_mode,
                     }))
                     .await?;
             }

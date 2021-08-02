@@ -8,8 +8,8 @@ use crate::{
         ItemReference, SkillPageType,
     },
     game::components::{
-        Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money, SkillSlot,
-        INVENTORY_PAGE_SIZE,
+        Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
+        SkillSlot, INVENTORY_PAGE_SIZE,
     },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
@@ -386,5 +386,18 @@ impl<'a> PacketReadSkillSlot for PacketReader<'a> {
 impl PacketWriteSkillSlot for PacketWriter {
     fn write_skill_slot_u8(&mut self, slot: SkillSlot) {
         self.write_u8(skill_slot_to_index(slot) as u8)
+    }
+}
+
+pub trait PacketWriteMoveMode {
+    fn write_move_mode_u8(&mut self, move_mode: MoveMode);
+}
+
+impl PacketWriteMoveMode for PacketWriter {
+    fn write_move_mode_u8(&mut self, move_mode: MoveMode) {
+        self.write_u8(match move_mode {
+            MoveMode::Walk => 0,
+            MoveMode::Run => 1,
+        })
     }
 }

@@ -14,9 +14,9 @@ use crate::{
             AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
             CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
             Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-            Inventory, ItemSlot, Level, ManaPoints, Money, Npc, NpcStandingDirection, Position,
-            QuestState, SkillList, SkillPage, SkillPoints, Stamina, StatPoints, StatusEffects,
-            Team, UnionMembership, VehiclePartIndex,
+            Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
+            NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints, Stamina,
+            StatPoints, StatusEffects, Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent,
@@ -24,7 +24,8 @@ use crate::{
         },
     },
     irose::protocol::game::common_packets::{
-        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteSkillSlot,
+        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
+        PacketWriteSkillSlot,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -661,6 +662,7 @@ pub struct PacketServerSpawnEntityNpc<'a> {
     pub command: &'a Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub health: &'a HealthPoints,
+    pub move_mode: MoveMode,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
@@ -673,7 +675,7 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
-        writer.write_u8(0); // move mode
+        writer.write_move_mode_u8(packet.move_mode);
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
@@ -694,6 +696,7 @@ pub struct PacketServerSpawnEntityMonster<'a> {
     pub health: &'a HealthPoints,
     pub command: &'a Command,
     pub target_entity_id: Option<ClientEntityId>,
+    pub move_mode: MoveMode,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
@@ -706,7 +709,7 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
-        writer.write_u8(0); // move mode
+        writer.write_move_mode_u8(packet.move_mode);
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
@@ -724,9 +727,10 @@ pub struct PacketServerSpawnEntityCharacter<'a> {
     pub equipment: &'a Equipment,
     pub health: &'a HealthPoints,
     pub level: &'a Level,
+    pub move_mode: MoveMode,
+    pub move_speed: MoveSpeed,
     pub passive_attack_speed: i32,
     pub position: &'a Position,
-    pub run_speed: f32,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: &'a Team,
 }
@@ -741,12 +745,12 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
-        writer.write_u8(1); // move mode
+        writer.write_move_mode_u8(packet.move_mode);
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_u32(0); // status flag
         writer.write_u8(packet.character_info.gender);
-        writer.write_u16(packet.run_speed as u16);
+        writer.write_u16(packet.move_speed.speed as u16);
         writer.write_u16(packet.passive_attack_speed as u16);
         writer.write_u8(0); // weight rate
 
