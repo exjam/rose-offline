@@ -15,7 +15,7 @@ use crate::{
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
             ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed, NextCommand, Position, QuestState,
-            SkillList, StatPoints, Team, WorldClient,
+            SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
         messages::{
             client::{
@@ -234,6 +234,7 @@ pub fn game_server_main(
         &SkillList,
         &mut QuestState,
         &MoveMode,
+        &StatusEffects,
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -265,6 +266,7 @@ pub fn game_server_main(
             skill_list,
             quest_state,
             move_mode,
+            status_effects,
         )| {
             if let Ok(message) = client.client_message_rx.try_recv() {
                 match message {
@@ -406,6 +408,7 @@ pub fn game_server_main(
                             game_data.ability_value_calculator.as_ref(),
                             client_entity,
                             entity,
+                            status_effects,
                             Some(basic_stats),
                             Some(character_info),
                             Some(equipment),
@@ -448,6 +451,7 @@ pub fn game_server_main(
                                     game_data.ability_value_calculator.as_ref(),
                                     client_entity,
                                     entity,
+                                    status_effects,
                                     Some(basic_stats),
                                     Some(character_info),
                                     Some(equipment),

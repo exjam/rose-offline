@@ -4,7 +4,8 @@ use crate::game::{
     components::{
         AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
         ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, ExpireTime,
-        GameClient, HealthPoints, Level, Npc, NpcStandingDirection, Owner, Position, Target, Team,
+        GameClient, HealthPoints, Level, MoveSpeed, Npc, NpcStandingDirection, Owner, Position,
+        Target, Team,
     },
     messages::server::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
@@ -32,6 +33,7 @@ pub fn client_entity_visibility(
         &Equipment,
         &HealthPoints,
         &Level,
+        &MoveSpeed,
         &Position,
         &Team,
         Option<&Destination>,
@@ -101,6 +103,7 @@ pub fn client_entity_visibility(
                                     spawn_equipment,
                                     spawn_health_points,
                                     spawn_level,
+                                    spawn_move_speed,
                                     spawn_position,
                                     spawn_team,
                                     spawn_destination,
@@ -129,7 +132,7 @@ pub fn client_entity_visibility(
                                                 team: spawn_team.clone(),
                                                 equipment: spawn_equipment.clone(),
                                                 level: spawn_level.clone(),
-                                                run_speed: spawn_ability_values.run_speed,
+                                                run_speed: spawn_move_speed.speed as f32,
                                                 passive_attack_speed: spawn_ability_values
                                                     .passive_attack_speed,
                                                 command: spawn_command.clone(),

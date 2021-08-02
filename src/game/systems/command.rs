@@ -3,21 +3,25 @@ use std::time::Duration;
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use nalgebra::Point3;
 
-use crate::game::{
-    bundles::client_entity_leave_zone,
-    components::{
-        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
-        CommandCastSkillTarget, CommandData, CommandMove, CommandPickupDroppedItem, Destination,
-        DroppedItem, GameClient, HealthPoints, Inventory, MotionData, NextCommand, Owner,
-        PersonalStore, Position, Target,
-    },
-    messages::server::{
-        self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
-        ServerMessage,
-    },
-    resources::{
-        ClientEntityList, GameData, PendingDamage, PendingDamageList, PendingSkillEffect,
-        PendingSkillEffectList, PendingSkillEffectTarget, ServerMessages, ServerTime,
+use crate::{
+    data::GetAbilityValues,
+    game::{
+        bundles::client_entity_leave_zone,
+        components::{
+            AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack,
+            CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
+            CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
+            Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, StatusEffects,
+            Target,
+        },
+        messages::server::{
+            self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
+            ServerMessage,
+        },
+        resources::{
+            ClientEntityList, GameData, PendingDamage, PendingDamageList, PendingSkillEffect,
+            PendingSkillEffectList, PendingSkillEffectTarget, ServerMessages, ServerTime,
+        },
     },
 };
 
@@ -71,15 +75,36 @@ fn is_valid_move_target<'a>(
 fn is_valid_attack_target<'a>(
     position: &Position,
     target_entity: &Entity,
-    attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    attack_target_query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &AbilityValues,
+        &HealthPoints,
+        &StatusEffects,
+    )>,
     attack_target_query_world: &'a SubWorld,
-) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
+) -> Option<(
+    &'a ClientEntity,
+    &'a Position,
+    &'a AbilityValues,
+    &'a StatusEffects,
+)> {
     // TODO: Check Team
-    if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
-        attack_target_query.get(attack_target_query_world, *target_entity)
+    if let Ok((
+        target_client_entity,
+        target_position,
+        target_ability_values,
+        target_health,
+        target_status_effects,
+    )) = attack_target_query.get(attack_target_query_world, *target_entity)
     {
         if target_position.zone_id == position.zone_id && target_health.hp > 0 {
-            return Some((target_client_entity, target_position, target_ability_values));
+            return Some((
+                target_client_entity,
+                target_position,
+                target_ability_values,
+                target_status_effects,
+            ));
         }
     }
 
@@ -89,12 +114,23 @@ fn is_valid_attack_target<'a>(
 fn is_valid_skill_target<'a>(
     position: &Position,
     target_entity: &Entity,
-    attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    attack_target_query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &AbilityValues,
+        &HealthPoints,
+        &StatusEffects,
+    )>,
     attack_target_query_world: &'a SubWorld,
 ) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
     // TODO: Check Team
-    if let Ok((target_client_entity, target_position, target_ability_values, _target_health)) =
-        attack_target_query.get(attack_target_query_world, *target_entity)
+    if let Ok((
+        target_client_entity,
+        target_position,
+        target_ability_values,
+        _target_health,
+        _target_status_effects,
+    )) = attack_target_query.get(attack_target_query_world, *target_entity)
     {
         if target_position.zone_id == position.zone_id {
             return Some((target_client_entity, target_position, target_ability_values));
@@ -149,6 +185,7 @@ pub fn command(
         &Position,
         &MotionData,
         &AbilityValues,
+        &StatusEffects,
         &mut Command,
         &mut NextCommand,
         Option<&GameClient>,
@@ -156,7 +193,13 @@ pub fn command(
         Option<&PersonalStore>,
     )>,
     move_target_query: &mut Query<(&ClientEntity, &Position)>,
-    attack_target_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+    attack_target_query: &mut Query<(
+        &ClientEntity,
+        &Position,
+        &AbilityValues,
+        &HealthPoints,
+        &StatusEffects,
+    )>,
     pickup_dropped_item_target_query: &mut Query<(
         &ClientEntity,
         &Position,
@@ -183,12 +226,15 @@ pub fn command(
             position,
             motion_data,
             ability_values,
+            status_effects,
             command,
             next_command,
             game_client,
             inventory,
             personal_store,
         )| {
+            let ability_values = (ability_values, status_effects);
+
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 // Send any server message required for update client next command
                 match next_command.command.as_mut().unwrap() {
@@ -235,7 +281,7 @@ pub fn command(
                     CommandData::Attack(CommandAttack {
                         target: target_entity,
                     }) => {
-                        if let Some((target_client_entity, target_position, _)) =
+                        if let Some((target_client_entity, target_position, ..)) =
                             is_valid_attack_target(
                                 position,
                                 target_entity,
@@ -280,7 +326,7 @@ pub fn command(
                         skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                         ..
                     }) => {
-                        if let Some((target_client_entity, target_position, _)) =
+                        if let Some((target_client_entity, target_position, ..)) =
                             is_valid_skill_target(
                                 position,
                                 target_entity,
@@ -334,7 +380,8 @@ pub fn command(
 
             let required_duration = match &mut command.command {
                 CommandData::Attack(_) => {
-                    let attack_speed = i32::max(ability_values.attack_speed, 30) as f32 / 100.0;
+                    let attack_speed =
+                        i32::max(ability_values.get_attack_speed(), 30) as f32 / 100.0;
                     command
                         .required_duration
                         .map(|duration| duration.div_f32(attack_speed))
@@ -523,19 +570,23 @@ pub fn command(
                 CommandData::Attack(CommandAttack {
                     target: target_entity,
                 }) => {
-                    if let Some((_, target_position, target_ability_values)) =
-                        is_valid_attack_target(
-                            position,
-                            target_entity,
-                            attack_target_query,
-                            &attack_target_query_world,
-                        )
-                    {
+                    if let Some((
+                        _,
+                        target_position,
+                        target_ability_values,
+                        target_status_effects,
+                    )) = is_valid_attack_target(
+                        position,
+                        target_entity,
+                        attack_target_query,
+                        &attack_target_query_world,
+                    ) {
+                        let target_ability_values = (target_ability_values, target_status_effects);
                         let distance =
                             (target_position.position.xy() - position.position.xy()).magnitude();
 
                         // Check if we are in attack range
-                        let attack_range = ability_values.attack_range as f32;
+                        let attack_range = ability_values.get_attack_range() as f32;
                         if distance < attack_range {
                             let (attack_duration, hit_count) = motion_data
                                 .get_attack()

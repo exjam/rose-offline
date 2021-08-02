@@ -1,7 +1,7 @@
 use legion::{systems::CommandBuffer, Entity};
 
 use crate::{
-    data::AbilityValueCalculator,
+    data::{AbilityValueCalculator, GetAbilityValues},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
@@ -222,6 +222,7 @@ pub fn client_entity_recalculate_ability_values(
     ability_value_calculator: &dyn AbilityValueCalculator,
     client_entity: &ClientEntity,
     entity: &Entity,
+    status_effects: &StatusEffects,
     basic_stats: Option<&BasicStats>,
     character_info: Option<&CharacterInfo>,
     equipment: Option<&Equipment>,
@@ -248,17 +249,27 @@ pub fn client_entity_recalculate_ability_values(
     }?;
 
     if let Some(health_points) = health_points {
-        health_points.hp = health_points.hp.max(ability_values.max_health as u32);
+        health_points.hp = health_points
+            .hp
+            .max((&ability_values, status_effects).get_max_health() as u32);
     }
 
     if let Some(mana_points) = mana_points {
-        mana_points.mp = mana_points.mp.max(ability_values.max_mana as u32);
+        mana_points.mp = mana_points
+            .mp
+            .max((&ability_values, status_effects).get_max_mana() as u32);
     }
 
     if let Some(move_mode) = move_mode {
         match move_mode {
-            MoveMode::Run => cmd.add_component(*entity, MoveSpeed::new(ability_values.run_speed)),
-            MoveMode::Walk => cmd.add_component(*entity, MoveSpeed::new(ability_values.walk_speed)),
+            MoveMode::Run => cmd.add_component(
+                *entity,
+                MoveSpeed::new((&ability_values, status_effects).get_run_speed()),
+            ),
+            MoveMode::Walk => cmd.add_component(
+                *entity,
+                MoveSpeed::new((&ability_values, status_effects).get_walk_speed()),
+            ),
         }
     }
 

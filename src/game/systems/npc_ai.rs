@@ -13,14 +13,14 @@ use crate::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
             AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
         },
-        Damage,
+        Damage, GetAbilityValues,
     },
     game::{
         bundles::client_entity_leave_zone,
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, Team,
+            NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, StatusEffects, Team,
         },
         messages::server::ServerMessage,
         resources::{ClientEntityList, PendingXp, PendingXpList, ServerTime, WorldRates},
@@ -37,7 +37,7 @@ struct AiSourceEntity<'a> {
     position: &'a Position,
     level: &'a Level,
     team: &'a Team,
-    ability_values: &'a AbilityValues,
+    ability_values: (&'a AbilityValues, &'a StatusEffects),
     health_points: &'a HealthPoints,
     target: Option<&'a Entity>,
     owner: Option<&'a Owner>,
@@ -49,7 +49,7 @@ struct AiAttackerEntity<'a> {
     _position: &'a Position,
     level: &'a Level,
     _team: &'a Team,
-    ability_values: &'a AbilityValues,
+    ability_values: (&'a AbilityValues, &'a StatusEffects),
     health_points: &'a HealthPoints,
     // TODO: Missing data on if clan master
 }
@@ -215,7 +215,7 @@ fn ai_condition_health_percent(
     value: i32,
 ) -> bool {
     let current = ai_parameters.source.health_points.hp as i32;
-    let max = ai_parameters.source.ability_values.max_health;
+    let max = ai_parameters.source.ability_values.get_max_health();
 
     compare_aip_value(operator, (100 * current) / max, value)
 }
@@ -251,11 +251,11 @@ fn ai_condition_no_target_and_compare_attacker_ability_value(
     if let Some(attacker) = ai_parameters.attacker {
         let ability_value = match ability {
             AipAbilityType::Level => attacker.level.level as i32,
-            AipAbilityType::Attack => attacker.ability_values.attack_power,
-            AipAbilityType::Defence => attacker.ability_values.defence,
-            AipAbilityType::Resistance => attacker.ability_values.resistance,
+            AipAbilityType::Attack => attacker.ability_values.get_attack_power(),
+            AipAbilityType::Defence => attacker.ability_values.get_defence(),
+            AipAbilityType::Resistance => attacker.ability_values.get_resistance(),
             AipAbilityType::HealthPoints => attacker.health_points.hp as i32,
-            AipAbilityType::Charm => attacker.ability_values.charm as i32,
+            AipAbilityType::Charm => attacker.ability_values.get_charm(),
         };
 
         compare_aip_value(operator, ability_value, value)
@@ -283,11 +283,11 @@ fn ai_condition_source_ability_value(
 ) -> bool {
     let ability_value = match ability {
         AipAbilityType::Level => ai_parameters.source.level.level as i32,
-        AipAbilityType::Attack => ai_parameters.source.ability_values.attack_power,
-        AipAbilityType::Defence => ai_parameters.source.ability_values.defence,
-        AipAbilityType::Resistance => ai_parameters.source.ability_values.resistance,
+        AipAbilityType::Attack => ai_parameters.source.ability_values.get_attack_power(),
+        AipAbilityType::Defence => ai_parameters.source.ability_values.get_defence(),
+        AipAbilityType::Resistance => ai_parameters.source.ability_values.get_resistance(),
         AipAbilityType::HealthPoints => ai_parameters.source.health_points.hp as i32,
-        AipAbilityType::Charm => ai_parameters.source.ability_values.charm as i32,
+        AipAbilityType::Charm => ai_parameters.source.ability_values.get_charm(),
     };
 
     compare_aip_value(operator, ability_value, value)
@@ -528,15 +528,23 @@ pub fn npc_ai(
         &Team,
         &HealthPoints,
         &AbilityValues,
+        &StatusEffects,
         Option<&Owner>,
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
     )>,
     spawn_point_query: &mut Query<&mut MonsterSpawnPoint>,
     nearby_query: &mut Query<(&Level, &Team)>,
-    attacker_query: &mut Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
+    attacker_query: &mut Query<(
+        &Position,
+        &Level,
+        &Team,
+        &AbilityValues,
+        &StatusEffects,
+        &HealthPoints,
+    )>,
     level_query: &mut Query<&Level>,
-    killer_query: &mut Query<(&Level, &AbilityValues, Option<&GameClient>)>,
+    killer_query: &mut Query<(&Level, &AbilityValues, &StatusEffects, Option<&GameClient>)>,
     #[resource] server_time: &ServerTime,
     #[resource] game_data: &GameData,
     #[resource] world_rates: &WorldRates,
@@ -563,10 +571,13 @@ pub fn npc_ai(
             team,
             health_points,
             ability_values,
+            status_effects,
             owner,
             spawn_origin,
             damage_sources,
         )| {
+            let ability_values = (ability_values, status_effects);
+
             if !npc_ai.has_run_created_trigger {
                 if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
                     if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
@@ -612,9 +623,12 @@ pub fn npc_ai(
                             attacker_level,
                             attacker_team,
                             attacker_ability_values,
+                            attacker_status_effects,
                             attacker_health_points,
                         )) = attacker_query.get(&attacker_query_world, *attacker)
                         {
+                            let attacker_ability_values =
+                                (attacker_ability_values, attacker_status_effects);
                             npc_ai_run_trigger(
                                 trigger_on_damaged,
                                 cmd,
@@ -746,7 +760,7 @@ pub fn npc_ai(
                                                 damage_source_level.level as i32,
                                                 damage_source.total_damage as i32,
                                                 level.level as i32,
-                                                ability_values.max_health,
+                                                ability_values.get_max_health(),
                                                 npc_data.reward_xp as i32,
                                                 world_rates.xp_rate,
                                             );
@@ -773,10 +787,14 @@ pub fn npc_ai(
                                     if let Ok((
                                         killer_level,
                                         killer_ability_values,
+                                        killer_status_effects,
                                         killer_game_client,
                                     )) =
                                         killer_query.get_mut(&mut killer_query_world, killer_entity)
                                     {
+                                        let killer_ability_values =
+                                            (killer_ability_values, killer_status_effects);
+
                                         // Inform client to execute npc dead event
                                         if !npc_data.death_quest_trigger_name.is_empty() {
                                             if let Some(killer_game_client) = killer_game_client {
@@ -803,8 +821,8 @@ pub fn npc_ai(
                                             npc.id,
                                             position.zone_id,
                                             level_difference,
-                                            killer_ability_values.drop_rate as i32,
-                                            killer_ability_values.charm as i32,
+                                            killer_ability_values.get_drop_rate(),
+                                            killer_ability_values.get_charm(),
                                         ) {
                                             let mut rng = rand::thread_rng();
                                             let client_entity_zone = client_entity_list

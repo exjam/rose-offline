@@ -1,15 +1,18 @@
 use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 
-use crate::game::{
-    bundles::client_entity_recalculate_ability_values,
-    components::{
-        BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, GameClient,
-        HealthPoints, Level, ManaPoints, MoveMode, SkillList, SkillPoints, Stamina, StatPoints,
-        MAX_STAMINA,
+use crate::{
+    data::GetAbilityValues,
+    game::{
+        bundles::client_entity_recalculate_ability_values,
+        components::{
+            BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, GameClient,
+            HealthPoints, Level, ManaPoints, MoveMode, SkillList, SkillPoints, Stamina, StatPoints,
+            StatusEffects, MAX_STAMINA,
+        },
+        messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
+        resources::{PendingXpList, ServerMessages},
+        GameData,
     },
-    messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
-    resources::{PendingXpList, ServerMessages},
-    GameData,
 };
 
 #[allow(clippy::type_complexity)]
@@ -34,6 +37,7 @@ pub fn experience_points(
         &Equipment,
         &BasicStats,
         &SkillList,
+        &StatusEffects,
         &MoveMode,
     )>,
     source_entity_query: &mut Query<&ClientEntity>,
@@ -99,6 +103,7 @@ pub fn experience_points(
                     equipment,
                     basic_stats,
                     skill_list,
+                    status_effects,
                     move_mode,
                 )) = ability_values_query.get_mut(&mut ability_values_query_world, *entity)
                 {
@@ -107,6 +112,7 @@ pub fn experience_points(
                         game_data.ability_value_calculator.as_ref(),
                         client_entity,
                         entity,
+                        status_effects,
                         Some(basic_stats),
                         Some(character_info),
                         Some(equipment),
@@ -117,8 +123,9 @@ pub fn experience_points(
                         Some(health_points), // TODO: Update hp / mp
                         Some(mana_points),
                     ) {
-                        health_points.hp = ability_values.max_health as u32;
-                        mana_points.mp = ability_values.max_mana as u32;
+                        health_points.hp =
+                            (&ability_values, status_effects).get_max_health() as u32;
+                        mana_points.mp = (&ability_values, status_effects).get_max_mana() as u32;
                     }
                 }
 

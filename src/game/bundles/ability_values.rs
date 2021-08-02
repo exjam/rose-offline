@@ -2,12 +2,12 @@ use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
 
 use crate::{
-    data::AbilityType,
+    data::{AbilityType, GetAbilityValues},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory,
-            Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership,
-            MAX_STAMINA,
+            Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
+            UnionMembership, MAX_STAMINA,
         },
         messages::server::{ServerMessage, UpdateAbilityValue, UpdateMoney},
     },
@@ -25,19 +25,19 @@ fn add_value<T: Saturating + Copy + 'static, U: Signed + AsPrimitive<T>>(
 }
 
 // TODO: Should all ability values be i64? XP + Money potentially do not fit into i32
-
 pub fn ability_values_get_value(
     ability_type: AbilityType,
-    ability_values: Option<&AbilityValues>,
+    ability_values: (&AbilityValues, &StatusEffects),
+    level: &Level,
+    move_speed: &MoveSpeed,
+    team_number: &Team,
+    // For characters only
     character_info: Option<&CharacterInfo>,
     experience_points: Option<&ExperiencePoints>,
     inventory: Option<&Inventory>,
-    level: Option<&Level>,
-    move_speed: Option<&MoveSpeed>,
     skill_points: Option<&SkillPoints>,
     stamina: Option<&Stamina>,
     stat_points: Option<&StatPoints>,
-    team_number: Option<&Team>,
     union_membership: Option<&UnionMembership>,
 ) -> Option<i32> {
     match ability_type {
@@ -51,26 +51,26 @@ pub fn ability_values_get_value(
         AbilityType::FameG => character_info.map(|x| x.fame_g as i32),
         AbilityType::Face => character_info.map(|x| x.face as i32),
         AbilityType::Hair => character_info.map(|x| x.hair as i32),
-        AbilityType::Strength => ability_values.map(|x| x.strength as i32),
-        AbilityType::Dexterity => ability_values.map(|x| x.dexterity as i32),
-        AbilityType::Intelligence => ability_values.map(|x| x.intelligence as i32),
-        AbilityType::Concentration => ability_values.map(|x| x.concentration as i32),
-        AbilityType::Charm => ability_values.map(|x| x.charm as i32),
-        AbilityType::Sense => ability_values.map(|x| x.sense as i32),
-        AbilityType::Attack => ability_values.map(|x| x.attack_power as i32),
-        AbilityType::Defence => ability_values.map(|x| x.defence as i32),
-        AbilityType::Hit => ability_values.map(|x| x.hit as i32),
-        AbilityType::Resistance => ability_values.map(|x| x.resistance as i32),
-        AbilityType::Avoid => ability_values.map(|x| x.avoid as i32),
-        AbilityType::AttackSpeed => ability_values.map(|x| x.attack_speed as i32),
-        AbilityType::Critical => ability_values.map(|x| x.critical as i32),
-        AbilityType::Speed => move_speed.map(|x| x.speed as i32),
+        AbilityType::Strength => Some(ability_values.get_strength()),
+        AbilityType::Dexterity => Some(ability_values.get_dexterity()),
+        AbilityType::Intelligence => Some(ability_values.get_intelligence()),
+        AbilityType::Concentration => Some(ability_values.get_concentration()),
+        AbilityType::Charm => Some(ability_values.get_charm()),
+        AbilityType::Sense => Some(ability_values.get_sense()),
+        AbilityType::Attack => Some(ability_values.get_attack_power()),
+        AbilityType::Defence => Some(ability_values.get_defence()),
+        AbilityType::Hit => Some(ability_values.get_hit()),
+        AbilityType::Resistance => Some(ability_values.get_resistance()),
+        AbilityType::Avoid => Some(ability_values.get_avoid()),
+        AbilityType::AttackSpeed => Some(ability_values.get_attack_speed()),
+        AbilityType::Critical => Some(ability_values.get_critical()),
+        AbilityType::Speed => Some(move_speed.speed as i32),
         AbilityType::Skillpoint => skill_points.map(|x| x.points as i32),
         AbilityType::BonusPoint => stat_points.map(|x| x.points as i32),
         AbilityType::Experience => experience_points.map(|x| x.xp as i32),
-        AbilityType::Level => level.map(|x| x.level as i32),
+        AbilityType::Level => Some(level.level as i32),
         AbilityType::Money => inventory.map(|x| x.money.0 as i32),
-        AbilityType::TeamNumber => team_number.map(|x| x.id as i32),
+        AbilityType::TeamNumber => Some(team_number.id as i32),
         AbilityType::Union => union_membership
             .and_then(|x| x.current_union)
             .map(|x| x as i32),
@@ -85,6 +85,8 @@ pub fn ability_values_get_value(
         AbilityType::UnionPoint9 => union_membership.map(|x| x.points[8] as i32),
         AbilityType::UnionPoint10 => union_membership.map(|x| x.points[9] as i32),
         AbilityType::Stamina => stamina.map(|x| x.stamina as i32),
+        AbilityType::MaxHealth => Some(ability_values.get_max_health()),
+        AbilityType::MaxMana => Some(ability_values.get_max_mana()),
         /*
         TODO: Implement remaining get ability types.
         AbilityType::Health => todo!(),
@@ -94,8 +96,6 @@ pub fn ability_values_get_value(
         AbilityType::PvpFlag => todo!(),
         AbilityType::HeadSize => todo!(),
         AbilityType::BodySize => todo!(),
-        AbilityType::MaxHealth => todo!(),
-        AbilityType::MaxMana => todo!(),
         AbilityType::DropRate => todo!(),
         AbilityType::CurrentPlanet => todo!(),
         AbilityType::GuildNumber => todo!(),
@@ -362,7 +362,7 @@ pub fn ability_values_set_value(
         }
         AbilityType::Strength => {
             if let Some(basic_stats) = basic_stats.as_mut() {
-                basic_stats.strength = value as u16;
+                basic_stats.strength = value;
                 true
             } else {
                 false
@@ -370,7 +370,7 @@ pub fn ability_values_set_value(
         }
         AbilityType::Dexterity => {
             if let Some(basic_stats) = basic_stats.as_mut() {
-                basic_stats.dexterity = value as u16;
+                basic_stats.dexterity = value;
                 true
             } else {
                 false
@@ -378,7 +378,7 @@ pub fn ability_values_set_value(
         }
         AbilityType::Intelligence => {
             if let Some(basic_stats) = basic_stats.as_mut() {
-                basic_stats.intelligence = value as u16;
+                basic_stats.intelligence = value;
                 true
             } else {
                 false
@@ -386,7 +386,7 @@ pub fn ability_values_set_value(
         }
         AbilityType::Concentration => {
             if let Some(basic_stats) = basic_stats.as_mut() {
-                basic_stats.concentration = value as u16;
+                basic_stats.concentration = value;
                 true
             } else {
                 false
@@ -394,7 +394,7 @@ pub fn ability_values_set_value(
         }
         AbilityType::Charm => {
             if let Some(basic_stats) = basic_stats.as_mut() {
-                basic_stats.charm = value as u16;
+                basic_stats.charm = value;
                 true
             } else {
                 false
@@ -402,7 +402,7 @@ pub fn ability_values_set_value(
         }
         AbilityType::Sense => {
             if let Some(basic_stats) = basic_stats.as_mut() {
-                basic_stats.sense = value as u16;
+                basic_stats.sense = value;
                 true
             } else {
                 false

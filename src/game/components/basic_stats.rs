@@ -12,10 +12,10 @@ pub enum BasicStatType {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BasicStats {
-    pub strength: u16,
-    pub dexterity: u16,
-    pub intelligence: u16,
-    pub concentration: u16,
-    pub charm: u16,
-    pub sense: u16,
+    pub strength: i32,
+    pub dexterity: i32,
+    pub intelligence: i32,
+    pub concentration: i32,
+    pub charm: i32,
+    pub sense: i32,
 }

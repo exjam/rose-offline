@@ -21,7 +21,7 @@ use crate::{
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
             EquipmentIndex, ExperiencePoints, GameClient, Inventory, Level, Money, MoveSpeed,
-            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, Team,
+            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
             UnionMembership,
         },
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
@@ -36,22 +36,23 @@ use crate::{
 struct QuestSourceEntity<'a> {
     entity: &'a Entity,
     game_client: Option<&'a GameClient>,
-    client_entity: Option<&'a ClientEntity>,
-    ability_values: Option<&'a mut AbilityValues>,
+    ability_values: &'a AbilityValues,
     basic_stats: Option<&'a mut BasicStats>,
     character_info: Option<&'a mut CharacterInfo>,
+    client_entity: &'a ClientEntity,
     equipment: Option<&'a Equipment>,
     experience_points: Option<&'a mut ExperiencePoints>,
     inventory: Option<&'a mut Inventory>,
-    level: Option<&'a mut Level>,
-    move_speed: Option<&'a mut MoveSpeed>,
-    position: Option<&'a Position>,
+    level: &'a Level,
+    move_speed: &'a MoveSpeed,
+    position: &'a Position,
     quest_state: Option<&'a mut QuestState>,
     skill_list: Option<&'a mut SkillList>,
     skill_points: Option<&'a mut SkillPoints>,
     stamina: Option<&'a mut Stamina>,
     stat_points: Option<&'a mut StatPoints>,
-    team: Option<&'a mut Team>,
+    status_effects: &'a StatusEffects,
+    team: &'a mut Team,
     union_membership: Option<&'a mut UnionMembership>,
 }
 
@@ -204,16 +205,19 @@ fn quest_condition_ability_values(
     for &(ability_type, operator, compare_value) in ability_values {
         let current_value = ability_values_get_value(
             ability_type,
-            quest_parameters.source.ability_values.as_deref(),
+            (
+                quest_parameters.source.ability_values,
+                quest_parameters.source.status_effects,
+            ),
+            quest_parameters.source.level,
+            quest_parameters.source.move_speed,
+            quest_parameters.source.team,
             quest_parameters.source.character_info.as_deref(),
             quest_parameters.source.experience_points.as_deref(),
             quest_parameters.source.inventory.as_deref(),
-            quest_parameters.source.level.as_deref(),
-            quest_parameters.source.move_speed.as_deref(),
             quest_parameters.source.skill_points.as_deref(),
             quest_parameters.source.stamina.as_deref(),
             quest_parameters.source.stat_points.as_deref(),
-            quest_parameters.source.team.as_deref(),
             quest_parameters.source.union_membership.as_deref(),
         )
         .unwrap_or(0);
@@ -313,12 +317,7 @@ fn quest_reward_calculated_experience_points(
             reward_equation_id,
             base_reward_value,
             0,
-            quest_parameters
-                .source
-                .level
-                .as_ref()
-                .map(|x| x.level)
-                .unwrap_or(1) as i32,
+            quest_parameters.source.level.level as i32,
             quest_parameters
                 .source
                 .basic_stats
@@ -361,12 +360,7 @@ fn quest_reward_calculated_item(
                 reward_equation_id,
                 base_reward_value,
                 0,
-                quest_parameters
-                    .source
-                    .level
-                    .as_ref()
-                    .map(|x| x.level)
-                    .unwrap_or(1) as i32,
+                quest_parameters.source.level.level as i32,
                 quest_parameters
                     .source
                     .basic_stats
@@ -474,12 +468,7 @@ fn quest_reward_calculated_money(
             reward_equation_id,
             base_reward_value,
             dup_count_var.as_ref().map_or(0, |x| **x) as i32,
-            quest_parameters
-                .source
-                .level
-                .as_ref()
-                .map(|x| x.level)
-                .unwrap_or(1) as i32,
+            quest_parameters.source.level.level as i32,
             quest_parameters
                 .source
                 .basic_stats
@@ -653,23 +642,16 @@ fn quest_reward_teleport(
     new_zone_id: ZoneId,
     new_position: Point3<f32>,
 ) -> bool {
-    if let (Some(client_entity), Some(position)) = (
+    client_entity_teleport_zone(
+        quest_world.cmd,
+        quest_world.client_entity_list,
+        quest_parameters.source.entity,
         quest_parameters.source.client_entity,
         quest_parameters.source.position,
-    ) {
-        client_entity_teleport_zone(
-            quest_world.cmd,
-            quest_world.client_entity_list,
-            quest_parameters.source.entity,
-            client_entity,
-            position,
-            Position::new(new_position, new_zone_id),
-            quest_parameters.source.game_client,
-        );
-        true
-    } else {
-        false
-    }
+        Position::new(new_position, new_zone_id),
+        quest_parameters.source.game_client,
+    );
+    true
 }
 
 fn quest_trigger_apply_rewards(
@@ -840,24 +822,25 @@ pub fn quest(
     cmd: &mut CommandBuffer,
     world: &mut SubWorld,
     entity_query: &mut Query<(
-        Option<&GameClient>,
-        Option<&ClientEntity>,
-        Option<&mut AbilityValues>,
+        &ClientEntity,
+        &AbilityValues,
+        &Level,
+        &MoveSpeed,
+        &Position,
+        &StatusEffects,
+        &mut Team,
         Option<&mut BasicStats>,
         Option<&mut CharacterInfo>,
         Option<&Equipment>,
         Option<&mut ExperiencePoints>,
         Option<&mut Inventory>,
-        Option<&mut Level>,
-        Option<&mut MoveSpeed>,
-        Option<&Position>,
         Option<&mut QuestState>,
         Option<&mut SkillList>,
         Option<&mut SkillPoints>,
         Option<&mut Stamina>,
         Option<&mut StatPoints>,
-        Option<&mut Team>,
         Option<&mut UnionMembership>,
+        Option<&GameClient>,
     )>,
     #[resource] client_entity_list: &mut ClientEntityList,
     #[resource] game_data: &GameData,
@@ -885,34 +868,35 @@ pub fn quest(
         let mut success = false;
 
         if let Ok((
-            game_client,
             client_entity,
             ability_values,
+            level,
+            move_speed,
+            position,
+            status_effects,
+            team,
             basic_stats,
             character_info,
             equipment,
             experience_points,
             inventory,
-            level,
-            move_speed,
-            position,
             quest_state,
             skill_list,
             skill_points,
             stamina,
             stat_points,
-            team,
             union_membership,
+            game_client,
         )) = entity_query.get_mut(world, *trigger_entity)
         {
             let mut quest_parameters = QuestParameters {
                 source: &mut QuestSourceEntity {
                     entity: trigger_entity,
                     game_client,
-                    client_entity,
                     ability_values,
                     basic_stats,
                     character_info,
+                    client_entity,
                     equipment,
                     experience_points,
                     inventory,
@@ -924,6 +908,7 @@ pub fn quest(
                     skill_points,
                     stamina,
                     stat_points,
+                    status_effects,
                     team,
                     union_membership,
                 },

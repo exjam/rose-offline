@@ -3,9 +3,12 @@ use num_derive::FromPrimitive;
 use crate::{
     data::NpcId,
     game::components::{
-        AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
+        AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
+        Equipment, Level, SkillList, StatusEffects,
     },
 };
+
+use super::StatusEffectType;
 
 #[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum AbilityType {
@@ -125,6 +128,195 @@ pub struct Damage {
     pub apply_hit_stun: bool,
 }
 
+pub trait GetAbilityValues {
+    fn get_additional_health_recovery(&self) -> i32;
+    fn get_additional_mana_recovery(&self) -> i32;
+    fn get_attack_damage_type(&self) -> DamageType;
+    fn get_attack_range(&self) -> i32;
+    fn get_charm(&self) -> i32;
+    fn get_concentration(&self) -> i32;
+    fn get_damage_category(&self) -> DamageCategory;
+    fn get_dexterity(&self) -> i32;
+    fn get_drop_rate(&self) -> i32;
+    fn get_intelligence(&self) -> i32;
+    fn get_level(&self) -> i32;
+    fn get_max_damage_sources(&self) -> usize;
+    fn get_passive_attack_speed(&self) -> i32;
+    fn get_sense(&self) -> i32;
+    fn get_strength(&self) -> i32;
+    fn get_walk_speed(&self) -> f32;
+    fn get_attack_speed(&self) -> i32;
+    fn get_attack_power(&self) -> i32;
+    fn get_avoid(&self) -> i32;
+    fn get_critical(&self) -> i32;
+    fn get_defence(&self) -> i32;
+    fn get_hit(&self) -> i32;
+    fn get_resistance(&self) -> i32;
+    fn get_max_health(&self) -> i32;
+    fn get_max_mana(&self) -> i32;
+    fn get_run_speed(&self) -> f32;
+}
+
+impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
+    fn get_additional_health_recovery(&self) -> i32 {
+        self.0.additional_health_recovery
+    }
+
+    fn get_additional_mana_recovery(&self) -> i32 {
+        self.0.additional_mana_recovery
+    }
+
+    fn get_attack_damage_type(&self) -> DamageType {
+        self.0.attack_damage_type
+    }
+
+    fn get_attack_range(&self) -> i32 {
+        self.0.attack_range
+    }
+
+    fn get_charm(&self) -> i32 {
+        self.0.charm
+    }
+
+    fn get_concentration(&self) -> i32 {
+        self.0.concentration
+    }
+
+    fn get_damage_category(&self) -> DamageCategory {
+        self.0.damage_category
+    }
+
+    fn get_dexterity(&self) -> i32 {
+        self.0.dexterity
+    }
+
+    fn get_drop_rate(&self) -> i32 {
+        self.0.drop_rate
+    }
+
+    fn get_intelligence(&self) -> i32 {
+        self.0.intelligence
+    }
+
+    fn get_level(&self) -> i32 {
+        self.0.level
+    }
+
+    fn get_max_damage_sources(&self) -> usize {
+        self.0.max_damage_sources
+    }
+
+    fn get_passive_attack_speed(&self) -> i32 {
+        self.0.passive_attack_speed
+    }
+
+    fn get_sense(&self) -> i32 {
+        self.0.sense
+    }
+
+    fn get_strength(&self) -> i32 {
+        self.0.strength
+    }
+
+    fn get_walk_speed(&self) -> f32 {
+        self.0.walk_speed
+    }
+
+    fn get_attack_speed(&self) -> i32 {
+        self.0.attack_speed
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseAttackSpeed)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseAttackSpeed)
+    }
+
+    fn get_attack_power(&self) -> i32 {
+        self.0.attack_power
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseAttackPower)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseAttackPower)
+    }
+
+    fn get_avoid(&self) -> i32 {
+        self.0.avoid
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseAvoid)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseAvoid)
+    }
+
+    fn get_critical(&self) -> i32 {
+        self.0.critical
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseCritical)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseCritical)
+    }
+
+    fn get_defence(&self) -> i32 {
+        self.0.defence
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseDefence)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseDefence)
+    }
+
+    fn get_hit(&self) -> i32 {
+        self.0.hit
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseHit)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseHit)
+    }
+
+    fn get_resistance(&self) -> i32 {
+        self.0.resistance
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseResistance)
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseResistance)
+    }
+
+    fn get_max_health(&self) -> i32 {
+        self.0.max_health
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseMaxHp)
+    }
+
+    fn get_max_mana(&self) -> i32 {
+        self.0.max_mana
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseMaxMp)
+    }
+
+    fn get_run_speed(&self) -> f32 {
+        self.0.run_speed
+            + self
+                .1
+                .get_status_effect_value(StatusEffectType::IncreaseMoveSpeed) as f32
+            - self
+                .1
+                .get_status_effect_value(StatusEffectType::DecreaseMoveSpeed) as f32
+    }
+}
+
 pub trait AbilityValueCalculator {
     fn calculate(
         &self,
@@ -139,8 +331,8 @@ pub trait AbilityValueCalculator {
 
     fn calculate_damage(
         &self,
-        attacker: &AbilityValues,
-        defender: &AbilityValues,
+        attacker: (&AbilityValues, &StatusEffects),
+        defender: (&AbilityValues, &StatusEffects),
         hit_count: i32,
     ) -> Damage;
 

@@ -1,10 +1,10 @@
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum DamageCategory {
     Character,
     Npc,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum DamageType {
     Physical,
     Magic,
@@ -16,12 +16,12 @@ pub struct AbilityValues {
     pub level: i32,
     pub walk_speed: f32,
     pub run_speed: f32,
-    pub strength: u16,
-    pub dexterity: u16,
-    pub intelligence: u16,
-    pub concentration: u16,
-    pub charm: u16,
-    pub sense: u16,
+    pub strength: i32,
+    pub dexterity: i32,
+    pub intelligence: i32,
+    pub concentration: i32,
+    pub charm: i32,
+    pub sense: i32,
     pub max_health: i32,
     pub max_mana: i32,
     pub additional_health_recovery: i32,

@@ -169,7 +169,7 @@ pub enum UpdateAbilityValue {
 #[derive(Clone)]
 pub struct UpdateBasicStat {
     pub basic_stat_type: BasicStatType,
-    pub value: u16,
+    pub value: i32,
 }
 
 #[derive(Clone)]

@@ -34,12 +34,12 @@ struct CharacterCreatorData {
 pub struct StbInitAvatar(pub StbFile);
 
 impl StbInitAvatar {
-    stb_column! { 0, get_strength, u16 }
-    stb_column! { 1, get_dexterity, u16 }
-    stb_column! { 2, get_intelligence, u16 }
-    stb_column! { 3, get_concentration, u16 }
-    stb_column! { 4, get_charm, u16 }
-    stb_column! { 5, get_sense, u16 }
+    stb_column! { 0, get_strength, i32 }
+    stb_column! { 1, get_dexterity, i32 }
+    stb_column! { 2, get_intelligence, i32 }
+    stb_column! { 3, get_concentration, i32 }
+    stb_column! { 4, get_charm, i32 }
+    stb_column! { 5, get_sense, i32 }
 
     pub fn get_basic_stats(&self, row: usize) -> Option<BasicStats> {
         Some(BasicStats {

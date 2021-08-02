@@ -6,16 +6,17 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{ItemClass, ItemWeaponType},
-        AbilityType, AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, NpcId,
-        SkillAddAbility, SkillDatabase, SkillId,
+        AbilityType, AbilityValueCalculator, Damage, GetAbilityValues, ItemDatabase, NpcDatabase,
+        NpcId, SkillAddAbility, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
         DamageType, Equipment, EquipmentIndex, EquipmentItemDatabase, Level, SkillList,
+        StatusEffects,
     },
 };
 
-const MAX_BASIC_STAT_VALUE: u16 = 300;
+const MAX_BASIC_STAT_VALUE: i32 = 300;
 
 pub struct AbilityValuesData {
     item_database: Arc<ItemDatabase>,
@@ -45,10 +46,10 @@ impl AbilityValueCalculator for AbilityValuesData {
             level: npc_data.level,
             strength: 0,
             dexterity: 0,
-            intelligence: npc_data.level as u16,
+            intelligence: npc_data.level,
             concentration: 0,
             charm: 0,
-            sense: npc_data.level as u16,
+            sense: npc_data.level,
             max_health: npc_data.level * npc_data.health_points,
             max_mana: 100,
             additional_health_recovery: 0,
@@ -89,24 +90,24 @@ impl AbilityValueCalculator for AbilityValuesData {
 
         // TODO: Apparently we only add these passive_ability_values stats when not on a cart
         let basic_stats = BasicStats {
-            strength: (basic_stats.strength as i32
+            strength: (basic_stats.strength
                 + passive_ability_values.value.strength
-                + passive_ability_values.rate.strength) as u16,
-            dexterity: (basic_stats.dexterity as i32
+                + passive_ability_values.rate.strength),
+            dexterity: (basic_stats.dexterity
                 + passive_ability_values.value.dexterity
-                + passive_ability_values.rate.dexterity) as u16,
-            intelligence: (basic_stats.intelligence as i32
+                + passive_ability_values.rate.dexterity),
+            intelligence: (basic_stats.intelligence
                 + passive_ability_values.value.intelligence
-                + passive_ability_values.rate.intelligence) as u16,
-            concentration: (basic_stats.concentration as i32
+                + passive_ability_values.rate.intelligence),
+            concentration: (basic_stats.concentration
                 + passive_ability_values.value.concentration
-                + passive_ability_values.rate.concentration) as u16,
-            charm: (basic_stats.charm as i32
+                + passive_ability_values.rate.concentration),
+            charm: (basic_stats.charm
                 + passive_ability_values.value.charm
-                + passive_ability_values.rate.charm) as u16,
-            sense: (basic_stats.sense as i32
+                + passive_ability_values.rate.charm),
+            sense: (basic_stats.sense
                 + passive_ability_values.value.sense
-                + passive_ability_values.rate.sense) as u16,
+                + passive_ability_values.rate.sense),
         };
 
         /*
@@ -228,14 +229,15 @@ impl AbilityValueCalculator for AbilityValuesData {
 
     fn calculate_damage(
         &self,
-        attacker: &AbilityValues,
-        defender: &AbilityValues,
+        attacker: (&AbilityValues, &StatusEffects),
+        defender: (&AbilityValues, &StatusEffects),
         hit_count: i32,
     ) -> Damage {
         let mut rng = rand::thread_rng();
         let success_rate = calculate_damage_success_rate(&mut rng, attacker, defender);
         if success_rate < 20
-            && (rng.gen_range(1..=100) + (0.6 * (attacker.level - defender.level) as f32) as i32)
+            && (rng.gen_range(1..=100)
+                + (0.6 * (attacker.get_level() - defender.get_level()) as f32) as i32)
                 < 94
         {
             Damage {
@@ -244,7 +246,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 is_critical: false,
             }
         } else {
-            match attacker.attack_damage_type {
+            match attacker.get_attack_damage_type() {
                 DamageType::Magic => calculate_attack_damage_magic(
                     &mut rng,
                     attacker,
@@ -393,24 +395,25 @@ impl AbilityValueCalculator for AbilityValuesData {
 
 fn calculate_damage_success_rate(
     rng: &mut impl Rng,
-    attacker: &AbilityValues,
-    defender: &AbilityValues,
+    attacker: (&AbilityValues, &StatusEffects),
+    defender: (&AbilityValues, &StatusEffects),
 ) -> i32 {
-    if attacker.damage_category == DamageCategory::Character
-        && defender.damage_category == DamageCategory::Character
+    if attacker.get_damage_category() == DamageCategory::Character
+        && defender.get_damage_category() == DamageCategory::Character
     {
-        40 - 60 * ((attacker.hit + defender.avoid) / attacker.avoid) + rng.gen_range(1..=100)
+        40 - 60 * ((attacker.get_hit() + defender.get_avoid()) / attacker.get_avoid())
+            + rng.gen_range(1..=100)
     } else {
-        let value =
-            (attacker.level + 10) - (defender.level as f32 * 1.1) as i32 + rng.gen_range(1..=50);
+        let value = (attacker.get_level() + 10) - (defender.get_level() as f32 * 1.1) as i32
+            + rng.gen_range(1..=50);
         if value <= 0 {
             0
         } else {
             (value as f32
-                * ((attacker.hit as f32 * 1.1 - defender.avoid as f32 * 0.93
+                * ((attacker.get_hit() as f32 * 1.1 - defender.get_avoid() as f32 * 0.93
                     + rng.gen_range(1..=60) as f32
                     + 5.0
-                    + attacker.level as f32 * 0.2)
+                    + attacker.get_level() as f32 * 0.2)
                     / 80.0)) as i32
         }
     }
@@ -418,41 +421,48 @@ fn calculate_damage_success_rate(
 
 fn calculate_attack_damage_physical(
     rng: &mut impl Rng,
-    attacker: &AbilityValues,
-    defender: &AbilityValues,
+    attacker: (&AbilityValues, &StatusEffects),
+    defender: (&AbilityValues, &StatusEffects),
     hit_count: i32,
     success_rate: i32,
 ) -> Damage {
-    let crit_success_rate =
-        16 * (3 * rng.gen_range(1..=100) + attacker.level + 30) / (attacker.critical + 70);
-    let apply_hit_stun =
-        ((28 - crit_success_rate) * (attacker.attack_power + 20) / (defender.defence + 5)) >= 10;
+    let crit_success_rate = 16 * (3 * rng.gen_range(1..=100) + attacker.get_level() + 30)
+        / (attacker.get_critical() + 70);
+    let apply_hit_stun = ((28 - crit_success_rate) * (attacker.get_attack_power() + 20)
+        / (defender.get_defence() + 5))
+        >= 10;
 
     if crit_success_rate < 20 {
         // Critical physical damage
-        let mut damage = if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        let mut damage = if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.05 + 35.0)
-                * ((attacker.attack_power - defender.defence + 430) as f32
-                    / (300.0 * (defender.defence as f32 + defender.avoid as f32 * 0.4 + 10.0)))
+                * ((attacker.get_attack_power() - defender.get_defence() + 430) as f32
+                    / (300.0
+                        * (defender.get_defence() as f32
+                            + defender.get_avoid() as f32 * 0.4
+                            + 10.0)))
                 + 25.0
         } else {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.05 + 29.0)
-                * ((attacker.attack_power - defender.defence + 230) as f32
-                    / (100.0 * (defender.defence as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+                * ((attacker.get_attack_power() - defender.get_defence() + 230) as f32
+                    / (100.0
+                        * (defender.get_defence() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 5.0)))
         };
 
         // TODO: Add damage from +additional damage buffs
 
         damage = f32::max(damage * hit_count as f32, 10.0);
 
-        if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            damage = f32::min(damage, defender.max_health as f32 * 0.35);
+            damage = f32::min(damage, defender.get_max_health() as f32 * 0.35);
         }
 
         damage = f32::min(damage, 2047.0);
@@ -464,29 +474,35 @@ fn calculate_attack_damage_physical(
         }
     } else {
         // Normal physical damage
-        let mut damage = if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        let mut damage = if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.05 + 25.0)
-                * ((attacker.attack_power - defender.defence + 400) as f32
-                    / (420.0 * (defender.defence as f32 + defender.avoid as f32 * 0.4 + 5.0)))
+                * ((attacker.get_attack_power() - defender.get_defence() + 400) as f32
+                    / (420.0
+                        * (defender.get_defence() as f32
+                            + defender.get_avoid() as f32 * 0.4
+                            + 5.0)))
                 + 20.0
         } else {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.03 + 26.0)
-                * ((attacker.attack_power - defender.defence + 250) as f32
-                    / (145.0 * (defender.defence as f32 + defender.avoid as f32 * 0.4 + 5.0)))
+                * ((attacker.get_attack_power() - defender.get_defence() + 250) as f32
+                    / (145.0
+                        * (defender.get_defence() as f32
+                            + defender.get_avoid() as f32 * 0.4
+                            + 5.0)))
         };
 
         // TODO: Add damage from +additional damage buffs
 
         damage = f32::max(damage * hit_count as f32, 5.0);
 
-        if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            damage = f32::min(damage, defender.max_health as f32 * 0.25);
+            damage = f32::min(damage, defender.get_max_health() as f32 * 0.25);
         }
 
         damage = f32::min(damage, 2047.0);
@@ -501,41 +517,49 @@ fn calculate_attack_damage_physical(
 
 fn calculate_attack_damage_magic(
     rng: &mut impl Rng,
-    attacker: &AbilityValues,
-    defender: &AbilityValues,
+    attacker: (&AbilityValues, &StatusEffects),
+    defender: (&AbilityValues, &StatusEffects),
     hit_count: i32,
     success_rate: i32,
 ) -> Damage {
-    let crit_success_rate =
-        16 * (3 * rng.gen_range(1..=100) + attacker.level + 30) / (attacker.critical + 70);
-    let apply_hit_stun =
-        ((28 - crit_success_rate) * (attacker.attack_power + 20) / (defender.defence + 5)) >= 10;
+    let crit_success_rate = 16 * (3 * rng.gen_range(1..=100) + attacker.get_level() + 30)
+        / (attacker.get_critical() + 70);
+    let apply_hit_stun = ((28 - crit_success_rate) * (attacker.get_attack_power() + 20)
+        / (defender.get_defence() + 5))
+        >= 10;
 
     if crit_success_rate < 20 {
         // Critical magic damage
-        let mut damage = if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        let mut damage = if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.05 + 33.0)
-                * ((attacker.attack_power - defender.defence + 340) as f32
-                    / (360.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 20.0)))
+                * ((attacker.get_attack_power() - defender.get_defence() + 340) as f32
+                    / (360.0
+                        * (defender.get_resistance() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 20.0)))
                 + 25.0
         } else {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.05 + 33.0)
-                * ((attacker.attack_power as f32 - defender.defence as f32 * 0.8 + 310.0)
-                    / (200.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+                * ((attacker.get_attack_power() as f32 - defender.get_defence() as f32 * 0.8
+                    + 310.0)
+                    / (200.0
+                        * (defender.get_resistance() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 5.0)))
         };
 
         // TODO: Add damage from +additional damage buffs
 
         damage = f32::max(damage * hit_count as f32, 10.0);
 
-        if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            damage = f32::min(damage, defender.max_health as f32 * 0.35);
+            damage = f32::min(damage, defender.get_max_health() as f32 * 0.35);
         }
 
         damage = f32::min(damage, 2047.0);
@@ -547,29 +571,37 @@ fn calculate_attack_damage_magic(
         }
     } else {
         // Normal magic damage
-        let mut damage = if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        let mut damage = if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.06 + 29.0)
-                * ((attacker.attack_power as f32 - defender.defence as f32 * 0.8 + 350.0)
-                    / (640.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+                * ((attacker.get_attack_power() as f32 - defender.get_defence() as f32 * 0.8
+                    + 350.0)
+                    / (640.0
+                        * (defender.get_resistance() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 5.0)))
                 + 20.0
         } else {
-            attacker.attack_power as f32
+            attacker.get_attack_power() as f32
                 * (success_rate as f32 * 0.03 + 30.0)
-                * ((attacker.attack_power as f32 - defender.defence as f32 * 0.8 + 280.0)
-                    / (280.0 * (defender.resistance as f32 + defender.avoid as f32 * 0.3 + 5.0)))
+                * ((attacker.get_attack_power() as f32 - defender.get_defence() as f32 * 0.8
+                    + 280.0)
+                    / (280.0
+                        * (defender.get_resistance() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 5.0)))
         };
 
         // TODO: Add damage from +additional damage buffs
 
         damage = f32::max(damage * hit_count as f32, 5.0);
 
-        if attacker.damage_category == DamageCategory::Character
-            && defender.damage_category == DamageCategory::Character
+        if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
         {
-            damage = f32::min(damage, defender.max_health as f32 * 0.25);
+            damage = f32::min(damage, defender.get_max_health() as f32 * 0.25);
         }
 
         damage = f32::min(damage, 2047.0);

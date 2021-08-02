@@ -175,12 +175,12 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
 
         // tagBasicAbility
         let basic_stats = packet.basic_stats;
-        writer.write_u16(basic_stats.strength);
-        writer.write_u16(basic_stats.dexterity);
-        writer.write_u16(basic_stats.intelligence);
-        writer.write_u16(basic_stats.concentration);
-        writer.write_u16(basic_stats.charm);
-        writer.write_u16(basic_stats.sense);
+        writer.write_u16(basic_stats.strength as u16);
+        writer.write_u16(basic_stats.dexterity as u16);
+        writer.write_u16(basic_stats.intelligence as u16);
+        writer.write_u16(basic_stats.concentration as u16);
+        writer.write_u16(basic_stats.charm as u16);
+        writer.write_u16(basic_stats.sense as u16);
 
         // tagGrowAbility
         writer.write_u16(packet.health_points.hp as u16);
@@ -892,7 +892,7 @@ impl From<&PacketServerUpdateXpStamina> for Packet {
 
 pub struct PacketServerUpdateBasicStat {
     pub basic_stat_type: BasicStatType,
-    pub value: u16,
+    pub value: i32,
 }
 
 impl From<&PacketServerUpdateBasicStat> for Packet {
@@ -907,7 +907,7 @@ impl From<&PacketServerUpdateBasicStat> for Packet {
             BasicStatType::Sense => 5,
         };
         writer.write_u8(id);
-        writer.write_u16(packet.value);
+        writer.write_u16(packet.value as u16);
         writer.into()
     }
 }

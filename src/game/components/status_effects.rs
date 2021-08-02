@@ -60,4 +60,11 @@ impl StatusEffects {
             }
         }
     }
+
+    pub fn get_status_effect_value(&self, status_effect_type: StatusEffectType) -> i32 {
+        match &self.active[status_effect_type] {
+            Some(status_effect) => status_effect.value,
+            None => 0,
+        }
+    }
 }
