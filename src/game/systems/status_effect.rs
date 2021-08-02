@@ -3,9 +3,10 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use crate::{
     data::StatusEffectType,
     game::{
+        bundles::client_entity_recalculate_ability_values,
         components::{
-            BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
-            HealthPoints, Inventory, Level, ManaPoints, Npc, SkillList, StatusEffects,
+            BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment, HealthPoints,
+            Level, ManaPoints, MoveMode, Npc, SkillList, StatusEffects,
         },
         messages::server::{ServerMessage, UpdateStatusEffects},
         resources::{ServerMessages, ServerTime},
@@ -28,11 +29,11 @@ pub fn status_effect(
         &CharacterInfo,
         &Level,
         &Equipment,
-        &Inventory,
         &BasicStats,
         &SkillList,
+        &MoveMode,
     )>,
-    npc_ability_values_query: &mut Query<&Npc>,
+    npc_ability_values_query: &mut Query<(&Npc, &Level, &MoveMode)>,
     #[resource] game_data: &GameData,
     #[resource] server_messages: &mut ServerMessages,
     #[resource] server_time: &ServerTime,
@@ -70,44 +71,45 @@ pub fn status_effect(
 
         if status_effects_expired {
             // Update ability values
-            let updated_ability_values =
-                if matches!(client_entity.entity_type, ClientEntityType::Character) {
-                    if let Ok((
-                        character_info,
-                        level,
-                        equipment,
-                        inventory,
-                        basic_stats,
-                        skill_list,
-                    )) = character_ability_values_query
+            if matches!(client_entity.entity_type, ClientEntityType::Character) {
+                if let Ok((character_info, level, equipment, basic_stats, skill_list, move_mode)) =
+                    character_ability_values_query
                         .get(&character_ability_values_query_world, *entity)
-                    {
-                        Some(game_data.ability_value_calculator.calculate(
-                            character_info,
-                            level,
-                            equipment,
-                            inventory,
-                            basic_stats,
-                            skill_list,
-                        ))
-                    } else {
-                        None
-                    }
-                } else if let Ok(npc) =
-                    npc_ability_values_query.get(&npc_ability_values_query_world, *entity)
                 {
-                    game_data.ability_value_calculator.calculate_npc(npc.id)
-                } else {
-                    None
-                };
-
-            if let Some(updated_ability_values) = updated_ability_values {
-                health_points.hp = health_points
-                    .hp
-                    .max(updated_ability_values.max_health as u32);
-                mana_points.mp = mana_points.mp.max(updated_ability_values.max_mana as u32);
-
-                cmd.add_component(*entity, updated_ability_values);
+                    client_entity_recalculate_ability_values(
+                        cmd,
+                        game_data.ability_value_calculator.as_ref(),
+                        client_entity,
+                        entity,
+                        Some(basic_stats),
+                        Some(character_info),
+                        Some(equipment),
+                        Some(level),
+                        Some(move_mode),
+                        Some(skill_list),
+                        None,
+                        Some(health_points),
+                        Some(mana_points),
+                    );
+                }
+            } else if let Ok((npc, level, move_mode)) =
+                npc_ability_values_query.get(&npc_ability_values_query_world, *entity)
+            {
+                client_entity_recalculate_ability_values(
+                    cmd,
+                    game_data.ability_value_calculator.as_ref(),
+                    client_entity,
+                    entity,
+                    None,
+                    None,
+                    None,
+                    Some(level),
+                    Some(move_mode),
+                    None,
+                    Some(npc),
+                    Some(health_points),
+                    Some(mana_points),
+                );
             }
 
             // Send status effect expiry message

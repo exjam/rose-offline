@@ -1,10 +1,11 @@
-use legion::{system, world::SubWorld, Entity, Query};
+use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 
 use crate::game::{
+    bundles::client_entity_recalculate_ability_values,
     components::{
-        AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
-        GameClient, HealthPoints, Inventory, Level, ManaPoints, SkillList, SkillPoints, Stamina,
-        StatPoints, MAX_STAMINA,
+        BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, GameClient,
+        HealthPoints, Level, ManaPoints, MoveMode, SkillList, SkillPoints, Stamina, StatPoints,
+        MAX_STAMINA,
     },
     messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
     resources::{PendingXpList, ServerMessages},
@@ -14,6 +15,7 @@ use crate::game::{
 #[allow(clippy::type_complexity)]
 #[system]
 pub fn experience_points(
+    cmd: &mut CommandBuffer,
     world: &mut SubWorld,
     entity_query: &mut Query<(
         Entity,
@@ -26,14 +28,13 @@ pub fn experience_points(
         Option<&GameClient>,
     )>,
     ability_values_query: &mut Query<(
-        &mut AbilityValues,
         &mut HealthPoints,
         &mut ManaPoints,
         &CharacterInfo,
         &Equipment,
-        &Inventory,
         &BasicStats,
         &SkillList,
+        &MoveMode,
     )>,
     source_entity_query: &mut Query<&ClientEntity>,
     #[resource] game_data: &GameData,
@@ -92,26 +93,33 @@ pub fn experience_points(
 
                 // Update ability values and restore hp / mp
                 if let Ok((
-                    ability_values,
                     health_points,
                     mana_points,
                     character_info,
                     equipment,
-                    inventory,
                     basic_stats,
                     skill_list,
+                    move_mode,
                 )) = ability_values_query.get_mut(&mut ability_values_query_world, *entity)
                 {
-                    *ability_values = game_data.ability_value_calculator.calculate(
-                        character_info,
-                        level,
-                        equipment,
-                        inventory,
-                        basic_stats,
-                        skill_list,
-                    );
-                    health_points.hp = ability_values.max_health as u32;
-                    mana_points.mp = ability_values.max_mana as u32;
+                    if let Some(ability_values) = client_entity_recalculate_ability_values(
+                        cmd,
+                        game_data.ability_value_calculator.as_ref(),
+                        client_entity,
+                        entity,
+                        Some(basic_stats),
+                        Some(character_info),
+                        Some(equipment),
+                        Some(level),
+                        Some(move_mode),
+                        Some(skill_list),
+                        None,
+                        Some(health_points), // TODO: Update hp / mp
+                        Some(mana_points),
+                    ) {
+                        health_points.hp = ability_values.max_health as u32;
+                        mana_points.mp = ability_values.max_mana as u32;
+                    }
                 }
 
                 // Send level up packet

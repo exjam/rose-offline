@@ -216,3 +216,52 @@ pub fn client_entity_teleport_zone(
             .ok();
     }
 }
+
+pub fn client_entity_recalculate_ability_values(
+    cmd: &mut CommandBuffer,
+    ability_value_calculator: &dyn AbilityValueCalculator,
+    client_entity: &ClientEntity,
+    entity: &Entity,
+    basic_stats: Option<&BasicStats>,
+    character_info: Option<&CharacterInfo>,
+    equipment: Option<&Equipment>,
+    level: Option<&Level>,
+    move_mode: Option<&MoveMode>,
+    skill_list: Option<&SkillList>,
+    npc: Option<&Npc>,
+    health_points: Option<&mut HealthPoints>,
+    mana_points: Option<&mut ManaPoints>,
+) -> Option<AbilityValues> {
+    // Update ability values
+    let ability_values = if matches!(client_entity.entity_type, ClientEntityType::Character) {
+        Some(ability_value_calculator.calculate(
+            character_info.unwrap(),
+            level.unwrap(),
+            equipment.unwrap(),
+            basic_stats.unwrap(),
+            skill_list.unwrap(),
+        ))
+    } else if let Some(npc) = npc {
+        ability_value_calculator.calculate_npc(npc.id)
+    } else {
+        None
+    }?;
+
+    if let Some(health_points) = health_points {
+        health_points.hp = health_points.hp.max(ability_values.max_health as u32);
+    }
+
+    if let Some(mana_points) = mana_points {
+        mana_points.mp = mana_points.mp.max(ability_values.max_mana as u32);
+    }
+
+    if let Some(move_mode) = move_mode {
+        match move_mode {
+            MoveMode::Run => cmd.add_component(*entity, MoveSpeed::new(ability_values.run_speed)),
+            MoveMode::Walk => cmd.add_component(*entity, MoveSpeed::new(ability_values.walk_speed)),
+        }
+    }
+
+    cmd.add_component(*entity, ability_values.clone());
+    Some(ability_values)
+}

@@ -4,9 +4,10 @@ use log::warn;
 use crate::{
     data::{SkillAddAbility, SkillData, SkillTargetFilter, SkillType, StatusEffectType},
     game::{
+        bundles::client_entity_recalculate_ability_values,
         components::{
-            AbilityValues, ClientEntity, ClientEntityType, HealthPoints, Position, StatusEffects,
-            Team,
+            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
+            HealthPoints, Level, MoveMode, Npc, Position, SkillList, StatusEffects, Team,
         },
         messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage},
         resources::{
@@ -24,6 +25,7 @@ enum SkillCastError {
 }
 
 struct SkillWorld<'a> {
+    cmd: &'a mut CommandBuffer,
     client_entity_list: &'a ClientEntityList,
     game_data: &'a GameData,
     server_messages: &'a mut ServerMessages,
@@ -44,10 +46,21 @@ struct SkillTargetEntity<'a> {
     status_effects: &'a mut StatusEffects,
     team: &'a Team,
     health_points: &'a HealthPoints,
+    level: &'a Level,
+    move_mode: Option<&'a MoveMode>,
+
+    // To update character ability_values
+    character_info: Option<&'a CharacterInfo>,
+    equipment: Option<&'a Equipment>,
+    basic_stats: Option<&'a BasicStats>,
+    skill_list: Option<&'a SkillList>,
+
+    // To update NPC ability_values
+    npc: Option<&'a Npc>,
 }
 
 fn check_skill_target_filter(
-    skill_world: &mut SkillWorld,
+    _skill_world: &mut SkillWorld,
     skill_caster: &SkillCaster,
     skill_target: &mut SkillTargetEntity,
     skill_data: &SkillData,
@@ -175,7 +188,23 @@ fn apply_skill_status_effects_to_entity(
         }
     }
 
-    // TODO: Update ability values, move speed, hp / mp
+    // Update ability values
+    client_entity_recalculate_ability_values(
+        skill_world.cmd,
+        skill_world.game_data.ability_value_calculator.as_ref(),
+        skill_target.client_entity,
+        skill_target.entity,
+        skill_target.basic_stats,
+        skill_target.character_info,
+        skill_target.equipment,
+        Some(skill_target.level),
+        skill_target.move_mode,
+        skill_target.skill_list,
+        skill_target.npc,
+        None, // TODO: Update of skill target HP / MP
+        None,
+    );
+
     if effect_success.iter().any(|x| *x) {
         skill_world.server_messages.send_entity_message(
             skill_target.client_entity,
@@ -203,6 +232,13 @@ fn apply_skill_status_effects(
         &mut StatusEffects,
         &Team,
         &HealthPoints,
+        &Level,
+        Option<&MoveMode>,
+        Option<&CharacterInfo>,
+        Option<&Equipment>,
+        Option<&BasicStats>,
+        Option<&SkillList>,
+        Option<&Npc>,
     )>,
     target_query_world: &mut SubWorld,
 ) -> Result<(), SkillCastError> {
@@ -215,7 +251,7 @@ fn apply_skill_status_effects(
 
         let skill_position = match skill_target {
             PendingSkillEffectTarget::Entity(target_entity) => {
-                if let Ok((_, target_position, _, _, _)) =
+                if let Ok((_, target_position, ..)) =
                     target_query.get_mut(target_query_world, *target_entity)
                 {
                     Some(target_position.position.xy())
@@ -236,6 +272,13 @@ fn apply_skill_status_effects(
                 target_status_effects,
                 target_team,
                 target_health_points,
+                target_level,
+                target_move_mode,
+                target_character_info,
+                target_equipment,
+                target_basic_stats,
+                target_skill_list,
+                target_npc,
             )) = target_query.get_mut(target_query_world, target_entity)
             {
                 apply_skill_status_effects_to_entity(
@@ -248,6 +291,13 @@ fn apply_skill_status_effects(
                         status_effects: target_status_effects,
                         team: target_team,
                         health_points: target_health_points,
+                        level: target_level,
+                        move_mode: target_move_mode,
+                        character_info: target_character_info,
+                        equipment: target_equipment,
+                        basic_stats: target_basic_stats,
+                        skill_list: target_skill_list,
+                        npc: target_npc,
                     },
                     skill_data,
                 )
@@ -263,6 +313,13 @@ fn apply_skill_status_effects(
             target_status_effects,
             target_team,
             target_health_points,
+            target_level,
+            target_move_mode,
+            target_character_info,
+            target_equipment,
+            target_basic_stats,
+            target_skill_list,
+            target_npc,
         )) = target_query.get_mut(target_query_world, *target_entity)
         {
             // Apply only to target entity
@@ -276,6 +333,13 @@ fn apply_skill_status_effects(
                     status_effects: target_status_effects,
                     team: target_team,
                     health_points: target_health_points,
+                    level: target_level,
+                    move_mode: target_move_mode,
+                    character_info: target_character_info,
+                    equipment: target_equipment,
+                    basic_stats: target_basic_stats,
+                    skill_list: target_skill_list,
+                    npc: target_npc,
                 },
                 skill_data,
             )
@@ -299,6 +363,13 @@ pub fn skill_effect(
         &mut StatusEffects,
         &Team,
         &HealthPoints,
+        &Level,
+        Option<&MoveMode>,
+        Option<&CharacterInfo>,
+        Option<&Equipment>,
+        Option<&BasicStats>,
+        Option<&SkillList>,
+        Option<&Npc>,
     )>,
     #[resource] game_data: &GameData,
     #[resource] client_entity_list: &ClientEntityList,
@@ -310,6 +381,7 @@ pub fn skill_effect(
     let caster_world = world;
 
     let mut skill_world = SkillWorld {
+        cmd,
         client_entity_list,
         game_data,
         server_messages,

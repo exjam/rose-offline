@@ -11,7 +11,7 @@ use crate::{
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
-        DamageType, Equipment, EquipmentIndex, EquipmentItemDatabase, Inventory, Level, SkillList,
+        DamageType, Equipment, EquipmentIndex, EquipmentItemDatabase, Level, SkillList,
     },
 };
 
@@ -77,7 +77,6 @@ impl AbilityValueCalculator for AbilityValuesData {
         character_info: &CharacterInfo,
         level: &Level,
         equipment: &Equipment,
-        _inventory: &Inventory,
         basic_stats: &BasicStats,
         skill_list: &SkillList,
     ) -> AbilityValues {
@@ -113,7 +112,6 @@ impl AbilityValueCalculator for AbilityValuesData {
         /*
         TODO:
         Cal_MaxWEIGHT ();
-        calculate weight in inventory
         Cal_DropRATE ();
         m_fRateUseMP
         class based += stats + immunity

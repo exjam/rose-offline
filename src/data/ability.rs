@@ -3,8 +3,7 @@ use num_derive::FromPrimitive;
 use crate::{
     data::NpcId,
     game::components::{
-        AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Inventory, Level,
-        SkillList,
+        AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
     },
 };
 
@@ -132,7 +131,6 @@ pub trait AbilityValueCalculator {
         character_info: &CharacterInfo,
         level: &Level,
         equipment: &Equipment,
-        inventory: &Inventory,
         basic_stats: &BasicStats,
         skill_list: &SkillList,
     ) -> AbilityValues;

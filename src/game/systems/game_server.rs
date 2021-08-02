@@ -6,7 +6,8 @@ use crate::{
     data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
         bundles::{
-            client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
+            client_entity_join_zone, client_entity_leave_zone,
+            client_entity_recalculate_ability_values, client_entity_teleport_zone,
             create_character_entity,
         },
         components::{
@@ -68,7 +69,6 @@ pub fn game_server_authentication(
                                     &character.info,
                                     &character.level,
                                     &character.equipment,
-                                    &character.inventory,
                                     &character.basic_stats,
                                     &character.skill_list,
                                 );
@@ -233,6 +233,7 @@ pub fn game_server_main(
         &Level,
         &SkillList,
         &mut QuestState,
+        &MoveMode,
     )>,
     world_client_query: &mut Query<&WorldClient>,
     #[resource] client_entity_list: &mut ClientEntityList,
@@ -263,6 +264,7 @@ pub fn game_server_main(
             level,
             skill_list,
             quest_state,
+            move_mode,
         )| {
             if let Ok(message) = client.client_message_rx.try_recv() {
                 match message {
@@ -399,16 +401,20 @@ pub fn game_server_main(
                             }
                         }
 
-                        cmd.add_component(
-                            *entity,
-                            game_data.ability_value_calculator.calculate(
-                                character_info,
-                                level,
-                                equipment,
-                                inventory,
-                                basic_stats,
-                                skill_list,
-                            ),
+                        client_entity_recalculate_ability_values(
+                            cmd,
+                            game_data.ability_value_calculator.as_ref(),
+                            client_entity,
+                            entity,
+                            Some(basic_stats),
+                            Some(character_info),
+                            Some(equipment),
+                            Some(level),
+                            Some(move_mode),
+                            Some(skill_list),
+                            None,
+                            None, // TODO: Update hp / mp
+                            None,
                         );
                     }
                     ClientMessage::IncreaseBasicStat(basic_stat_type) => {
@@ -437,16 +443,20 @@ pub fn game_server_main(
                                     }))
                                     .ok();
 
-                                cmd.add_component(
-                                    *entity,
-                                    game_data.ability_value_calculator.calculate(
-                                        character_info,
-                                        level,
-                                        equipment,
-                                        inventory,
-                                        basic_stats,
-                                        skill_list,
-                                    ),
+                                client_entity_recalculate_ability_values(
+                                    cmd,
+                                    game_data.ability_value_calculator.as_ref(),
+                                    client_entity,
+                                    entity,
+                                    Some(basic_stats),
+                                    Some(character_info),
+                                    Some(equipment),
+                                    Some(level),
+                                    Some(move_mode),
+                                    Some(skill_list),
+                                    None,
+                                    None, // TODO: Update hp / mp
+                                    None,
                                 );
                             }
                         }

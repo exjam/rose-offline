@@ -170,7 +170,6 @@ fn create_bot_entity(
             &bot_data.info,
             &bot_data.level,
             &bot_data.equipment,
-            &bot_data.inventory,
             &bot_data.basic_stats,
             &bot_data.skill_list,
         );
