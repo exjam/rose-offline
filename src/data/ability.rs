@@ -227,9 +227,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseAttackSpeed)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseAttackSpeed)
+                .unwrap_or(0)
     }
 
     fn get_attack_power(&self) -> i32 {
@@ -237,9 +239,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseAttackPower)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseAttackPower)
+                .unwrap_or(0)
     }
 
     fn get_avoid(&self) -> i32 {
@@ -247,9 +251,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseAvoid)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseAvoid)
+                .unwrap_or(0)
     }
 
     fn get_critical(&self) -> i32 {
@@ -257,9 +263,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseCritical)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseCritical)
+                .unwrap_or(0)
     }
 
     fn get_defence(&self) -> i32 {
@@ -267,9 +275,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseDefence)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseDefence)
+                .unwrap_or(0)
     }
 
     fn get_hit(&self) -> i32 {
@@ -277,9 +287,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseHit)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseHit)
+                .unwrap_or(0)
     }
 
     fn get_resistance(&self) -> i32 {
@@ -287,9 +299,11 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseResistance)
+                .unwrap_or(0)
             - self
                 .1
                 .get_status_effect_value(StatusEffectType::DecreaseResistance)
+                .unwrap_or(0)
     }
 
     fn get_max_health(&self) -> i32 {
@@ -297,6 +311,7 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseMaxHp)
+                .unwrap_or(0)
     }
 
     fn get_max_mana(&self) -> i32 {
@@ -304,16 +319,19 @@ impl GetAbilityValues for (&AbilityValues, &StatusEffects) {
             + self
                 .1
                 .get_status_effect_value(StatusEffectType::IncreaseMaxMp)
+                .unwrap_or(0)
     }
 
     fn get_run_speed(&self) -> f32 {
         self.0.run_speed
             + self
                 .1
-                .get_status_effect_value(StatusEffectType::IncreaseMoveSpeed) as f32
+                .get_status_effect_value(StatusEffectType::IncreaseMoveSpeed)
+                .unwrap_or(0) as f32
             - self
                 .1
-                .get_status_effect_value(StatusEffectType::DecreaseMoveSpeed) as f32
+                .get_status_effect_value(StatusEffectType::DecreaseMoveSpeed)
+                .unwrap_or(0) as f32
     }
 }
 

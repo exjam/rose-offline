@@ -97,10 +97,11 @@ pub struct SpawnEntityCharacter {
     pub equipment: Equipment,
     pub health: HealthPoints,
     pub level: Level,
-    pub passive_attack_speed: i32,
-    pub position: Position,
     pub move_mode: MoveMode,
     pub move_speed: MoveSpeed,
+    pub passive_attack_speed: i32,
+    pub position: Position,
+    pub status_effects: StatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
 }
@@ -117,6 +118,7 @@ pub struct SpawnEntityNpc {
     pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
+    pub status_effects: StatusEffects,
 }
 
 #[derive(Clone)]
@@ -130,6 +132,7 @@ pub struct SpawnEntityMonster {
     pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
+    pub status_effects: StatusEffects,
 }
 
 #[derive(Clone)]

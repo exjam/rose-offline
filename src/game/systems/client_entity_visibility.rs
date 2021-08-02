@@ -5,7 +5,7 @@ use crate::game::{
         AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
         ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, ExpireTime,
         GameClient, HealthPoints, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
-        Position, Target, Team,
+        Position, StatusEffects, Target, Team,
     },
     messages::server::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
@@ -36,6 +36,7 @@ pub fn client_entity_visibility(
         &MoveMode,
         &MoveSpeed,
         &Position,
+        &StatusEffects,
         &Team,
         Option<&Destination>,
         Option<&Target>,
@@ -48,6 +49,7 @@ pub fn client_entity_visibility(
         &HealthPoints,
         &Command,
         &MoveMode,
+        &StatusEffects,
         Option<&Destination>,
         Option<&Target>,
     )>,
@@ -59,6 +61,7 @@ pub fn client_entity_visibility(
         &HealthPoints,
         &Command,
         &MoveMode,
+        &StatusEffects,
         Option<&Destination>,
         Option<&Target>,
     )>,
@@ -109,6 +112,7 @@ pub fn client_entity_visibility(
                                     spawn_move_mode,
                                     spawn_move_speed,
                                     spawn_position,
+                                    spawn_status_effects,
                                     spawn_team,
                                     spawn_destination,
                                     spawn_target,
@@ -140,6 +144,7 @@ pub fn client_entity_visibility(
                                                 move_speed: *spawn_move_speed,
                                                 passive_attack_speed: spawn_ability_values
                                                     .passive_attack_speed,
+                                                status_effects: spawn_status_effects.clone(),
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
                                             },
@@ -189,6 +194,7 @@ pub fn client_entity_visibility(
                                     spawn_health,
                                     spawn_command,
                                     spawn_move_mode,
+                                    spawn_status_effects,
                                     spawn_destination,
                                     spawn_target,
                                 )) = monsters_query.get(&monster_query_world, *spawn_entity)
@@ -216,6 +222,7 @@ pub fn client_entity_visibility(
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
                                                 move_mode: *spawn_move_mode,
+                                                status_effects: spawn_status_effects.clone(),
                                             },
                                         ))
                                         .ok();
@@ -230,6 +237,7 @@ pub fn client_entity_visibility(
                                     spawn_health,
                                     spawn_command,
                                     spawn_move_mode,
+                                    spawn_status_effects,
                                     spawn_destination,
                                     spawn_target,
                                 )) = npcs_query.get(&npc_query_world, *spawn_entity)
@@ -257,6 +265,7 @@ pub fn client_entity_visibility(
                                             command: spawn_command.clone(),
                                             target_entity_id,
                                             move_mode: *spawn_move_mode,
+                                            status_effects: spawn_status_effects.clone(),
                                         }))
                                         .ok();
                                 }

@@ -665,6 +665,7 @@ pub struct PacketServerSpawnEntityNpc<'a> {
     pub target_entity_id: Option<ClientEntityId>,
     pub health: &'a HealthPoints,
     pub move_mode: MoveMode,
+    pub status_effects: &'a StatusEffects,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
@@ -680,11 +681,12 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
-        writer.write_u32(0); // status flag
+        writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
         writer.write_u16(packet.npc.quest_index);
         writer.write_f32(packet.direction.direction);
         writer.write_u16(0); // event status
+        writer.write_status_effects_values(packet.status_effects);
         writer.into()
     }
 }
@@ -699,6 +701,7 @@ pub struct PacketServerSpawnEntityMonster<'a> {
     pub command: &'a Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
+    pub status_effects: &'a StatusEffects,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
@@ -714,9 +717,10 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
-        writer.write_u32(0); // status flag
+        writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
         writer.write_u16(packet.npc.quest_index);
+        writer.write_status_effects_values(packet.status_effects);
         writer.into()
     }
 }
@@ -733,6 +737,7 @@ pub struct PacketServerSpawnEntityCharacter<'a> {
     pub move_speed: MoveSpeed,
     pub passive_attack_speed: i32,
     pub position: &'a Position,
+    pub status_effects: &'a StatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: &'a Team,
 }
@@ -750,7 +755,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_u32(packet.health.hp);
         writer.write_u32(packet.team.id);
-        writer.write_u32(0); // status flag
+        writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u8(packet.character_info.gender);
         writer.write_u16(packet.move_speed.speed as u16);
         writer.write_u16(packet.passive_attack_speed as u16);
@@ -779,7 +784,8 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_u16(packet.position.position.z as u16); // z
         writer.write_u32(0); // sub flag
         writer.write_null_terminated_utf8(&packet.character_info.name);
-        // if status flag != 0 then u16[] of endurace things
+
+        writer.write_status_effects_values(packet.status_effects);
         // if sub flag == store then u16 type, str shop name
         // optional clan info of u32 clan id, u32 clan mark, u8 clan level, u8 clan rank
         writer.into()

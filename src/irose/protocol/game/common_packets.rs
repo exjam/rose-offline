@@ -404,6 +404,7 @@ impl PacketWriteMoveMode for PacketWriter {
 
 pub trait PacketWriteStatusEffects {
     fn write_status_effects_flags_u32(&mut self, status_effects: &StatusEffects);
+    fn write_status_effects_values(&mut self, status_effects: &StatusEffects);
 }
 
 fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
@@ -454,5 +455,36 @@ impl PacketWriteStatusEffects for PacketWriter {
         }
 
         self.write_u32(status_effect_flags);
+    }
+
+    fn write_status_effects_values(&mut self, status_effects: &StatusEffects) {
+        if let Some(value) = status_effects.get_status_effect_value(StatusEffectType::IncreaseMaxHp)
+        {
+            self.write_u16(value as u16);
+        }
+
+        if let Some(value) =
+            status_effects.get_status_effect_value(StatusEffectType::IncreaseMoveSpeed)
+        {
+            self.write_u16(value as u16);
+        }
+
+        if let Some(value) =
+            status_effects.get_status_effect_value(StatusEffectType::DecreaseMoveSpeed)
+        {
+            self.write_u16(value as u16);
+        }
+
+        if let Some(value) =
+            status_effects.get_status_effect_value(StatusEffectType::IncreaseAttackSpeed)
+        {
+            self.write_u16(value as u16);
+        }
+
+        if let Some(value) =
+            status_effects.get_status_effect_value(StatusEffectType::DecreaseAttackSpeed)
+        {
+            self.write_u16(value as u16);
+        }
     }
 }
