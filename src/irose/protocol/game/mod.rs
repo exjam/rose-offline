@@ -19,8 +19,8 @@ use crate::{
             PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
             QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
             SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateXpStamina, UseItem,
-            Whisper,
+            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateStatusEffects,
+            UpdateXpStamina, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -525,6 +525,22 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateMoney { is_reward, money }))
+                    .await?;
+            }
+            ServerMessage::UpdateStatusEffects(UpdateStatusEffects {
+                entity_id,
+                ref status_effects,
+                updated_hp,
+                updated_mp,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateStatusEffects {
+                        entity_id,
+                        status_effects,
+                        updated_hp,
+                        updated_mp,
+                    }))
                     .await?;
             }
             ServerMessage::UpdateEquipment(UpdateEquipment {

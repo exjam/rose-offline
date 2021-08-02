@@ -5,11 +5,13 @@ use log::warn;
 
 use crate::data::{StatusEffectData, StatusEffectType};
 
+#[derive(Clone)]
 pub struct ActiveStatusEffect {
     pub value: i32,
     pub time_remaining: Duration,
 }
 
+#[derive(Clone)]
 pub struct StatusEffects {
     pub active: EnumMap<StatusEffectType, Option<ActiveStatusEffect>>,
 }

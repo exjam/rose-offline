@@ -9,8 +9,8 @@ use crate::{
     },
     game::components::{
         BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
-        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, Money, Npc,
-        NpcStandingDirection, Position, SkillPoints, SkillSlot, StatPoints, Team,
+        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money, Npc,
+        NpcStandingDirection, Position, SkillPoints, SkillSlot, StatPoints, StatusEffects, Team,
     },
 };
 
@@ -192,6 +192,14 @@ pub struct UpdateMoney {
 }
 
 #[derive(Clone)]
+pub struct UpdateStatusEffects {
+    pub entity_id: ClientEntityId,
+    pub status_effects: StatusEffects,
+    pub updated_hp: Option<HealthPoints>,
+    pub updated_mp: Option<ManaPoints>,
+}
+
+#[derive(Clone)]
 pub struct UpdateLevel {
     pub entity_id: ClientEntityId,
     pub level: Level,
@@ -357,6 +365,7 @@ pub enum ServerMessage {
     UpdateInventory(UpdateInventory),
     UpdateLevel(UpdateLevel),
     UpdateMoney(UpdateMoney),
+    UpdateStatusEffects(UpdateStatusEffects),
     UpdateXpStamina(UpdateXpStamina),
     Whisper(Whisper),
     LogoutReply(LogoutReply),

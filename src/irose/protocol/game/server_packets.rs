@@ -7,7 +7,7 @@ use num_derive::FromPrimitive;
 use crate::{
     data::{
         item::{EquipmentItem, Item},
-        AbilityType, Damage, ItemReference, NpcId, SkillId, WorldTicks, ZoneId,
+        AbilityType, Damage, ItemReference, NpcId, SkillId, StatusEffectType, WorldTicks, ZoneId,
     },
     game::{
         components::{
@@ -15,8 +15,8 @@ use crate::{
             CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
             Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
             Inventory, ItemSlot, Level, ManaPoints, Money, Npc, NpcStandingDirection, Position,
-            QuestState, SkillList, SkillPage, SkillPoints, Stamina, StatPoints, Team,
-            UnionMembership, VehiclePartIndex,
+            QuestState, SkillList, SkillPage, SkillPoints, Stamina, StatPoints, StatusEffects,
+            Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent,
@@ -69,6 +69,7 @@ pub enum ServerPackets {
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
     ApplySkillEffect = 0x7b5,
+    UpdateStatusEffects = 0x7b7,
     FinishCastingSkill = 0x7b9,
     StartCastingSkill = 0x7bb,
     CancelCastingSkill = 0x7bd,
@@ -1331,6 +1332,77 @@ impl From<&PacketServerFinishCastingSkill> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::FinishCastingSkill as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.skill_id.get() as u16);
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateStatusEffects<'a> {
+    pub entity_id: ClientEntityId,
+    pub status_effects: &'a StatusEffects,
+    pub updated_hp: Option<HealthPoints>,
+    pub updated_mp: Option<ManaPoints>,
+}
+
+fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
+    match status_effect_type {
+        StatusEffectType::IncreaseHp => 0x00000001,
+        StatusEffectType::IncreaseMp => 0x00000002,
+        StatusEffectType::Poisoned => 0x00000004,
+        StatusEffectType::IncreaseMaxHp => 0x00000010,
+        StatusEffectType::IncreaseMaxMp => 0x00000020,
+        StatusEffectType::IncreaseMoveSpeed => 0x00000040,
+        StatusEffectType::DecreaseMoveSpeed => 0x00000080,
+        StatusEffectType::IncreaseAttackSpeed => 0x00000100,
+        StatusEffectType::DecreaseAttackSpeed => 0x00000200,
+        StatusEffectType::IncreaseAttackPower => 0x00000400,
+        StatusEffectType::DecreaseAttackPower => 0x00000800,
+        StatusEffectType::IncreaseDefence => 0x00001000,
+        StatusEffectType::DecreaseDefence => 0x00002000,
+        StatusEffectType::IncreaseResistance => 0x00004000,
+        StatusEffectType::DecreaseResistance => 0x00008000,
+        StatusEffectType::IncreaseHit => 0x00010000,
+        StatusEffectType::DecreaseHit => 0x00020000,
+        StatusEffectType::IncreaseCritical => 0x00040000,
+        StatusEffectType::DecreaseCritical => 0x00080000,
+        StatusEffectType::IncreaseAvoid => 0x00100000,
+        StatusEffectType::DecreaseAvoid => 0x00200000,
+        StatusEffectType::Dumb => 0x00400000,
+        StatusEffectType::Sleep => 0x00800000,
+        StatusEffectType::Fainting => 0x01000000,
+        StatusEffectType::Disguise => 0x02000000,
+        StatusEffectType::Transparent => 0x04000000,
+        StatusEffectType::ShieldDamage => 0x08000000,
+        StatusEffectType::DummyDamage => 0x10000000,
+        StatusEffectType::DecreaseLifeTime => 0x20000000,
+        StatusEffectType::Revive => 0x40000000,
+        StatusEffectType::Taunt => 0x80000000,
+        _ => 0,
+    }
+}
+
+impl<'a> From<&'a PacketServerUpdateStatusEffects<'a>> for Packet {
+    fn from(packet: &'a PacketServerUpdateStatusEffects<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateStatusEffects as u16);
+        writer.write_entity_id(packet.entity_id);
+
+        let mut status_effect_flags = 0u32;
+
+        for (status_effect_type, status_effect) in packet.status_effects.active.iter() {
+            if status_effect.is_some() {
+                status_effect_flags |= get_status_effect_type_flag(status_effect_type);
+            }
+        }
+
+        writer.write_u32(status_effect_flags);
+
+        if let Some(updated_hp) = packet.updated_hp {
+            writer.write_u32(updated_hp.hp);
+        }
+
+        if let Some(updated_mp) = packet.updated_mp {
+            writer.write_u32(updated_mp.mp);
+        }
+
         writer.into()
     }
 }

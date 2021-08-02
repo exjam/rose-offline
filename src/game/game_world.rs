@@ -74,6 +74,7 @@ impl GameWorld {
             .add_system(bot_ai_system())
             .add_system(npc_ai_system())
             .add_system(expire_time_system())
+            .add_system(status_effect_system())
             .flush()
             .add_system(command_system())
             .flush()
