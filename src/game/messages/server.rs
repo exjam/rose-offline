@@ -39,6 +39,7 @@ pub struct MoveEntity {
     pub x: f32,
     pub y: f32,
     pub z: u16,
+    pub move_mode: Option<MoveMode>,
 }
 
 #[derive(Clone)]

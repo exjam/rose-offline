@@ -106,7 +106,11 @@ pub fn bot_ai(
                                     // Move towards item to pickup
                                     cmd.add_component(
                                         *entity,
-                                        NextCommand::with_move(*target_position, Some(*target)),
+                                        NextCommand::with_move(
+                                            *target_position,
+                                            Some(*target),
+                                            None,
+                                        ),
                                     );
                                     cmd.add_component(*entity, BotAiState::PickupItem(*target));
                                 } else if let Some((target, _)) = nearby_monsters.choose(&mut rng) {

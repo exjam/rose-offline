@@ -324,6 +324,7 @@ impl GameClient {
                         x: message.x,
                         y: message.y,
                         z: message.z,
+                        move_mode: message.move_mode,
                     }))
                     .await?;
             }

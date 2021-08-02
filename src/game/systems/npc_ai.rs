@@ -20,7 +20,8 @@ use crate::{
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, StatusEffects, Team,
+            MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin,
+            StatusEffects, Team,
         },
         messages::server::ServerMessage,
         resources::{ClientEntityList, PendingXp, PendingXpList, ServerTime, WorldRates},
@@ -378,7 +379,7 @@ fn ai_action_move_random_distance(
     ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     move_origin: AipMoveOrigin,
-    _move_mode: AipMoveMode,
+    move_mode: AipMoveMode,
     distance: i32,
 ) {
     let dx = ai_world.rng.gen_range(-distance..distance);
@@ -392,13 +393,15 @@ fn ai_action_move_random_distance(
         AipMoveOrigin::FindChar => ai_parameters.find_char.map(|(_, position)| position),
     };
 
-    // TODO: Handle move_mode to do walk or run
-
     if let Some(move_origin) = move_origin {
+        let move_mode = match move_mode {
+            AipMoveMode::Run => MoveMode::Run,
+            AipMoveMode::Walk => MoveMode::Walk,
+        };
         let destination = move_origin + Vector3::new(dx as f32, dy as f32, 0.0);
         ai_world.cmd.add_component(
             *ai_parameters.source.entity,
-            NextCommand::with_move(destination, None),
+            NextCommand::with_move(destination, None, Some(move_mode)),
         )
     }
 }

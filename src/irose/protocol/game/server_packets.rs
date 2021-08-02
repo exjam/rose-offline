@@ -55,6 +55,7 @@ pub enum ServerPackets {
     SpawnEntityCharacter = 0x793,
     RemoveEntities = 0x794,
     StopMoveEntity = 0x796,
+    MoveEntityWithMoveMode = 0x797,
     AttackEntity = 0x798,
     DamageEntity = 0x799,
     MoveEntity = 0x79a,
@@ -318,6 +319,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             );
         }
 
+        // Planet Variables
         for i in 0..7 {
             writer.write_u16(
                 packet
@@ -385,7 +387,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
         }
 
         for _ in 0..30 {
-            writer.write_item_full(None); // wish list items
+            writer.write_item_full(None); // TODO: Wish list items
         }
 
         writer.into()
@@ -466,17 +468,28 @@ pub struct PacketServerMoveEntity {
     pub x: f32,
     pub y: f32,
     pub z: u16,
+    pub move_mode: Option<MoveMode>,
 }
 
 impl From<&PacketServerMoveEntity> for Packet {
     fn from(packet: &PacketServerMoveEntity) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::MoveEntity as u16);
+        let opcode = if packet.move_mode.is_some() {
+            ServerPackets::MoveEntityWithMoveMode
+        } else {
+            ServerPackets::MoveEntity
+        };
+        let mut writer = PacketWriter::new(opcode as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_u16(packet.distance);
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
         writer.write_u16(packet.z);
+
+        if let Some(move_mode) = packet.move_mode {
+            writer.write_move_mode_u8(move_mode);
+        }
+
         writer.into()
     }
 }

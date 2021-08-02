@@ -3,12 +3,13 @@ use std::time::Duration;
 use legion::Entity;
 use nalgebra::{Point2, Point3};
 
-use crate::data::SkillId;
+use crate::{data::SkillId, game::components::MoveMode};
 
 #[derive(Clone)]
 pub struct CommandMove {
     pub destination: Point3<f32>,
     pub target: Option<Entity>,
+    pub move_mode: Option<MoveMode>,
 }
 
 #[derive(Clone)]
@@ -76,11 +77,16 @@ impl NextCommand {
         }
     }
 
-    pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {
+    pub fn with_move(
+        destination: Point3<f32>,
+        target: Option<Entity>,
+        move_mode: Option<MoveMode>,
+    ) -> Self {
         Self {
             command: Some(CommandData::Move(CommandMove {
                 destination,
                 target,
+                move_mode,
             })),
             has_sent_server_message: false,
         }
@@ -176,11 +182,16 @@ impl Command {
         Self::new(CommandData::Die(CommandDie { killer }), duration)
     }
 
-    pub fn with_move(destination: Point3<f32>, target: Option<Entity>) -> Self {
+    pub fn with_move(
+        destination: Point3<f32>,
+        target: Option<Entity>,
+        move_mode: Option<MoveMode>,
+    ) -> Self {
         Self::new(
             CommandData::Move(CommandMove {
                 destination,
                 target,
+                move_mode,
             }),
             None,
         )

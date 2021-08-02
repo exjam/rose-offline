@@ -11,8 +11,8 @@ use crate::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack,
             CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
             CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
-            Inventory, MotionData, NextCommand, Owner, PersonalStore, Position, StatusEffects,
-            Target,
+            Inventory, MotionData, MoveMode, MoveSpeed, NextCommand, Owner, PersonalStore,
+            Position, StatusEffects, Target,
         },
         messages::server::{
             self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
@@ -186,6 +186,7 @@ pub fn command(
         &MotionData,
         &AbilityValues,
         &StatusEffects,
+        &MoveMode,
         &mut Command,
         &mut NextCommand,
         Option<&GameClient>,
@@ -227,6 +228,7 @@ pub fn command(
             motion_data,
             ability_values,
             status_effects,
+            move_mode,
             command,
             next_command,
             game_client,
@@ -247,6 +249,7 @@ pub fn command(
                     CommandData::Move(CommandMove {
                         destination,
                         target,
+                        move_mode: command_move_mode,
                     }) => {
                         let mut target_entity_id = None;
                         if let Some(target_entity) = target {
@@ -275,6 +278,7 @@ pub fn command(
                                 x: destination.x,
                                 y: destination.y,
                                 z: destination.z as u16,
+                                move_mode: *command_move_mode,
                             }),
                         );
                     }
@@ -428,6 +432,7 @@ pub fn command(
                 CommandData::Move(CommandMove {
                     destination,
                     target,
+                    move_mode: command_move_mode,
                 }) => {
                     if let Some(target_entity) = target {
                         if let Some((target_client_entity, target_position)) = is_valid_move_target(
@@ -462,13 +467,35 @@ pub fn command(
                         }
                     }
 
+                    match command_move_mode {
+                        Some(MoveMode::Walk) => {
+                            if !matches!(move_mode, MoveMode::Walk) {
+                                cmd.add_component(*entity, MoveMode::Walk);
+                                cmd.add_component(
+                                    *entity,
+                                    MoveSpeed::new(ability_values.get_walk_speed()),
+                                );
+                            }
+                        }
+                        Some(MoveMode::Run) => {
+                            if !matches!(move_mode, MoveMode::Run) {
+                                cmd.add_component(*entity, MoveMode::Run);
+                                cmd.add_component(
+                                    *entity,
+                                    MoveSpeed::new(ability_values.get_run_speed()),
+                                );
+                            }
+                        }
+                        None => {}
+                    }
+
                     let distance = (destination.xy() - position.position.xy()).magnitude();
                     if distance < 0.1 {
                         *command = Command::with_stop();
                         cmd.remove_component::<Destination>(*entity);
                         cmd.remove_component::<Target>(*entity);
                     } else {
-                        *command = Command::with_move(*destination, *target);
+                        *command = Command::with_move(*destination, *target, *command_move_mode);
                         cmd.add_component(*entity, Destination::new(*destination));
 
                         if let Some(target_entity) = target {
@@ -617,8 +644,11 @@ pub fn command(
                             });
                         } else {
                             // Not in range, set current command to move
-                            *command =
-                                Command::with_move(target_position.position, Some(*target_entity));
+                            *command = Command::with_move(
+                                target_position.position,
+                                Some(*target_entity),
+                                Some(MoveMode::Run),
+                            );
 
                             // Set destination to move towards
                             cmd.add_component(*entity, Destination::new(target_position.position));
@@ -748,7 +778,11 @@ pub fn command(
                         } else {
                             // Not in range, set current command to move
                             let target_position = target_position.unwrap();
-                            *command = Command::with_move(target_position, target_entity);
+                            *command = Command::with_move(
+                                target_position,
+                                target_entity,
+                                Some(MoveMode::Run),
+                            );
 
                             // Set destination to move towards
                             cmd.add_component(*entity, Destination::new(target_position));

@@ -297,7 +297,7 @@ pub fn game_server_main(
                         let destination = Point3::new(message.x, message.y, message.z as f32);
                         cmd.add_component(
                             *entity,
-                            NextCommand::with_move(destination, move_target_entity),
+                            NextCommand::with_move(destination, move_target_entity, None),
                         );
                     }
                     ClientMessage::Attack(message) => {
