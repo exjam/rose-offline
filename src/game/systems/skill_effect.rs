@@ -2,10 +2,7 @@ use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use log::warn;
 
 use crate::{
-    data::{
-        GetAbilityValues, SkillAddAbility, SkillData, SkillTargetFilter, SkillType,
-        StatusEffectType,
-    },
+    data::{SkillAddAbility, SkillData, SkillTargetFilter, SkillType, StatusEffectType},
     game::{
         bundles::client_entity_recalculate_ability_values,
         components::{
@@ -38,7 +35,7 @@ struct SkillCaster<'a> {
     entity: &'a Entity,
     client_entity: &'a ClientEntity,
     position: &'a Position,
-    ability_values: (&'a AbilityValues, &'a StatusEffects),
+    ability_values: &'a AbilityValues,
     team: &'a Team,
 }
 
@@ -215,7 +212,7 @@ fn apply_skill_status_effects_to_entity(
             ServerMessage::ApplySkillEffect(ApplySkillEffect {
                 entity_id: skill_target.client_entity.id,
                 caster_entity_id: skill_caster.client_entity.id,
-                caster_intelligence: skill_caster.ability_values.get_intelligence(),
+                caster_intelligence: skill_caster.ability_values.intelligence,
                 skill_id: skill_data.id,
                 effect_success,
             }),
@@ -361,13 +358,7 @@ fn apply_skill_status_effects(
 pub fn skill_effect(
     world: &mut SubWorld,
     cmd: &mut CommandBuffer,
-    caster_query: &mut Query<(
-        &ClientEntity,
-        &Position,
-        &AbilityValues,
-        &StatusEffects,
-        &Team,
-    )>,
+    caster_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &Team)>,
     target_query: &mut Query<(
         &ClientEntity,
         &Position,
@@ -419,15 +410,9 @@ pub fn skill_effect(
         }
         let skill_data = skill_data.unwrap();
 
-        if let Ok((
-            caster_client_entity,
-            caster_position,
-            caster_ability_values,
-            caster_status_effects,
-            caster_team,
-        )) = caster_query.get(&caster_world, caster_entity)
+        if let Ok((caster_client_entity, caster_position, caster_ability_values, caster_team)) =
+            caster_query.get(&caster_world, caster_entity)
         {
-            let caster_ability_values = (caster_ability_values, caster_status_effects);
             let skill_caster = SkillCaster {
                 entity: &caster_entity,
                 client_entity: caster_client_entity,
