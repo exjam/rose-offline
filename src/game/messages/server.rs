@@ -208,6 +208,13 @@ pub struct UpdateStatusEffects {
 }
 
 #[derive(Clone)]
+pub struct UpdateSpeed {
+    pub entity_id: ClientEntityId,
+    pub run_speed: i32,
+    pub passive_attack_speed: i32,
+}
+
+#[derive(Clone)]
 pub struct UpdateLevel {
     pub entity_id: ClientEntityId,
     pub level: Level,
@@ -374,6 +381,7 @@ pub enum ServerMessage {
     UpdateLevel(UpdateLevel),
     UpdateMoney(UpdateMoney),
     UpdateStatusEffects(UpdateStatusEffects),
+    UpdateSpeed(UpdateSpeed),
     UpdateXpStamina(UpdateXpStamina),
     Whisper(Whisper),
     LogoutReply(LogoutReply),

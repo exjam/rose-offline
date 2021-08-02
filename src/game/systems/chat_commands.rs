@@ -25,10 +25,10 @@ use crate::{
             MoveSpeed, NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina,
             StatPoints, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
-        messages::server::{ServerMessage, Whisper},
+        messages::server::{ServerMessage, UpdateSpeed, Whisper},
         resources::{
             BotList, BotListEntry, ClientEntityList, PendingChatCommandList, PendingXp,
-            PendingXpList,
+            PendingXpList, ServerMessages,
         },
         GameData,
     },
@@ -40,6 +40,7 @@ pub struct ChatCommandWorld<'a> {
     client_entity_list: &'a mut ClientEntityList,
     game_data: &'a GameData,
     pending_xp_list: &'a mut PendingXpList,
+    server_messages: &'a mut ServerMessages,
 }
 
 pub struct ChatCommandUser<'a> {
@@ -77,6 +78,7 @@ lazy_static! {
                     .arg(Arg::new("ability_type").required(true))
                     .arg(Arg::new("value").required(true)),
             )
+            .subcommand(App::new("speed").arg(Arg::new("speed").required(true)))
     };
 }
 
@@ -479,6 +481,21 @@ fn handle_gm_command(
                 );
             }
         }
+        ("speed", arg_matches) => {
+            let value = arg_matches.value_of("speed").unwrap().parse::<i32>()?;
+
+            chat_command_world
+                .cmd
+                .add_component(*chat_command_user.entity, MoveSpeed::new(value as f32));
+            chat_command_world.server_messages.send_entity_message(
+                chat_command_user.client_entity,
+                ServerMessage::UpdateSpeed(UpdateSpeed {
+                    entity_id: chat_command_user.client_entity.id,
+                    run_speed: value,
+                    passive_attack_speed: chat_command_user.ability_values.passive_attack_speed,
+                }),
+            );
+        }
         _ => return Err(GMCommandError::InvalidCommand),
     }
 
@@ -508,6 +525,7 @@ pub fn chat_commands(
     #[resource] game_data: &GameData,
     #[resource] pending_chat_commands: &mut PendingChatCommandList,
     #[resource] pending_xp_list: &mut PendingXpList,
+    #[resource] server_messages: &mut ServerMessages,
 ) {
     let mut chat_command_world = ChatCommandWorld {
         cmd,
@@ -515,6 +533,7 @@ pub fn chat_commands(
         client_entity_list,
         game_data,
         pending_xp_list,
+        server_messages,
     };
 
     for (entity, command) in pending_chat_commands.iter() {

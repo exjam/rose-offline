@@ -73,6 +73,7 @@ pub enum ServerPackets {
     CastSkillTargetPosition = 0x7b4,
     ApplySkillEffect = 0x7b5,
     UpdateStatusEffects = 0x7b7,
+    UpdateSpeed = 0x7b8,
     FinishCastingSkill = 0x7b9,
     StartCastingSkill = 0x7bb,
     CancelCastingSkill = 0x7bd,
@@ -760,7 +761,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_u8(packet.character_info.gender);
         writer.write_u16(packet.move_speed.speed as u16);
         writer.write_u16(packet.passive_attack_speed as u16);
-        writer.write_u8(0); // weight rate
+        writer.write_u8(0); // TODO: Weight rate
 
         writer.write_u32(packet.character_info.face as u32);
         writer.write_u32(packet.character_info.hair as u32);
@@ -1362,6 +1363,23 @@ impl From<&PacketServerFinishCastingSkill> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::FinishCastingSkill as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.skill_id.get() as u16);
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateSpeed {
+    pub entity_id: ClientEntityId,
+    pub run_speed: i32,
+    pub passive_attack_speed: i32,
+}
+
+impl From<&PacketServerUpdateSpeed> for Packet {
+    fn from(packet: &PacketServerUpdateSpeed) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateSpeed as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u16(packet.run_speed as u16);
+        writer.write_u16(packet.passive_attack_speed as u16);
+        writer.write_u8(0); // TODO: Weight rate
         writer.into()
     }
 }
