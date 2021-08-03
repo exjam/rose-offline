@@ -32,9 +32,8 @@ pub fn save_system(
         &ManaPoints,
         &SkillPoints,
         &StatPoints,
-        &QuestState,
+        (&QuestState, &UnionMembership, &Stamina),
     )>,
-    query_2: Query<(&UnionMembership, &Stamina)>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut pending_save_list: ResMut<PendingSaveList>,
 ) {
@@ -44,26 +43,23 @@ pub fn save_system(
                 entity,
                 remove_after_save,
             }) => {
-                let (client_entity, position) = if let (
-                    Ok((
-                        client_entity,
-                        character_info,
-                        basic_stats,
-                        inventory,
-                        equipment,
-                        level,
-                        experience_points,
-                        position,
-                        skill_list,
-                        hotbar,
-                        health_points,
-                        mana_points,
-                        skill_points,
-                        stat_points,
-                        quest_state,
-                    )),
-                    Ok((union_membership, stamina)),
-                ) = (query.get(entity), query_2.get(entity))
+                let (client_entity, position) = if let Ok((
+                    client_entity,
+                    character_info,
+                    basic_stats,
+                    inventory,
+                    equipment,
+                    level,
+                    experience_points,
+                    position,
+                    skill_list,
+                    hotbar,
+                    health_points,
+                    mana_points,
+                    skill_points,
+                    stat_points,
+                    (quest_state, union_membership, stamina),
+                )) = query.get(entity)
                 {
                     let storage = CharacterStorage {
                         info: character_info.clone(),
