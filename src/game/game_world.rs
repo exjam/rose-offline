@@ -1,5 +1,8 @@
+use bevy_ecs::{
+    prelude::{IntoSystem, Schedule, StageLabel, World},
+    schedule::{RunOnce, SystemStage},
+};
 use crossbeam_channel::Receiver;
-use legion::{Resources, Schedule, World};
 use log::debug;
 use std::time::{Duration, Instant};
 
@@ -11,8 +14,27 @@ use crate::game::{
         PendingSkillEffectList, PendingUseItemList, PendingXpList, ServerList, ServerMessages,
         ServerTime, WorldRates, WorldTime,
     },
-    systems::*,
+    systems::{
+        bot_ai_system, chat_commands_system, client_entity_visibility_system, command_system,
+        control_server_system, damage_system, experience_points_system, expire_time_system,
+        game_server_authentication_system, game_server_join_system, game_server_main_system,
+        login_server_authentication_system, login_server_system, monster_spawn_system,
+        npc_ai_system, personal_store_system, quest_system, save_system, server_messages_system,
+        skill_effect_system, startup_zones_system, status_effect_system, update_position_system,
+        use_item_system, world_server_authentication_system, world_server_system,
+        world_time_system,
+    },
 };
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
+enum GameStages {
+    Startup,
+    Input,
+    PreUpdate,
+    Update,
+    PostUpdate,
+    Output,
+}
 
 pub struct GameWorld {
     tick_rate_hz: u64,
@@ -28,88 +50,104 @@ impl GameWorld {
     }
 
     pub fn run(&mut self, game_data: GameData) {
-        let mut world = World::default();
+        let mut world = World::new();
+        world.insert_resource(BotList::new());
+        world.insert_resource(ControlChannel::new(self.control_rx.clone()));
+        world.insert_resource(ServerList::new());
+        world.insert_resource(LoginTokens::new());
+        world.insert_resource(ServerMessages::new());
+        world.insert_resource(ClientEntityList::new(&game_data.zones));
+        world.insert_resource(PendingChatCommandList::new());
+        world.insert_resource(PendingDamageList::new());
+        world.insert_resource(PendingPersonalStoreEventList::new());
+        world.insert_resource(PendingQuestTriggerList::new());
+        world.insert_resource(PendingSaveList::new());
+        world.insert_resource(PendingSkillEffectList::new());
+        world.insert_resource(PendingUseItemList::new());
+        world.insert_resource(PendingXpList::new());
+        world.insert_resource(WorldRates::new());
+        world.insert_resource(WorldTime::new());
+        world.insert_resource(game_data);
 
-        let mut resources = Resources::default();
-        resources.insert(BotList::new());
-        resources.insert(ControlChannel::new(self.control_rx.clone()));
-        resources.insert(ServerList::new());
-        resources.insert(LoginTokens::new());
-        resources.insert(ServerMessages::new());
-        resources.insert(ClientEntityList::new(&game_data.zones));
-        resources.insert(PendingChatCommandList::new());
-        resources.insert(PendingDamageList::new());
-        resources.insert(PendingPersonalStoreEventList::new());
-        resources.insert(PendingQuestTriggerList::new());
-        resources.insert(PendingSaveList::new());
-        resources.insert(PendingSkillEffectList::new());
-        resources.insert(PendingUseItemList::new());
-        resources.insert(PendingXpList::new());
-        resources.insert(WorldRates::new());
-        resources.insert(WorldTime::new());
-        resources.insert(game_data);
-
-        let started_load = Instant::now();
-        let mut startup_schedule = Schedule::builder()
-            .add_system(startup_zones_system())
-            .build();
-        startup_schedule.execute(&mut world, &mut resources);
-        debug!(
-            "Time taken to populate game world: {:?}",
-            started_load.elapsed()
+        let mut schedule = Schedule::default();
+        schedule.add_stage(
+            GameStages::Startup,
+            SystemStage::single_threaded()
+                .with_run_criteria(RunOnce::default())
+                .with_system(startup_zones_system.system()),
+        );
+        schedule.add_stage_after(
+            GameStages::Startup,
+            GameStages::Input,
+            SystemStage::parallel()
+                .with_system(world_time_system.system())
+                .with_system(control_server_system.system())
+                .with_system(login_server_authentication_system.system())
+                .with_system(login_server_system.system())
+                .with_system(world_server_authentication_system.system())
+                .with_system(world_server_system.system())
+                .with_system(game_server_authentication_system.system())
+                .with_system(game_server_join_system.system())
+                .with_system(game_server_main_system.system())
+                .with_system(chat_commands_system.system())
+                .with_system(monster_spawn_system.system())
+                .with_system(bot_ai_system.system())
+                .with_system(npc_ai_system.system())
+                .with_system(expire_time_system.system())
+                .with_system(status_effect_system.system()),
         );
 
-        let mut schedule = Schedule::builder()
-            .add_system(world_time_system())
-            .add_system(control_server_system())
-            .add_system(login_server_authentication_system())
-            .add_system(login_server_system())
-            .add_system(world_server_authentication_system())
-            .add_system(world_server_system())
-            .add_system(game_server_authentication_system())
-            .add_system(game_server_join_system())
-            .add_system(game_server_main_system())
-            .add_system(chat_commands_system())
-            .add_system(monster_spawn_system())
-            .add_system(bot_ai_system())
-            .add_system(npc_ai_system())
-            .add_system(expire_time_system())
-            .add_system(status_effect_system())
-            .flush()
-            .add_system(command_system())
-            .flush()
-            .add_system(skill_effect_system())
-            .add_system(update_position_system())
-            .flush()
-            .add_system(personal_store_system())
-            .add_system(damage_system())
-            .add_system(quest_system())
-            .add_system(use_item_system())
-            .flush()
-            .add_system(experience_points_system())
-            .flush()
-            .add_system(client_entity_visibility_system())
-            .add_system(server_messages_sender_system())
-            .flush()
-            .add_system(save_system())
-            .build();
+        schedule.add_stage_after(
+            GameStages::Input,
+            GameStages::PreUpdate,
+            SystemStage::parallel()
+                .with_system(command_system.system())
+                .with_system(update_position_system.system()),
+        );
+
+        schedule.add_stage_after(
+            GameStages::PreUpdate,
+            GameStages::Update,
+            SystemStage::parallel()
+                .with_system(skill_effect_system.system())
+                .with_system(personal_store_system.system())
+                .with_system(damage_system.system())
+                .with_system(quest_system.system())
+                .with_system(use_item_system.system()),
+        );
+
+        schedule.add_stage_after(
+            GameStages::Update,
+            GameStages::PostUpdate,
+            SystemStage::parallel()
+                .with_system(experience_points_system.system())
+                .with_system(client_entity_visibility_system.system()),
+        );
+
+        schedule.add_stage_after(
+            GameStages::PostUpdate,
+            GameStages::Output,
+            SystemStage::parallel()
+                .with_system(server_messages_system.system())
+                .with_system(save_system.system()),
+        );
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);
-        let mut last_tick = std::time::Instant::now();
+        let mut last_tick = Instant::now();
 
         let mut tick_counter = 0;
         let mut tick_counter_duration = Duration::from_secs(0);
-        let mut tick_counter_last_print = std::time::Instant::now();
+        let mut tick_counter_last_print = Instant::now();
 
         loop {
-            let current_tick = std::time::Instant::now();
-            resources.insert(ServerTime {
+            let current_tick = Instant::now();
+            world.insert_resource(ServerTime {
                 delta: current_tick - last_tick,
                 now: current_tick,
             });
-            schedule.execute(&mut world, &mut resources);
+            schedule.run_once(&mut world);
 
-            let now = std::time::Instant::now();
+            let now = Instant::now();
             let tick_duration = now - current_tick;
 
             tick_counter += 1;

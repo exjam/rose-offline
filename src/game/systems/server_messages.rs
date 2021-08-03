@@ -1,24 +1,28 @@
-use legion::{system, world::SubWorld, Query};
+use bevy_ecs::prelude::{Query, ResMut};
 
 use crate::game::{
     components::{ClientEntityVisibility, GameClient, Position},
     resources::ServerMessages,
 };
 
-#[system]
-pub fn server_messages_sender(
-    world: &SubWorld,
-    query: &mut Query<(&Position, &GameClient, &ClientEntityVisibility)>,
-    #[resource] server_messages: &mut ServerMessages,
+pub fn server_messages_system(
+    query: Query<(&GameClient, &Position, &ClientEntityVisibility)>,
+    mut server_messages: ResMut<ServerMessages>,
 ) {
-    for (position, client, client_visibility) in query.iter(world) {
+    for (game_client, position, client_visibility) in query.iter() {
         for message in server_messages.pending_global_messages.iter() {
-            client.server_message_tx.send(message.message.clone()).ok();
+            game_client
+                .server_message_tx
+                .send(message.message.clone())
+                .ok();
         }
 
         for message in server_messages.pending_zone_messages.iter() {
             if position.zone_id == message.zone_id {
-                client.server_message_tx.send(message.message.clone()).ok();
+                game_client
+                    .server_message_tx
+                    .send(message.message.clone())
+                    .ok();
             }
         }
 
@@ -29,7 +33,10 @@ pub fn server_messages_sender(
                     .get(message.entity_id.0)
                     .map_or(false, |b| *b)
             {
-                client.server_message_tx.send(message.message.clone()).ok();
+                game_client
+                    .server_message_tx
+                    .send(message.message.clone())
+                    .ok();
             }
         }
     }

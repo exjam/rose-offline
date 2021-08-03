@@ -1,4 +1,4 @@
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 
 pub struct PendingCharacterSave {
     pub entity: Entity,

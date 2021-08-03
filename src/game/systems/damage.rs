@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use legion::{system, systems::CommandBuffer, world::SubWorld, Query};
+use bevy_ecs::prelude::{Commands, Query, Res, ResMut};
 
 use crate::game::{
     components::{
@@ -12,12 +12,10 @@ use crate::game::{
 };
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn damage(
-    world: &mut SubWorld,
-    cmd: &mut CommandBuffer,
-    attacker_query: &mut Query<&ClientEntity>,
-    defender_query: &mut Query<(
+pub fn damage_system(
+    mut commands: Commands,
+    attacker_query: Query<&ClientEntity>,
+    mut defender_query: Query<(
         &ClientEntity,
         &Position,
         &mut HealthPoints,
@@ -25,18 +23,24 @@ pub fn damage(
         Option<&mut NpcAi>,
         Option<&MotionData>,
     )>,
-    #[resource] pending_damage_list: &mut PendingDamageList,
-    #[resource] server_messages: &mut ServerMessages,
-    #[resource] server_time: &ServerTime,
+    mut pending_damage_list: ResMut<PendingDamageList>,
+    mut server_messages: ResMut<ServerMessages>,
+    server_time: Res<ServerTime>,
 ) {
     for pending_damage in pending_damage_list.iter() {
         let attacker_entity_id = attacker_query
-            .get(world, pending_damage.attacker)
+            .get(pending_damage.attacker)
             .map(|client_entity| Some(client_entity.id))
             .unwrap_or(None);
 
-        if let Ok((client_entity, position, health_points, damage_sources, npc_ai, motion_data)) =
-            defender_query.get_mut(world, pending_damage.defender)
+        if let Ok((
+            client_entity,
+            position,
+            mut health_points,
+            damage_sources,
+            npc_ai,
+            motion_data,
+        )) = defender_query.get_mut(pending_damage.defender)
         {
             if pending_damage.damage.apply_hit_stun {
                 // TODO: Apply hit stun by setting next command to HitStun ?
@@ -63,8 +67,8 @@ pub fn damage(
                 );
             }
 
-            if let Some(damage_sources) = damage_sources {
-                if let Some(source) = damage_sources
+            if let Some(mut damage_sources) = damage_sources {
+                if let Some(mut source) = damage_sources
                     .damage_sources
                     .iter_mut()
                     .find(|source| source.entity == pending_damage.attacker)
@@ -85,9 +89,10 @@ pub fn damage(
                             }
                         }
 
-                        damage_sources.damage_sources.remove(
-                            oldest_index.unwrap_or(damage_sources.damage_sources.len() - 1),
-                        );
+                        let default_oldest = damage_sources.damage_sources.len() - 1;
+                        damage_sources
+                            .damage_sources
+                            .remove(oldest_index.unwrap_or(default_oldest));
                     }
 
                     damage_sources.damage_sources.push(DamageSource {
@@ -99,23 +104,22 @@ pub fn damage(
                 }
             }
 
-            if let Some(npc_ai) = npc_ai {
+            if let Some(mut npc_ai) = npc_ai {
                 npc_ai
                     .pending_damage
                     .push((pending_damage.attacker, pending_damage.damage));
             }
 
             if health_points.hp == 0 {
-                cmd.add_component(
-                    pending_damage.defender,
-                    Command::with_die(
+                commands
+                    .entity(pending_damage.defender)
+                    .insert(Command::with_die(
                         Some(pending_damage.attacker),
                         motion_data
                             .and_then(|motion_data| motion_data.get_die())
                             .map(|die_motion| die_motion.duration)
                             .or_else(|| Some(Duration::from_secs(1))),
-                    ),
-                );
+                    ));
             }
         }
     }

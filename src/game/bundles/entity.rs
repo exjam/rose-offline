@@ -1,146 +1,83 @@
-use legion::{systems::CommandBuffer, Entity};
+use bevy_ecs::prelude::{Bundle, Commands, Entity, Mut};
 
 use crate::{
     data::{AbilityValueCalculator, GetAbilityValues},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
-            ClientEntityType, ClientEntityVisibility, Command, DamageSources, Equipment,
-            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
-            MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection,
-            Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
-            StatusEffects, Team, UnionMembership,
+            ClientEntityType, ClientEntityVisibility, Command, Equipment, ExperiencePoints,
+            GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints, MotionData, MoveMode,
+            MoveSpeed, NextCommand, Npc, NpcStandingDirection, Position, QuestState, SkillList,
+            SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
         },
         messages::server::{ServerMessage, Teleport},
         resources::ClientEntityList,
     },
 };
 
-pub fn create_character_entity(
-    cmd: &mut CommandBuffer,
-    entity: &Entity,
-    ability_values: AbilityValues,
-    basic_stats: BasicStats,
-    command: Command,
-    equipment: Equipment,
-    experience_points: ExperiencePoints,
-    health_points: HealthPoints,
-    hotbar: Hotbar,
-    info: CharacterInfo,
-    inventory: Inventory,
-    level: Level,
-    mana_points: ManaPoints,
-    motion_data: MotionData,
-    move_mode: MoveMode,
-    move_speed: MoveSpeed,
-    next_command: NextCommand,
-    position: Position,
-    quest_state: QuestState,
-    skill_list: SkillList,
-    skill_points: SkillPoints,
-    stamina: Stamina,
-    stat_points: StatPoints,
-    team: Team,
-    union_membership: UnionMembership,
-) {
-    cmd.add_component(*entity, ability_values);
-    cmd.add_component(*entity, basic_stats);
-    cmd.add_component(*entity, command);
-    cmd.add_component(*entity, equipment);
-    cmd.add_component(*entity, experience_points);
-    cmd.add_component(*entity, health_points);
-    cmd.add_component(*entity, hotbar);
-    cmd.add_component(*entity, info);
-    cmd.add_component(*entity, inventory);
-    cmd.add_component(*entity, level);
-    cmd.add_component(*entity, mana_points);
-    cmd.add_component(*entity, motion_data);
-    cmd.add_component(*entity, move_mode);
-    cmd.add_component(*entity, move_speed);
-    cmd.add_component(*entity, next_command);
-    cmd.add_component(*entity, position);
-    cmd.add_component(*entity, quest_state);
-    cmd.add_component(*entity, skill_list);
-    cmd.add_component(*entity, skill_points);
-    cmd.add_component(*entity, stamina);
-    cmd.add_component(*entity, stat_points);
-    cmd.add_component(*entity, team);
-    cmd.add_component(*entity, union_membership);
-    cmd.add_component(*entity, StatusEffects::new());
+#[derive(Bundle)]
+pub struct NpcBundle {
+    pub ability_values: AbilityValues,
+    pub command: Command,
+    pub health_points: HealthPoints,
+    pub level: Level,
+    pub motion_data: MotionData,
+    pub move_mode: MoveMode,
+    pub move_speed: MoveSpeed,
+    pub next_command: NextCommand,
+    pub npc: Npc,
+    //pub npc_ai: Option<NpcAi>,
+    pub position: Position,
+    pub standing_direction: NpcStandingDirection,
+    pub status_effects: StatusEffects,
+    pub team: Team,
 }
 
-pub fn create_npc_entity(
-    cmd: &mut CommandBuffer,
-    entity: &Entity,
-    ability_values: AbilityValues,
-    command: Command,
-    health_points: HealthPoints,
-    level: Level,
-    motion_data: MotionData,
-    move_mode: MoveMode,
-    move_speed: MoveSpeed,
-    next_command: NextCommand,
-    npc: Npc,
-    npc_ai: Option<NpcAi>,
-    position: Position,
-    standing_direction: NpcStandingDirection,
-    team: Team,
-) {
-    cmd.add_component(*entity, ability_values);
-    cmd.add_component(*entity, command);
-    cmd.add_component(*entity, health_points);
-    cmd.add_component(*entity, level);
-    cmd.add_component(*entity, motion_data);
-    cmd.add_component(*entity, move_mode);
-    cmd.add_component(*entity, move_speed);
-    cmd.add_component(*entity, next_command);
-    cmd.add_component(*entity, npc);
-    if let Some(npc_ai) = npc_ai {
-        cmd.add_component(*entity, npc_ai);
-    }
-    cmd.add_component(*entity, position);
-    cmd.add_component(*entity, standing_direction);
-    cmd.add_component(*entity, team);
-    cmd.add_component(*entity, StatusEffects::new());
+#[derive(Bundle)]
+pub struct CharacterBundle {
+    pub ability_values: AbilityValues,
+    pub basic_stats: BasicStats,
+    pub command: Command,
+    pub equipment: Equipment,
+    pub experience_points: ExperiencePoints,
+    pub health_points: HealthPoints,
+    pub hotbar: Hotbar,
+    pub info: CharacterInfo,
+    pub inventory: Inventory,
+    pub level: Level,
+    pub mana_points: ManaPoints,
+    pub motion_data: MotionData,
+    pub move_mode: MoveMode,
+    pub move_speed: MoveSpeed,
+    pub next_command: NextCommand,
+    pub position: Position,
+    pub quest_state: QuestState,
+    pub skill_list: SkillList,
+    pub skill_points: SkillPoints,
+    pub stamina: Stamina,
+    pub stat_points: StatPoints,
+    pub status_effects: StatusEffects,
+    pub team: Team,
+    pub union_membership: UnionMembership,
 }
 
-pub fn create_monster_entity(
-    cmd: &mut CommandBuffer,
-    entity: &Entity,
-    ability_values: AbilityValues,
-    command: Command,
-    damage_sources: Option<DamageSources>,
-    health_points: HealthPoints,
-    level: Level,
-    motion_data: MotionData,
-    move_mode: MoveMode,
-    move_speed: MoveSpeed,
-    next_command: NextCommand,
-    npc: Npc,
-    npc_ai: Option<NpcAi>,
-    position: Position,
-    spawn_origin: SpawnOrigin,
-    team: Team,
-) {
-    cmd.add_component(*entity, ability_values);
-    cmd.add_component(*entity, command);
-    if let Some(damage_sources) = damage_sources {
-        cmd.add_component(*entity, damage_sources);
-    }
-    cmd.add_component(*entity, health_points);
-    cmd.add_component(*entity, level);
-    cmd.add_component(*entity, motion_data);
-    cmd.add_component(*entity, move_mode);
-    cmd.add_component(*entity, move_speed);
-    cmd.add_component(*entity, next_command);
-    cmd.add_component(*entity, npc);
-    if let Some(npc_ai) = npc_ai {
-        cmd.add_component(*entity, npc_ai);
-    }
-    cmd.add_component(*entity, position);
-    cmd.add_component(*entity, spawn_origin);
-    cmd.add_component(*entity, team);
-    cmd.add_component(*entity, StatusEffects::new());
+#[derive(Bundle)]
+pub struct MonsterBundle {
+    pub ability_values: AbilityValues,
+    pub command: Command,
+    //pub damage_sources: Option<DamageSources>,
+    pub health_points: HealthPoints,
+    pub level: Level,
+    pub motion_data: MotionData,
+    pub move_mode: MoveMode,
+    pub move_speed: MoveSpeed,
+    pub next_command: NextCommand,
+    pub npc: Npc,
+    //pub npc_ai: Option<NpcAi>,
+    pub position: Position,
+    pub spawn_origin: SpawnOrigin,
+    pub status_effects: StatusEffects,
+    pub team: Team,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -150,9 +87,9 @@ pub enum ClientEntityJoinZoneError {
 }
 
 pub fn client_entity_join_zone(
-    cmd: &mut CommandBuffer,
+    commands: &mut Commands,
     client_entity_list: &mut ClientEntityList,
-    entity: &Entity,
+    entity: Entity,
     client_entity_type: ClientEntityType,
     position: &Position,
 ) -> Result<ClientEntityId, ClientEntityJoinZoneError> {
@@ -160,47 +97,51 @@ pub fn client_entity_join_zone(
         .get_zone_mut(position.zone_id)
         .ok_or(ClientEntityJoinZoneError::InvalidZone)?;
     let client_entity = zone
-        .join_zone(client_entity_type, *entity, position.position)
+        .join_zone(client_entity_type, entity, position.position)
         .ok_or(ClientEntityJoinZoneError::OutOfEntityId)?;
 
     let client_entity_id = client_entity.id;
-    cmd.add_component(*entity, client_entity);
+    commands.entity(entity).insert(client_entity);
     Ok(client_entity_id)
 }
 
 pub fn client_entity_leave_zone(
-    cmd: &mut CommandBuffer,
+    commands: &mut Commands,
     client_entity_list: &mut ClientEntityList,
-    entity: &Entity,
+    entity: Entity,
     client_entity: &ClientEntity,
     position: &Position,
 ) {
     if let Some(client_entity_zone) = client_entity_list.get_zone_mut(position.zone_id) {
         client_entity_zone.leave_zone(entity, client_entity);
     }
-    cmd.remove_component::<ClientEntity>(*entity);
-    cmd.remove_component::<ClientEntityVisibility>(*entity);
+    commands
+        .entity(entity)
+        .remove::<ClientEntity>()
+        .remove::<ClientEntityVisibility>();
 }
 
 pub fn client_entity_teleport_zone(
-    cmd: &mut CommandBuffer,
+    commands: &mut Commands,
     client_entity_list: &mut ClientEntityList,
-    entity: &Entity,
+    entity: Entity,
     client_entity: &ClientEntity,
     previous_position: &Position,
     new_position: Position,
     game_client: Option<&GameClient>,
 ) {
     client_entity_leave_zone(
-        cmd,
+        commands,
         client_entity_list,
         entity,
         client_entity,
         previous_position,
     );
-    cmd.add_component(*entity, Command::with_stop());
-    cmd.add_component(*entity, NextCommand::with_stop());
-    cmd.add_component(*entity, new_position.clone());
+    commands
+        .entity(entity)
+        .insert(Command::with_stop())
+        .insert(NextCommand::with_stop())
+        .insert(new_position.clone());
 
     if let Some(game_client) = game_client {
         game_client
@@ -218,10 +159,10 @@ pub fn client_entity_teleport_zone(
 }
 
 pub fn client_entity_recalculate_ability_values(
-    cmd: &mut CommandBuffer,
+    commands: &mut Commands,
     ability_value_calculator: &dyn AbilityValueCalculator,
     client_entity: &ClientEntity,
-    entity: &Entity,
+    entity: Entity,
     status_effects: &StatusEffects,
     basic_stats: Option<&BasicStats>,
     character_info: Option<&CharacterInfo>,
@@ -230,8 +171,8 @@ pub fn client_entity_recalculate_ability_values(
     move_mode: Option<&MoveMode>,
     skill_list: Option<&SkillList>,
     npc: Option<&Npc>,
-    health_points: Option<&mut HealthPoints>,
-    mana_points: Option<&mut ManaPoints>,
+    health_points: Option<&mut Mut<HealthPoints>>,
+    mana_points: Option<&mut Mut<ManaPoints>>,
 ) -> Option<AbilityValues> {
     // Update ability values
     let ability_values = if matches!(client_entity.entity_type, ClientEntityType::Character) {
@@ -249,30 +190,36 @@ pub fn client_entity_recalculate_ability_values(
     }?;
 
     if let Some(health_points) = health_points {
-        health_points.hp = health_points
-            .hp
-            .max((&ability_values, status_effects).get_max_health() as u32);
-    }
-
-    if let Some(mana_points) = mana_points {
-        mana_points.mp = mana_points
-            .mp
-            .max((&ability_values, status_effects).get_max_mana() as u32);
-    }
-
-    if let Some(move_mode) = move_mode {
-        match move_mode {
-            MoveMode::Run => cmd.add_component(
-                *entity,
-                MoveSpeed::new((&ability_values, status_effects).get_run_speed()),
-            ),
-            MoveMode::Walk => cmd.add_component(
-                *entity,
-                MoveSpeed::new((&ability_values, status_effects).get_walk_speed()),
-            ),
+        let max_hp = (&ability_values, status_effects).get_max_health() as u32;
+        if health_points.hp > max_hp {
+            health_points.hp = max_hp;
         }
     }
 
-    cmd.add_component(*entity, ability_values.clone());
+    if let Some(mana_points) = mana_points {
+        let max_mp = (&ability_values, status_effects).get_max_mana() as u32;
+        if mana_points.mp > max_mp {
+            mana_points.mp = max_mp;
+        }
+    }
+
+    let mut entity_commands = commands.entity(entity);
+
+    if let Some(move_mode) = move_mode {
+        match move_mode {
+            MoveMode::Run => {
+                entity_commands.insert(MoveSpeed::new(
+                    (&ability_values, status_effects).get_run_speed(),
+                ));
+            }
+            MoveMode::Walk => {
+                entity_commands.insert(MoveSpeed::new(
+                    (&ability_values, status_effects).get_walk_speed(),
+                ));
+            }
+        }
+    }
+
+    entity_commands.insert(ability_values.clone());
     Some(ability_values)
 }

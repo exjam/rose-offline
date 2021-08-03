@@ -45,7 +45,7 @@ use crate::game::messages::{client::ClientMessage, control::ClientType, server::
 use async_trait::async_trait;
 
 pub struct Client<'a> {
-    pub entity: legion::Entity,
+    pub entity: bevy_ecs::prelude::Entity,
     pub connection: Connection<'a>,
     pub client_message_tx: crossbeam_channel::Sender<ClientMessage>,
     pub server_message_rx: tokio::sync::mpsc::UnboundedReceiver<ServerMessage>,

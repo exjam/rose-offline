@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
 use log::warn;
 use nalgebra::Point3;
 use rand::{prelude::ThreadRng, Rng};
@@ -33,42 +33,42 @@ use crate::{
     },
 };
 
-struct QuestSourceEntity<'a> {
-    entity: &'a Entity,
+struct QuestSourceEntity<'world, 'a> {
+    entity: Entity,
     game_client: Option<&'a GameClient>,
     ability_values: &'a AbilityValues,
-    basic_stats: Option<&'a mut BasicStats>,
-    character_info: Option<&'a mut CharacterInfo>,
+    basic_stats: Option<&'a mut Mut<'world, BasicStats>>,
+    character_info: Option<&'a mut Mut<'world, CharacterInfo>>,
     client_entity: &'a ClientEntity,
     equipment: Option<&'a Equipment>,
-    experience_points: Option<&'a mut ExperiencePoints>,
-    inventory: Option<&'a mut Inventory>,
+    experience_points: Option<&'a mut Mut<'world, ExperiencePoints>>,
+    inventory: Option<&'a mut Mut<'world, Inventory>>,
     level: &'a Level,
     move_speed: &'a MoveSpeed,
     position: &'a Position,
-    quest_state: Option<&'a mut QuestState>,
-    skill_list: Option<&'a mut SkillList>,
-    skill_points: Option<&'a mut SkillPoints>,
-    stamina: Option<&'a mut Stamina>,
-    stat_points: Option<&'a mut StatPoints>,
+    quest_state: Option<&'a mut Mut<'world, QuestState>>,
+    skill_list: Option<&'a mut Mut<'world, SkillList>>,
+    skill_points: Option<&'a mut Mut<'world, SkillPoints>>,
+    stamina: Option<&'a mut Mut<'world, Stamina>>,
+    stat_points: Option<&'a mut Mut<'world, StatPoints>>,
     status_effects: &'a StatusEffects,
-    team: &'a mut Team,
-    union_membership: Option<&'a mut UnionMembership>,
+    team: &'a mut Mut<'world, Team>,
+    union_membership: Option<&'a mut Mut<'world, UnionMembership>>,
 }
 
-struct QuestParameters<'a, 'b> {
-    source: &'a mut QuestSourceEntity<'b>,
+struct QuestParameters<'a, 'world, 'b> {
+    source: &'a mut QuestSourceEntity<'world, 'b>,
     selected_quest_index: Option<usize>,
     next_trigger_name: Option<String>,
 }
 
-struct QuestWorld<'a> {
-    cmd: &'a mut CommandBuffer,
-    client_entity_list: &'a mut ClientEntityList,
+struct QuestWorld<'a, 'b, 'c, 'd> {
+    commands: &'a mut Commands<'b>,
+    client_entity_list: &'a mut ResMut<'c, ClientEntityList>,
     game_data: &'a GameData,
     world_rates: &'a WorldRates,
     world_time: &'a WorldTime,
-    pending_xp_list: &'a mut PendingXpList,
+    pending_xp_list: &'a mut ResMut<'d, PendingXpList>,
     rng: ThreadRng,
 }
 
@@ -212,13 +212,29 @@ fn quest_condition_ability_values(
             quest_parameters.source.level,
             quest_parameters.source.move_speed,
             quest_parameters.source.team,
-            quest_parameters.source.character_info.as_deref(),
-            quest_parameters.source.experience_points.as_deref(),
-            quest_parameters.source.inventory.as_deref(),
-            quest_parameters.source.skill_points.as_deref(),
-            quest_parameters.source.stamina.as_deref(),
-            quest_parameters.source.stat_points.as_deref(),
-            quest_parameters.source.union_membership.as_deref(),
+            quest_parameters
+                .source
+                .character_info
+                .as_deref()
+                .map(|x| &**x),
+            quest_parameters
+                .source
+                .experience_points
+                .as_deref()
+                .map(|x| &**x),
+            quest_parameters.source.inventory.as_deref().map(|x| &**x),
+            quest_parameters
+                .source
+                .skill_points
+                .as_deref()
+                .map(|x| &**x),
+            quest_parameters.source.stamina.as_deref().map(|x| &**x),
+            quest_parameters.source.stat_points.as_deref().map(|x| &**x),
+            quest_parameters
+                .source
+                .union_membership
+                .as_deref()
+                .map(|x| &**x),
         )
         .unwrap_or(0);
 
@@ -334,7 +350,7 @@ fn quest_reward_calculated_experience_points(
         );
 
     quest_world.pending_xp_list.push(PendingXp::new(
-        *quest_parameters.source.entity,
+        quest_parameters.source.entity,
         reward_value as u64,
         0,
         None,
@@ -439,14 +455,25 @@ fn quest_reward_calculated_item(
     true
 }
 
-fn get_quest_calculated_money_dup_count_var<'a>(
+fn reset_quest_calculated_money_dup_count_var(
     selected_quest_index: Option<usize>,
-    quest_state: &'a mut Option<&mut QuestState>,
-) -> Option<&'a mut u16> {
+    quest_state: &mut Option<&mut Mut<QuestState>>,
+) -> Option<()> {
     let quest_index = selected_quest_index?;
     let quest_state = quest_state.as_mut()?;
     let active_quest = quest_state.get_quest_mut(quest_index)?;
-    active_quest.variables.last_mut()
+    *active_quest.variables.last_mut()? = 0;
+    Some(())
+}
+
+fn get_quest_calculated_money_dup_count_var<'a, 'world>(
+    selected_quest_index: Option<usize>,
+    quest_state: &'a Option<&'a mut Mut<'world, QuestState>>,
+) -> Option<&'a u16> {
+    let quest_index = selected_quest_index?;
+    let quest_state = quest_state.as_ref()?;
+    let active_quest = quest_state.get_quest(quest_index)?;
+    active_quest.variables.last()
 }
 
 fn quest_reward_calculated_money(
@@ -458,7 +485,7 @@ fn quest_reward_calculated_money(
 ) -> bool {
     let dup_count_var = get_quest_calculated_money_dup_count_var(
         quest_parameters.selected_quest_index,
-        &mut quest_parameters.source.quest_state,
+        &quest_parameters.source.quest_state,
     );
 
     let reward_value = quest_world
@@ -487,9 +514,10 @@ fn quest_reward_calculated_money(
 
     if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
         if inventory.try_add_money(money).is_ok() {
-            if let Some(dup_count_var) = dup_count_var {
-                *dup_count_var = 0u16;
-            }
+            reset_quest_calculated_money_dup_count_var(
+                quest_parameters.selected_quest_index,
+                &mut quest_parameters.source.quest_state,
+            );
 
             if let Some(game_client) = quest_parameters.source.game_client {
                 game_client
@@ -643,7 +671,7 @@ fn quest_reward_teleport(
     new_position: Point3<f32>,
 ) -> bool {
     client_entity_teleport_zone(
-        quest_world.cmd,
+        quest_world.commands,
         quest_world.client_entity_list,
         quest_parameters.source.entity,
         quest_parameters.source.client_entity,
@@ -817,11 +845,9 @@ fn quest_trigger_apply_rewards(
 }
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn quest(
-    cmd: &mut CommandBuffer,
-    world: &mut SubWorld,
-    entity_query: &mut Query<(
+pub fn quest_system(
+    mut commands: Commands,
+    mut query: Query<(
         &ClientEntity,
         &AbilityValues,
         &Level,
@@ -837,34 +863,36 @@ pub fn quest(
         Option<&mut QuestState>,
         Option<&mut SkillList>,
         Option<&mut SkillPoints>,
+    )>,
+    mut query_2: Query<(
         Option<&mut Stamina>,
         Option<&mut StatPoints>,
         Option<&mut UnionMembership>,
         Option<&GameClient>,
     )>,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] game_data: &GameData,
-    #[resource] world_rates: &WorldRates,
-    #[resource] pending_quest_trigger_list: &mut PendingQuestTriggerList,
-    #[resource] pending_xp_list: &mut PendingXpList,
-    #[resource] world_time: &WorldTime,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    game_data: Res<GameData>,
+    world_rates: Res<WorldRates>,
+    mut pending_quest_trigger_list: ResMut<PendingQuestTriggerList>,
+    mut pending_xp_list: ResMut<PendingXpList>,
+    world_time: Res<WorldTime>,
 ) {
     let mut quest_world = QuestWorld {
-        cmd,
-        client_entity_list,
-        game_data,
-        world_rates,
-        world_time,
-        pending_xp_list,
+        commands: &mut commands,
+        client_entity_list: &mut client_entity_list,
+        game_data: &game_data,
+        world_rates: &world_rates,
+        world_time: &world_time,
+        pending_xp_list: &mut pending_xp_list,
         rng: rand::thread_rng(),
     };
 
     for PendingQuestTrigger {
         trigger_entity,
         trigger_hash,
-    } in pending_quest_trigger_list.iter()
+    } in pending_quest_trigger_list.drain(..)
     {
-        let mut trigger = game_data.quests.get_trigger_by_hash(*trigger_hash);
+        let mut trigger = game_data.quests.get_trigger_by_hash(trigger_hash);
         let mut success = false;
 
         if let Ok((
@@ -874,43 +902,42 @@ pub fn quest(
             move_speed,
             position,
             status_effects,
-            team,
-            basic_stats,
-            character_info,
+            mut team,
+            mut basic_stats,
+            mut character_info,
             equipment,
-            experience_points,
-            inventory,
-            quest_state,
-            skill_list,
-            skill_points,
-            stamina,
-            stat_points,
-            union_membership,
-            game_client,
-        )) = entity_query.get_mut(world, *trigger_entity)
+            mut experience_points,
+            mut inventory,
+            mut quest_state,
+            mut skill_list,
+            mut skill_points,
+        )) = query.get_mut(trigger_entity)
         {
+            let (mut stamina, mut stat_points, mut union_membership, game_client) =
+                query_2.get_mut(trigger_entity).unwrap();
+
             let mut quest_parameters = QuestParameters {
                 source: &mut QuestSourceEntity {
                     entity: trigger_entity,
                     game_client,
                     ability_values,
-                    basic_stats,
-                    character_info,
+                    basic_stats: basic_stats.as_mut(),
+                    character_info: character_info.as_mut(),
                     client_entity,
                     equipment,
-                    experience_points,
-                    inventory,
+                    experience_points: experience_points.as_mut(),
+                    inventory: inventory.as_mut(),
                     level,
                     move_speed,
                     position,
-                    quest_state,
-                    skill_list,
-                    skill_points,
-                    stamina,
-                    stat_points,
+                    quest_state: quest_state.as_mut(),
+                    skill_list: skill_list.as_mut(),
+                    skill_points: skill_points.as_mut(),
+                    stamina: stamina.as_mut(),
+                    stat_points: stat_points.as_mut(),
                     status_effects,
-                    team,
-                    union_membership,
+                    team: &mut team,
+                    union_membership: union_membership.as_mut(),
                 },
                 selected_quest_index: None,
                 next_trigger_name: None,
@@ -951,12 +978,10 @@ pub fn quest(
                     .server_message_tx
                     .send(ServerMessage::QuestTriggerResult(QuestTriggerResult {
                         success,
-                        trigger_hash: *trigger_hash,
+                        trigger_hash,
                     }))
                     .ok();
             }
         }
     }
-
-    pending_quest_trigger_list.clear();
 }

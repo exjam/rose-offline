@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
 use log::warn;
 
 use crate::{
@@ -18,32 +18,34 @@ use crate::{
     },
 };
 
+#[allow(dead_code)]
 enum SkillCastError {
     InvalidSkill,
     InvalidTarget,
     NotEnoughUseAbility,
 }
 
-struct SkillWorld<'a> {
-    cmd: &'a mut CommandBuffer,
-    client_entity_list: &'a ClientEntityList,
-    game_data: &'a GameData,
-    server_messages: &'a mut ServerMessages,
+struct SkillWorld<'a, 'b, 'c, 'd, 'e, 'f> {
+    commands: &'a mut Commands<'b>,
+    client_entity_list: &'c ClientEntityList,
+    game_data: &'d GameData,
+    server_messages: &'e mut ResMut<'f, ServerMessages>,
 }
 
 struct SkillCaster<'a> {
-    entity: &'a Entity,
+    entity: Entity,
     client_entity: &'a ClientEntity,
     position: &'a Position,
     ability_values: &'a AbilityValues,
     team: &'a Team,
 }
 
-struct SkillTargetEntity<'a> {
-    entity: &'a Entity,
+#[allow(dead_code)]
+struct SkillTargetEntity<'a, 'b> {
+    entity: Entity,
     client_entity: &'a ClientEntity,
     position: &'a Position,
-    status_effects: &'a mut StatusEffects,
+    status_effects: &'a mut Mut<'b, StatusEffects>,
     team: &'a Team,
     health_points: &'a HealthPoints,
     level: &'a Level,
@@ -190,7 +192,7 @@ fn apply_skill_status_effects_to_entity(
 
     // Update ability values
     client_entity_recalculate_ability_values(
-        skill_world.cmd,
+        skill_world.commands,
         skill_world.game_data.ability_value_calculator.as_ref(),
         skill_target.client_entity,
         skill_target.entity,
@@ -242,7 +244,6 @@ fn apply_skill_status_effects(
         Option<&SkillList>,
         Option<&Npc>,
     )>,
-    target_query_world: &mut SubWorld,
 ) -> Result<(), SkillCastError> {
     if skill_data.scope > 0 {
         // Apply in AOE around target position
@@ -251,17 +252,15 @@ fn apply_skill_status_effects(
             .get_zone(skill_caster.position.zone_id)
             .ok_or(SkillCastError::InvalidTarget)?;
 
-        let skill_position = match skill_target {
+        let skill_position = match *skill_target {
             PendingSkillEffectTarget::Entity(target_entity) => {
-                if let Ok((_, target_position, ..)) =
-                    target_query.get_mut(target_query_world, *target_entity)
-                {
+                if let Ok((_, target_position, ..)) = target_query.get_mut(target_entity) {
                     Some(target_position.position.xy())
                 } else {
                     None
                 }
             }
-            PendingSkillEffectTarget::Position(position) => Some(*position),
+            PendingSkillEffectTarget::Position(position) => Some(position),
         }
         .ok_or(SkillCastError::InvalidTarget)?;
 
@@ -271,7 +270,7 @@ fn apply_skill_status_effects(
             if let Ok((
                 target_client_entity,
                 target_position,
-                target_status_effects,
+                mut target_status_effects,
                 target_team,
                 target_health_points,
                 target_level,
@@ -281,16 +280,16 @@ fn apply_skill_status_effects(
                 target_basic_stats,
                 target_skill_list,
                 target_npc,
-            )) = target_query.get_mut(target_query_world, target_entity)
+            )) = target_query.get_mut(target_entity)
             {
                 apply_skill_status_effects_to_entity(
                     skill_world,
                     skill_caster,
                     &mut SkillTargetEntity {
-                        entity: &target_entity,
+                        entity: target_entity,
                         client_entity: target_client_entity,
                         position: target_position,
-                        status_effects: target_status_effects,
+                        status_effects: &mut target_status_effects,
                         team: target_team,
                         health_points: target_health_points,
                         level: target_level,
@@ -308,11 +307,11 @@ fn apply_skill_status_effects(
         }
 
         Ok(())
-    } else if let PendingSkillEffectTarget::Entity(target_entity) = skill_target {
+    } else if let PendingSkillEffectTarget::Entity(target_entity) = *skill_target {
         if let Ok((
             target_client_entity,
             target_position,
-            target_status_effects,
+            mut target_status_effects,
             target_team,
             target_health_points,
             target_level,
@@ -322,17 +321,17 @@ fn apply_skill_status_effects(
             target_basic_stats,
             target_skill_list,
             target_npc,
-        )) = target_query.get_mut(target_query_world, *target_entity)
+        )) = target_query.get_mut(target_entity)
         {
             // Apply only to target entity
             apply_skill_status_effects_to_entity(
                 skill_world,
                 skill_caster,
                 &mut SkillTargetEntity {
-                    entity: &target_entity,
+                    entity: target_entity,
                     client_entity: target_client_entity,
                     position: target_position,
-                    status_effects: target_status_effects,
+                    status_effects: &mut target_status_effects,
                     team: target_team,
                     health_points: target_health_points,
                     level: target_level,
@@ -354,12 +353,10 @@ fn apply_skill_status_effects(
 }
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn skill_effect(
-    world: &mut SubWorld,
-    cmd: &mut CommandBuffer,
-    caster_query: &mut Query<(&ClientEntity, &Position, &AbilityValues, &Team)>,
-    target_query: &mut Query<(
+pub fn skill_effect_system(
+    mut commands: Commands,
+    caster_query: Query<(&ClientEntity, &Position, &AbilityValues, &Team)>,
+    mut target_query: Query<(
         &ClientEntity,
         &Position,
         &mut StatusEffects,
@@ -373,20 +370,17 @@ pub fn skill_effect(
         Option<&SkillList>,
         Option<&Npc>,
     )>,
-    #[resource] game_data: &GameData,
-    #[resource] client_entity_list: &ClientEntityList,
-    #[resource] pending_skill_effect_list: &mut PendingSkillEffectList,
-    #[resource] server_messages: &mut ServerMessages,
-    #[resource] server_time: &ServerTime,
+    game_data: Res<GameData>,
+    client_entity_list: Res<ClientEntityList>,
+    mut pending_skill_effect_list: ResMut<PendingSkillEffectList>,
+    mut server_messages: ResMut<ServerMessages>,
+    server_time: Res<ServerTime>,
 ) {
-    let (mut target_query_world, world) = world.split_for_query(&target_query);
-    let caster_world = world;
-
     let mut skill_world = SkillWorld {
-        cmd,
-        client_entity_list,
-        game_data,
-        server_messages,
+        commands: &mut commands,
+        client_entity_list: &client_entity_list,
+        game_data: &game_data,
+        server_messages: &mut server_messages,
     };
 
     // TODO: drain_filter pls
@@ -411,10 +405,10 @@ pub fn skill_effect(
         let skill_data = skill_data.unwrap();
 
         if let Ok((caster_client_entity, caster_position, caster_ability_values, caster_team)) =
-            caster_query.get(&caster_world, caster_entity)
+            caster_query.get(caster_entity)
         {
             let skill_caster = SkillCaster {
-                entity: &caster_entity,
+                entity: caster_entity,
                 client_entity: caster_client_entity,
                 position: caster_position,
                 ability_values: caster_ability_values,
@@ -430,8 +424,7 @@ pub fn skill_effect(
                     &skill_caster,
                     &skill_target,
                     skill_data,
-                    target_query,
-                    &mut target_query_world,
+                    &mut target_query,
                 ),
                 _ => {
                     warn!("Unimplemented skill used {:?}", skill_data);

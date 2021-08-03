@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
 use log::warn;
 
 use crate::{
@@ -22,34 +22,34 @@ use crate::{
     },
 };
 
-struct UseItemWorld<'a> {
-    pub cmd: &'a mut CommandBuffer,
-    pub game_data: &'a GameData,
-    pub server_messages: &'a mut ServerMessages,
+struct UseItemWorld<'a, 'b, 'c, 'd, 'e> {
+    pub commands: &'a mut Commands<'b>,
+    pub game_data: &'c GameData,
+    pub server_messages: &'d mut ResMut<'e, ServerMessages>,
 }
 
-struct UseItemUser<'a> {
-    pub entity: &'a Entity,
+struct UseItemUser<'a, 'world> {
+    pub entity: Entity,
     pub ability_values: &'a AbilityValues,
-    pub basic_stats: &'a mut BasicStats,
+    pub basic_stats: &'a mut Mut<'world, BasicStats>,
     pub character_info: &'a CharacterInfo,
     pub client_entity: &'a ClientEntity,
     pub experience_points: &'a ExperiencePoints,
     pub game_client: Option<&'a GameClient>,
     pub equipment: &'a Equipment,
-    pub health_points: &'a mut HealthPoints,
-    pub inventory: &'a mut Inventory,
+    pub health_points: &'a mut Mut<'world, HealthPoints>,
+    pub inventory: &'a mut Mut<'world, Inventory>,
     pub level: &'a Level,
-    pub mana_points: &'a mut ManaPoints,
+    pub mana_points: &'a mut Mut<'world, ManaPoints>,
     pub move_mode: &'a MoveMode,
     pub move_speed: &'a MoveSpeed,
-    pub skill_list: &'a mut SkillList,
-    pub skill_points: &'a mut SkillPoints,
-    pub stamina: &'a mut Stamina,
-    pub stat_points: &'a mut StatPoints,
+    pub skill_list: &'a mut Mut<'world, SkillList>,
+    pub skill_points: &'a mut Mut<'world, SkillPoints>,
+    pub stamina: &'a mut Mut<'world, Stamina>,
+    pub stat_points: &'a mut Mut<'world, StatPoints>,
     pub status_effects: &'a StatusEffects,
     pub team_number: &'a Team,
-    pub union_membership: &'a mut UnionMembership,
+    pub union_membership: &'a mut Mut<'world, UnionMembership>,
 }
 
 enum UseItemError {
@@ -172,7 +172,7 @@ fn use_inventory_item(
 
     if consume_item {
         client_entity_recalculate_ability_values(
-            use_item_world.cmd,
+            use_item_world.commands,
             use_item_world.game_data.ability_value_calculator.as_ref(),
             use_item_user.client_entity,
             use_item_user.entity,
@@ -237,11 +237,9 @@ fn use_inventory_item(
 }
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn use_item(
-    cmd: &mut CommandBuffer,
-    world: &mut SubWorld,
-    entity_query: &mut Query<(
+pub fn use_item_system(
+    mut commands: Commands,
+    mut query: Query<(
         &AbilityValues,
         &mut BasicStats,
         &CharacterInfo,
@@ -257,20 +255,22 @@ pub fn use_item(
         &mut SkillList,
         &mut SkillPoints,
         &mut Stamina,
+    )>,
+    mut query_2: Query<(
         &mut StatPoints,
         &StatusEffects,
         &Team,
         &mut UnionMembership,
         Option<&GameClient>,
     )>,
-    #[resource] game_data: &GameData,
-    #[resource] pending_use_item_list: &mut PendingUseItemList,
-    #[resource] server_messages: &mut ServerMessages,
+    game_data: Res<GameData>,
+    mut pending_use_item_list: ResMut<PendingUseItemList>,
+    mut server_messages: ResMut<ServerMessages>,
 ) {
     let mut use_item_world = UseItemWorld {
-        cmd,
-        game_data,
-        server_messages,
+        commands: &mut commands,
+        game_data: &game_data,
+        server_messages: &mut server_messages,
     };
 
     for PendingUseItem {
@@ -279,50 +279,48 @@ pub fn use_item(
         target_entity,
     } in pending_use_item_list.drain(..)
     {
-        if let Ok((
-            ability_values,
-            basic_stats,
-            character_info,
-            client_entity,
-            experience_points,
-            equipment,
-            health_points,
-            inventory,
-            level,
-            mana_points,
-            move_mode,
-            move_speed,
-            skill_list,
-            skill_points,
-            stamina,
-            stat_points,
-            status_effects,
-            team_number,
-            union_membership,
-            game_client,
-        )) = entity_query.get_mut(world, entity)
-        {
-            let mut use_item_user = UseItemUser {
-                entity: &entity,
+        if let (
+            Ok((
                 ability_values,
-                basic_stats,
+                mut basic_stats,
                 character_info,
                 client_entity,
                 experience_points,
                 equipment,
-                health_points,
-                inventory,
+                mut health_points,
+                mut inventory,
                 level,
-                mana_points,
+                mut mana_points,
                 move_mode,
                 move_speed,
-                skill_list,
-                skill_points,
-                stamina,
-                stat_points,
+                mut skill_list,
+                mut skill_points,
+                mut stamina,
+            )),
+            Ok((mut stat_points, status_effects, team_number, mut union_membership, game_client)),
+        ) = (query.get_mut(entity), query_2.get_mut(entity))
+        {
+            let mut use_item_user = UseItemUser {
+                entity,
+                ability_values,
+                basic_stats: &mut basic_stats,
+                character_info,
+                client_entity,
+                experience_points,
+                equipment,
+                health_points: &mut health_points,
+                inventory: &mut inventory,
+                level,
+                mana_points: &mut mana_points,
+                move_mode,
+                move_speed,
+                skill_list: &mut skill_list,
+                skill_points: &mut skill_points,
+                stamina: &mut stamina,
+                stat_points: &mut stat_points,
                 status_effects,
                 team_number,
-                union_membership,
+                union_membership: &mut union_membership,
                 game_client,
             };
 

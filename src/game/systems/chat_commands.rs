@@ -1,6 +1,6 @@
+use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
 use clap::{App, Arg};
 use lazy_static::lazy_static;
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
 use nalgebra::{Point2, Point3};
 use num_traits::FromPrimitive;
 use rand::prelude::SliceRandom;
@@ -17,13 +17,13 @@ use crate::{
     game::{
         bundles::{
             ability_values_add_value, client_entity_join_zone, client_entity_teleport_zone,
-            create_character_entity,
+            CharacterBundle,
         },
         components::{
             AbilityValues, BasicStats, BotAi, ClientEntity, ClientEntityType, Command,
             EquipmentIndex, EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveMode,
             MoveSpeed, NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina,
-            StatPoints, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+            StatPoints, StatusEffects, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
         messages::server::{ServerMessage, UpdateSpeed, Whisper},
         resources::{
@@ -34,28 +34,28 @@ use crate::{
     },
 };
 
-pub struct ChatCommandWorld<'a> {
-    cmd: &'a mut CommandBuffer,
-    bot_list: &'a mut BotList,
-    client_entity_list: &'a mut ClientEntityList,
-    game_data: &'a GameData,
-    pending_xp_list: &'a mut PendingXpList,
-    server_messages: &'a mut ServerMessages,
+pub struct ChatCommandWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l> {
+    commands: &'a mut Commands<'b>,
+    bot_list: &'c mut ResMut<'d, BotList>,
+    client_entity_list: &'e mut ResMut<'f, ClientEntityList>,
+    game_data: &'g Res<'h, GameData>,
+    pending_xp_list: &'i mut ResMut<'j, PendingXpList>,
+    server_messages: &'k mut ResMut<'l, ServerMessages>,
 }
 
-pub struct ChatCommandUser<'a> {
-    ability_values: &'a AbilityValues,
-    client_entity: &'a ClientEntity,
-    entity: &'a Entity,
-    game_client: &'a GameClient,
-    level: &'a Level,
-    position: &'a Position,
-    basic_stats: &'a mut BasicStats,
-    inventory: &'a mut Inventory,
-    skill_points: &'a mut SkillPoints,
-    stamina: &'a mut Stamina,
-    stat_points: &'a mut StatPoints,
-    union_membership: &'a mut UnionMembership,
+pub struct ChatCommandUser<'world, 'a> {
+    entity: Entity,
+    ability_values: &'world AbilityValues,
+    client_entity: &'world ClientEntity,
+    game_client: &'world GameClient,
+    level: &'world Level,
+    position: &'world Position,
+    basic_stats: &'a mut Mut<'world, BasicStats>,
+    inventory: &'a mut Mut<'world, Inventory>,
+    skill_points: &'a mut Mut<'world, SkillPoints>,
+    stamina: &'a mut Mut<'world, Stamina>,
+    stat_points: &'a mut Mut<'world, StatPoints>,
+    union_membership: &'a mut Mut<'world, UnionMembership>,
 }
 
 lazy_static! {
@@ -176,11 +176,7 @@ fn create_bot_entity(
             &bot_data.skill_list,
         );
 
-    let command = Command::default();
-    let next_command = NextCommand::default();
-    let move_mode = MoveMode::Run;
     let move_speed = MoveSpeed::new(ability_values.run_speed as f32);
-    let team = Team::default_character();
 
     let weapon_motion_type = chat_command_world
         .game_data
@@ -199,41 +195,42 @@ fn create_bot_entity(
     bot_data.mana_points.mp = ability_values.max_mana as u32;
 
     let entity = chat_command_world
-        .cmd
-        .push((BotAi::new(), Owner::new(owner)));
-
-    create_character_entity(
-        chat_command_world.cmd,
-        &entity,
-        ability_values,
-        bot_data.basic_stats,
-        command,
-        bot_data.equipment,
-        bot_data.experience_points,
-        bot_data.health_points,
-        bot_data.hotbar,
-        bot_data.info,
-        bot_data.inventory,
-        bot_data.level,
-        bot_data.mana_points,
-        motion_data,
-        move_mode,
-        move_speed,
-        next_command,
-        bot_data.position,
-        bot_data.quest_state,
-        bot_data.skill_list,
-        bot_data.skill_points,
-        bot_data.stamina,
-        bot_data.stat_points,
-        team,
-        bot_data.union_membership,
-    );
+        .commands
+        .spawn()
+        .insert(BotAi::new())
+        .insert(Owner::new(owner))
+        .insert_bundle(CharacterBundle {
+            ability_values,
+            basic_stats: bot_data.basic_stats,
+            command: Command::default(),
+            equipment: bot_data.equipment,
+            experience_points: bot_data.experience_points,
+            health_points: bot_data.health_points,
+            hotbar: bot_data.hotbar,
+            info: bot_data.info,
+            inventory: bot_data.inventory,
+            level: bot_data.level,
+            mana_points: bot_data.mana_points,
+            motion_data,
+            move_mode: MoveMode::Run,
+            move_speed,
+            next_command: NextCommand::default(),
+            position: bot_data.position,
+            quest_state: bot_data.quest_state,
+            skill_list: bot_data.skill_list,
+            skill_points: bot_data.skill_points,
+            stamina: bot_data.stamina,
+            stat_points: bot_data.stat_points,
+            status_effects: StatusEffects::new(),
+            team: Team::default_character(),
+            union_membership: bot_data.union_membership,
+        })
+        .id();
 
     client_entity_join_zone(
-        chat_command_world.cmd,
+        chat_command_world.commands,
         chat_command_world.client_entity_list,
-        &entity,
+        entity,
         ClientEntityType::Character,
         &position,
     )
@@ -247,7 +244,7 @@ fn create_random_bot_entities(
     num_bots: usize,
     spacing: f32,
     origin: Position,
-    owner: &Entity,
+    owner: Entity,
 ) -> Vec<Entity> {
     let mut rng = rand::thread_rng();
     let genders = [0, 1];
@@ -270,7 +267,7 @@ fn create_random_bot_entities(
             *faces.choose(&mut rng).unwrap() as u8,
             *hair.choose(&mut rng).unwrap() as u8,
             bot_position,
-            *owner,
+            owner,
         ) {
             chat_command_world
                 .bot_list
@@ -339,7 +336,7 @@ fn handle_gm_command(
                 .is_some()
             {
                 client_entity_teleport_zone(
-                    chat_command_world.cmd,
+                    chat_command_world.commands,
                     chat_command_world.client_entity_list,
                     chat_command_user.entity,
                     chat_command_user.client_entity,
@@ -373,7 +370,7 @@ fn handle_gm_command(
             }
 
             chat_command_world.pending_xp_list.push(PendingXp::new(
-                *chat_command_user.entity,
+                chat_command_user.entity,
                 required_xp,
                 0,
                 None,
@@ -425,11 +422,12 @@ fn handle_gm_command(
 
                     index += PERSONAL_STORE_ITEM_SLOTS;
 
-                    chat_command_world.cmd.add_component(entity, store);
-                    chat_command_world.cmd.add_component(entity, inventory);
                     chat_command_world
-                        .cmd
-                        .add_component(entity, NextCommand::with_personal_store());
+                        .commands
+                        .entity(entity)
+                        .insert(store)
+                        .insert(inventory)
+                        .insert(NextCommand::with_personal_store());
                 }
             }
         }
@@ -485,8 +483,9 @@ fn handle_gm_command(
             let value = arg_matches.value_of("speed").unwrap().parse::<i32>()?;
 
             chat_command_world
-                .cmd
-                .add_component(*chat_command_user.entity, MoveSpeed::new(value as f32));
+                .commands
+                .entity(chat_command_user.entity)
+                .insert(MoveSpeed::new(value as f32));
             chat_command_world.server_messages.send_entity_message(
                 chat_command_user.client_entity,
                 ServerMessage::UpdateSpeed(UpdateSpeed {
@@ -503,11 +502,9 @@ fn handle_gm_command(
 }
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn chat_commands(
-    world: &mut SubWorld,
-    cmd: &mut CommandBuffer,
-    user_query: &mut Query<(
+pub fn chat_commands_system(
+    mut commands: Commands,
+    mut user_query: Query<(
         &AbilityValues,
         &ClientEntity,
         &GameClient,
@@ -520,50 +517,50 @@ pub fn chat_commands(
         &mut StatPoints,
         &mut UnionMembership,
     )>,
-    #[resource] bot_list: &mut BotList,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] game_data: &GameData,
-    #[resource] pending_chat_commands: &mut PendingChatCommandList,
-    #[resource] pending_xp_list: &mut PendingXpList,
-    #[resource] server_messages: &mut ServerMessages,
+    mut bot_list: ResMut<BotList>,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    game_data: Res<GameData>,
+    mut pending_chat_commands: ResMut<PendingChatCommandList>,
+    mut pending_xp_list: ResMut<PendingXpList>,
+    mut server_messages: ResMut<ServerMessages>,
 ) {
     let mut chat_command_world = ChatCommandWorld {
-        cmd,
-        bot_list,
-        client_entity_list,
-        game_data,
-        pending_xp_list,
-        server_messages,
+        commands: &mut commands,
+        bot_list: &mut bot_list,
+        client_entity_list: &mut client_entity_list,
+        game_data: &game_data,
+        pending_xp_list: &mut pending_xp_list,
+        server_messages: &mut server_messages,
     };
 
-    for (entity, command) in pending_chat_commands.iter() {
+    for (entity, command) in pending_chat_commands.drain(..) {
         if let Ok((
             ability_values,
             client_entity,
             game_client,
             level,
             position,
-            basic_stats,
-            inventory,
-            skill_points,
-            stamina,
-            stat_points,
-            union_membership,
-        )) = user_query.get_mut(world, *entity)
+            mut basic_stats,
+            mut inventory,
+            mut skill_points,
+            mut stamina,
+            mut stat_points,
+            mut union_membership,
+        )) = user_query.get_mut(entity)
         {
             let mut chat_command_user = ChatCommandUser {
+                entity,
                 ability_values,
                 client_entity,
-                entity,
                 game_client,
                 level,
                 position,
-                basic_stats,
-                inventory,
-                skill_points,
-                stamina,
-                stat_points,
-                union_membership,
+                basic_stats: &mut basic_stats,
+                inventory: &mut inventory,
+                skill_points: &mut skill_points,
+                stamina: &mut stamina,
+                stat_points: &mut stat_points,
+                union_membership: &mut union_membership,
             };
 
             if handle_gm_command(
@@ -577,6 +574,4 @@ pub fn chat_commands(
             }
         }
     }
-
-    pending_chat_commands.clear();
 }

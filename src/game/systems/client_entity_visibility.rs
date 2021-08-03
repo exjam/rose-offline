@@ -1,4 +1,4 @@
-use legion::{system, world::SubWorld, Query};
+use bevy_ecs::prelude::{Query, Res, ResMut};
 
 use crate::game::{
     components::{
@@ -15,17 +15,15 @@ use crate::game::{
 };
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn client_entity_visibility(
-    world: &mut SubWorld,
-    clients_query: &mut Query<(
+pub fn client_entity_visibility_system(
+    clients_query: Query<(
         &mut ClientEntityVisibility,
         &GameClient,
         &ClientEntity,
         &Position,
     )>,
-    entity_id_query: &mut Query<&ClientEntity>,
-    characters_query: &mut Query<(
+    entity_id_query: Query<&ClientEntity>,
+    characters_query: Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -42,8 +40,8 @@ pub fn client_entity_visibility(
         Option<&Target>,
         Option<&PersonalStore>,
     )>,
-    dropped_item_query: &mut Query<(&Option<DroppedItem>, &Position, &ExpireTime, Option<&Owner>)>,
-    monsters_query: &mut Query<(
+    dropped_item_query: Query<(&Option<DroppedItem>, &Position, &ExpireTime, Option<&Owner>)>,
+    monsters_query: Query<(
         &Npc,
         &Position,
         &Team,
@@ -54,7 +52,7 @@ pub fn client_entity_visibility(
         Option<&Destination>,
         Option<&Target>,
     )>,
-    npcs_query: &mut Query<(
+    npcs_query: Query<(
         &Npc,
         &NpcStandingDirection,
         &Position,
@@ -66,20 +64,17 @@ pub fn client_entity_visibility(
         Option<&Destination>,
         Option<&Target>,
     )>,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] server_time: &ServerTime,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    server_time: Res<ServerTime>,
 ) {
-    let (mut clients_query_world, mut world) = world.split_for_query(clients_query);
-    let (entity_id_query_world, mut world) = world.split_for_query(entity_id_query);
-    let (characters_query_world, mut world) = world.split_for_query(characters_query);
-    let (dropped_item_query_world, mut world) = world.split_for_query(dropped_item_query);
-    let (monster_query_world, mut world) = world.split_for_query(monsters_query);
-    let (npc_query_world, mut _world) = world.split_for_query(npcs_query);
-
     // First loop through all client entities and generate visibility changes that need to be sent
     clients_query.for_each_mut(
-        &mut clients_query_world,
-        |(visibility, visibility_game_client, visibility_client_entity, visibility_position)| {
+        |(
+            mut visibility,
+            visibility_game_client,
+            visibility_client_entity,
+            visibility_position,
+        )| {
             if let Some(client_entity_zone) =
                 client_entity_list.get_zone(visibility_position.zone_id)
             {
@@ -118,13 +113,11 @@ pub fn client_entity_visibility(
                                     spawn_destination,
                                     spawn_target,
                                     spawn_personal_store,
-                                )) = characters_query.get(&characters_query_world, *spawn_entity)
+                                )) = characters_query.get(*spawn_entity)
                                 {
                                     let target_entity_id = spawn_target
                                         .and_then(|spawn_target| {
-                                            entity_id_query
-                                                .get(&entity_id_query_world, spawn_target.entity)
-                                                .ok()
+                                            entity_id_query.get(spawn_target.entity).ok()
                                         })
                                         .map(|spawn_target_client_entity| {
                                             spawn_target_client_entity.id
@@ -168,14 +161,11 @@ pub fn client_entity_visibility(
                                     spawn_position,
                                     spawn_expire_time,
                                     spawn_owner,
-                                )) =
-                                    dropped_item_query.get(&dropped_item_query_world, *spawn_entity)
+                                )) = dropped_item_query.get(*spawn_entity)
                                 {
                                     let owner_entity_id = spawn_owner
                                         .and_then(|spawn_owner| {
-                                            entity_id_query
-                                                .get(&entity_id_query_world, spawn_owner.entity)
-                                                .ok()
+                                            entity_id_query.get(spawn_owner.entity).ok()
                                         })
                                         .map(|spawn_owner_client_entity| {
                                             spawn_owner_client_entity.id
@@ -207,13 +197,11 @@ pub fn client_entity_visibility(
                                     spawn_status_effects,
                                     spawn_destination,
                                     spawn_target,
-                                )) = monsters_query.get(&monster_query_world, *spawn_entity)
+                                )) = monsters_query.get(*spawn_entity)
                                 {
                                     let target_entity_id = spawn_target
                                         .and_then(|spawn_target| {
-                                            entity_id_query
-                                                .get(&entity_id_query_world, spawn_target.entity)
-                                                .ok()
+                                            entity_id_query.get(spawn_target.entity).ok()
                                         })
                                         .map(|spawn_target_client_entity| {
                                             spawn_target_client_entity.id
@@ -250,13 +238,11 @@ pub fn client_entity_visibility(
                                     spawn_status_effects,
                                     spawn_destination,
                                     spawn_target,
-                                )) = npcs_query.get(&npc_query_world, *spawn_entity)
+                                )) = npcs_query.get(*spawn_entity)
                                 {
                                     let target_entity_id = spawn_target
                                         .and_then(|spawn_target| {
-                                            entity_id_query
-                                                .get(&entity_id_query_world, spawn_target.entity)
-                                                .ok()
+                                            entity_id_query.get(spawn_target.entity).ok()
                                         })
                                         .map(|spawn_target_client_entity| {
                                             spawn_target_client_entity.id

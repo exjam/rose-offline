@@ -354,6 +354,7 @@ pub struct ApplySkillEffect {
     pub effect_success: [bool; 2],
 }
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub enum CancelCastingSkillReason {
     NeedAbility,

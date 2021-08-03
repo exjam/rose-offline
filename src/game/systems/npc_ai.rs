@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use legion::{systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 use nalgebra::{Point3, Vector3};
 use rand::{prelude::ThreadRng, Rng};
 
@@ -20,8 +20,7 @@ use crate::{
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin,
-            StatusEffects, Team,
+            MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, StatusEffects, Team,
         },
         messages::server::ServerMessage,
         resources::{ClientEntityList, PendingXp, PendingXpList, ServerTime, WorldRates},
@@ -34,7 +33,7 @@ const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
 struct AiSourceEntity<'a> {
-    entity: &'a Entity,
+    entity: Entity,
     position: &'a Position,
     level: &'a Level,
     team: &'a Team,
@@ -76,11 +75,10 @@ struct AiParameters<'a, 'b> {
     is_dead: bool,
 }
 
-struct AiWorld<'a, 'b, 'c, 'd> {
-    cmd: &'a mut CommandBuffer,
-    client_entity_list: &'a ClientEntityList,
-    nearby_query_world: &'a mut SubWorld<'b>,
-    nearby_query: &'a mut Query<(&'c Level, &'d Team)>,
+struct AiWorld<'world, 'world1, 'world2, 'world3, 'a, 'b, 'c> {
+    commands: &'a mut Commands<'world>,
+    client_entity_list: &'b ClientEntityList,
+    nearby_query: &'c Query<'world1, (&'world2 Level, &'world3 Team)>,
     rng: ThreadRng,
 }
 
@@ -110,14 +108,14 @@ fn ai_condition_count_nearby_entities(
         .iter_entities_within_distance(ai_parameters.source.position.position.xy(), distance as f32)
     {
         // Ignore self entity
-        if entity == *ai_parameters.source.entity {
+        if entity == ai_parameters.source.entity {
             continue;
         }
 
         // Check level and team requirements
         if !ai_world
             .nearby_query
-            .get(ai_world.nearby_query_world, entity)
+            .get(entity)
             .map_or(false, |(level, team)| {
                 let level_diff = ai_parameters.source.level.level as i32 - level.level as i32;
 
@@ -371,8 +369,9 @@ fn npc_ai_check_conditions(
 
 fn ai_action_stop(ai_world: &mut AiWorld, ai_parameters: &mut AiParameters) {
     ai_world
-        .cmd
-        .add_component(*ai_parameters.source.entity, NextCommand::with_stop());
+        .commands
+        .entity(ai_parameters.source.entity)
+        .insert(NextCommand::with_stop());
 }
 
 fn ai_action_move_random_distance(
@@ -399,10 +398,10 @@ fn ai_action_move_random_distance(
             AipMoveMode::Walk => MoveMode::Walk,
         };
         let destination = move_origin + Vector3::new(dx as f32, dy as f32, 0.0);
-        ai_world.cmd.add_component(
-            *ai_parameters.source.entity,
-            NextCommand::with_move(destination, None, Some(move_mode)),
-        )
+        ai_world
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(NextCommand::with_move(destination, None, Some(move_mode)));
     }
 }
 
@@ -433,38 +432,37 @@ fn npc_ai_do_actions(
             AipAction::NearbyAlliesAttackTarget(_, _, _) => {}
             AipAction::AttackNearChar => {
                 if let Some((near_char, _)) = &ai_parameters.near_char {
-                    ai_world.cmd.add_component(
-                        *ai_parameters.source.entity,
-                        NextCommand::with_attack(*near_char),
-                    );
+                    ai_world
+                        .commands
+                        .entity(ai_parameters.source.entity)
+                        .insert(NextCommand::with_attack(*near_char));
                 }
             }
             AipAction::AttackFindChar => {
                 if let Some((find_char, _)) = &ai_parameters.find_char {
-                    ai_world.cmd.add_component(
-                        *ai_parameters.source.entity,
-                        NextCommand::with_attack(*find_char),
-                    );
+                    ai_world
+                        .commands
+                        .entity(ai_parameters.source.entity)
+                        .insert(NextCommand::with_attack(*find_char));
                 }
             }
             AipAction::NearbyAlliesSameNpcAttackTarget(_) => {}
             AipAction::AttackAttacker => {
                 if let Some(attacker) = ai_parameters.attacker {
-                    ai_world.cmd.add_component(
-                        *ai_parameters.source.entity,
-                        NextCommand::with_attack(*attacker.entity),
-                    );
+                    ai_world
+                        .commands
+                        .entity(ai_parameters.source.entity)
+                        .insert(NextCommand::with_attack(*attacker.entity));
                 }
             }
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {}
             AipAction::KillSelf => {
                 ai_world
-                    .cmd
-                    .add_component(*ai_parameters.source.entity, HealthPoints::new(0));
-                ai_world
-                    .cmd
-                    .add_component(*ai_parameters.source.entity, Command::with_die(None, None));
+                    .commands
+                    .entity(ai_parameters.source.entity)
+                    .insert(HealthPoints::new(0))
+                    .insert(Command::with_die(None, None));
             }
             AipAction::UseSkill(_, _, _) => {}
             AipAction::SetVariable(_, _, _, _) => {}
@@ -481,19 +479,17 @@ fn npc_ai_do_actions(
 
 fn npc_ai_run_trigger(
     ai_trigger: &AipTrigger,
-    cmd: &mut CommandBuffer,
+    commands: &mut Commands,
     source: &AiSourceEntity,
     attacker: Option<AiAttackerEntity>,
     damage: Option<Damage>,
     is_dead: bool,
     client_entity_list: &ClientEntityList,
-    nearby_query: &mut Query<(&Level, &Team)>,
-    nearby_query_world: &mut SubWorld,
+    nearby_query: &Query<(&Level, &Team)>,
 ) {
     let mut ai_world = AiWorld {
-        cmd,
+        commands,
         client_entity_list,
-        nearby_query_world,
         nearby_query,
         rng: rand::thread_rng(),
     };
@@ -516,11 +512,9 @@ fn npc_ai_run_trigger(
 }
 
 #[allow(clippy::type_complexity)]
-#[legion::system]
-pub fn npc_ai(
-    world: &mut SubWorld,
-    cmd: &mut CommandBuffer,
-    npc_query: &mut Query<(
+pub fn npc_ai_system(
+    mut commands: Commands,
+    npc_query: Query<(
         Entity,
         &Npc,
         &mut NpcAi,
@@ -536,9 +530,9 @@ pub fn npc_ai(
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
     )>,
-    spawn_point_query: &mut Query<&mut MonsterSpawnPoint>,
-    nearby_query: &mut Query<(&Level, &Team)>,
-    attacker_query: &mut Query<(
+    mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
+    nearby_query: Query<(&Level, &Team)>,
+    attacker_query: Query<(
         &Position,
         &Level,
         &Team,
@@ -546,23 +540,15 @@ pub fn npc_ai(
         &StatusEffects,
         &HealthPoints,
     )>,
-    level_query: &mut Query<&Level>,
-    killer_query: &mut Query<(&Level, &AbilityValues, &StatusEffects, Option<&GameClient>)>,
-    #[resource] server_time: &ServerTime,
-    #[resource] game_data: &GameData,
-    #[resource] world_rates: &WorldRates,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] pending_xp_list: &mut PendingXpList,
+    level_query: Query<&Level>,
+    killer_query: Query<(&Level, &AbilityValues, &StatusEffects, Option<&GameClient>)>,
+    server_time: Res<ServerTime>,
+    game_data: Res<GameData>,
+    world_rates: Res<WorldRates>,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    mut pending_xp_list: ResMut<PendingXpList>,
 ) {
-    let (mut spawn_point_world, mut world) = world.split_for_query(&spawn_point_query);
-    let (attacker_query_world, mut world) = world.split_for_query(&attacker_query);
-    let (mut killer_query_world, mut world) = world.split_for_query(&killer_query);
-    let (mut nearby_query_world, mut world) = world.split_for_query(&nearby_query);
-    let (level_query_world, world) = world.split_for_query(&level_query);
-    let mut npc_world = world;
-
     npc_query.for_each_mut(
-        &mut npc_world,
         |(
             entity,
             npc,
@@ -586,7 +572,7 @@ pub fn npc_ai(
                     if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
                         npc_ai_run_trigger(
                             trigger_on_created,
-                            cmd,
+                            &mut commands,
                             &AiSourceEntity {
                                 entity,
                                 position,
@@ -601,9 +587,8 @@ pub fn npc_ai(
                             None,
                             None,
                             false,
-                            client_entity_list,
-                            nearby_query,
-                            &mut nearby_query_world,
+                            &client_entity_list,
+                            &nearby_query,
                         );
                     }
                 }
@@ -628,13 +613,13 @@ pub fn npc_ai(
                             attacker_ability_values,
                             attacker_status_effects,
                             attacker_health_points,
-                        )) = attacker_query.get(&attacker_query_world, *attacker)
+                        )) = attacker_query.get(*attacker)
                         {
                             let attacker_ability_values =
                                 (attacker_ability_values, attacker_status_effects);
                             npc_ai_run_trigger(
                                 trigger_on_damaged,
-                                cmd,
+                                &mut commands,
                                 &AiSourceEntity {
                                     entity,
                                     position,
@@ -656,9 +641,8 @@ pub fn npc_ai(
                                 }),
                                 Some(*damage),
                                 false,
-                                client_entity_list,
-                                nearby_query,
-                                &mut nearby_query_world,
+                                &client_entity_list,
+                                &nearby_query,
                             );
                         }
                     }
@@ -675,7 +659,7 @@ pub fn npc_ai(
                             if npc_ai.idle_duration > ai_program.idle_trigger_interval {
                                 npc_ai_run_trigger(
                                     trigger_on_idle,
-                                    cmd,
+                                    &mut commands,
                                     &AiSourceEntity {
                                         entity,
                                         position,
@@ -690,9 +674,8 @@ pub fn npc_ai(
                                     None,
                                     None,
                                     false,
-                                    client_entity_list,
-                                    nearby_query,
-                                    &mut nearby_query_world,
+                                    &client_entity_list,
+                                    &nearby_query,
                                 );
                                 npc_ai.idle_duration -= ai_program.idle_trigger_interval;
                             }
@@ -708,9 +691,10 @@ pub fn npc_ai(
                         if let Some(&SpawnOrigin::MonsterSpawnPoint(spawn_point_entity, _)) =
                             spawn_origin
                         {
-                            if let Ok(spawn_point) = spawn_point_query
-                                .get_mut(&mut spawn_point_world, spawn_point_entity)
+                            if let Ok(mut spawn_point) =
+                                spawn_point_query.get_mut(spawn_point_entity)
                             {
+                                let mut spawn_point = &mut *spawn_point;
                                 spawn_point.num_alive_monsters =
                                     spawn_point.num_alive_monsters.saturating_sub(1);
                             }
@@ -723,7 +707,7 @@ pub fn npc_ai(
                         {
                             npc_ai_run_trigger(
                                 trigger_on_dead,
-                                cmd,
+                                &mut commands,
                                 &AiSourceEntity {
                                     entity,
                                     position,
@@ -738,9 +722,8 @@ pub fn npc_ai(
                                 None, // TODO: Pass in killer entity
                                 None, // TODO: Pass in killer damage
                                 true,
-                                client_entity_list,
-                                nearby_query,
-                                &mut nearby_query_world,
+                                &client_entity_list,
+                                &nearby_query,
                             );
                         }
 
@@ -756,7 +739,7 @@ pub fn npc_ai(
                                     }
 
                                     if let Ok(damage_source_level) =
-                                        level_query.get(&level_query_world, damage_source.entity)
+                                        level_query.get(damage_source.entity)
                                     {
                                         let reward_xp =
                                             game_data.ability_value_calculator.calculate_give_xp(
@@ -780,7 +763,7 @@ pub fn npc_ai(
                                                 damage_source.entity,
                                                 reward_xp as u64,
                                                 stamina as u32,
-                                                Some(*entity),
+                                                Some(entity),
                                             ));
                                         }
                                     }
@@ -792,8 +775,7 @@ pub fn npc_ai(
                                         killer_ability_values,
                                         killer_status_effects,
                                         killer_game_client,
-                                    )) =
-                                        killer_query.get_mut(&mut killer_query_world, killer_entity)
+                                    )) = killer_query.get(killer_entity)
                                     {
                                         let killer_ability_values =
                                             (killer_ability_values, killer_status_effects);
@@ -844,24 +826,28 @@ pub fn npc_ai(
                                                         as f32,
                                                 position.position.z,
                                             );
-                                            let drop_entity = cmd.push((
-                                                Some(drop_item),
-                                                Position::new(drop_position, position.zone_id),
-                                                Owner::new(killer_entity),
-                                                ExpireTime::new(
+                                            let mut drop_entity_commands = commands.spawn();
+
+                                            let drop_entity = drop_entity_commands.id();
+                                            drop_entity_commands
+                                                .insert(Some(drop_item))
+                                                .insert(Position::new(
+                                                    drop_position,
+                                                    position.zone_id,
+                                                ))
+                                                .insert(Owner::new(killer_entity))
+                                                .insert(ExpireTime::new(
                                                     server_time.now + DROPPED_ITEM_EXPIRE_TIME,
-                                                ),
-                                            ));
-                                            cmd.add_component(
-                                                drop_entity,
-                                                client_entity_zone
-                                                    .join_zone(
-                                                        ClientEntityType::DroppedItem,
-                                                        drop_entity,
-                                                        drop_position,
-                                                    )
-                                                    .unwrap(),
-                                            );
+                                                ))
+                                                .insert(
+                                                    client_entity_zone
+                                                        .join_zone(
+                                                            ClientEntityType::DroppedItem,
+                                                            drop_entity,
+                                                            drop_position,
+                                                        )
+                                                        .unwrap(),
+                                                );
                                         }
                                     }
                                 }
@@ -877,13 +863,13 @@ pub fn npc_ai(
                         });
                     if command_complete {
                         client_entity_leave_zone(
-                            cmd,
-                            client_entity_list,
+                            &mut commands,
+                            &mut client_entity_list,
                             entity,
                             client_entity,
                             position,
                         );
-                        cmd.remove(*entity);
+                        commands.entity(entity).despawn();
                     }
                 }
                 CommandData::Move(_) => {}

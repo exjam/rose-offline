@@ -7,6 +7,6 @@ pub use ability_values::{
 };
 pub use entity::{
     client_entity_join_zone, client_entity_leave_zone, client_entity_recalculate_ability_values,
-    client_entity_teleport_zone, create_character_entity, create_monster_entity, create_npc_entity,
+    client_entity_teleport_zone, CharacterBundle, MonsterBundle, NpcBundle,
 };
 pub use skills::skill_list_try_learn_skill;

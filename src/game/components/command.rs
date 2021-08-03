@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 use nalgebra::{Point2, Point3};
 
 use crate::{data::SkillId, game::components::MoveMode};

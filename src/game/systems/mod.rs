@@ -24,24 +24,26 @@ mod world_time;
 
 pub use bot_ai::bot_ai_system;
 pub use chat_commands::chat_commands_system;
-pub use client_entity_visibility::*;
-pub use command::*;
-pub use control_server::*;
+pub use client_entity_visibility::client_entity_visibility_system;
+pub use command::command_system;
+pub use control_server::control_server_system;
 pub use damage::damage_system;
 pub use experience_points::experience_points_system;
 pub use expire_time::expire_time_system;
-pub use game_server::*;
-pub use login_server::*;
-pub use monster_spawn::*;
-pub use npc_ai::*;
+pub use game_server::{
+    game_server_authentication_system, game_server_join_system, game_server_main_system,
+};
+pub use login_server::{login_server_authentication_system, login_server_system};
+pub use monster_spawn::monster_spawn_system;
+pub use npc_ai::npc_ai_system;
 pub use personal_store::personal_store_system;
 pub use quest::quest_system;
 pub use save::save_system;
-pub use server_messages::*;
+pub use server_messages::server_messages_system;
 pub use skill_effect::skill_effect_system;
-pub use startup_zones::*;
+pub use startup_zones::startup_zones_system;
 pub use status_effect::status_effect_system;
-pub use update_position::*;
+pub use update_position::update_position_system;
 pub use use_item::use_item_system;
-pub use world_server::*;
+pub use world_server::{world_server_authentication_system, world_server_system};
 pub use world_time::world_time_system;

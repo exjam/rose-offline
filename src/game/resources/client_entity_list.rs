@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
+use bevy_ecs::prelude::Entity;
 use bitvec::prelude::*;
-use legion::Entity;
 use nalgebra::{Point2, Point3, Vector2};
 
 use crate::{
@@ -185,11 +185,11 @@ impl ClientEntityZone {
         Some(client_entity)
     }
 
-    pub fn leave_zone(&mut self, entity: &Entity, client_entity: &ClientEntity) {
+    pub fn leave_zone(&mut self, entity: Entity, client_entity: &ClientEntity) {
         // Validate entity list
         assert_eq!(
             self.entities[client_entity.id.0].as_ref().map(|x| &x.0),
-            Some(entity)
+            Some(&entity)
         );
 
         // Leave sector
@@ -201,14 +201,14 @@ impl ClientEntityZone {
 
     pub fn update_position(
         &mut self,
-        entity: &Entity,
+        entity: Entity,
         client_entity: &mut ClientEntity,
         position: Point3<f32>,
     ) {
         // Validate entity list
         assert_eq!(
             self.entities[client_entity.id.0].as_ref().map(|x| &x.0),
-            Some(entity)
+            Some(&entity)
         );
 
         // Update sector
@@ -222,7 +222,7 @@ impl ClientEntityZone {
         }
 
         // Update the entity data storage
-        self.entities[client_entity.id.0] = Some((*entity, client_entity.clone(), position));
+        self.entities[client_entity.id.0] = Some((entity, client_entity.clone(), position));
     }
 
     pub fn process_zone_leavers(&mut self) {

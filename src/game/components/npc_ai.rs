@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 
 use crate::data::Damage;
 

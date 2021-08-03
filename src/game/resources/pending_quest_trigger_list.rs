@@ -1,5 +1,5 @@
 use crate::data::QuestTriggerHash;
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 
 pub struct PendingQuestTrigger {
     pub trigger_entity: Entity,

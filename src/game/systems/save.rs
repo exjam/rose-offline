@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Query};
+use bevy_ecs::prelude::{Commands, Query, ResMut};
 use log::{error, info};
 
 use crate::{
@@ -15,11 +15,9 @@ use crate::{
 };
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn save(
-    cmd: &mut CommandBuffer,
-    world: &mut SubWorld,
-    entity_query: &mut Query<(
+pub fn save_system(
+    mut commands: Commands,
+    query: Query<(
         Option<&ClientEntity>,
         &CharacterInfo,
         &BasicStats,
@@ -35,37 +33,37 @@ pub fn save(
         &SkillPoints,
         &StatPoints,
         &QuestState,
-        &UnionMembership,
-        &Stamina,
     )>,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] pending_save_list: &mut PendingSaveList,
+    query_2: Query<(&UnionMembership, &Stamina)>,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    mut pending_save_list: ResMut<PendingSaveList>,
 ) {
-    for pending_save in pending_save_list.iter() {
-        match *pending_save {
+    for pending_save in pending_save_list.drain(..) {
+        match pending_save {
             PendingSave::Character(PendingCharacterSave {
                 entity,
                 remove_after_save,
             }) => {
-                let (client_entity, position) = if let Ok((
-                    client_entity,
-                    character_info,
-                    basic_stats,
-                    inventory,
-                    equipment,
-                    level,
-                    experience_points,
-                    position,
-                    skill_list,
-                    hotbar,
-                    health_points,
-                    mana_points,
-                    skill_points,
-                    stat_points,
-                    quest_state,
-                    union_membership,
-                    stamina,
-                )) = entity_query.get(world, entity)
+                let (client_entity, position) = if let (
+                    Ok((
+                        client_entity,
+                        character_info,
+                        basic_stats,
+                        inventory,
+                        equipment,
+                        level,
+                        experience_points,
+                        position,
+                        skill_list,
+                        hotbar,
+                        health_points,
+                        mana_points,
+                        skill_points,
+                        stat_points,
+                        quest_state,
+                    )),
+                    Ok((union_membership, stamina)),
+                ) = (query.get(entity), query_2.get(entity))
                 {
                     let storage = CharacterStorage {
                         info: character_info.clone(),
@@ -103,19 +101,17 @@ pub fn save(
                 if remove_after_save {
                     if let (Some(client_entity), Some(position)) = (client_entity, position) {
                         client_entity_leave_zone(
-                            cmd,
-                            client_entity_list,
-                            &entity,
+                            &mut commands,
+                            &mut client_entity_list,
+                            entity,
                             client_entity,
                             &position,
                         );
                     }
 
-                    cmd.remove(entity);
+                    commands.entity(entity).despawn();
                 }
             }
         }
     }
-
-    pending_save_list.clear();
 }

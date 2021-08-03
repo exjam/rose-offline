@@ -1,7 +1,8 @@
-use crate::game::messages::{client::ClientMessage, server::ServerMessage};
+use bevy_ecs::prelude::Entity;
 use crossbeam_channel::Receiver;
-use legion::Entity;
 use tokio::sync::mpsc::UnboundedSender;
+
+use crate::game::messages::{client::ClientMessage, server::ServerMessage};
 
 pub struct WorldClient {
     pub client_message_rx: Receiver<ClientMessage>,

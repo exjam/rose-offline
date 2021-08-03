@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::Mut;
 use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
 
@@ -115,12 +116,12 @@ pub fn ability_values_get_value(
 pub fn ability_values_add_value(
     ability_type: AbilityType,
     value: i32,
-    mut basic_stats: Option<&mut BasicStats>,
-    mut inventory: Option<&mut Inventory>,
-    mut skill_points: Option<&mut SkillPoints>,
-    mut stamina: Option<&mut Stamina>,
-    mut stat_points: Option<&mut StatPoints>,
-    mut union_membership: Option<&mut UnionMembership>,
+    mut basic_stats: Option<&mut Mut<BasicStats>>,
+    mut inventory: Option<&mut Mut<Inventory>>,
+    mut skill_points: Option<&mut Mut<SkillPoints>>,
+    mut stamina: Option<&mut Mut<Stamina>>,
+    mut stat_points: Option<&mut Mut<StatPoints>>,
+    mut union_membership: Option<&mut Mut<UnionMembership>>,
     game_client: Option<&GameClient>,
 ) -> bool {
     let result = match ability_type {
@@ -326,9 +327,9 @@ pub fn ability_values_add_value(
 pub fn ability_values_set_value(
     ability_type: AbilityType,
     value: i32,
-    mut basic_stats: Option<&mut BasicStats>,
-    mut character_info: Option<&mut CharacterInfo>,
-    mut union_membership: Option<&mut UnionMembership>,
+    mut basic_stats: Option<&mut Mut<BasicStats>>,
+    mut character_info: Option<&mut Mut<CharacterInfo>>,
+    mut union_membership: Option<&mut Mut<UnionMembership>>,
     game_client: Option<&GameClient>,
 ) -> bool {
     let result = match ability_type {

@@ -1,5 +1,5 @@
 use crate::data::Damage;
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 
 pub struct PendingDamage {
     pub attacker: Entity,

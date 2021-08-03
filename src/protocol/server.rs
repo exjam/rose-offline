@@ -1,5 +1,5 @@
+use bevy_ecs::prelude::Entity;
 use lazy_static::__Deref;
-use legion::Entity;
 use log::info;
 use std::sync::Arc;
 use tokio::{

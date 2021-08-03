@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer};
+use bevy_ecs::prelude::{Commands, Res, ResMut};
 
 use crate::game::{
     components::{GameClient, LoginClient, ServerInfo, WorldClient},
@@ -8,12 +8,11 @@ use crate::game::{
     },
 };
 
-#[system]
-pub fn control_server(
-    cmd: &mut CommandBuffer,
-    #[resource] channel: &mut ControlChannel,
-    #[resource] server_list: &mut ServerList,
-    #[resource] pending_save_list: &mut PendingSaveList,
+pub fn control_server_system(
+    mut commands: Commands,
+    channel: Res<ControlChannel>,
+    mut server_list: ResMut<ServerList>,
+    mut pending_save_list: ResMut<PendingSaveList>,
 ) {
     while let Ok(message) = channel.control_rx.try_recv() {
         match message {
@@ -24,15 +23,18 @@ pub fn control_server(
                 response_tx,
             } => {
                 let entity = match client_type {
-                    ClientType::Login => {
-                        cmd.push((LoginClient::new(client_message_rx, server_message_tx),))
-                    }
-                    ClientType::World => {
-                        cmd.push((WorldClient::new(client_message_rx, server_message_tx),))
-                    }
-                    ClientType::Game => {
-                        cmd.push((GameClient::new(client_message_rx, server_message_tx),))
-                    }
+                    ClientType::Login => commands
+                        .spawn()
+                        .insert(LoginClient::new(client_message_rx, server_message_tx))
+                        .id(),
+                    ClientType::World => commands
+                        .spawn()
+                        .insert(WorldClient::new(client_message_rx, server_message_tx))
+                        .id(),
+                    ClientType::Game => commands
+                        .spawn()
+                        .insert(GameClient::new(client_message_rx, server_message_tx))
+                        .id(),
                 };
                 response_tx.send(entity).unwrap();
             }
@@ -43,7 +45,7 @@ pub fn control_server(
                 ClientType::Game => {
                     pending_save_list.push(PendingSave::with_character(entity, true))
                 }
-                _ => cmd.remove(entity),
+                _ => commands.entity(entity).despawn(),
             },
             ControlMessage::AddWorldServer {
                 name,
@@ -52,12 +54,15 @@ pub fn control_server(
                 packet_codec_seed,
                 response_tx,
             } => {
-                let entity = cmd.push((ServerInfo {
-                    name: name.clone(),
-                    ip: ip.clone(),
-                    port,
-                    packet_codec_seed,
-                },));
+                let entity = commands
+                    .spawn()
+                    .insert(ServerInfo {
+                        name: name.clone(),
+                        ip: ip.clone(),
+                        port,
+                        packet_codec_seed,
+                    })
+                    .id();
                 server_list.world_servers.push(WorldServer {
                     entity,
                     name,
@@ -76,12 +81,15 @@ pub fn control_server(
                 packet_codec_seed,
                 response_tx,
             } => {
-                let entity = cmd.push((ServerInfo {
-                    name: name.clone(),
-                    ip: ip.clone(),
-                    port,
-                    packet_codec_seed,
-                },));
+                let entity = commands
+                    .spawn()
+                    .insert(ServerInfo {
+                        name: name.clone(),
+                        ip: ip.clone(),
+                        port,
+                        packet_codec_seed,
+                    })
+                    .id();
                 let world_server = server_list
                     .world_servers
                     .iter_mut()
@@ -97,7 +105,7 @@ pub fn control_server(
                 response_tx.send(entity).unwrap();
             }
             ControlMessage::RemoveServer { entity } => {
-                cmd.remove(entity);
+                commands.entity(entity).despawn();
             }
         }
     }

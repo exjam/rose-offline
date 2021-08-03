@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use crate::{
     data::GetAbilityValues,
@@ -16,11 +16,9 @@ use crate::{
 };
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn experience_points(
-    cmd: &mut CommandBuffer,
-    world: &mut SubWorld,
-    entity_query: &mut Query<(
+pub fn experience_points_system(
+    mut commands: Commands,
+    mut entity_query: Query<(
         Entity,
         &ClientEntity,
         &mut Level,
@@ -30,7 +28,7 @@ pub fn experience_points(
         &mut StatPoints,
         Option<&GameClient>,
     )>,
-    ability_values_query: &mut Query<(
+    mut ability_values_query: Query<(
         &mut HealthPoints,
         &mut ManaPoints,
         &CharacterInfo,
@@ -40,26 +38,22 @@ pub fn experience_points(
         &StatusEffects,
         &MoveMode,
     )>,
-    source_entity_query: &mut Query<&ClientEntity>,
-    #[resource] game_data: &GameData,
-    #[resource] pending_xp_list: &mut PendingXpList,
-    #[resource] server_messages: &mut ServerMessages,
+    source_entity_query: Query<&ClientEntity>,
+    game_data: Res<GameData>,
+    mut pending_xp_list: ResMut<PendingXpList>,
+    mut server_messages: ResMut<ServerMessages>,
 ) {
-    let (mut ability_values_query_world, mut world) = world.split_for_query(ability_values_query);
-    let (source_entity_query_world, world) = world.split_for_query(source_entity_query);
-    let mut entity_query_world = world;
-
     for pending_xp in pending_xp_list.iter() {
         if let Ok((
             entity,
             client_entity,
-            level,
-            experience_points,
-            stamina,
-            skill_points,
-            stat_points,
+            mut level,
+            mut experience_points,
+            mut stamina,
+            mut skill_points,
+            mut stat_points,
             game_client,
-        )) = entity_query.get_mut(&mut entity_query_world, pending_xp.entity)
+        )) = entity_query.get_mut(pending_xp.entity)
         {
             experience_points.xp = experience_points.xp.saturating_add(pending_xp.xp as u64);
 
@@ -97,18 +91,18 @@ pub fn experience_points(
 
                 // Update ability values and restore hp / mp
                 if let Ok((
-                    health_points,
-                    mana_points,
+                    mut health_points,
+                    mut mana_points,
                     character_info,
                     equipment,
                     basic_stats,
                     skill_list,
                     status_effects,
                     move_mode,
-                )) = ability_values_query.get_mut(&mut ability_values_query_world, *entity)
+                )) = ability_values_query.get_mut(entity)
                 {
                     if let Some(ability_values) = client_entity_recalculate_ability_values(
-                        cmd,
+                        &mut commands,
                         game_data.ability_value_calculator.as_ref(),
                         client_entity,
                         entity,
@@ -116,12 +110,12 @@ pub fn experience_points(
                         Some(basic_stats),
                         Some(character_info),
                         Some(equipment),
-                        Some(level),
+                        Some(&level),
                         Some(move_mode),
                         Some(skill_list),
                         None,
-                        Some(health_points), // TODO: Update hp / mp
-                        Some(mana_points),
+                        Some(&mut health_points),
+                        Some(&mut mana_points),
                     ) {
                         health_points.hp =
                             (&ability_values, status_effects).get_max_health() as u32;
@@ -144,11 +138,7 @@ pub fn experience_points(
                 // If not level up, then just send normal set xp packet
                 let source_entity_id = pending_xp
                     .source
-                    .and_then(|source_entity| {
-                        source_entity_query
-                            .get(&source_entity_query_world, source_entity)
-                            .ok()
-                    })
+                    .and_then(|source_entity| source_entity_query.get(source_entity).ok())
                     .map(|source_client_entity| source_client_entity.id);
 
                 game_client

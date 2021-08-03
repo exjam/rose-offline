@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
 use crate::{
@@ -30,17 +30,19 @@ const CHARACTER_MOVE_TO_DISTANCE: f32 = 1000.0;
 const DROPPED_ITEM_MOVE_TO_DISTANCE: f32 = 150.0;
 const DROPPED_ITEM_PICKUP_DISTANCE: f32 = 200.0;
 
-fn set_command_stop(
+fn send_command_stop(
+    commands: &mut Commands,
     command: &mut Command,
-    cmd: &mut CommandBuffer,
-    entity: &Entity,
+    entity: Entity,
     client_entity: &ClientEntity,
     position: &Position,
     server_messages: &mut ServerMessages,
 ) {
     // Remove all components associated with other actions
-    cmd.remove_component::<Destination>(*entity);
-    cmd.remove_component::<Target>(*entity);
+    commands
+        .entity(entity)
+        .remove::<Destination>()
+        .remove::<Target>();
 
     server_messages.send_entity_message(
         client_entity,
@@ -57,13 +59,10 @@ fn set_command_stop(
 
 fn is_valid_move_target<'a>(
     position: &Position,
-    target_entity: &Entity,
-    move_target_query: &mut Query<(&ClientEntity, &Position)>,
-    move_target_query_world: &'a SubWorld,
+    target_entity: Entity,
+    move_target_query: &'a Query<(&ClientEntity, &Position)>,
 ) -> Option<(&'a ClientEntity, &'a Position)> {
-    if let Ok((target_client_entity, target_position)) =
-        move_target_query.get(move_target_query_world, *target_entity)
-    {
+    if let Ok((target_client_entity, target_position)) = move_target_query.get(target_entity) {
         if target_position.zone_id == position.zone_id {
             return Some((target_client_entity, target_position));
         }
@@ -74,15 +73,14 @@ fn is_valid_move_target<'a>(
 
 fn is_valid_attack_target<'a>(
     position: &Position,
-    target_entity: &Entity,
-    attack_target_query: &mut Query<(
+    target_entity: Entity,
+    attack_target_query: &'a Query<(
         &ClientEntity,
         &Position,
         &AbilityValues,
         &HealthPoints,
         &StatusEffects,
     )>,
-    attack_target_query_world: &'a SubWorld,
 ) -> Option<(
     &'a ClientEntity,
     &'a Position,
@@ -96,7 +94,7 @@ fn is_valid_attack_target<'a>(
         target_ability_values,
         target_health,
         target_status_effects,
-    )) = attack_target_query.get(attack_target_query_world, *target_entity)
+    )) = attack_target_query.get(target_entity)
     {
         if target_position.zone_id == position.zone_id && target_health.hp > 0 {
             return Some((
@@ -113,15 +111,14 @@ fn is_valid_attack_target<'a>(
 
 fn is_valid_skill_target<'a>(
     position: &Position,
-    target_entity: &Entity,
-    attack_target_query: &mut Query<(
+    target_entity: Entity,
+    attack_target_query: &'a Query<(
         &ClientEntity,
         &Position,
         &AbilityValues,
         &HealthPoints,
         &StatusEffects,
     )>,
-    attack_target_query_world: &'a SubWorld,
 ) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
     // TODO: Check Team
     if let Ok((
@@ -130,7 +127,7 @@ fn is_valid_skill_target<'a>(
         target_ability_values,
         _target_health,
         _target_status_effects,
-    )) = attack_target_query.get(attack_target_query_world, *target_entity)
+    )) = attack_target_query.get(target_entity)
     {
         if target_position.zone_id == position.zone_id {
             return Some((target_client_entity, target_position, target_ability_values));
@@ -140,24 +137,24 @@ fn is_valid_skill_target<'a>(
     None
 }
 
+#[allow(clippy::type_complexity)]
 fn is_valid_pickup_target<'a>(
     position: &Position,
-    target_entity: &Entity,
-    query: &mut Query<(
+    target_entity: Entity,
+    query: &'a mut Query<(
         &ClientEntity,
         &Position,
         &mut Option<DroppedItem>,
         Option<&Owner>,
     )>,
-    world: &'a mut SubWorld,
 ) -> Option<(
     &'a ClientEntity,
     &'a Position,
-    &'a mut Option<DroppedItem>,
+    Mut<'a, Option<DroppedItem>>,
     Option<&'a Owner>,
 )> {
     if let Ok((target_client_entity, target_position, target_dropped_item, target_owner)) =
-        query.get_mut(world, *target_entity)
+        query.get_mut(target_entity)
     {
         // Check distance to target
         let distance = (position.position.xy() - target_position.position.xy()).magnitude();
@@ -175,11 +172,9 @@ fn is_valid_pickup_target<'a>(
 }
 
 #[allow(clippy::clippy::type_complexity)]
-#[system]
-pub fn command(
-    world: &mut SubWorld,
-    cmd: &mut CommandBuffer,
-    query: &mut Query<(
+pub fn command_system(
+    mut commands: Commands,
+    query: Query<(
         Entity,
         &ClientEntity,
         &Position,
@@ -193,34 +188,28 @@ pub fn command(
         Option<&mut Inventory>,
         Option<&PersonalStore>,
     )>,
-    move_target_query: &mut Query<(&ClientEntity, &Position)>,
-    attack_target_query: &mut Query<(
+    move_target_query: Query<(&ClientEntity, &Position)>,
+    attack_target_query: Query<(
         &ClientEntity,
         &Position,
         &AbilityValues,
         &HealthPoints,
         &StatusEffects,
     )>,
-    pickup_dropped_item_target_query: &mut Query<(
+    mut pickup_dropped_item_target_query: Query<(
         &ClientEntity,
         &Position,
         &mut Option<DroppedItem>,
         Option<&Owner>,
     )>,
-    #[resource] server_time: &ServerTime,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] pending_damage_list: &mut PendingDamageList,
-    #[resource] pending_skill_effect_list: &mut PendingSkillEffectList,
-    #[resource] server_messages: &mut ServerMessages,
-    #[resource] game_data: &GameData,
+    server_time: Res<ServerTime>,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    mut pending_damage_list: ResMut<PendingDamageList>,
+    mut pending_skill_effect_list: ResMut<PendingSkillEffectList>,
+    mut server_messages: ResMut<ServerMessages>,
+    game_data: Res<GameData>,
 ) {
-    let (move_target_query_world, mut world) = world.split_for_query(&move_target_query);
-    let (attack_target_query_world, mut world) = world.split_for_query(&attack_target_query);
-    let (mut pickup_dropped_item_target_query_world, mut world) =
-        world.split_for_query(&pickup_dropped_item_target_query);
-
     query.for_each_mut(
-        &mut world,
         |(
             entity,
             client_entity,
@@ -229,8 +218,8 @@ pub fn command(
             ability_values,
             status_effects,
             move_mode,
-            command,
-            next_command,
+            mut command,
+            mut next_command,
             game_client,
             inventory,
             personal_store,
@@ -254,12 +243,7 @@ pub fn command(
                         let mut target_entity_id = None;
                         if let Some(target_entity) = target {
                             if let Some((target_client_entity, target_position)) =
-                                is_valid_move_target(
-                                    position,
-                                    target_entity,
-                                    move_target_query,
-                                    &move_target_query_world,
-                                )
+                                is_valid_move_target(position, *target_entity, &move_target_query)
                             {
                                 *destination = target_position.position;
                                 target_entity_id = Some(target_client_entity.id);
@@ -286,12 +270,7 @@ pub fn command(
                         target: target_entity,
                     }) => {
                         if let Some((target_client_entity, target_position, ..)) =
-                            is_valid_attack_target(
-                                position,
-                                target_entity,
-                                attack_target_query,
-                                &attack_target_query_world,
-                            )
+                            is_valid_attack_target(position, *target_entity, &attack_target_query)
                         {
                             let distance = (target_position.position.xy() - position.position.xy())
                                 .magnitude();
@@ -331,12 +310,7 @@ pub fn command(
                         ..
                     }) => {
                         if let Some((target_client_entity, target_position, ..)) =
-                            is_valid_skill_target(
-                                position,
-                                target_entity,
-                                attack_target_query,
-                                &attack_target_query_world,
-                            )
+                            is_valid_skill_target(position, *target_entity, &attack_target_query)
                         {
                             let distance = (target_position.position.xy() - position.position.xy())
                                 .magnitude();
@@ -419,13 +393,13 @@ pub fn command(
 
             match next_command.command.as_mut().unwrap() {
                 CommandData::Stop => {
-                    set_command_stop(
-                        command,
-                        cmd,
+                    send_command_stop(
+                        &mut commands,
+                        &mut command,
                         entity,
                         client_entity,
                         position,
-                        server_messages,
+                        &mut server_messages,
                     );
                     *next_command = NextCommand::default();
                 }
@@ -434,13 +408,12 @@ pub fn command(
                     target,
                     move_mode: command_move_mode,
                 }) => {
+                    let mut entity_commands = commands.entity(entity);
+
                     if let Some(target_entity) = target {
-                        if let Some((target_client_entity, target_position)) = is_valid_move_target(
-                            position,
-                            target_entity,
-                            move_target_query,
-                            &move_target_query_world,
-                        ) {
+                        if let Some((target_client_entity, target_position)) =
+                            is_valid_move_target(position, *target_entity, &move_target_query)
+                        {
                             let required_distance = match target_client_entity.entity_type {
                                 ClientEntityType::Character => Some(CHARACTER_MOVE_TO_DISTANCE),
                                 ClientEntityType::Npc => Some(NPC_MOVE_TO_DISTANCE),
@@ -463,27 +436,23 @@ pub fn command(
                             }
                         } else {
                             *target = None;
-                            cmd.remove_component::<Target>(*entity);
+                            entity_commands.remove::<Target>();
                         }
                     }
 
                     match command_move_mode {
                         Some(MoveMode::Walk) => {
                             if !matches!(move_mode, MoveMode::Walk) {
-                                cmd.add_component(*entity, MoveMode::Walk);
-                                cmd.add_component(
-                                    *entity,
-                                    MoveSpeed::new(ability_values.get_walk_speed()),
-                                );
+                                entity_commands
+                                    .insert(MoveMode::Walk)
+                                    .insert(MoveSpeed::new(ability_values.get_walk_speed()));
                             }
                         }
                         Some(MoveMode::Run) => {
                             if !matches!(move_mode, MoveMode::Run) {
-                                cmd.add_component(*entity, MoveMode::Run);
-                                cmd.add_component(
-                                    *entity,
-                                    MoveSpeed::new(ability_values.get_run_speed()),
-                                );
+                                entity_commands
+                                    .insert(MoveMode::Run)
+                                    .insert(MoveSpeed::new(ability_values.get_run_speed()));
                             }
                         }
                         None => {}
@@ -492,34 +461,32 @@ pub fn command(
                     let distance = (destination.xy() - position.position.xy()).magnitude();
                     if distance < 0.1 {
                         *command = Command::with_stop();
-                        cmd.remove_component::<Destination>(*entity);
-                        cmd.remove_component::<Target>(*entity);
+                        entity_commands.remove::<Target>().remove::<Destination>();
                     } else {
                         *command = Command::with_move(*destination, *target, *command_move_mode);
-                        cmd.add_component(*entity, Destination::new(*destination));
+                        entity_commands.insert(Destination::new(*destination));
 
                         if let Some(target_entity) = target {
-                            cmd.add_component(*entity, Target::new(*target_entity));
+                            entity_commands.insert(Target::new(*target_entity));
                         }
                     }
                 }
                 CommandData::PickupDroppedItem(CommandPickupDroppedItem {
                     target: target_entity,
                 }) => {
-                    if let Some(inventory) = inventory {
+                    if let Some(mut inventory) = inventory {
                         if let Some((
                             target_client_entity,
                             target_position,
-                            target_dropped_item,
+                            mut target_dropped_item,
                             target_owner,
                         )) = is_valid_pickup_target(
                             position,
-                            target_entity,
-                            pickup_dropped_item_target_query,
-                            &mut pickup_dropped_item_target_query_world,
+                            *target_entity,
+                            &mut pickup_dropped_item_target_query,
                         ) {
                             let result = if !target_owner
-                                .map_or(true, |owner| owner.entity == *entity)
+                                .map_or(true, |owner| owner.entity == entity)
                             {
                                 // Not owner
                                 Err(PickupDroppedItemError::NoPermission)
@@ -554,13 +521,13 @@ pub fn command(
                             if result.is_ok() {
                                 // Delete picked up item
                                 client_entity_leave_zone(
-                                    cmd,
-                                    client_entity_list,
-                                    target_entity,
+                                    &mut commands,
+                                    &mut client_entity_list,
+                                    *target_entity,
                                     target_client_entity,
                                     target_position,
                                 );
-                                cmd.remove(*target_entity);
+                                commands.entity(*target_entity).despawn();
 
                                 // Update our current command
                                 let motion_duration =
@@ -573,8 +540,10 @@ pub fn command(
                                     *target_entity,
                                     motion_duration,
                                 );
-                                cmd.remove_component::<Destination>(*entity);
-                                cmd.remove_component::<Target>(*entity);
+                                commands
+                                    .entity(entity)
+                                    .remove::<Destination>()
+                                    .remove::<Target>();
                             }
 
                             // Send message to client with result
@@ -602,12 +571,9 @@ pub fn command(
                         target_position,
                         target_ability_values,
                         target_status_effects,
-                    )) = is_valid_attack_target(
-                        position,
-                        target_entity,
-                        attack_target_query,
-                        &attack_target_query_world,
-                    ) {
+                    )) = is_valid_attack_target(position, *target_entity, &attack_target_query)
+                    {
+                        let mut entity_commands = commands.entity(entity);
                         let target_ability_values = (target_ability_values, target_status_effects);
                         let distance =
                             (target_position.position.xy() - position.position.xy()).magnitude();
@@ -627,14 +593,14 @@ pub fn command(
                             *command = Command::with_attack(*target_entity, attack_duration);
 
                             // Remove our destination component, as we have reached it!
-                            cmd.remove_component::<Destination>(*entity);
+                            entity_commands.remove::<Destination>();
 
                             // Update target
-                            cmd.add_component(*entity, Target::new(*target_entity));
+                            entity_commands.insert(Target::new(*target_entity));
 
                             // Queue up pending damage for damage system to process
                             pending_damage_list.push(PendingDamage {
-                                attacker: *entity,
+                                attacker: entity,
                                 defender: *target_entity,
                                 damage: game_data.ability_value_calculator.calculate_damage(
                                     ability_values,
@@ -651,19 +617,19 @@ pub fn command(
                             );
 
                             // Set destination to move towards
-                            cmd.add_component(*entity, Destination::new(target_position.position));
+                            entity_commands.insert(Destination::new(target_position.position));
 
                             // Update target
-                            cmd.add_component(*entity, Target::new(*target_entity));
+                            entity_commands.insert(Target::new(*target_entity));
                         }
                     } else {
-                        set_command_stop(
-                            command,
-                            cmd,
+                        send_command_stop(
+                            &mut commands,
+                            &mut command,
                             entity,
                             client_entity,
                             position,
-                            server_messages,
+                            &mut server_messages,
                         );
                         *next_command = NextCommand::default();
                     }
@@ -686,13 +652,13 @@ pub fn command(
                     ..
                 }) => {
                     if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
+                        let mut entity_commands = commands.entity(entity);
                         let (target_position, target_entity) = match skill_target {
                             Some(CommandCastSkillTarget::Entity(target_entity)) => {
                                 if let Some((_, target_position, _)) = is_valid_skill_target(
                                     position,
-                                    target_entity,
-                                    attack_target_query,
-                                    &attack_target_query_world,
+                                    *target_entity,
+                                    &attack_target_query,
                                 ) {
                                     (Some(target_position.position), Some(*target_entity))
                                 } else {
@@ -741,11 +707,11 @@ pub fn command(
 
                             // Queue up pending skill for the skill effect to be applied after casting motion
                             pending_skill_effect_list.push(PendingSkillEffect {
-                                caster_entity: *entity,
+                                caster_entity: entity,
                                 when: server_time.now + casting_duration,
                                 skill_id: *skill_id,
                                 skill_target: match skill_target {
-                                    None => PendingSkillEffectTarget::Entity(*entity),
+                                    None => PendingSkillEffectTarget::Entity(entity),
                                     Some(CommandCastSkillTarget::Entity(target_entity)) => {
                                         PendingSkillEffectTarget::Entity(*target_entity)
                                     }
@@ -767,13 +733,13 @@ pub fn command(
                             *next_command = NextCommand::default();
 
                             // Remove our destination component, as we have reached it!
-                            cmd.remove_component::<Destination>(*entity);
+                            entity_commands.remove::<Destination>();
 
                             // Update target
                             if let Some(target_entity) = target_entity {
-                                cmd.add_component(*entity, Target::new(target_entity));
+                                entity_commands.insert(Target::new(target_entity));
                             } else {
-                                cmd.remove_component::<Target>(*entity);
+                                entity_commands.remove::<Target>();
                             }
                         } else {
                             // Not in range, set current command to move
@@ -785,13 +751,13 @@ pub fn command(
                             );
 
                             // Set destination to move towards
-                            cmd.add_component(*entity, Destination::new(target_position));
+                            entity_commands.insert(Destination::new(target_position));
 
                             // Update target
                             if let Some(target_entity) = target_entity {
-                                cmd.add_component(*entity, Target::new(target_entity));
+                                entity_commands.insert(Target::new(target_entity));
                             } else {
-                                cmd.remove_component::<Target>(*entity);
+                                entity_commands.remove::<Target>();
                             }
                         }
                     }

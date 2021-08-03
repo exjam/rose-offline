@@ -1,4 +1,4 @@
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 
 pub struct LoginToken {
     pub username: String,

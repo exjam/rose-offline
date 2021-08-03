@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 arrayvec = "0.7.1"
 async-trait = "0.1.48"
+bevy_ecs = "0.5.0"
 bitvec = { version = "0.22.3", features = ["serde"] }
 bytes = "1"
 clap = "3.0.0-beta.2"
@@ -18,7 +19,6 @@ encoding_rs = "0.8"
 enum-map = "1.1.1"
 hex = "0.4"
 lazy_static = "1.4.0"
-legion = { version = "0.4.0", features = ["extended-tuple-impls"] }
 log = "0.4.14"
 memmap = "0.7"
 modular-bitfield = "0.11.2"

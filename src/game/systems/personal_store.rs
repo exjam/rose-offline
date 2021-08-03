@@ -1,4 +1,4 @@
-use legion::{system, world::SubWorld, Query};
+use bevy_ecs::prelude::{Query, ResMut};
 
 use crate::{
     data::item::ItemSlotBehaviour,
@@ -17,16 +17,14 @@ use crate::{
 };
 
 #[allow(clippy::type_complexity)]
-#[system]
-pub fn personal_store(
-    world: &mut SubWorld,
-    entity_query: &mut Query<(
+pub fn personal_store_system(
+    mut entity_query: Query<(
         &mut Inventory,
         Option<&mut PersonalStore>,
         &ClientEntity,
         Option<&GameClient>,
     )>,
-    #[resource] pending_personal_store_event_list: &mut PendingPersonalStoreEventList,
+    mut pending_personal_store_event_list: ResMut<PendingPersonalStoreEventList>,
 ) {
     for event in pending_personal_store_event_list.drain(..) {
         match event {
@@ -38,7 +36,7 @@ pub fn personal_store(
                 let mut sell_items = Vec::new();
 
                 if let Ok((store_inventory, Some(personal_store), _, _)) =
-                    entity_query.get_mut(world, store_entity)
+                    entity_query.get_mut(store_entity)
                 {
                     for (store_slot, slot) in personal_store.buy_items.iter().enumerate() {
                         if let Some((item, price)) = slot {
@@ -55,7 +53,7 @@ pub fn personal_store(
                     }
                 }
 
-                if let Ok((_, _, _, Some(game_client))) = entity_query.get_mut(world, list_entity) {
+                if let Ok((_, _, _, Some(game_client))) = entity_query.get_mut(list_entity) {
                     game_client
                         .server_message_tx
                         .send(ServerMessage::PersonalStoreItemList(
@@ -81,8 +79,8 @@ pub fn personal_store(
                 let mut store_slot_remaining_item = None;
 
                 // Try get the item from the personal store
-                if let Ok((store_inventory, Some(personal_store), store_client_entity, _)) =
-                    entity_query.get_mut(world, store_entity)
+                if let Ok((mut store_inventory, Some(personal_store), store_client_entity, _)) =
+                    entity_query.get_mut(store_entity)
                 {
                     store_client_entity_id = store_client_entity.id;
 
@@ -104,8 +102,8 @@ pub fn personal_store(
 
                 if transaction_item.is_some() {
                     // Try take the buyer's money and give them the item
-                    if let Ok((buyer_inventory, _, _, buyer_game_client)) =
-                        entity_query.get_mut(world, buyer_entity)
+                    if let Ok((mut buyer_inventory, _, _, buyer_game_client)) =
+                        entity_query.get_mut(buyer_entity)
                     {
                         if let Ok(money) = buyer_inventory.try_take_money(item_price) {
                             let buyer_remaining_money = buyer_inventory.money;
@@ -157,7 +155,7 @@ pub fn personal_store(
                 } else {
                     // Item sold out before we could buy it!
                     if let Ok((_, _, _, Some(buyer_game_client))) =
-                        entity_query.get_mut(world, buyer_entity)
+                        entity_query.get_mut(buyer_entity)
                     {
                         buyer_game_client
                             .server_message_tx
@@ -176,8 +174,8 @@ pub fn personal_store(
 
                 // If was a success, give money to seller, else return item to seller
                 if transaction_item.is_some() || transaction_money.is_some() {
-                    if let Ok((store_inventory, _, _, store_game_client)) =
-                        entity_query.get_mut(world, store_entity)
+                    if let Ok((mut store_inventory, _, _, store_game_client)) =
+                        entity_query.get_mut(store_entity)
                     {
                         let store_inventory_slot = store_inventory_slot.unwrap();
                         if transaction_item.is_some() {

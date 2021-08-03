@@ -1,3 +1,5 @@
+use bevy_ecs::prelude::Mut;
+
 use crate::{
     data::{SkillDatabase, SkillId},
     game::{
@@ -10,7 +12,7 @@ fn try_learn_skill(
     skill_database: &SkillDatabase,
     skill_id: SkillId,
     skill_list: &mut SkillList,
-    skill_points: Option<&mut SkillPoints>,
+    skill_points: Option<&mut Mut<SkillPoints>>,
 ) -> Result<SkillSlot, LearnSkillError> {
     let skill_data = skill_database
         .get_skill(skill_id)
@@ -43,7 +45,7 @@ pub fn skill_list_try_learn_skill(
     skill_database: &SkillDatabase,
     skill_id: SkillId,
     skill_list: &mut SkillList,
-    mut skill_points: Option<&mut SkillPoints>,
+    mut skill_points: Option<&mut Mut<SkillPoints>>,
     game_client: Option<&GameClient>,
 ) -> Result<SkillSlot, LearnSkillError> {
     let result = try_learn_skill(
@@ -62,8 +64,7 @@ pub fn skill_list_try_learn_skill(
                         skill_slot,
                         skill_id,
                         updated_skill_points: skill_points
-                            .cloned()
-                            .unwrap_or_else(SkillPoints::new),
+                            .map_or_else(SkillPoints::new, |skill_points| **skill_points),
                     })))
                     .ok();
             }

@@ -1,4 +1,4 @@
-use legion::Entity;
+use bevy_ecs::prelude::Entity;
 use nalgebra::Point3;
 
 #[derive(Clone, Copy)]

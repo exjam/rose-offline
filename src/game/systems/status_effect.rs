@@ -1,4 +1,4 @@
-use legion::{system, systems::CommandBuffer, world::SubWorld, Entity, Query};
+use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use crate::{
     data::StatusEffectType,
@@ -14,18 +14,16 @@ use crate::{
     },
 };
 
-#[system]
-pub fn status_effect(
-    cmd: &mut CommandBuffer,
-    world: &mut SubWorld,
-    query: &mut Query<(
+pub fn status_effect_system(
+    mut commands: Commands,
+    mut query: Query<(
         Entity,
         &ClientEntity,
         &mut HealthPoints,
         &mut ManaPoints,
         &mut StatusEffects,
     )>,
-    character_ability_values_query: &mut Query<(
+    character_ability_values_query: Query<(
         &CharacterInfo,
         &Level,
         &Equipment,
@@ -33,18 +31,13 @@ pub fn status_effect(
         &SkillList,
         &MoveMode,
     )>,
-    npc_ability_values_query: &mut Query<(&Npc, &Level, &MoveMode)>,
-    #[resource] game_data: &GameData,
-    #[resource] server_messages: &mut ServerMessages,
-    #[resource] server_time: &ServerTime,
+    npc_ability_values_query: Query<(&Npc, &Level, &MoveMode)>,
+    game_data: Res<GameData>,
+    mut server_messages: ResMut<ServerMessages>,
+    server_time: Res<ServerTime>,
 ) {
-    let (character_ability_values_query_world, mut world) =
-        world.split_for_query(character_ability_values_query);
-    let (npc_ability_values_query_world, mut world) =
-        world.split_for_query(npc_ability_values_query);
-
-    for (entity, client_entity, health_points, mana_points, status_effects) in
-        query.iter_mut(&mut world)
+    for (entity, client_entity, mut health_points, mut mana_points, mut status_effects) in
+        query.iter_mut()
     {
         let mut status_effects_expired = false;
         let mut cleared_hp = false;
@@ -73,15 +66,14 @@ pub fn status_effect(
             // Update ability values
             if matches!(client_entity.entity_type, ClientEntityType::Character) {
                 if let Ok((character_info, level, equipment, basic_stats, skill_list, move_mode)) =
-                    character_ability_values_query
-                        .get(&character_ability_values_query_world, *entity)
+                    character_ability_values_query.get(entity)
                 {
                     client_entity_recalculate_ability_values(
-                        cmd,
+                        &mut commands,
                         game_data.ability_value_calculator.as_ref(),
                         client_entity,
                         entity,
-                        status_effects,
+                        &status_effects,
                         Some(basic_stats),
                         Some(character_info),
                         Some(equipment),
@@ -89,19 +81,17 @@ pub fn status_effect(
                         Some(move_mode),
                         Some(skill_list),
                         None,
-                        Some(health_points),
-                        Some(mana_points),
+                        Some(&mut health_points),
+                        Some(&mut mana_points),
                     );
                 }
-            } else if let Ok((npc, level, move_mode)) =
-                npc_ability_values_query.get(&npc_ability_values_query_world, *entity)
-            {
+            } else if let Ok((npc, level, move_mode)) = npc_ability_values_query.get(entity) {
                 client_entity_recalculate_ability_values(
-                    cmd,
+                    &mut commands,
                     game_data.ability_value_calculator.as_ref(),
                     client_entity,
                     entity,
-                    status_effects,
+                    &status_effects,
                     None,
                     None,
                     None,
@@ -109,8 +99,8 @@ pub fn status_effect(
                     Some(move_mode),
                     None,
                     Some(npc),
-                    Some(health_points),
-                    Some(mana_points),
+                    Some(&mut health_points),
+                    Some(&mut mana_points),
                 );
             }
 

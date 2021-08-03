@@ -1,24 +1,23 @@
-use legion::{system, systems::CommandBuffer};
+use bevy_ecs::prelude::{Commands, Res, ResMut};
 use log::warn;
 
 use crate::game::{
-    bundles::{client_entity_join_zone, create_npc_entity},
+    bundles::{client_entity_join_zone, NpcBundle},
     components::{
         ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveMode, MoveSpeed,
-        NextCommand, Npc, NpcAi, NpcStandingDirection, Position, Team, Zone,
+        NextCommand, Npc, NpcAi, NpcStandingDirection, Position, StatusEffects, Team, Zone,
     },
     resources::{ClientEntityList, GameData},
 };
 
-#[system]
-pub fn startup_zones(
-    cmd: &mut CommandBuffer,
-    #[resource] client_entity_list: &mut ClientEntityList,
-    #[resource] game_data: &GameData,
+pub fn startup_zones_system(
+    mut commands: Commands,
+    mut client_entity_list: ResMut<ClientEntityList>,
+    game_data: Res<GameData>,
 ) {
     for (&zone_id, zone_data) in game_data.zones.iter() {
         // Create the Zone entity
-        cmd.push((Zone { id: zone_id },));
+        commands.spawn().insert(Zone { id: zone_id });
 
         // Create the MonsterSpawnPoint entities
         for spawn in zone_data.monster_spawns.iter() {
@@ -44,10 +43,10 @@ pub fn startup_zones(
                 }
             }
 
-            cmd.push((
-                MonsterSpawnPoint::from(spawn),
-                Position::new(spawn.position, zone_id),
-            ));
+            commands
+                .spawn()
+                .insert(MonsterSpawnPoint::from(spawn))
+                .insert(Position::new(spawn.position, zone_id));
         }
 
         // Spawn all NPCs
@@ -63,6 +62,8 @@ pub fn startup_zones(
                 );
                 continue;
             }
+            let ability_values = ability_values.unwrap();
+            let npc_data = npc_data.unwrap();
 
             let conversation_index = game_data
                 .npcs
@@ -70,43 +71,39 @@ pub fn startup_zones(
                 .map(|x| x.index)
                 .unwrap_or(0);
 
-            let npc_data = npc_data.unwrap();
             let npc_ai = Some(npc_data.ai_file_index)
                 .filter(|ai_file_index| *ai_file_index != 0)
                 .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
             let position = Position::new(npc.position, zone_id);
-
-            let ability_values = ability_values.unwrap();
-            let health_points = HealthPoints::new(ability_values.max_health as u32);
-            let level = Level::new(ability_values.level as u32);
-            let move_mode = MoveMode::Walk;
             let move_speed = MoveSpeed::new(ability_values.walk_speed as f32);
+            let level = Level::new(ability_values.level as u32);
+            let health_points = HealthPoints::new(ability_values.max_health as u32);
 
-            let entity = cmd.push(());
-
-            create_npc_entity(
-                cmd,
-                &entity,
+            let mut entity_commands = commands.spawn_bundle(NpcBundle {
                 ability_values,
-                Command::default(),
+                command: Command::default(),
                 health_points,
                 level,
-                game_data.npcs.get_npc_motions(npc.npc_id),
-                move_mode,
+                motion_data: game_data.npcs.get_npc_motions(npc.npc_id),
+                move_mode: MoveMode::Walk,
                 move_speed,
-                NextCommand::default(),
-                Npc::new(npc.npc_id, conversation_index as u16),
-                npc_ai,
-                position.clone(),
-                NpcStandingDirection::new(npc.direction),
-                Team::default_npc(),
-            );
+                next_command: NextCommand::default(),
+                npc: Npc::new(npc.npc_id, conversation_index as u16),
+                position: position.clone(),
+                standing_direction: NpcStandingDirection::new(npc.direction),
+                status_effects: StatusEffects::new(),
+                team: Team::default_npc(),
+            });
+            if let Some(npc_ai) = npc_ai {
+                entity_commands.insert(npc_ai);
+            }
+            let entity = entity_commands.id();
 
             client_entity_join_zone(
-                cmd,
-                client_entity_list,
-                &entity,
+                &mut commands,
+                &mut client_entity_list,
+                entity,
                 ClientEntityType::Npc,
                 &position,
             )
