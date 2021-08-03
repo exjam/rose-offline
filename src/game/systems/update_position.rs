@@ -7,7 +7,7 @@ use crate::game::{
 
 pub fn update_position_system(
     mut commands: Commands,
-    query: Query<(
+    mut query: Query<(
         Entity,
         Option<&mut ClientEntity>,
         &MoveSpeed,

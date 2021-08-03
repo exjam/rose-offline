@@ -19,7 +19,7 @@ use crate::{
 
 pub fn world_server_authentication_system(
     mut commands: Commands,
-    query: Query<(Entity, &mut WorldClient), Without<Account>>,
+    mut query: Query<(Entity, &mut WorldClient), Without<Account>>,
     login_tokens: Res<LoginTokens>,
 ) {
     query.for_each_mut(|(entity, mut world_client)| {
@@ -106,7 +106,7 @@ fn create_character(
 }
 
 pub fn world_server_system(
-    world_client_query: Query<(&mut WorldClient, &mut Account, &mut CharacterList)>,
+    mut world_client_query: Query<(&mut WorldClient, &mut Account, &mut CharacterList)>,
     server_info_query: Query<&ServerInfo>,
     mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,

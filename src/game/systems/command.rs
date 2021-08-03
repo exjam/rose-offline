@@ -174,7 +174,7 @@ fn is_valid_pickup_target<'a>(
 #[allow(clippy::clippy::type_complexity)]
 pub fn command_system(
     mut commands: Commands,
-    query: Query<(
+    mut query: Query<(
         Entity,
         &ClientEntity,
         &Position,

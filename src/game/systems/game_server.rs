@@ -38,7 +38,7 @@ use crate::{
 
 pub fn game_server_authentication_system(
     mut commands: Commands,
-    query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
+    mut query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
     login_tokens: Res<LoginTokens>,
     game_data: Res<GameData>,
 ) {
@@ -184,7 +184,7 @@ pub fn game_server_join_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     world_time: Res<WorldTime>,
 ) {
-    query.for_each_mut(
+    query.for_each(
         |(
             entity,
             game_client,
@@ -233,7 +233,7 @@ pub fn game_server_join_system(
 #[allow(clippy::type_complexity)]
 pub fn game_server_main_system(
     mut commands: Commands,
-    game_client_query: Query<(
+    mut game_client_query: Query<(
         Entity,
         &GameClient,
         &ClientEntity,

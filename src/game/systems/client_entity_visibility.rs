@@ -16,7 +16,7 @@ use crate::game::{
 
 #[allow(clippy::type_complexity)]
 pub fn client_entity_visibility_system(
-    clients_query: Query<(
+    mut clients_query: Query<(
         &mut ClientEntityVisibility,
         &GameClient,
         &ClientEntity,

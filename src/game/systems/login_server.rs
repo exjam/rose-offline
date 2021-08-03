@@ -17,7 +17,7 @@ pub fn login_server_authentication_system(
     mut commands: Commands,
     query: Query<(Entity, &LoginClient), Without<Account>>,
 ) {
-    query.for_each_mut(|(entity, login_client)| {
+    query.for_each(|(entity, login_client)| {
         if let Ok(message) = login_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::ConnectionRequest(message) => {
@@ -50,7 +50,7 @@ pub fn login_server_authentication_system(
 }
 
 pub fn login_server_system(
-    query: Query<(&Account, &mut LoginClient)>,
+    mut query: Query<(&Account, &mut LoginClient)>,
     mut login_tokens: ResMut<LoginTokens>,
     server_list: Res<ServerList>,
 ) {

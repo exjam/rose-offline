@@ -514,7 +514,7 @@ fn npc_ai_run_trigger(
 #[allow(clippy::type_complexity)]
 pub fn npc_ai_system(
     mut commands: Commands,
-    npc_query: Query<(
+    mut npc_query: Query<(
         Entity,
         &Npc,
         &mut NpcAi,

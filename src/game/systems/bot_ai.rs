@@ -13,7 +13,7 @@ use crate::game::{
 #[allow(clippy::type_complexity)]
 pub fn bot_ai_system(
     mut commands: Commands,
-    bot_query: Query<(
+    mut bot_query: Query<(
         Entity,
         &mut BotAi,
         &Command,

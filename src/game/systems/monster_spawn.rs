@@ -17,7 +17,7 @@ use crate::{
 
 pub fn monster_spawn_system(
     mut commands: Commands,
-    query: Query<(Entity, &mut MonsterSpawnPoint, &Position)>,
+    mut query: Query<(Entity, &mut MonsterSpawnPoint, &Position)>,
     server_time: Res<ServerTime>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
