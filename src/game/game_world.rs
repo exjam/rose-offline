@@ -1,4 +1,5 @@
 use bevy_ecs::{
+    event::Events,
     prelude::{IntoSystem, Schedule, StageLabel, World},
     schedule::{RunOnce, SystemStage},
 };
@@ -7,12 +8,13 @@ use log::debug;
 use std::time::{Duration, Instant};
 
 use crate::game::{
+    events::QuestTriggerEvent,
     messages::control::ControlMessage,
     resources::{
         BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, PendingChatCommandList,
-        PendingDamageList, PendingPersonalStoreEventList, PendingQuestTriggerList, PendingSaveList,
-        PendingSkillEffectList, PendingUseItemList, PendingXpList, ServerList, ServerMessages,
-        ServerTime, WorldRates, WorldTime,
+        PendingDamageList, PendingPersonalStoreEventList, PendingSaveList, PendingSkillEffectList,
+        PendingUseItemList, PendingXpList, ServerList, ServerMessages, ServerTime, WorldRates,
+        WorldTime,
     },
     systems::{
         bot_ai_system, chat_commands_system, client_entity_visibility_system, command_system,
@@ -29,6 +31,7 @@ use crate::game::{
 #[derive(Debug, Clone, PartialEq, Eq, Hash, StageLabel)]
 enum GameStages {
     Startup,
+    First,
     Input,
     PreUpdate,
     Update,
@@ -60,7 +63,7 @@ impl GameWorld {
         world.insert_resource(PendingChatCommandList::new());
         world.insert_resource(PendingDamageList::new());
         world.insert_resource(PendingPersonalStoreEventList::new());
-        world.insert_resource(PendingQuestTriggerList::new());
+        world.insert_resource(Events::<QuestTriggerEvent>::default());
         world.insert_resource(PendingSaveList::new());
         world.insert_resource(PendingSkillEffectList::new());
         world.insert_resource(PendingUseItemList::new());
@@ -78,6 +81,11 @@ impl GameWorld {
         );
         schedule.add_stage_after(
             GameStages::Startup,
+            GameStages::First,
+            SystemStage::parallel().with_system(Events::<QuestTriggerEvent>::update_system),
+        );
+        schedule.add_stage_after(
+            GameStages::First,
             GameStages::Input,
             SystemStage::parallel()
                 .with_system(world_time_system.system())

@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut};
 use log::warn;
 use nalgebra::Point3;
 use rand::{prelude::ThreadRng, Rng};
@@ -24,11 +24,9 @@ use crate::{
             Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
             UnionMembership,
         },
+        events::QuestTriggerEvent,
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
-        resources::{
-            ClientEntityList, PendingQuestTrigger, PendingQuestTriggerList, PendingXp,
-            PendingXpList, WorldRates, WorldTime,
-        },
+        resources::{ClientEntityList, PendingXp, PendingXpList, WorldRates, WorldTime},
         GameData,
     },
 };
@@ -873,7 +871,7 @@ pub fn quest_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
-    mut pending_quest_trigger_list: ResMut<PendingQuestTriggerList>,
+    mut quest_trigger_events: EventReader<QuestTriggerEvent>,
     mut pending_xp_list: ResMut<PendingXpList>,
     world_time: Res<WorldTime>,
 ) {
@@ -887,10 +885,10 @@ pub fn quest_system(
         rng: rand::thread_rng(),
     };
 
-    for PendingQuestTrigger {
+    for &QuestTriggerEvent {
         trigger_entity,
         trigger_hash,
-    } in pending_quest_trigger_list.drain(..)
+    } in quest_trigger_events.iter()
     {
         let mut trigger = game_data.quests.get_trigger_by_hash(trigger_hash);
         let mut success = false;

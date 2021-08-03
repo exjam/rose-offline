@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
+use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
 use log::warn;
 use nalgebra::Point3;
 
@@ -16,6 +16,7 @@ use crate::{
             ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed, NextCommand, Position, QuestState,
             SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
+        events::QuestTriggerEvent,
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
@@ -29,9 +30,9 @@ use crate::{
         },
         resources::{
             ClientEntityList, GameData, LoginTokens, PendingChatCommandList,
-            PendingPersonalStoreEvent, PendingPersonalStoreEventList, PendingQuestTrigger,
-            PendingQuestTriggerList, PendingUseItem, PendingUseItemList, PersonalStoreEventBuyItem,
-            PersonalStoreEventListItems, ServerMessages, WorldTime,
+            PendingPersonalStoreEvent, PendingPersonalStoreEventList, PendingUseItem,
+            PendingUseItemList, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
+            ServerMessages, WorldTime,
         },
     },
 };
@@ -254,7 +255,7 @@ pub fn game_server_main_system(
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut pending_chat_command_list: ResMut<PendingChatCommandList>,
-    mut pending_quest_trigger_list: ResMut<PendingQuestTriggerList>,
+    mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut pending_store_event_list: ResMut<PendingPersonalStoreEventList>,
     mut pending_use_item_list: ResMut<PendingUseItemList>,
     mut server_messages: ResMut<ServerMessages>,
@@ -574,7 +575,7 @@ pub fn game_server_main_system(
                         }
                     }
                     ClientMessage::QuestTrigger(trigger_hash) => {
-                        pending_quest_trigger_list.push(PendingQuestTrigger {
+                        quest_trigger_events.send(QuestTriggerEvent {
                             trigger_entity: entity,
                             trigger_hash,
                         });
