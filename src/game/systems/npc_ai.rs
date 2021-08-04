@@ -426,6 +426,14 @@ fn ai_condition_variable(
     compare_aip_value(operator_type, variable_value, value)
 }
 
+fn ai_condition_server_channel_number(
+    _ai_world: &AiWorld,
+    channel_range: &RangeInclusive<u16>,
+) -> bool {
+    // TODO: Do we need to have channel numbers?
+    channel_range.contains(&1)
+}
+
 fn npc_ai_check_conditions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
@@ -504,13 +512,15 @@ fn npc_ai_check_conditions(
                     value,
                 )
             }
+            AipCondition::ServerChannelNumber(ref channel_range) => {
+                ai_condition_server_channel_number(ai_world, &channel_range)
+            }
             /*
             AipCondition::CompareAttackerAndTargetAbilityValue(_, _) => false,
             AipCondition::HasStatusEffect(_, _, _) => false,
             AipCondition::IsAttackerClanMaster => false,
             AipCondition::IsTargetClanMaster => false,
             AipCondition::OwnerHasTarget => false,
-            AipCondition::ServerChannelNumber(_) => false,
             AipCondition::TargetAbilityValue(_, _, _) => false,
             */
             _ => {
