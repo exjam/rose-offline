@@ -1,10 +1,11 @@
 use std::{
-    num::NonZeroU16,
+    num::{NonZeroU16, NonZeroU8},
     ops::{Range, RangeInclusive},
     time::Duration,
 };
 
 use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
+use chrono::{Datelike, Timelike};
 use log::trace;
 use nalgebra::{Point3, Vector3};
 use rand::{prelude::ThreadRng, Rng};
@@ -12,9 +13,9 @@ use rand::{prelude::ThreadRng, Rng};
 use crate::{
     data::{
         formats::{
-            AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
-            AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType,
-            AipTrigger,
+            AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities,
+            AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistanceOrigin,
+            AipEvent, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType, AipTrigger,
         },
         Damage, NpcId,
     },
@@ -27,7 +28,7 @@ use crate::{
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
-        resources::{ClientEntityList, ServerTime, WorldRates, ZoneList},
+        resources::{ClientEntityList, ServerTime, WorldRates, WorldTime, ZoneList},
         GameData,
     },
 };
@@ -39,8 +40,11 @@ const DROP_ITEM_RADIUS: i32 = 200;
 struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f> {
     client_entity_list: &'a mut ClientEntityList,
     commands: &'a mut Commands<'b>,
+    game_data: &'c GameData,
     nearby_query: &'c Query<'d, (&'e Level, &'f Team)>,
     rng: ThreadRng,
+    server_time: &'c ServerTime,
+    world_time: &'c WorldTime,
     zone_list: &'c ZoneList,
 }
 
@@ -97,7 +101,7 @@ fn ai_condition_count_nearby_entities(
     ai_parameters: &mut AiParameters,
     distance: i32,
     is_allied: bool,
-    level_diff_range: RangeInclusive<i32>,
+    level_diff_range: &RangeInclusive<i32>,
     count_operator_type: Option<AipOperatorType>,
     count: i32,
 ) -> Result<(), AiConditionResult> {
@@ -163,7 +167,6 @@ fn ai_condition_count_nearby_entities(
 }
 
 fn ai_condition_damage(
-    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     damage_type: AipDamageType,
     operator: AipOperatorType,
@@ -182,7 +185,6 @@ fn ai_condition_damage(
 }
 
 fn ai_condition_distance(
-    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     origin: AipDistanceOrigin,
     operator: AipOperatorType,
@@ -214,7 +216,6 @@ fn ai_condition_distance(
 }
 
 fn ai_condition_health_percent(
-    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     value: i32,
@@ -225,14 +226,11 @@ fn ai_condition_health_percent(
     compare_aip_value(operator, (100 * current) / max, value)
 }
 
-fn ai_condition_has_owner(_ai_world: &mut AiWorld, ai_parameters: &mut AiParameters) -> bool {
+fn ai_condition_has_owner(ai_parameters: &mut AiParameters) -> bool {
     ai_parameters.source.owner.is_some()
 }
 
-fn ai_condition_is_attacker_current_target(
-    _ai_world: &mut AiWorld,
-    ai_parameters: &mut AiParameters,
-) -> bool {
+fn ai_condition_is_attacker_current_target(ai_parameters: &mut AiParameters) -> bool {
     if let Some(attacker) = ai_parameters.attacker {
         if let Some(target) = ai_parameters.source.target {
             return attacker.entity == target;
@@ -243,7 +241,6 @@ fn ai_condition_is_attacker_current_target(
 }
 
 fn ai_condition_no_target_and_compare_attacker_ability_value(
-    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     ability: AipAbilityType,
@@ -271,7 +268,6 @@ fn ai_condition_no_target_and_compare_attacker_ability_value(
 
 fn ai_condition_random(
     ai_world: &mut AiWorld,
-    _ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     range: Range<i32>,
     value: i32,
@@ -280,7 +276,6 @@ fn ai_condition_random(
 }
 
 fn ai_condition_source_ability_value(
-    _ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
     operator: AipOperatorType,
     ability: AipAbilityType,
@@ -312,74 +307,158 @@ fn ai_condition_select_local_npc(
     local_npc.is_some()
 }
 
+fn ai_condition_month_day_time(
+    ai_world: &mut AiWorld,
+    month_day: Option<NonZeroU8>,
+    day_minutes_range: &RangeInclusive<i32>,
+) -> bool {
+    let local_time = &ai_world.server_time.local_time;
+
+    if let Some(month_day) = month_day {
+        if month_day.get() as u32 != local_time.day() {
+            return false;
+        }
+    }
+
+    let local_day_minutes = local_time.hour() as i32 + local_time.minute() as i32;
+    day_minutes_range.contains(&local_day_minutes)
+}
+
+fn ai_condition_week_day_time(
+    ai_world: &mut AiWorld,
+    week_day: u8,
+    day_minutes_range: &RangeInclusive<i32>,
+) -> bool {
+    let local_time = &ai_world.server_time.local_time;
+
+    if week_day as u32 != local_time.weekday().num_days_from_sunday() {
+        return false;
+    }
+
+    let local_day_minutes = local_time.hour() as i32 + local_time.minute() as i32;
+    day_minutes_range.contains(&local_day_minutes)
+}
+
+fn ai_condition_world_time(ai_world: &mut AiWorld, range: &RangeInclusive<u32>) -> bool {
+    range.contains(&ai_world.world_time.ticks.get_world_time())
+}
+
+fn ai_condition_zone_time(
+    ai_world: &AiWorld,
+    ai_parameters: &AiParameters,
+    range: &RangeInclusive<u32>,
+) -> bool {
+    let world_time = ai_world.world_time.ticks.get_world_time();
+    let zone_time = if let Some(zone_data) = ai_world
+        .game_data
+        .zones
+        .get_zone(ai_parameters.source.position.zone_id)
+    {
+        world_time % zone_data.day_cycle
+    } else {
+        world_time
+    };
+    range.contains(&zone_time)
+}
+
+fn ai_condition_is_zone_daytime(
+    ai_world: &AiWorld,
+    ai_parameters: &AiParameters,
+    is_daytime: bool,
+) -> bool {
+    if let Some(zone_data) = ai_world
+        .game_data
+        .zones
+        .get_zone(ai_parameters.source.position.zone_id)
+    {
+        let world_time = ai_world.world_time.ticks.get_world_time();
+        let zone_time = world_time % zone_data.day_cycle;
+        let zone_day_start = zone_data.day_time / 2;
+        let zone_day_end = (zone_data.evening_time + zone_data.night_time) / 2;
+
+        is_daytime == (zone_day_start..=zone_day_end).contains(&zone_time)
+    } else {
+        is_daytime
+    }
+}
+
 fn npc_ai_check_conditions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
 ) -> bool {
     for condition in ai_program_event.conditions.iter() {
-        let result = match condition {
+        let result = match *condition {
             AipCondition::FindNearbyEntities(AipConditionFindNearbyEntities {
                 distance,
                 is_allied,
-                level_diff_range,
+                ref level_diff_range,
                 count_operator_type,
                 count,
             }) => ai_condition_count_nearby_entities(
                 ai_world,
                 ai_parameters,
-                *distance,
-                *is_allied,
-                level_diff_range.clone(),
-                *count_operator_type,
-                *count,
+                distance,
+                is_allied,
+                level_diff_range,
+                count_operator_type,
+                count,
             )
             .is_ok(),
-            &AipCondition::Damage(damage_type, operator, value) => {
-                ai_condition_damage(ai_world, ai_parameters, damage_type, operator, value)
+            AipCondition::Damage(damage_type, operator, value) => {
+                ai_condition_damage(ai_parameters, damage_type, operator, value)
             }
-            &AipCondition::Distance(origin, operator, value) => {
-                ai_condition_distance(ai_world, ai_parameters, origin, operator, value)
+            AipCondition::Distance(origin, operator, value) => {
+                ai_condition_distance(ai_parameters, origin, operator, value)
             }
-            AipCondition::HasOwner => ai_condition_has_owner(ai_world, ai_parameters),
-            &AipCondition::HealthPercent(operator, value) => {
-                ai_condition_health_percent(ai_world, ai_parameters, operator, value)
+            AipCondition::HasOwner => ai_condition_has_owner(ai_parameters),
+            AipCondition::HealthPercent(operator, value) => {
+                ai_condition_health_percent(ai_parameters, operator, value)
             }
             AipCondition::IsAttackerCurrentTarget => {
-                ai_condition_is_attacker_current_target(ai_world, ai_parameters)
+                ai_condition_is_attacker_current_target(ai_parameters)
             }
-            &AipCondition::NoTargetAndCompareAttackerAbilityValue(operator, ability, value) => {
+            AipCondition::NoTargetAndCompareAttackerAbilityValue(operator, ability, value) => {
                 ai_condition_no_target_and_compare_attacker_ability_value(
-                    ai_world,
                     ai_parameters,
                     operator,
                     ability,
                     value,
                 )
             }
-            AipCondition::Random(operator, range, value) => {
-                ai_condition_random(ai_world, ai_parameters, *operator, range.clone(), *value)
+            AipCondition::Random(operator, ref range, value) => {
+                ai_condition_random(ai_world, operator, range.clone(), value)
             }
-            &AipCondition::SelfAbilityValue(operator, ability, value) => {
-                ai_condition_source_ability_value(ai_world, ai_parameters, operator, ability, value)
+            AipCondition::SelfAbilityValue(operator, ability, value) => {
+                ai_condition_source_ability_value(ai_parameters, operator, ability, value)
             }
-            &AipCondition::SelectLocalNpc(npc_id) => {
+            AipCondition::SelectLocalNpc(npc_id) => {
                 ai_condition_select_local_npc(ai_world, ai_parameters, npc_id)
+            }
+            AipCondition::MonthDay(AipConditionMonthDayTime {
+                month_day,
+                ref day_minutes_range,
+            }) => ai_condition_month_day_time(ai_world, month_day, day_minutes_range),
+            AipCondition::WeekDay(AipConditionWeekDayTime {
+                week_day,
+                ref day_minutes_range,
+            }) => ai_condition_week_day_time(ai_world, week_day, day_minutes_range),
+            AipCondition::WorldTime(ref range) => ai_condition_world_time(ai_world, range),
+            AipCondition::ZoneTime(ref range) => {
+                ai_condition_zone_time(ai_world, ai_parameters, range)
+            }
+            AipCondition::IsDaytime(is_daytime) => {
+                ai_condition_is_zone_daytime(ai_world, ai_parameters, is_daytime)
             }
             /*
             AipCondition::CompareAttackerAndTargetAbilityValue(_, _) => false,
             AipCondition::HasStatusEffect(_, _, _) => false,
             AipCondition::IsAttackerClanMaster => false,
-            AipCondition::IsDaytime(_) => false,
             AipCondition::IsTargetClanMaster => false,
-            AipCondition::MonthDay(_) => false,
             AipCondition::OwnerHasTarget => false,
             AipCondition::ServerChannelNumber(_) => false,
             AipCondition::TargetAbilityValue(_, _, _) => false,
             AipCondition::Variable(_, _, _, _) => false,
-            AipCondition::WeekDay(_) => false,
-            AipCondition::WorldTime(_) => false,
-            AipCondition::ZoneTime(_) => false,
             */
             _ => {
                 trace!("Unimplemented AI condition: {:?}", condition);
@@ -451,7 +530,7 @@ fn npc_ai_do_actions(
                 )
             }
             AipAction::AttackNearChar => {
-                if let &Some((near_char, _)) = &ai_parameters.near_char {
+                if let Some((near_char, _)) = ai_parameters.near_char {
                     ai_world
                         .commands
                         .entity(ai_parameters.source.entity)
@@ -459,7 +538,7 @@ fn npc_ai_do_actions(
                 }
             }
             AipAction::AttackFindChar => {
-                if let &Some((find_char, _)) = &ai_parameters.find_char {
+                if let Some((find_char, _)) = ai_parameters.find_char {
                     ai_world
                         .commands
                         .entity(ai_parameters.source.entity)
@@ -585,18 +664,22 @@ pub fn npc_ai_system(
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: Query<&Level>,
     killer_query: Query<(&Level, &AbilityValues, Option<&GameClient>)>,
-    server_time: Res<ServerTime>,
-    game_data: Res<GameData>,
-    world_rates: Res<WorldRates>,
-    zone_list: Res<ZoneList>,
     mut client_entity_list: ResMut<ClientEntityList>,
+    game_data: Res<GameData>,
+    server_time: Res<ServerTime>,
+    world_rates: Res<WorldRates>,
+    world_time: Res<WorldTime>,
+    zone_list: Res<ZoneList>,
     mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
     let mut ai_world = AiWorld {
-        commands: &mut commands,
         client_entity_list: &mut client_entity_list,
+        commands: &mut commands,
+        game_data: &game_data,
         nearby_query: &nearby_query,
         rng: rand::thread_rng(),
+        server_time: &server_time,
+        world_time: &world_time,
         zone_list: &zone_list,
     };
 

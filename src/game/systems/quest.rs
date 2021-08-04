@@ -90,7 +90,7 @@ fn quest_get_expire_time(quest_world: &mut QuestWorld, quest_id: usize) -> Optio
         .quests
         .get_quest_data(quest_id)
         .and_then(|quest_data| quest_data.time_limit)
-        .map(|time_limit| quest_world.world_time.now + time_limit)
+        .map(|time_limit| quest_world.world_time.ticks + time_limit)
 }
 
 fn quest_condition_select_quest(quest_parameters: &mut QuestParameters, quest_id: usize) -> bool {

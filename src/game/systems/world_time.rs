@@ -9,7 +9,7 @@ pub fn world_time_system(server_time: Res<ServerTime>, mut world_time: ResMut<Wo
     world_time.time_since_last_tick += server_time.delta;
 
     if world_time.time_since_last_tick > WORLD_TICK_DURATION {
-        world_time.now = world_time.now + WorldTicks(1);
+        world_time.ticks = world_time.ticks + WorldTicks(1);
         world_time.time_since_last_tick -= WORLD_TICK_DURATION;
     }
 }

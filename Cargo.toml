@@ -12,6 +12,7 @@ async-trait = "0.1.48"
 bevy_ecs = { git = "https://github.com/bevyengine/bevy", rev = "43d99bb583866c1adb4aa88f19b88637df0a7f33" }
 bitvec = { version = "0.22.3", features = ["serde"] }
 bytes = "1"
+chrono = "0.4"
 clap = "3.0.0-beta.2"
 crossbeam-channel = "0.5.0"
 directories = "3.0"

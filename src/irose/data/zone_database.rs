@@ -9,7 +9,7 @@ use crate::{
             FileReader, IfoFile, StbFile, StlFile, VfsIndex, ZonFile, ZonReadError,
         },
         NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneId, ZoneMonsterSpawnPoint,
-        ZoneNpcSpawn,
+        ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
     },
     stb_column,
 };
@@ -265,6 +265,21 @@ fn load_zone(
         num_sectors_y,
         start_position,
         revive_positions,
+        day_cycle: data
+            .get_zone_day_cycle_time(id)
+            .unwrap_or(WORLD_TICKS_PER_DAY as u32),
+        morning_time: data
+            .get_zone_morning_time(id)
+            .unwrap_or((WORLD_TICKS_PER_DAY / 6) as u32),
+        day_time: data
+            .get_zone_day_time(id)
+            .unwrap_or((2 * WORLD_TICKS_PER_DAY / 6) as u32),
+        evening_time: data
+            .get_zone_evening_time(id)
+            .unwrap_or((4 * WORLD_TICKS_PER_DAY / 6) as u32),
+        night_time: data
+            .get_zone_night_time(id)
+            .unwrap_or((5 * WORLD_TICKS_PER_DAY / 6) as u32),
     })
 }
 

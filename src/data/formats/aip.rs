@@ -1,5 +1,6 @@
 use log::warn;
 use std::{
+    num::NonZeroU8,
     ops::{Range, RangeInclusive},
     time::Duration,
 };
@@ -93,16 +94,14 @@ pub struct AipConditionFindNearbyEntities {
 
 #[derive(Debug)]
 pub struct AipConditionMonthDayTime {
-    pub month_day: u8,                          // 1 - 31
-    pub hour_range: Option<RangeInclusive<u8>>, // 1 - 24
-    pub minute_range: RangeInclusive<u8>,       // 1 - 60
+    pub month_day: Option<NonZeroU8>,
+    pub day_minutes_range: RangeInclusive<i32>,
 }
 
 #[derive(Debug)]
 pub struct AipConditionWeekDayTime {
-    pub week_day: u8,                     // 0 - 6
-    pub hour_range: RangeInclusive<u8>,   // 1 - 24
-    pub minute_range: RangeInclusive<u8>, // 1 - 60
+    pub week_day: u8,
+    pub day_minutes_range: RangeInclusive<i32>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -582,13 +581,9 @@ impl AipFile {
                             reader.skip(3); // padding
 
                             conditions.push(AipCondition::MonthDay(AipConditionMonthDayTime {
-                                month_day: day,
-                                hour_range: if hour_min > 100 || hour_max > 100 {
-                                    None
-                                } else {
-                                    Some(hour_min..=hour_max)
-                                },
-                                minute_range: minute_min..=minute_max,
+                                month_day: NonZeroU8::new(day),
+                                day_minutes_range: (hour_min as i32 * 60 + minute_min as i32)
+                                    ..=(hour_max as i32 * 60 + minute_max as i32),
                             }));
                         }
                         26 => {
@@ -601,8 +596,8 @@ impl AipFile {
 
                             conditions.push(AipCondition::WeekDay(AipConditionWeekDayTime {
                                 week_day: day,
-                                hour_range: hour_min..=hour_max,
-                                minute_range: minute_min..=minute_max,
+                                day_minutes_range: (hour_min as i32 * 60 + minute_min as i32)
+                                    ..=(hour_max as i32 * 60 + minute_max as i32),
                             }));
                         }
                         27 => {

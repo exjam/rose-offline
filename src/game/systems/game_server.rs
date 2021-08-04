@@ -223,7 +223,7 @@ pub fn game_server_join_system(
                                     team: team.clone(),
                                     health_points: *health_points,
                                     mana_points: *mana_points,
-                                    world_time: world_time.now,
+                                    world_ticks: world_time.ticks,
                                 })
                                 .ok();
                         }

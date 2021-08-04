@@ -3,6 +3,7 @@ use bevy_ecs::{
     prelude::{IntoSystem, Schedule, StageLabel, World},
     schedule::{RunOnce, SystemStage},
 };
+use chrono::Local;
 use crossbeam_channel::Receiver;
 use log::debug;
 use std::time::{Duration, Instant};
@@ -164,6 +165,7 @@ impl GameWorld {
             world.insert_resource(ServerTime {
                 delta: current_tick - last_tick,
                 now: current_tick,
+                local_time: Local::now(),
             });
             schedule.run_once(&mut world);
 

@@ -501,7 +501,7 @@ pub struct PacketServerJoinZone<'a> {
     pub team: &'a Team,
     pub health_points: &'a HealthPoints,
     pub mana_points: &'a ManaPoints,
-    pub world_time: WorldTicks,
+    pub world_ticks: WorldTicks,
 }
 
 impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
@@ -524,7 +524,7 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
         }
         writer.write_u32(0); // global flags (0x1 = pvp allowed)
 
-        writer.write_u32(packet.world_time.0 as u32);
+        writer.write_u32(packet.world_ticks.0 as u32);
         writer.write_u32(packet.team.id);
         writer.into()
     }

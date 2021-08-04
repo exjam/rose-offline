@@ -184,7 +184,7 @@ pub struct JoinZoneResponse {
     pub team: Team,
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,
-    pub world_time: WorldTicks,
+    pub world_ticks: WorldTicks,
 }
 
 #[derive(Debug)]
