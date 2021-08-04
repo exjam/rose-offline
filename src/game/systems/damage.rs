@@ -1,14 +1,15 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::{Commands, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, EventReader, Query, Res, ResMut};
 
 use crate::game::{
     components::{
         ClientEntity, Command, DamageSource, DamageSources, HealthPoints, MotionData, NpcAi,
         Position,
     },
+    events::DamageEvent,
     messages::server::{DamageEntity, ServerMessage},
-    resources::{PendingDamageList, ServerMessages, ServerTime},
+    resources::{ServerMessages, ServerTime},
 };
 
 #[allow(clippy::type_complexity)]
@@ -23,13 +24,13 @@ pub fn damage_system(
         Option<&mut NpcAi>,
         Option<&MotionData>,
     )>,
-    mut pending_damage_list: ResMut<PendingDamageList>,
+    mut damage_events: EventReader<DamageEvent>,
     mut server_messages: ResMut<ServerMessages>,
     server_time: Res<ServerTime>,
 ) {
-    for pending_damage in pending_damage_list.iter() {
+    for damage_event in damage_events.iter() {
         let attacker_entity_id = attacker_query
-            .get(pending_damage.attacker)
+            .get(damage_event.attacker)
             .map(|client_entity| Some(client_entity.id))
             .unwrap_or(None);
 
@@ -40,9 +41,9 @@ pub fn damage_system(
             damage_sources,
             npc_ai,
             motion_data,
-        )) = defender_query.get_mut(pending_damage.defender)
+        )) = defender_query.get_mut(damage_event.defender)
         {
-            if pending_damage.damage.apply_hit_stun {
+            if damage_event.damage.apply_hit_stun {
                 // TODO: Apply hit stun by setting next command to HitStun ?
             }
 
@@ -53,7 +54,7 @@ pub fn damage_system(
 
             health_points.hp = health_points
                 .hp
-                .saturating_sub(pending_damage.damage.amount as u32);
+                .saturating_sub(damage_event.damage.amount as u32);
 
             if let Some(attacker_entity_id) = attacker_entity_id {
                 server_messages.send_zone_message(
@@ -61,7 +62,7 @@ pub fn damage_system(
                     ServerMessage::DamageEntity(DamageEntity {
                         attacker_entity_id,
                         defender_entity_id: client_entity.id,
-                        damage: pending_damage.damage,
+                        damage: damage_event.damage,
                         is_killed: health_points.hp == 0,
                     }),
                 );
@@ -71,10 +72,10 @@ pub fn damage_system(
                 if let Some(mut source) = damage_sources
                     .damage_sources
                     .iter_mut()
-                    .find(|source| source.entity == pending_damage.attacker)
+                    .find(|source| source.entity == damage_event.attacker)
                 {
                     source.last_damage_time = server_time.now;
-                    source.total_damage += pending_damage.damage.amount as usize;
+                    source.total_damage += damage_event.damage.amount as usize;
                 } else {
                     // If we have a full list of damage sources, remove the oldest
                     if damage_sources.damage_sources.len() == damage_sources.max_damage_sources {
@@ -96,8 +97,8 @@ pub fn damage_system(
                     }
 
                     damage_sources.damage_sources.push(DamageSource {
-                        entity: pending_damage.attacker,
-                        total_damage: pending_damage.damage.amount as usize,
+                        entity: damage_event.attacker,
+                        total_damage: damage_event.damage.amount as usize,
                         first_damage_time: server_time.now,
                         last_damage_time: server_time.now,
                     });
@@ -107,14 +108,14 @@ pub fn damage_system(
             if let Some(mut npc_ai) = npc_ai {
                 npc_ai
                     .pending_damage
-                    .push((pending_damage.attacker, pending_damage.damage));
+                    .push((damage_event.attacker, damage_event.damage));
             }
 
             if health_points.hp == 0 {
                 commands
-                    .entity(pending_damage.defender)
+                    .entity(damage_event.defender)
                     .insert(Command::with_die(
-                        Some(pending_damage.attacker),
+                        Some(damage_event.attacker),
                         motion_data
                             .and_then(|motion_data| motion_data.get_die())
                             .map(|die_motion| die_motion.duration)
@@ -123,6 +124,4 @@ pub fn damage_system(
             }
         }
     }
-
-    pending_damage_list.clear();
 }

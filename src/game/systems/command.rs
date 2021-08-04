@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
 use crate::{
@@ -14,13 +14,14 @@ use crate::{
             Inventory, MotionData, MoveMode, MoveSpeed, NextCommand, Owner, PersonalStore,
             Position, StatusEffects, Target,
         },
+        events::DamageEvent,
         messages::server::{
             self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
             ServerMessage,
         },
         resources::{
-            ClientEntityList, GameData, PendingDamage, PendingDamageList, PendingSkillEffect,
-            PendingSkillEffectList, PendingSkillEffectTarget, ServerMessages, ServerTime,
+            ClientEntityList, GameData, PendingSkillEffect, PendingSkillEffectList,
+            PendingSkillEffectTarget, ServerMessages, ServerTime,
         },
     },
 };
@@ -204,7 +205,7 @@ pub fn command_system(
     )>,
     server_time: Res<ServerTime>,
     mut client_entity_list: ResMut<ClientEntityList>,
-    mut pending_damage_list: ResMut<PendingDamageList>,
+    mut damage_events: EventWriter<DamageEvent>,
     mut pending_skill_effect_list: ResMut<PendingSkillEffectList>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
@@ -598,16 +599,16 @@ pub fn command_system(
                             // Update target
                             entity_commands.insert(Target::new(*target_entity));
 
-                            // Queue up pending damage for damage system to process
-                            pending_damage_list.push(PendingDamage {
-                                attacker: entity,
-                                defender: *target_entity,
-                                damage: game_data.ability_value_calculator.calculate_damage(
+                            // Send damage event to damage system
+                            damage_events.send(DamageEvent::new(
+                                entity,
+                                *target_entity,
+                                game_data.ability_value_calculator.calculate_damage(
                                     ability_values,
                                     target_ability_values,
                                     hit_count as i32,
                                 ),
-                            });
+                            ));
                         } else {
                             // Not in range, set current command to move
                             *command = Command::with_move(
