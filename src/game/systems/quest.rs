@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut};
 use log::warn;
 use nalgebra::Point3;
 use rand::{prelude::ThreadRng, Rng};
@@ -24,9 +24,9 @@ use crate::{
             Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
             UnionMembership,
         },
-        events::QuestTriggerEvent,
+        events::{QuestTriggerEvent, RewardXpEvent},
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
-        resources::{ClientEntityList, PendingXp, PendingXpList, WorldRates, WorldTime},
+        resources::{ClientEntityList, WorldRates, WorldTime},
         GameData,
     },
 };
@@ -66,7 +66,7 @@ struct QuestWorld<'a, 'b, 'c, 'd> {
     game_data: &'a GameData,
     world_rates: &'a WorldRates,
     world_time: &'a WorldTime,
-    pending_xp_list: &'a mut ResMut<'d, PendingXpList>,
+    reward_xp_events: &'a mut EventWriter<'d, RewardXpEvent>,
     rng: ThreadRng,
 }
 
@@ -347,7 +347,7 @@ fn quest_reward_calculated_experience_points(
             quest_world.world_rates.reward_rate,
         );
 
-    quest_world.pending_xp_list.push(PendingXp::new(
+    quest_world.reward_xp_events.send(RewardXpEvent::new(
         quest_parameters.source.entity,
         reward_value as u64,
         0,
@@ -872,7 +872,7 @@ pub fn quest_system(
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
     mut quest_trigger_events: EventReader<QuestTriggerEvent>,
-    mut pending_xp_list: ResMut<PendingXpList>,
+    mut reward_xp_events: EventWriter<RewardXpEvent>,
     world_time: Res<WorldTime>,
 ) {
     let mut quest_world = QuestWorld {
@@ -881,7 +881,7 @@ pub fn quest_system(
         game_data: &game_data,
         world_rates: &world_rates,
         world_time: &world_time,
-        pending_xp_list: &mut pending_xp_list,
+        reward_xp_events: &mut reward_xp_events,
         rng: rand::thread_rng(),
     };
 

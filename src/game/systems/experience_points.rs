@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventReader, Query, Res, ResMut};
 
 use crate::{
     data::GetAbilityValues,
@@ -9,8 +9,9 @@ use crate::{
             HealthPoints, Level, ManaPoints, MoveMode, SkillList, SkillPoints, Stamina, StatPoints,
             StatusEffects, MAX_STAMINA,
         },
+        events::RewardXpEvent,
         messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
-        resources::{PendingXpList, ServerMessages},
+        resources::ServerMessages,
         GameData,
     },
 };
@@ -40,10 +41,10 @@ pub fn experience_points_system(
     )>,
     source_entity_query: Query<&ClientEntity>,
     game_data: Res<GameData>,
-    mut pending_xp_list: ResMut<PendingXpList>,
+    mut reward_xp_events: EventReader<RewardXpEvent>,
     mut server_messages: ResMut<ServerMessages>,
 ) {
-    for pending_xp in pending_xp_list.iter() {
+    for reward_xp_event in reward_xp_events.iter() {
         if let Ok((
             entity,
             client_entity,
@@ -53,11 +54,15 @@ pub fn experience_points_system(
             mut skill_points,
             mut stat_points,
             game_client,
-        )) = entity_query.get_mut(pending_xp.entity)
+        )) = entity_query.get_mut(reward_xp_event.entity)
         {
-            experience_points.xp = experience_points.xp.saturating_add(pending_xp.xp as u64);
+            experience_points.xp = experience_points
+                .xp
+                .saturating_add(reward_xp_event.xp as u64);
 
-            stamina.stamina = stamina.stamina.saturating_add(pending_xp.stamina as u32);
+            stamina.stamina = stamina
+                .stamina
+                .saturating_add(reward_xp_event.stamina as u32);
             if stamina.stamina > MAX_STAMINA {
                 stamina.stamina = MAX_STAMINA;
             }
@@ -136,7 +141,7 @@ pub fn experience_points_system(
                 );
             } else if let Some(game_client) = game_client {
                 // If not level up, then just send normal set xp packet
-                let source_entity_id = pending_xp
+                let source_entity_id = reward_xp_event
                     .source
                     .and_then(|source_entity| source_entity_query.get(source_entity).ok())
                     .map(|source_client_entity| source_client_entity.id);
@@ -152,6 +157,4 @@ pub fn experience_points_system(
             }
         }
     }
-
-    pending_xp_list.clear();
 }

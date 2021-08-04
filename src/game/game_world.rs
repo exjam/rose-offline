@@ -9,13 +9,13 @@ use std::time::{Duration, Instant};
 
 use crate::game::{
     events::{
-        ChatCommandEvent, DamageEvent, PersonalStoreEvent, QuestTriggerEvent, SaveEvent,
-        UseItemEvent,
+        ChatCommandEvent, DamageEvent, PersonalStoreEvent, QuestTriggerEvent, RewardXpEvent,
+        SaveEvent, UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
         BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, PendingSkillEffectList,
-        PendingXpList, ServerList, ServerMessages, ServerTime, WorldRates, WorldTime,
+        ServerList, ServerMessages, ServerTime, WorldRates, WorldTime,
     },
     systems::{
         bot_ai_system, chat_commands_system, client_entity_visibility_system, command_system,
@@ -62,7 +62,6 @@ impl GameWorld {
         world.insert_resource(ServerMessages::new());
         world.insert_resource(ClientEntityList::new(&game_data.zones));
         world.insert_resource(PendingSkillEffectList::new());
-        world.insert_resource(PendingXpList::new());
         world.insert_resource(WorldRates::new());
         world.insert_resource(WorldTime::new());
         world.insert_resource(game_data);
@@ -71,6 +70,7 @@ impl GameWorld {
         world.insert_resource(Events::<DamageEvent>::default());
         world.insert_resource(Events::<PersonalStoreEvent>::default());
         world.insert_resource(Events::<QuestTriggerEvent>::default());
+        world.insert_resource(Events::<RewardXpEvent>::default());
         world.insert_resource(Events::<SaveEvent>::default());
         world.insert_resource(Events::<UseItemEvent>::default());
 
@@ -89,6 +89,7 @@ impl GameWorld {
                 .with_system(Events::<DamageEvent>::update_system)
                 .with_system(Events::<PersonalStoreEvent>::update_system)
                 .with_system(Events::<QuestTriggerEvent>::update_system)
+                .with_system(Events::<RewardXpEvent>::update_system)
                 .with_system(Events::<SaveEvent>::update_system)
                 .with_system(Events::<UseItemEvent>::update_system),
         );

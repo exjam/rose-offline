@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut};
 use clap::{App, Arg};
 use lazy_static::lazy_static;
 use nalgebra::{Point2, Point3};
@@ -25,11 +25,9 @@ use crate::{
             MoveSpeed, NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina,
             StatPoints, StatusEffects, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
-        events::ChatCommandEvent,
+        events::{ChatCommandEvent, RewardXpEvent},
         messages::server::{ServerMessage, UpdateSpeed, Whisper},
-        resources::{
-            BotList, BotListEntry, ClientEntityList, PendingXp, PendingXpList, ServerMessages,
-        },
+        resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
         GameData,
     },
 };
@@ -39,7 +37,7 @@ pub struct ChatCommandWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l> {
     bot_list: &'c mut ResMut<'d, BotList>,
     client_entity_list: &'e mut ResMut<'f, ClientEntityList>,
     game_data: &'g Res<'h, GameData>,
-    pending_xp_list: &'i mut ResMut<'j, PendingXpList>,
+    reward_xp_events: &'i mut EventWriter<'j, RewardXpEvent>,
     server_messages: &'k mut ResMut<'l, ServerMessages>,
 }
 
@@ -369,7 +367,7 @@ fn handle_gm_command(
                     .calculate_levelup_require_xp(level);
             }
 
-            chat_command_world.pending_xp_list.push(PendingXp::new(
+            chat_command_world.reward_xp_events.send(RewardXpEvent::new(
                 chat_command_user.entity,
                 required_xp,
                 0,
@@ -521,7 +519,7 @@ pub fn chat_commands_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     mut chat_command_events: EventReader<ChatCommandEvent>,
-    mut pending_xp_list: ResMut<PendingXpList>,
+    mut reward_xp_events: EventWriter<RewardXpEvent>,
     mut server_messages: ResMut<ServerMessages>,
 ) {
     let mut chat_command_world = ChatCommandWorld {
@@ -529,7 +527,7 @@ pub fn chat_commands_system(
         bot_list: &mut bot_list,
         client_entity_list: &mut client_entity_list,
         game_data: &game_data,
-        pending_xp_list: &mut pending_xp_list,
+        reward_xp_events: &mut reward_xp_events,
         server_messages: &mut server_messages,
     };
 

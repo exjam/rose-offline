@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
 use nalgebra::{Point3, Vector3};
 use rand::{prelude::ThreadRng, Rng};
 
@@ -22,8 +22,9 @@ use crate::{
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
             MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, StatusEffects, Team,
         },
+        events::RewardXpEvent,
         messages::server::ServerMessage,
-        resources::{ClientEntityList, PendingXp, PendingXpList, ServerTime, WorldRates},
+        resources::{ClientEntityList, ServerTime, WorldRates},
         GameData,
     },
 };
@@ -546,7 +547,7 @@ pub fn npc_ai_system(
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
     mut client_entity_list: ResMut<ClientEntityList>,
-    mut pending_xp_list: ResMut<PendingXpList>,
+    mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
     npc_query.for_each_mut(
         |(
@@ -759,7 +760,7 @@ pub fn npc_ai_system(
                                                     world_rates.xp_rate,
                                                 );
 
-                                            pending_xp_list.push(PendingXp::new(
+                                            reward_xp_events.send(RewardXpEvent::new(
                                                 damage_source.entity,
                                                 reward_xp as u64,
                                                 stamina as u32,
