@@ -1,4 +1,5 @@
 use std::{
+    num::NonZeroU16,
     ops::{Range, RangeInclusive},
     time::Duration,
 };
@@ -12,9 +13,10 @@ use crate::{
     data::{
         formats::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
-            AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
+            AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType,
+            AipTrigger,
         },
-        Damage,
+        Damage, NpcId,
     },
     game::{
         bundles::client_entity_leave_zone,
@@ -25,7 +27,7 @@ use crate::{
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
-        resources::{ClientEntityList, ServerTime, WorldRates},
+        resources::{ClientEntityList, ServerTime, WorldRates, ZoneList},
         GameData,
     },
 };
@@ -34,11 +36,12 @@ const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
-struct AiWorld<'world, 'world1, 'world2, 'world3, 'a, 'b, 'c> {
-    commands: &'a mut Commands<'world>,
-    client_entity_list: &'b mut ClientEntityList,
-    nearby_query: &'c Query<'world1, (&'world2 Level, &'world3 Team)>,
+struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f> {
+    client_entity_list: &'a mut ClientEntityList,
+    commands: &'a mut Commands<'b>,
+    nearby_query: &'c Query<'d, (&'e Level, &'f Team)>,
     rng: ThreadRng,
+    zone_list: &'c ZoneList,
 }
 
 struct AiSourceData<'a> {
@@ -70,6 +73,7 @@ struct AiParameters<'a, 'b> {
     find_char: Option<(Entity, Point3<f32>)>,
     near_char: Option<(Entity, Point3<f32>)>,
     damage_received: Option<Damage>,
+    selected_local_npc: Option<Entity>,
     is_dead: bool,
 }
 
@@ -294,6 +298,20 @@ fn ai_condition_source_ability_value(
     compare_aip_value(operator, ability_value, value)
 }
 
+fn ai_condition_select_local_npc(
+    ai_world: &mut AiWorld,
+    ai_parameters: &mut AiParameters,
+    npc_id: AipNpcId,
+) -> bool {
+    let local_npc = NpcId::new(npc_id as u16).and_then(|npc_id| {
+        ai_world
+            .zone_list
+            .find_local_npc(ai_parameters.source.position.zone_id, npc_id)
+    });
+    ai_parameters.selected_local_npc = local_npc;
+    local_npc.is_some()
+}
+
 fn npc_ai_check_conditions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
@@ -345,6 +363,9 @@ fn npc_ai_check_conditions(
             &AipCondition::SelfAbilityValue(operator, ability, value) => {
                 ai_condition_source_ability_value(ai_world, ai_parameters, operator, ability, value)
             }
+            &AipCondition::SelectLocalNpc(npc_id) => {
+                ai_condition_select_local_npc(ai_world, ai_parameters, npc_id)
+            }
             /*
             AipCondition::CompareAttackerAndTargetAbilityValue(_, _) => false,
             AipCondition::HasStatusEffect(_, _, _) => false,
@@ -353,7 +374,6 @@ fn npc_ai_check_conditions(
             AipCondition::IsTargetClanMaster => false,
             AipCondition::MonthDay(_) => false,
             AipCondition::OwnerHasTarget => false,
-            AipCondition::SelectLocalNpc(_) => false,
             AipCondition::ServerChannelNumber(_) => false,
             AipCondition::TargetAbilityValue(_, _, _) => false,
             AipCondition::Variable(_, _, _, _) => false,
@@ -503,6 +523,7 @@ fn npc_ai_run_trigger(
         attacker: attacker.as_ref(),
         find_char: None,
         near_char: None,
+        selected_local_npc: None,
         damage_received: damage,
         is_dead,
     };
@@ -567,6 +588,7 @@ pub fn npc_ai_system(
     server_time: Res<ServerTime>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
+    zone_list: Res<ZoneList>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
@@ -575,6 +597,7 @@ pub fn npc_ai_system(
         client_entity_list: &mut client_entity_list,
         nearby_query: &nearby_query,
         rng: rand::thread_rng(),
+        zone_list: &zone_list,
     };
 
     npc_query.for_each_mut(

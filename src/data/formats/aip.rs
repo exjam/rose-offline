@@ -198,7 +198,7 @@ pub enum AipCondition {
     NoTargetAndCompareAttackerAbilityValue(AipOperatorType, AipAbilityType, i32),
     OwnerHasTarget,
     Random(AipOperatorType, Range<i32>, i32),
-    SelectLocalNpc(usize),
+    SelectLocalNpc(AipNpcId),
     SelfAbilityValue(AipOperatorType, AipAbilityType, i32),
     ServerChannelNumber(RangeInclusive<u16>),
     TargetAbilityValue(AipOperatorType, AipAbilityType, i32),
@@ -536,7 +536,7 @@ impl AipFile {
                             ));
                         }
                         18 => {
-                            let npc_id = reader.read_u32()? as usize;
+                            let npc_id = reader.read_u32()? as AipNpcId;
                             conditions.push(AipCondition::SelectLocalNpc(npc_id));
                         }
                         19 => {
