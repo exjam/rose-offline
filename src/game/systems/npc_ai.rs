@@ -1,12 +1,13 @@
 use std::{
-    num::{NonZeroU16, NonZeroU8},
+    num::NonZeroU8,
     ops::{Range, RangeInclusive},
+    sync::mpsc::channel,
     time::Duration,
 };
 
-use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use chrono::{Datelike, Timelike};
-use log::trace;
+use log::{trace, warn};
 use nalgebra::{Point3, Vector3};
 use rand::{prelude::ThreadRng, Rng};
 
@@ -16,6 +17,7 @@ use crate::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities,
             AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistanceOrigin,
             AipEvent, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType, AipTrigger,
+            AipVariableType,
         },
         Damage, NpcId,
     },
@@ -24,7 +26,7 @@ use crate::{
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, Team,
+            MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin, Team,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -37,24 +39,26 @@ const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
-struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f> {
+struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> {
     client_entity_list: &'a mut ClientEntityList,
     commands: &'a mut Commands<'b>,
     game_data: &'c GameData,
     nearby_query: &'c Query<'d, (&'e Level, &'f Team)>,
+    object_variable_query: &'g mut Query<'h, &'i mut ObjectVariables>,
     rng: ThreadRng,
     server_time: &'c ServerTime,
     world_time: &'c WorldTime,
     zone_list: &'c ZoneList,
 }
 
-struct AiSourceData<'a> {
+struct AiSourceData<'a, 'b> {
     entity: Entity,
     position: &'a Position,
     level: &'a Level,
     team: &'a Team,
     ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
+    object_variables: &'b mut Mut<'b, ObjectVariables>,
     target: Option<Entity>,
     owner: Option<Entity>,
     spawn_origin: Option<&'a SpawnOrigin>,
@@ -71,8 +75,8 @@ struct AiAttackerData<'a> {
 }
 
 #[allow(dead_code)]
-struct AiParameters<'a, 'b> {
-    source: &'a AiSourceData<'b>,
+struct AiParameters<'a, 'b, 'c> {
+    source: &'a AiSourceData<'b, 'c>,
     attacker: Option<&'a AiAttackerData<'b>>,
     find_char: Option<(Entity, Point3<f32>)>,
     near_char: Option<(Entity, Point3<f32>)>,
@@ -382,6 +386,46 @@ fn ai_condition_is_zone_daytime(
     }
 }
 
+fn ai_condition_variable(
+    ai_world: &mut AiWorld,
+    ai_parameters: &AiParameters,
+    variable_type: AipVariableType,
+    variable_id: usize,
+    operator_type: AipOperatorType,
+    value: i32,
+) -> bool {
+    let variable_value = match variable_type {
+        AipVariableType::LocalNpcObject => ai_parameters
+            .selected_local_npc
+            .and_then(|object_entity| ai_world.object_variable_query.get_mut(object_entity).ok())
+            .and_then(|object_variables| object_variables.variables.get(variable_id).copied())
+            .unwrap_or(0),
+        AipVariableType::Ai => ai_parameters
+            .source
+            .object_variables
+            .variables
+            .get(variable_id)
+            .copied()
+            .unwrap_or(0),
+        AipVariableType::World => {
+            warn!(
+                "Unimplemented ai_condition_variable with variable type {:?}",
+                variable_type
+            );
+            0
+        }
+        AipVariableType::Economy => {
+            warn!(
+                "Unimplemented ai_condition_variable with variable type {:?}",
+                variable_type
+            );
+            0
+        }
+    };
+
+    compare_aip_value(operator_type, variable_value, value)
+}
+
 fn npc_ai_check_conditions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
@@ -450,6 +494,16 @@ fn npc_ai_check_conditions(
             AipCondition::IsDaytime(is_daytime) => {
                 ai_condition_is_zone_daytime(ai_world, ai_parameters, is_daytime)
             }
+            AipCondition::Variable(variable_type, variable_id, operator_type, value) => {
+                ai_condition_variable(
+                    ai_world,
+                    ai_parameters,
+                    variable_type,
+                    variable_id,
+                    operator_type,
+                    value,
+                )
+            }
             /*
             AipCondition::CompareAttackerAndTargetAbilityValue(_, _) => false,
             AipCondition::HasStatusEffect(_, _, _) => false,
@@ -458,10 +512,9 @@ fn npc_ai_check_conditions(
             AipCondition::OwnerHasTarget => false,
             AipCondition::ServerChannelNumber(_) => false,
             AipCondition::TargetAbilityValue(_, _, _) => false,
-            AipCondition::Variable(_, _, _, _) => false,
             */
             _ => {
-                trace!("Unimplemented AI condition: {:?}", condition);
+                warn!("Unimplemented AI condition: {:?}", condition);
                 false
             }
         };
@@ -655,12 +708,14 @@ pub fn npc_ai_system(
         &Team,
         &HealthPoints,
         &AbilityValues,
+        &mut ObjectVariables,
         Option<&Owner>,
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
     )>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     nearby_query: Query<(&Level, &Team)>,
+    mut object_variable_query: Query<&mut ObjectVariables>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: Query<&Level>,
     killer_query: Query<(&Level, &AbilityValues, Option<&GameClient>)>,
@@ -677,6 +732,7 @@ pub fn npc_ai_system(
         commands: &mut commands,
         game_data: &game_data,
         nearby_query: &nearby_query,
+        object_variable_query: &mut object_variable_query,
         rng: rand::thread_rng(),
         server_time: &server_time,
         world_time: &world_time,
@@ -695,6 +751,7 @@ pub fn npc_ai_system(
             team,
             health_points,
             ability_values,
+            mut object_variables,
             owner,
             spawn_origin,
             damage_sources,
@@ -706,6 +763,7 @@ pub fn npc_ai_system(
                 ability_values,
                 target: None,
                 health_points,
+                object_variables: &mut object_variables,
                 team,
                 owner: owner.map(|owner| owner.entity),
                 spawn_origin,
