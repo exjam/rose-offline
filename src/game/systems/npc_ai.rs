@@ -463,7 +463,7 @@ fn npc_ai_do_actions(
                     .commands
                     .entity(ai_parameters.source.entity)
                     .insert(HealthPoints::new(0))
-                    .insert(Command::with_die(None, None));
+                    .insert(Command::with_die(None, None, None));
             }
             AipAction::UseSkill(_, _, _) => {}
             AipAction::SetVariable(_, _, _, _) => {}

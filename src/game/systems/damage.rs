@@ -116,6 +116,7 @@ pub fn damage_system(
                     .entity(damage_event.defender)
                     .insert(Command::with_die(
                         Some(damage_event.attacker),
+                        Some(damage_event.damage),
                         motion_data
                             .and_then(|motion_data| motion_data.get_die())
                             .map(|die_motion| die_motion.duration)

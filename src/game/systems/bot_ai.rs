@@ -116,9 +116,7 @@ pub fn bot_ai_system(
                         }
                     }
                 }
-                CommandData::Die(CommandDie {
-                    killer: _killer_entity,
-                }) => {
+                CommandData::Die(_) => {
                     // TODO: Handle death by respawning, or disappearing?
                 }
                 _ => {}

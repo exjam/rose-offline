@@ -24,7 +24,7 @@ pub fn expire_time_system(
             if command.is_some() {
                 commands
                     .entity(entity)
-                    .insert(Command::with_die(None, None));
+                    .insert(Command::with_die(None, None, None));
             } else {
                 if let (Some(position), Some(client_entity)) = (position, client_entity) {
                     client_entity_leave_zone(

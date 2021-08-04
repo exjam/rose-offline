@@ -3,7 +3,10 @@ use std::time::Duration;
 use bevy_ecs::prelude::Entity;
 use nalgebra::{Point2, Point3};
 
-use crate::{data::SkillId, game::components::MoveMode};
+use crate::{
+    data::{Damage, SkillId},
+    game::components::MoveMode,
+};
 
 #[derive(Clone)]
 pub struct CommandMove {
@@ -15,6 +18,7 @@ pub struct CommandMove {
 #[derive(Clone)]
 pub struct CommandDie {
     pub killer: Option<Entity>,
+    pub damage: Option<Damage>,
 }
 
 #[derive(Clone)]
@@ -178,8 +182,12 @@ impl Command {
         matches!(self.command, CommandData::Die(_))
     }
 
-    pub fn with_die(killer: Option<Entity>, duration: Option<Duration>) -> Self {
-        Self::new(CommandData::Die(CommandDie { killer }), duration)
+    pub fn with_die(
+        killer: Option<Entity>,
+        damage: Option<Damage>,
+        duration: Option<Duration>,
+    ) -> Self {
+        Self::new(CommandData::Die(CommandDie { killer, damage }), duration)
     }
 
     pub fn with_move(
