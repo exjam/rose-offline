@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
 use chrono::{Datelike, Timelike};
 use log::{trace, warn};
 use nalgebra::{Point3, Vector3};
@@ -50,14 +50,13 @@ struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> {
     zone_list: &'c ZoneList,
 }
 
-struct AiSourceData<'a, 'b> {
+struct AiSourceData<'a> {
     entity: Entity,
     position: &'a Position,
     level: &'a Level,
     team: &'a Team,
     ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
-    object_variables: &'b mut Mut<'b, ObjectVariables>,
     target: Option<Entity>,
     owner: Option<Entity>,
     spawn_origin: Option<&'a SpawnOrigin>,
@@ -74,8 +73,8 @@ struct AiAttackerData<'a> {
 }
 
 #[allow(dead_code)]
-struct AiParameters<'a, 'b, 'c> {
-    source: &'a AiSourceData<'b, 'c>,
+struct AiParameters<'a, 'b> {
+    source: &'a AiSourceData<'b>,
     attacker: Option<&'a AiAttackerData<'b>>,
     find_char: Option<(Entity, Point3<f32>)>,
     near_char: Option<(Entity, Point3<f32>)>,
@@ -399,12 +398,11 @@ fn ai_condition_variable(
             .and_then(|object_entity| ai_world.object_variable_query.get_mut(object_entity).ok())
             .and_then(|object_variables| object_variables.variables.get(variable_id).copied())
             .unwrap_or(0),
-        AipVariableType::Ai => ai_parameters
-            .source
-            .object_variables
-            .variables
-            .get(variable_id)
-            .copied()
+        AipVariableType::Ai => ai_world
+            .object_variable_query
+            .get_mut(ai_parameters.source.entity)
+            .ok()
+            .and_then(|object_variables| object_variables.variables.get(variable_id).copied())
             .unwrap_or(0),
         AipVariableType::World => {
             warn!(
@@ -717,7 +715,6 @@ pub fn npc_ai_system(
         &Team,
         &HealthPoints,
         &AbilityValues,
-        &mut ObjectVariables,
         Option<&Owner>,
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
@@ -760,7 +757,6 @@ pub fn npc_ai_system(
             team,
             health_points,
             ability_values,
-            mut object_variables,
             owner,
             spawn_origin,
             damage_sources,
@@ -772,7 +768,6 @@ pub fn npc_ai_system(
                 ability_values,
                 target: None,
                 health_points,
-                object_variables: &mut object_variables,
                 team,
                 owner: owner.map(|owner| owner.entity),
                 spawn_origin,
