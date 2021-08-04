@@ -14,9 +14,7 @@ pub struct PersonalStoreEventBuyItem {
     pub buy_item: Item,
 }
 
-pub enum PendingPersonalStoreEvent {
+pub enum PersonalStoreEvent {
     ListItems(PersonalStoreEventListItems),
     BuyItem(PersonalStoreEventBuyItem),
 }
-
-pub type PendingPersonalStoreEventList = Vec<PendingPersonalStoreEvent>;

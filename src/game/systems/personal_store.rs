@@ -1,17 +1,14 @@
-use bevy_ecs::prelude::{Query, ResMut};
+use bevy_ecs::prelude::{EventReader, Query};
 
 use crate::{
     data::item::ItemSlotBehaviour,
     game::{
         components::{ClientEntity, ClientEntityId, GameClient, Inventory, Money, PersonalStore},
+        events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},
         messages::server::{
             PersonalStoreItemList, PersonalStoreTransactionCancelled,
             PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
             PersonalStoreTransactionSuccess, ServerMessage,
-        },
-        resources::{
-            PendingPersonalStoreEvent, PendingPersonalStoreEventList, PersonalStoreEventBuyItem,
-            PersonalStoreEventListItems,
         },
     },
 };
@@ -24,11 +21,11 @@ pub fn personal_store_system(
         &ClientEntity,
         Option<&GameClient>,
     )>,
-    mut pending_personal_store_event_list: ResMut<PendingPersonalStoreEventList>,
+    mut personal_store_events: EventReader<PersonalStoreEvent>,
 ) {
-    for event in pending_personal_store_event_list.drain(..) {
-        match event {
-            PendingPersonalStoreEvent::ListItems(PersonalStoreEventListItems {
+    for event in personal_store_events.iter() {
+        match *event {
+            PersonalStoreEvent::ListItems(PersonalStoreEventListItems {
                 store_entity,
                 list_entity,
             }) => {
@@ -65,12 +62,13 @@ pub fn personal_store_system(
                         .ok();
                 }
             }
-            PendingPersonalStoreEvent::BuyItem(PersonalStoreEventBuyItem {
+            PersonalStoreEvent::BuyItem(PersonalStoreEventBuyItem {
                 store_entity,
                 buyer_entity,
                 store_slot_index,
-                buy_item,
+                ref buy_item,
             }) => {
+                let buy_item = buy_item.clone();
                 let mut transaction_item = None;
                 let mut transaction_money = None;
                 let mut store_inventory_slot = None;

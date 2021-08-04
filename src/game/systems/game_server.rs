@@ -16,7 +16,10 @@ use crate::{
             ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed, NextCommand, Position, QuestState,
             SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
-        events::{ChatCommandEvent, QuestTriggerEvent},
+        events::{
+            ChatCommandEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
+            PersonalStoreEventListItems, QuestTriggerEvent,
+        },
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
@@ -29,9 +32,8 @@ use crate::{
             },
         },
         resources::{
-            ClientEntityList, GameData, LoginTokens, PendingPersonalStoreEvent,
-            PendingPersonalStoreEventList, PendingUseItem, PendingUseItemList,
-            PersonalStoreEventBuyItem, PersonalStoreEventListItems, ServerMessages, WorldTime,
+            ClientEntityList, GameData, LoginTokens, PendingUseItem, PendingUseItemList,
+            ServerMessages, WorldTime,
         },
     },
 };
@@ -255,7 +257,7 @@ pub fn game_server_main_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
     mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
-    mut pending_store_event_list: ResMut<PendingPersonalStoreEventList>,
+    mut personal_store_events: EventWriter<PersonalStoreEvent>,
     mut pending_use_item_list: ResMut<PendingUseItemList>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
@@ -584,7 +586,7 @@ pub fn game_server_main_system(
                             .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(store_entity_id))
                         {
-                            pending_store_event_list.push(PendingPersonalStoreEvent::ListItems(
+                            personal_store_events.send(PersonalStoreEvent::ListItems(
                                 PersonalStoreEventListItems {
                                     store_entity: *store_entity,
                                     list_entity: entity,
@@ -601,7 +603,7 @@ pub fn game_server_main_system(
                             .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(store_entity_id))
                         {
-                            pending_store_event_list.push(PendingPersonalStoreEvent::BuyItem(
+                            personal_store_events.send(PersonalStoreEvent::BuyItem(
                                 PersonalStoreEventBuyItem {
                                     store_entity: *store_entity,
                                     buyer_entity: entity,
