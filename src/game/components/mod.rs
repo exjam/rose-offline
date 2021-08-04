@@ -43,7 +43,6 @@ mod target;
 mod team;
 mod union_membership;
 mod world_client;
-mod zone;
 
 pub use ability_values::{AbilityValues, DamageCategory, DamageType};
 pub use account::*;
@@ -93,4 +92,3 @@ pub use target::Target;
 pub use team::Team;
 pub use union_membership::UnionMembership;
 pub use world_client::*;
-pub use zone::Zone;

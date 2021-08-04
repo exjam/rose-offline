@@ -5,19 +5,20 @@ use crate::game::{
     bundles::{client_entity_join_zone, NpcBundle},
     components::{
         ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveMode, MoveSpeed,
-        NextCommand, Npc, NpcAi, NpcStandingDirection, Position, StatusEffects, Team, Zone,
+        NextCommand, Npc, NpcAi, NpcStandingDirection, Position, StatusEffects, Team,
     },
-    resources::{ClientEntityList, GameData},
+    resources::{ClientEntityList, GameData, ZoneList},
 };
 
 pub fn startup_zones_system(
     mut commands: Commands,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
+    mut zone_list: ResMut<ZoneList>,
 ) {
     for (&zone_id, zone_data) in game_data.zones.iter() {
-        // Create the Zone entity
-        commands.spawn().insert(Zone { id: zone_id });
+        // Add to zone list
+        zone_list.add_zone(zone_id);
 
         // Create the MonsterSpawnPoint entities
         for spawn in zone_data.monster_spawns.iter() {
@@ -102,6 +103,7 @@ pub fn startup_zones_system(
             if let Some(npc_ai) = npc_ai {
                 entity_commands.insert(npc_ai);
             }
+
             let entity = entity_commands.id();
 
             client_entity_join_zone(
@@ -112,6 +114,8 @@ pub fn startup_zones_system(
                 &position,
             )
             .expect("Failed to join zone with NPC");
+
+            zone_list.add_local_npc(zone_id, npc.npc_id, entity);
         }
     }
 }

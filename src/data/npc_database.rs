@@ -5,7 +5,7 @@ use crate::{
     game::components::{MotionData, MotionDataNpc},
 };
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NpcId(NonZeroU16);
 
 id_wrapper_impl!(NpcId, NonZeroU16, u16);

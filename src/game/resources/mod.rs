@@ -8,6 +8,7 @@ mod server_messages;
 mod server_time;
 mod world_rates;
 mod world_time;
+mod zone_list;
 
 pub use bot_list::{BotList, BotListEntry};
 pub use client_entity_list::{ClientEntityList, ClientEntitySet, ClientEntityZone};
@@ -19,3 +20,4 @@ pub use server_messages::ServerMessages;
 pub use server_time::ServerTime;
 pub use world_rates::WorldRates;
 pub use world_time::WorldTime;
+pub use zone_list::ZoneList;
