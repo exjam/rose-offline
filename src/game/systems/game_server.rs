@@ -18,7 +18,7 @@ use crate::{
         },
         events::{
             ChatCommandEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
-            PersonalStoreEventListItems, QuestTriggerEvent,
+            PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
         },
         messages::{
             client::{
@@ -31,10 +31,7 @@ use crate::{
                 UpdateInventory,
             },
         },
-        resources::{
-            ClientEntityList, GameData, LoginTokens, PendingUseItem, PendingUseItemList,
-            ServerMessages, WorldTime,
-        },
+        resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, WorldTime},
     },
 };
 
@@ -258,7 +255,7 @@ pub fn game_server_main_system(
     mut chat_command_events: EventWriter<ChatCommandEvent>,
     mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut personal_store_events: EventWriter<PersonalStoreEvent>,
-    mut pending_use_item_list: ResMut<PendingUseItemList>,
+    mut use_item_events: EventWriter<UseItemEvent>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
 ) {
@@ -622,11 +619,7 @@ pub fn game_server_main_system(
                             })
                             .map(|(target_entity, _, _)| *target_entity);
 
-                        pending_use_item_list.push(PendingUseItem::new(
-                            entity,
-                            item_slot,
-                            target_entity,
-                        ));
+                        use_item_events.send(UseItemEvent::new(entity, item_slot, target_entity));
                     }
                     ClientMessage::CastSkillSelf(skill_slot) => {
                         if let Some(skill) = skill_list.get_skill(skill_slot) {

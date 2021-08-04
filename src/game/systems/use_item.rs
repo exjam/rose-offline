@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut};
 use log::warn;
 
 use crate::{
@@ -16,8 +16,9 @@ use crate::{
             GameClient, HealthPoints, Inventory, ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed,
             SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
         },
+        events::UseItemEvent,
         messages::server::{ServerMessage, UpdateInventory, UseItem},
-        resources::{PendingUseItem, PendingUseItemList, ServerMessages},
+        resources::ServerMessages,
         GameData,
     },
 };
@@ -264,7 +265,7 @@ pub fn use_item_system(
         Option<&GameClient>,
     )>,
     game_data: Res<GameData>,
-    mut pending_use_item_list: ResMut<PendingUseItemList>,
+    mut use_item_events: EventReader<UseItemEvent>,
     mut server_messages: ResMut<ServerMessages>,
 ) {
     let mut use_item_world = UseItemWorld {
@@ -273,11 +274,11 @@ pub fn use_item_system(
         server_messages: &mut server_messages,
     };
 
-    for PendingUseItem {
+    for &UseItemEvent {
         entity,
         item_slot,
         target_entity,
-    } in pending_use_item_list.drain(..)
+    } in use_item_events.iter()
     {
         if let Ok((
             ability_values,

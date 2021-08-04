@@ -4,7 +4,6 @@ mod control_channel;
 mod game_data;
 mod login_tokens;
 mod pending_skill_effect_list;
-mod pending_use_item_list;
 mod pending_xp_list;
 mod server_list;
 mod server_messages;
@@ -20,7 +19,6 @@ pub use login_tokens::{LoginToken, LoginTokens};
 pub use pending_skill_effect_list::{
     PendingSkillEffect, PendingSkillEffectList, PendingSkillEffectTarget,
 };
-pub use pending_use_item_list::{PendingUseItem, PendingUseItemList};
 pub use pending_xp_list::{PendingXp, PendingXpList};
 pub use server_list::{GameServer, ServerList, WorldServer};
 pub use server_messages::ServerMessages;
