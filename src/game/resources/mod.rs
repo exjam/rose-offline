@@ -3,7 +3,6 @@ mod client_entity_list;
 mod control_channel;
 mod game_data;
 mod login_tokens;
-mod pending_chat_commands;
 mod pending_damage_list;
 mod pending_personal_store_event;
 mod pending_save_list;
@@ -21,7 +20,6 @@ pub use client_entity_list::{ClientEntityList, ClientEntitySet, ClientEntityZone
 pub use control_channel::ControlChannel;
 pub use game_data::GameData;
 pub use login_tokens::{LoginToken, LoginTokens};
-pub use pending_chat_commands::PendingChatCommandList;
 pub use pending_damage_list::{PendingDamage, PendingDamageList};
 pub use pending_personal_store_event::{
     PendingPersonalStoreEvent, PendingPersonalStoreEventList, PersonalStoreEventBuyItem,

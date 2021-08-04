@@ -16,7 +16,7 @@ use crate::{
             ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed, NextCommand, Position, QuestState,
             SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
-        events::QuestTriggerEvent,
+        events::{ChatCommandEvent, QuestTriggerEvent},
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
@@ -29,7 +29,7 @@ use crate::{
             },
         },
         resources::{
-            ClientEntityList, GameData, LoginTokens, PendingChatCommandList,
+            ClientEntityList, GameData, LoginTokens,
             PendingPersonalStoreEvent, PendingPersonalStoreEventList, PendingUseItem,
             PendingUseItemList, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
             ServerMessages, WorldTime,
@@ -254,7 +254,7 @@ pub fn game_server_main_system(
     game_client_query2: Query<(&MoveMode, &StatusEffects)>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
-    mut pending_chat_command_list: ResMut<PendingChatCommandList>,
+    mut chat_command_events: EventWriter<ChatCommandEvent>,
     mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut pending_store_event_list: ResMut<PendingPersonalStoreEventList>,
     mut pending_use_item_list: ResMut<PendingUseItemList>,
@@ -286,7 +286,7 @@ pub fn game_server_main_system(
                 match message {
                     ClientMessage::Chat(text) => {
                         if text.chars().next().map_or(false, |c| c == '/') {
-                            pending_chat_command_list.push((entity, text));
+                            chat_command_events.send(ChatCommandEvent::new(entity, text));
                         } else {
                             server_messages.send_entity_message(
                                 client_entity,

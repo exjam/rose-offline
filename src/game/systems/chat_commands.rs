@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut, EventReader};
 use clap::{App, Arg};
 use lazy_static::lazy_static;
 use nalgebra::{Point2, Point3};
@@ -25,9 +25,10 @@ use crate::{
             MoveSpeed, NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina,
             StatPoints, StatusEffects, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
+        events::ChatCommandEvent,
         messages::server::{ServerMessage, UpdateSpeed, Whisper},
         resources::{
-            BotList, BotListEntry, ClientEntityList, PendingChatCommandList, PendingXp,
+            BotList, BotListEntry, ClientEntityList, PendingXp,
             PendingXpList, ServerMessages,
         },
         GameData,
@@ -520,7 +521,7 @@ pub fn chat_commands_system(
     mut bot_list: ResMut<BotList>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
-    mut pending_chat_commands: ResMut<PendingChatCommandList>,
+    mut chat_command_events: EventReader<ChatCommandEvent>,
     mut pending_xp_list: ResMut<PendingXpList>,
     mut server_messages: ResMut<ServerMessages>,
 ) {
@@ -533,7 +534,7 @@ pub fn chat_commands_system(
         server_messages: &mut server_messages,
     };
 
-    for (entity, command) in pending_chat_commands.drain(..) {
+    for &ChatCommandEvent { entity, ref command } in chat_command_events.iter() {
         if let Ok((
             ability_values,
             client_entity,
