@@ -29,10 +29,9 @@ use crate::{
             },
         },
         resources::{
-            ClientEntityList, GameData, LoginTokens,
-            PendingPersonalStoreEvent, PendingPersonalStoreEventList, PendingUseItem,
-            PendingUseItemList, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
-            ServerMessages, WorldTime,
+            ClientEntityList, GameData, LoginTokens, PendingPersonalStoreEvent,
+            PendingPersonalStoreEventList, PendingUseItem, PendingUseItemList,
+            PersonalStoreEventBuyItem, PersonalStoreEventListItems, ServerMessages, WorldTime,
         },
     },
 };
