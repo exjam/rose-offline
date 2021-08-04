@@ -14,15 +14,12 @@ use crate::{
             Inventory, MotionData, MoveMode, MoveSpeed, NextCommand, Owner, PersonalStore,
             Position, StatusEffects, Target,
         },
-        events::DamageEvent,
+        events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
             self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
             ServerMessage,
         },
-        resources::{
-            ClientEntityList, GameData, PendingSkillEffect, PendingSkillEffectList,
-            PendingSkillEffectTarget, ServerMessages, ServerTime,
-        },
+        resources::{ClientEntityList, GameData, ServerMessages, ServerTime},
     },
 };
 
@@ -206,7 +203,7 @@ pub fn command_system(
     server_time: Res<ServerTime>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut damage_events: EventWriter<DamageEvent>,
-    mut pending_skill_effect_list: ResMut<PendingSkillEffectList>,
+    mut skill_events: EventWriter<SkillEvent>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
 ) {
@@ -411,9 +408,9 @@ pub fn command_system(
                 }) => {
                     let mut entity_commands = commands.entity(entity);
 
-                    if let Some(target_entity) = target {
+                    if let Some(target_entity) = *target {
                         if let Some((target_client_entity, target_position)) =
-                            is_valid_move_target(position, *target_entity, &move_target_query)
+                            is_valid_move_target(position, target_entity, &move_target_query)
                         {
                             let required_distance = match target_client_entity.entity_type {
                                 ClientEntityType::Character => Some(CHARACTER_MOVE_TO_DISTANCE),
@@ -467,12 +464,12 @@ pub fn command_system(
                         *command = Command::with_move(*destination, *target, *command_move_mode);
                         entity_commands.insert(Destination::new(*destination));
 
-                        if let Some(target_entity) = target {
-                            entity_commands.insert(Target::new(*target_entity));
+                        if let Some(target_entity) = *target {
+                            entity_commands.insert(Target::new(target_entity));
                         }
                     }
                 }
-                CommandData::PickupDroppedItem(CommandPickupDroppedItem {
+                &mut CommandData::PickupDroppedItem(CommandPickupDroppedItem {
                     target: target_entity,
                 }) => {
                     if let Some(mut inventory) = inventory {
@@ -483,7 +480,7 @@ pub fn command_system(
                             target_owner,
                         )) = is_valid_pickup_target(
                             position,
-                            *target_entity,
+                            target_entity,
                             &mut pickup_dropped_item_target_query,
                         ) {
                             let result = if !target_owner
@@ -524,11 +521,11 @@ pub fn command_system(
                                 client_entity_leave_zone(
                                     &mut commands,
                                     &mut client_entity_list,
-                                    *target_entity,
+                                    target_entity,
                                     target_client_entity,
                                     target_position,
                                 );
-                                commands.entity(*target_entity).despawn();
+                                commands.entity(target_entity).despawn();
 
                                 // Update our current command
                                 let motion_duration =
@@ -538,7 +535,7 @@ pub fn command_system(
                                     );
 
                                 *command = Command::with_pickup_dropped_item(
-                                    *target_entity,
+                                    target_entity,
                                     motion_duration,
                                 );
                                 commands
@@ -564,7 +561,7 @@ pub fn command_system(
                         *next_command = NextCommand::default();
                     }
                 }
-                CommandData::Attack(CommandAttack {
+                &mut CommandData::Attack(CommandAttack {
                     target: target_entity,
                 }) => {
                     if let Some((
@@ -572,7 +569,7 @@ pub fn command_system(
                         target_position,
                         target_ability_values,
                         target_status_effects,
-                    )) = is_valid_attack_target(position, *target_entity, &attack_target_query)
+                    )) = is_valid_attack_target(position, target_entity, &attack_target_query)
                     {
                         let mut entity_commands = commands.entity(entity);
                         let target_ability_values = (target_ability_values, target_status_effects);
@@ -591,18 +588,18 @@ pub fn command_system(
                                 .unwrap_or_else(|| (Duration::from_secs(1), 1));
 
                             // In range, set current command to attack
-                            *command = Command::with_attack(*target_entity, attack_duration);
+                            *command = Command::with_attack(target_entity, attack_duration);
 
                             // Remove our destination component, as we have reached it!
                             entity_commands.remove::<Destination>();
 
                             // Update target
-                            entity_commands.insert(Target::new(*target_entity));
+                            entity_commands.insert(Target::new(target_entity));
 
                             // Send damage event to damage system
                             damage_events.send(DamageEvent::new(
                                 entity,
-                                *target_entity,
+                                target_entity,
                                 game_data.ability_value_calculator.calculate_damage(
                                     ability_values,
                                     target_ability_values,
@@ -613,7 +610,7 @@ pub fn command_system(
                             // Not in range, set current command to move
                             *command = Command::with_move(
                                 target_position.position,
-                                Some(*target_entity),
+                                Some(target_entity),
                                 Some(MoveMode::Run),
                             );
 
@@ -621,7 +618,7 @@ pub fn command_system(
                             entity_commands.insert(Destination::new(target_position.position));
 
                             // Update target
-                            entity_commands.insert(Target::new(*target_entity));
+                            entity_commands.insert(Target::new(target_entity));
                         }
                     } else {
                         send_command_stop(
@@ -647,21 +644,21 @@ pub fn command_system(
                 + Start the skill doing animation for a required_duration
                 - Set NextCommand depending on skill action mode
                 */
-                CommandData::CastSkill(CommandCastSkill {
+                &mut CommandData::CastSkill(CommandCastSkill {
                     skill_id,
                     skill_target,
                     ..
                 }) => {
-                    if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
+                    if let Some(skill_data) = game_data.skills.get_skill(skill_id) {
                         let mut entity_commands = commands.entity(entity);
                         let (target_position, target_entity) = match skill_target {
                             Some(CommandCastSkillTarget::Entity(target_entity)) => {
                                 if let Some((_, target_position, _)) = is_valid_skill_target(
                                     position,
-                                    *target_entity,
+                                    target_entity,
                                     &attack_target_query,
                                 ) {
-                                    (Some(target_position.position), Some(*target_entity))
+                                    (Some(target_position.position), Some(target_entity))
                                 } else {
                                     (None, None)
                                 }
@@ -706,26 +703,26 @@ pub fn command_system(
                                 );
                             }
 
-                            // Queue up pending skill for the skill effect to be applied after casting motion
-                            pending_skill_effect_list.push(PendingSkillEffect {
-                                caster_entity: entity,
-                                when: server_time.now + casting_duration,
-                                skill_id: *skill_id,
-                                skill_target: match skill_target {
-                                    None => PendingSkillEffectTarget::Entity(entity),
+                            // Send skill event for effect to be applied after casting motion
+                            skill_events.send(SkillEvent::new(
+                                entity,
+                                server_time.now + casting_duration,
+                                skill_id,
+                                match skill_target {
+                                    None => SkillEventTarget::Entity(entity),
                                     Some(CommandCastSkillTarget::Entity(target_entity)) => {
-                                        PendingSkillEffectTarget::Entity(*target_entity)
+                                        SkillEventTarget::Entity(target_entity)
                                     }
                                     Some(CommandCastSkillTarget::Position(target_position)) => {
-                                        PendingSkillEffectTarget::Position(*target_position)
+                                        SkillEventTarget::Position(target_position)
                                     }
                                 },
-                            });
+                            ));
 
                             // Set current command to cast skill
                             *command = Command::with_cast_skill(
-                                *skill_id,
-                                *skill_target,
+                                skill_id,
+                                skill_target,
                                 casting_duration,
                                 action_duration,
                             );

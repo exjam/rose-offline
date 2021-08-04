@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Commands, Entity, EventReader, Local, Mut, Query, Res, ResMut};
 use log::warn;
 
 use crate::{
@@ -9,11 +9,9 @@ use crate::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
             HealthPoints, Level, MoveMode, Npc, Position, SkillList, StatusEffects, Team,
         },
+        events::{SkillEvent, SkillEventTarget},
         messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage},
-        resources::{
-            ClientEntityList, PendingSkillEffect, PendingSkillEffectList, PendingSkillEffectTarget,
-            ServerMessages, ServerTime,
-        },
+        resources::{ClientEntityList, ServerMessages, ServerTime},
         GameData,
     },
 };
@@ -228,7 +226,7 @@ fn apply_skill_status_effects_to_entity(
 fn apply_skill_status_effects(
     skill_world: &mut SkillWorld,
     skill_caster: &SkillCaster,
-    skill_target: &PendingSkillEffectTarget,
+    skill_target: &SkillEventTarget,
     skill_data: &SkillData,
     target_query: &mut Query<(
         &ClientEntity,
@@ -253,14 +251,14 @@ fn apply_skill_status_effects(
             .ok_or(SkillCastError::InvalidTarget)?;
 
         let skill_position = match *skill_target {
-            PendingSkillEffectTarget::Entity(target_entity) => {
+            SkillEventTarget::Entity(target_entity) => {
                 if let Ok((_, target_position, ..)) = target_query.get_mut(target_entity) {
                     Some(target_position.position.xy())
                 } else {
                     None
                 }
             }
-            PendingSkillEffectTarget::Position(position) => Some(position),
+            SkillEventTarget::Position(position) => Some(position),
         }
         .ok_or(SkillCastError::InvalidTarget)?;
 
@@ -307,7 +305,7 @@ fn apply_skill_status_effects(
         }
 
         Ok(())
-    } else if let PendingSkillEffectTarget::Entity(target_entity) = *skill_target {
+    } else if let SkillEventTarget::Entity(target_entity) = *skill_target {
         if let Ok((
             target_client_entity,
             target_position,
@@ -372,7 +370,8 @@ pub fn skill_effect_system(
     )>,
     game_data: Res<GameData>,
     client_entity_list: Res<ClientEntityList>,
-    mut pending_skill_effect_list: ResMut<PendingSkillEffectList>,
+    mut skill_events: EventReader<SkillEvent>,
+    mut pending_skill_events: Local<Vec<SkillEvent>>,
     mut server_messages: ResMut<ServerMessages>,
     server_time: Res<ServerTime>,
 ) {
@@ -383,20 +382,25 @@ pub fn skill_effect_system(
         server_messages: &mut server_messages,
     };
 
+    // Read events into pending_skill_events for executing at specific time
+    for skill_event in skill_events.iter() {
+        pending_skill_events.push(skill_event.clone());
+    }
+
     // TODO: drain_filter pls
     let mut i = 0;
-    while i != pending_skill_effect_list.len() {
-        if pending_skill_effect_list[i].when > server_time.now {
+    while i != pending_skill_events.len() {
+        if pending_skill_events[i].when > server_time.now {
             i += 1;
             continue;
         }
 
-        let PendingSkillEffect {
+        let SkillEvent {
             skill_id,
             caster_entity,
             skill_target,
             ..
-        } = pending_skill_effect_list.remove(i);
+        } = pending_skill_events.remove(i);
 
         let skill_data = skill_world.game_data.skills.get_skill(skill_id);
         if skill_data.is_none() {
