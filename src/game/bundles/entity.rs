@@ -1,18 +1,15 @@
-use bevy_ecs::prelude::{Bundle, Commands, Entity, Mut};
+use bevy_ecs::prelude::{Bundle, Commands, Entity};
 
-use crate::{
-    data::{AbilityValueCalculator, GetAbilityValues},
-    game::{
-        components::{
-            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
-            ClientEntityType, ClientEntityVisibility, Command, Equipment, ExperiencePoints,
-            GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints, MotionData, MoveMode,
-            MoveSpeed, NextCommand, Npc, NpcStandingDirection, Position, QuestState, SkillList,
-            SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
-        },
-        messages::server::{ServerMessage, Teleport},
-        resources::ClientEntityList,
+use crate::game::{
+    components::{
+        AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
+        ClientEntityVisibility, Command, Equipment, ExperiencePoints, GameClient, HealthPoints,
+        Hotbar, Inventory, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc,
+        NpcStandingDirection, Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina,
+        StatPoints, StatusEffects, Team, UnionMembership,
     },
+    messages::server::{ServerMessage, Teleport},
+    resources::ClientEntityList,
 };
 
 #[derive(Bundle)]
@@ -156,70 +153,4 @@ pub fn client_entity_teleport_zone(
             }))
             .ok();
     }
-}
-
-pub fn client_entity_recalculate_ability_values(
-    commands: &mut Commands,
-    ability_value_calculator: &dyn AbilityValueCalculator,
-    client_entity: &ClientEntity,
-    entity: Entity,
-    status_effects: &StatusEffects,
-    basic_stats: Option<&BasicStats>,
-    character_info: Option<&CharacterInfo>,
-    equipment: Option<&Equipment>,
-    level: Option<&Level>,
-    move_mode: Option<&MoveMode>,
-    skill_list: Option<&SkillList>,
-    npc: Option<&Npc>,
-    health_points: Option<&mut Mut<HealthPoints>>,
-    mana_points: Option<&mut Mut<ManaPoints>>,
-) -> Option<AbilityValues> {
-    // Update ability values
-    let ability_values = if matches!(client_entity.entity_type, ClientEntityType::Character) {
-        Some(ability_value_calculator.calculate(
-            character_info.unwrap(),
-            level.unwrap(),
-            equipment.unwrap(),
-            basic_stats.unwrap(),
-            skill_list.unwrap(),
-        ))
-    } else if let Some(npc) = npc {
-        ability_value_calculator.calculate_npc(npc.id)
-    } else {
-        None
-    }?;
-
-    if let Some(health_points) = health_points {
-        let max_hp = (&ability_values, status_effects).get_max_health() as u32;
-        if health_points.hp > max_hp {
-            health_points.hp = max_hp;
-        }
-    }
-
-    if let Some(mana_points) = mana_points {
-        let max_mp = (&ability_values, status_effects).get_max_mana() as u32;
-        if mana_points.mp > max_mp {
-            mana_points.mp = max_mp;
-        }
-    }
-
-    let mut entity_commands = commands.entity(entity);
-
-    if let Some(move_mode) = move_mode {
-        match move_mode {
-            MoveMode::Run => {
-                entity_commands.insert(MoveSpeed::new(
-                    (&ability_values, status_effects).get_run_speed(),
-                ));
-            }
-            MoveMode::Walk => {
-                entity_commands.insert(MoveSpeed::new(
-                    (&ability_values, status_effects).get_walk_speed(),
-                ));
-            }
-        }
-    }
-
-    entity_commands.insert(ability_values.clone());
-    Some(ability_values)
 }

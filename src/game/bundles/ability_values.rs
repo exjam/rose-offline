@@ -3,12 +3,12 @@ use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
 
 use crate::{
-    data::{AbilityType, GetAbilityValues},
+    data::AbilityType,
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory,
-            Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
-            UnionMembership, MAX_STAMINA,
+            Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership,
+            MAX_STAMINA,
         },
         messages::server::{ServerMessage, UpdateAbilityValue, UpdateMoney},
     },
@@ -28,7 +28,7 @@ fn add_value<T: Saturating + Copy + 'static, U: Signed + AsPrimitive<T>>(
 // TODO: Should all ability values be i64? XP + Money potentially do not fit into i32
 pub fn ability_values_get_value(
     ability_type: AbilityType,
-    ability_values: (&AbilityValues, &StatusEffects),
+    ability_values: &AbilityValues,
     level: &Level,
     move_speed: &MoveSpeed,
     team_number: &Team,

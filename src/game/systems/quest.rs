@@ -21,7 +21,7 @@ use crate::{
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
             EquipmentIndex, ExperiencePoints, GameClient, Inventory, Level, Money, MoveSpeed,
-            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
+            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, Team,
             UnionMembership,
         },
         events::{QuestTriggerEvent, RewardXpEvent},
@@ -49,7 +49,6 @@ struct QuestSourceEntity<'world, 'a> {
     skill_points: Option<&'a mut Mut<'world, SkillPoints>>,
     stamina: Option<&'a mut Mut<'world, Stamina>>,
     stat_points: Option<&'a mut Mut<'world, StatPoints>>,
-    status_effects: &'a StatusEffects,
     team: &'a mut Mut<'world, Team>,
     union_membership: Option<&'a mut Mut<'world, UnionMembership>>,
 }
@@ -203,10 +202,7 @@ fn quest_condition_ability_values(
     for &(ability_type, operator, compare_value) in ability_values {
         let current_value = ability_values_get_value(
             ability_type,
-            (
-                quest_parameters.source.ability_values,
-                quest_parameters.source.status_effects,
-            ),
+            quest_parameters.source.ability_values,
             quest_parameters.source.level,
             quest_parameters.source.move_speed,
             quest_parameters.source.team,
@@ -851,7 +847,6 @@ pub fn quest_system(
         &Level,
         &MoveSpeed,
         &Position,
-        &StatusEffects,
         Option<&Equipment>,
         (
             &mut Team,
@@ -899,7 +894,6 @@ pub fn quest_system(
             level,
             move_speed,
             position,
-            status_effects,
             equipment,
             (
                 mut team,
@@ -936,7 +930,6 @@ pub fn quest_system(
                     skill_points: skill_points.as_mut(),
                     stamina: stamina.as_mut(),
                     stat_points: stat_points.as_mut(),
-                    status_effects,
                     team: &mut team,
                     union_membership: union_membership.as_mut(),
                 },

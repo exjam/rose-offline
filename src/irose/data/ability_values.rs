@@ -6,8 +6,8 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{ItemClass, ItemWeaponType},
-        AbilityType, AbilityValueCalculator, Damage, GetAbilityValues, ItemDatabase, NpcDatabase,
-        NpcId, SkillAddAbility, SkillDatabase, SkillId,
+        AbilityType, AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, NpcId,
+        SkillAddAbility, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
@@ -37,13 +37,19 @@ pub fn get_ability_value_calculator(
 }
 
 impl AbilityValueCalculator for AbilityValuesData {
-    fn calculate_npc(&self, npc_id: NpcId) -> Option<AbilityValues> {
+    fn calculate_npc(
+        &self,
+        npc_id: NpcId,
+        level: Option<&Level>,
+        status_effects: &StatusEffects,
+    ) -> Option<AbilityValues> {
         let npc_data = self.npc_database.get_npc(npc_id)?;
+        let level = level.map_or(npc_data.level, |level| level.level as i32);
         Some(AbilityValues {
             damage_category: DamageCategory::Npc,
             walk_speed: npc_data.walk_speed as f32,
             run_speed: npc_data.run_speed as f32,
-            level: npc_data.level,
+            level,
             strength: 0,
             dexterity: 0,
             intelligence: npc_data.level,
@@ -70,6 +76,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             avoid: npc_data.avoid,
             max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
             drop_rate: 0,
+            adjust: status_effects.into(),
         })
     }
 
@@ -80,6 +87,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         equipment: &Equipment,
         basic_stats: &BasicStats,
         skill_list: &SkillList,
+        status_effects: &StatusEffects,
     ) -> AbilityValues {
         let equipment_ability_values =
             calculate_equipment_ability_values(&self.item_database, equipment);
@@ -224,13 +232,14 @@ impl AbilityValueCalculator for AbilityValuesData {
             ),
             max_damage_sources: 0,
             drop_rate: calculate_drop_rate(&equipment_ability_values, &passive_ability_values),
+            adjust: status_effects.into(),
         }
     }
 
     fn calculate_damage(
         &self,
-        attacker: (&AbilityValues, &StatusEffects),
-        defender: (&AbilityValues, &StatusEffects),
+        attacker: &AbilityValues,
+        defender: &AbilityValues,
         hit_count: i32,
     ) -> Damage {
         let mut rng = rand::thread_rng();
@@ -395,8 +404,8 @@ impl AbilityValueCalculator for AbilityValuesData {
 
 fn calculate_damage_success_rate(
     rng: &mut impl Rng,
-    attacker: (&AbilityValues, &StatusEffects),
-    defender: (&AbilityValues, &StatusEffects),
+    attacker: &AbilityValues,
+    defender: &AbilityValues,
 ) -> i32 {
     if attacker.get_damage_category() == DamageCategory::Character
         && defender.get_damage_category() == DamageCategory::Character
@@ -421,8 +430,8 @@ fn calculate_damage_success_rate(
 
 fn calculate_attack_damage_physical(
     rng: &mut impl Rng,
-    attacker: (&AbilityValues, &StatusEffects),
-    defender: (&AbilityValues, &StatusEffects),
+    attacker: &AbilityValues,
+    defender: &AbilityValues,
     hit_count: i32,
     success_rate: i32,
 ) -> Damage {
@@ -517,8 +526,8 @@ fn calculate_attack_damage_physical(
 
 fn calculate_attack_damage_magic(
     rng: &mut impl Rng,
-    attacker: (&AbilityValues, &StatusEffects),
-    defender: (&AbilityValues, &StatusEffects),
+    attacker: &AbilityValues,
+    defender: &AbilityValues,
     hit_count: i32,
     success_rate: i32,
 ) -> Damage {

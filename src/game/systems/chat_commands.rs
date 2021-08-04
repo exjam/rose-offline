@@ -163,6 +163,8 @@ fn create_bot_entity(
         .create(name, gender, 1, face, hair)
         .ok()?;
 
+    let status_effects = StatusEffects::new();
+
     let ability_values = chat_command_world
         .game_data
         .ability_value_calculator
@@ -172,9 +174,10 @@ fn create_bot_entity(
             &bot_data.equipment,
             &bot_data.basic_stats,
             &bot_data.skill_list,
+            &status_effects,
         );
 
-    let move_speed = MoveSpeed::new(ability_values.run_speed as f32);
+    let move_speed = MoveSpeed::new(ability_values.get_run_speed() as f32);
 
     let weapon_motion_type = chat_command_world
         .game_data
@@ -189,8 +192,8 @@ fn create_bot_entity(
         .get_character_action_motions(weapon_motion_type, bot_data.info.gender as usize);
 
     bot_data.position = position.clone();
-    bot_data.health_points.hp = ability_values.max_health as u32;
-    bot_data.mana_points.mp = ability_values.max_mana as u32;
+    bot_data.health_points.hp = ability_values.get_max_health() as u32;
+    bot_data.mana_points.mp = ability_values.get_max_mana() as u32;
 
     let entity = chat_command_world
         .commands
@@ -219,7 +222,7 @@ fn create_bot_entity(
             skill_points: bot_data.skill_points,
             stamina: bot_data.stamina,
             stat_points: bot_data.stat_points,
-            status_effects: StatusEffects::new(),
+            status_effects,
             team: Team::default_character(),
             union_membership: bot_data.union_membership,
         })
@@ -489,7 +492,9 @@ fn handle_gm_command(
                 ServerMessage::UpdateSpeed(UpdateSpeed {
                     entity_id: chat_command_user.client_entity.id,
                     run_speed: value,
-                    passive_attack_speed: chat_command_user.ability_values.passive_attack_speed,
+                    passive_attack_speed: chat_command_user
+                        .ability_values
+                        .get_passive_attack_speed(),
                 }),
             );
         }

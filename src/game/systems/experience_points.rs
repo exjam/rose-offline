@@ -1,24 +1,19 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, Query, Res, ResMut};
+use bevy_ecs::prelude::{Entity, EventReader, Query, Res, ResMut};
 
-use crate::{
-    data::GetAbilityValues,
-    game::{
-        bundles::client_entity_recalculate_ability_values,
-        components::{
-            BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, GameClient,
-            HealthPoints, Level, ManaPoints, MoveMode, SkillList, SkillPoints, Stamina, StatPoints,
-            StatusEffects, MAX_STAMINA,
-        },
-        events::RewardXpEvent,
-        messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
-        resources::ServerMessages,
-        GameData,
+use crate::game::{
+    components::{
+        BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, GameClient,
+        HealthPoints, Level, ManaPoints, SkillList, SkillPoints, Stamina, StatPoints,
+        StatusEffects, MAX_STAMINA,
     },
+    events::RewardXpEvent,
+    messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
+    resources::ServerMessages,
+    GameData,
 };
 
 #[allow(clippy::type_complexity)]
 pub fn experience_points_system(
-    mut commands: Commands,
     mut entity_query: Query<(
         Entity,
         &ClientEntity,
@@ -37,7 +32,6 @@ pub fn experience_points_system(
         &BasicStats,
         &SkillList,
         &StatusEffects,
-        &MoveMode,
     )>,
     source_entity_query: Query<&ClientEntity>,
     game_data: Res<GameData>,
@@ -103,29 +97,20 @@ pub fn experience_points_system(
                     basic_stats,
                     skill_list,
                     status_effects,
-                    move_mode,
                 )) = ability_values_query.get_mut(entity)
                 {
-                    if let Some(ability_values) = client_entity_recalculate_ability_values(
-                        &mut commands,
-                        game_data.ability_value_calculator.as_ref(),
-                        client_entity,
-                        entity,
-                        status_effects,
-                        Some(basic_stats),
-                        Some(character_info),
-                        Some(equipment),
-                        Some(&level),
-                        Some(move_mode),
-                        Some(skill_list),
-                        None,
-                        Some(&mut health_points),
-                        Some(&mut mana_points),
-                    ) {
-                        health_points.hp =
-                            (&ability_values, status_effects).get_max_health() as u32;
-                        mana_points.mp = (&ability_values, status_effects).get_max_mana() as u32;
-                    }
+                    // Set to max hp / mana on levelup
+                    let ability_values = game_data.ability_value_calculator.calculate(
+                        &character_info,
+                        &level,
+                        &equipment,
+                        &basic_stats,
+                        &skill_list,
+                        &status_effects,
+                    );
+
+                    health_points.hp = ability_values.get_max_health() as u32;
+                    mana_points.mp = ability_values.get_max_mana() as u32;
                 }
 
                 // Send level up packet

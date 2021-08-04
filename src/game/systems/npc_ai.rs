@@ -13,14 +13,14 @@ use crate::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities, AipDamageType,
             AipDistanceOrigin, AipEvent, AipMoveMode, AipMoveOrigin, AipOperatorType, AipTrigger,
         },
-        Damage, GetAbilityValues,
+        Damage,
     },
     game::{
         bundles::client_entity_leave_zone,
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, StatusEffects, Team,
+            MoveMode, NextCommand, Npc, NpcAi, Owner, Position, SpawnOrigin, Team,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -38,7 +38,7 @@ struct AiSourceEntity<'a> {
     position: &'a Position,
     level: &'a Level,
     team: &'a Team,
-    ability_values: (&'a AbilityValues, &'a StatusEffects),
+    ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
     target: Option<&'a Entity>,
     owner: Option<&'a Owner>,
@@ -50,7 +50,7 @@ struct AiAttackerEntity<'a> {
     _position: &'a Position,
     level: &'a Level,
     _team: &'a Team,
-    ability_values: (&'a AbilityValues, &'a StatusEffects),
+    ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
     // TODO: Missing data on if clan master
 }
@@ -526,23 +526,15 @@ pub fn npc_ai_system(
         &Team,
         &HealthPoints,
         &AbilityValues,
-        &StatusEffects,
         Option<&Owner>,
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
     )>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     nearby_query: Query<(&Level, &Team)>,
-    attacker_query: Query<(
-        &Position,
-        &Level,
-        &Team,
-        &AbilityValues,
-        &StatusEffects,
-        &HealthPoints,
-    )>,
+    attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     level_query: Query<&Level>,
-    killer_query: Query<(&Level, &AbilityValues, &StatusEffects, Option<&GameClient>)>,
+    killer_query: Query<(&Level, &AbilityValues, Option<&GameClient>)>,
     server_time: Res<ServerTime>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
@@ -561,13 +553,10 @@ pub fn npc_ai_system(
             team,
             health_points,
             ability_values,
-            status_effects,
             owner,
             spawn_origin,
             damage_sources,
         )| {
-            let ability_values = (ability_values, status_effects);
-
             if !npc_ai.has_run_created_trigger {
                 if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
                     if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
@@ -612,12 +601,9 @@ pub fn npc_ai_system(
                             attacker_level,
                             attacker_team,
                             attacker_ability_values,
-                            attacker_status_effects,
                             attacker_health_points,
                         )) = attacker_query.get(*attacker)
                         {
-                            let attacker_ability_values =
-                                (attacker_ability_values, attacker_status_effects);
                             npc_ai_run_trigger(
                                 trigger_on_damaged,
                                 &mut commands,
@@ -774,13 +760,9 @@ pub fn npc_ai_system(
                                     if let Ok((
                                         killer_level,
                                         killer_ability_values,
-                                        killer_status_effects,
                                         killer_game_client,
                                     )) = killer_query.get(killer_entity)
                                     {
-                                        let killer_ability_values =
-                                            (killer_ability_values, killer_status_effects);
-
                                         // Inform client to execute npc dead event
                                         if !npc_data.death_quest_trigger_name.is_empty() {
                                             if let Some(killer_game_client) = killer_game_client {

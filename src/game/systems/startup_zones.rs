@@ -52,7 +52,11 @@ pub fn startup_zones_system(
         // Spawn all NPCs
         for npc in zone_data.npcs.iter() {
             let npc_data = game_data.npcs.get_npc(npc.npc_id);
-            let ability_values = game_data.ability_value_calculator.calculate_npc(npc.npc_id);
+            let status_effects = StatusEffects::new();
+            let ability_values =
+                game_data
+                    .ability_value_calculator
+                    .calculate_npc(npc.npc_id, None, &status_effects);
 
             if npc_data.is_none() || ability_values.is_none() {
                 warn!(
@@ -76,9 +80,9 @@ pub fn startup_zones_system(
                 .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
             let position = Position::new(npc.position, zone_id);
-            let move_speed = MoveSpeed::new(ability_values.walk_speed as f32);
-            let level = Level::new(ability_values.level as u32);
-            let health_points = HealthPoints::new(ability_values.max_health as u32);
+            let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
+            let level = Level::new(ability_values.get_level() as u32);
+            let health_points = HealthPoints::new(ability_values.get_max_health() as u32);
 
             let mut entity_commands = commands.spawn_bundle(NpcBundle {
                 ability_values,
@@ -92,7 +96,7 @@ pub fn startup_zones_system(
                 npc: Npc::new(npc.npc_id, conversation_index as u16),
                 position: position.clone(),
                 standing_direction: NpcStandingDirection::new(npc.direction),
-                status_effects: StatusEffects::new(),
+                status_effects,
                 team: Team::default_npc(),
             });
             if let Some(npc_ai) = npc_ai {

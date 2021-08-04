@@ -6,8 +6,8 @@ use crate::{
     data::{account::AccountStorage, character::CharacterStorage, item::Item},
     game::{
         bundles::{
-            client_entity_join_zone, client_entity_leave_zone,
-            client_entity_recalculate_ability_values, client_entity_teleport_zone, CharacterBundle,
+            client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
+            CharacterBundle,
         },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
@@ -61,6 +61,7 @@ pub fn game_server_authentication_system(
                                         .ok_or(ConnectionRequestError::Failed)
                                 })
                                 .map(|character| {
+                                    let status_effects = StatusEffects::new();
                                     let ability_values =
                                         game_data.ability_value_calculator.calculate(
                                             &character.info,
@@ -68,14 +69,19 @@ pub fn game_server_authentication_system(
                                             &character.equipment,
                                             &character.basic_stats,
                                             &character.skill_list,
+                                            &status_effects,
                                         );
 
                                     // If the character was saved as dead, we must respawn them!
                                     let (health_points, mana_points, position) =
                                         if character.health_points.hp == 0 {
                                             (
-                                                HealthPoints::new(ability_values.max_health as u32),
-                                                ManaPoints::new(ability_values.max_mana as u32),
+                                                HealthPoints::new(
+                                                    ability_values.get_max_health() as u32
+                                                ),
+                                                ManaPoints::new(
+                                                    ability_values.get_max_mana() as u32
+                                                ),
                                                 Position::new(
                                                     character.info.revive_position,
                                                     character.info.revive_zone_id,
@@ -106,7 +112,7 @@ pub fn game_server_authentication_system(
                                         );
 
                                     let move_mode = MoveMode::Run;
-                                    let move_speed = MoveSpeed::new(ability_values.run_speed);
+                                    let move_speed = MoveSpeed::new(ability_values.get_run_speed());
 
                                     commands.entity(entity).insert_bundle(CharacterBundle {
                                         ability_values,
@@ -130,7 +136,7 @@ pub fn game_server_authentication_system(
                                         skill_points: character.skill_points,
                                         stamina: character.stamina,
                                         stat_points: character.stat_points,
-                                        status_effects: StatusEffects::new(),
+                                        status_effects,
                                         team: Team::default_character(),
                                         union_membership: character.union_membership.clone(),
                                     });
@@ -245,11 +251,9 @@ pub fn game_server_main_system(
         &AbilityValues,
         &Command,
         &CharacterInfo,
-        &Level,
         &SkillList,
         &mut QuestState,
     )>,
-    game_client_query2: Query<(&MoveMode, &StatusEffects)>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
@@ -273,11 +277,9 @@ pub fn game_server_main_system(
             ability_values,
             command,
             character_info,
-            level,
             skill_list,
             mut quest_state,
         )| {
-            let (move_mode, status_effects) = game_client_query2.get(entity).unwrap();
             let mut entity_commands = commands.entity(entity);
 
             if let Ok(message) = client.client_message_rx.try_recv() {
@@ -415,23 +417,6 @@ pub fn game_server_main_system(
                                 }
                             }
                         }
-
-                        client_entity_recalculate_ability_values(
-                            &mut commands,
-                            game_data.ability_value_calculator.as_ref(),
-                            client_entity,
-                            entity,
-                            status_effects,
-                            Some(&basic_stats),
-                            Some(character_info),
-                            Some(&equipment),
-                            Some(level),
-                            Some(move_mode),
-                            Some(skill_list),
-                            None,
-                            None, // TODO: Update hp / mp
-                            None,
-                        );
                     }
                     ClientMessage::IncreaseBasicStat(basic_stat_type) => {
                         if let Some(cost) = game_data
@@ -458,23 +443,6 @@ pub fn game_server_main_system(
                                         value: *value,
                                     }))
                                     .ok();
-
-                                client_entity_recalculate_ability_values(
-                                    &mut commands,
-                                    game_data.ability_value_calculator.as_ref(),
-                                    client_entity,
-                                    entity,
-                                    status_effects,
-                                    Some(&basic_stats),
-                                    Some(character_info),
-                                    Some(&equipment),
-                                    Some(level),
-                                    Some(move_mode),
-                                    Some(skill_list),
-                                    None,
-                                    None, // TODO: Update hp / mp
-                                    None,
-                                );
                             }
                         }
                     }
@@ -542,8 +510,8 @@ pub fn game_server_main_system(
                             };
 
                             entity_commands
-                                .insert(HealthPoints::new(ability_values.max_health as u32))
-                                .insert(ManaPoints::new(ability_values.max_mana as u32));
+                                .insert(HealthPoints::new(ability_values.get_max_health() as u32))
+                                .insert(ManaPoints::new(ability_values.get_max_mana() as u32));
                             client_entity_teleport_zone(
                                 &mut commands,
                                 &mut client_entity_list,

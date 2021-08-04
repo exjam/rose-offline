@@ -7,10 +7,7 @@ use crate::{
         AbilityType,
     },
     game::{
-        bundles::{
-            ability_values_add_value, ability_values_get_value,
-            client_entity_recalculate_ability_values, skill_list_try_learn_skill,
-        },
+        bundles::{ability_values_add_value, ability_values_get_value, skill_list_try_learn_skill},
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
             GameClient, HealthPoints, Inventory, ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed,
@@ -85,7 +82,7 @@ fn use_inventory_item(
     if let Some((require_ability_type, require_ability_value)) = item_data.ability_requirement {
         let ability_value = ability_values_get_value(
             require_ability_type,
-            (use_item_user.ability_values, use_item_user.status_effects),
+            use_item_user.ability_values,
             use_item_user.level,
             use_item_user.move_speed,
             use_item_user.team_number,
@@ -172,23 +169,6 @@ fn use_inventory_item(
     };
 
     if consume_item {
-        client_entity_recalculate_ability_values(
-            use_item_world.commands,
-            use_item_world.game_data.ability_value_calculator.as_ref(),
-            use_item_user.client_entity,
-            use_item_user.entity,
-            use_item_user.status_effects,
-            Some(use_item_user.basic_stats),
-            Some(use_item_user.character_info),
-            Some(use_item_user.equipment),
-            Some(use_item_user.level),
-            Some(use_item_user.move_mode),
-            Some(use_item_user.skill_list),
-            None,
-            Some(use_item_user.health_points),
-            Some(use_item_user.mana_points),
-        );
-
         if let Some(game_client) = use_item_user.game_client {
             if message_to_nearby {
                 use_item_world.server_messages.send_entity_message(

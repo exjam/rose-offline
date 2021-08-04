@@ -83,7 +83,7 @@ pub mod character;
 pub mod formats;
 pub mod item;
 
-pub use ability::{AbilityType, AbilityValueCalculator, Damage, GetAbilityValues};
+pub use ability::{AbilityType, AbilityValueCalculator, Damage};
 pub use ai_database::AiDatabase;
 pub use character::{CharacterCreator, CharacterCreatorError};
 pub use drop_table::DropTable;

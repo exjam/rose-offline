@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::time::Instant;
 
 use enum_map::EnumMap;
 use log::warn;
@@ -8,7 +8,7 @@ use crate::data::{StatusEffectData, StatusEffectType};
 #[derive(Clone)]
 pub struct ActiveStatusEffect {
     pub value: i32,
-    pub time_remaining: Duration,
+    pub expire_time: Instant,
 }
 
 #[derive(Clone)]
@@ -35,7 +35,7 @@ impl StatusEffects {
     pub fn apply_status_effect(
         &mut self,
         status_effect_data: &StatusEffectData,
-        duration: Duration,
+        expire_time: Instant,
         value: i32,
     ) -> bool {
         let status_effect_type = status_effect_data.status_effect_type;
@@ -52,10 +52,7 @@ impl StatusEffects {
                 false
             }
             _ => {
-                self.active[status_effect_type] = Some(ActiveStatusEffect {
-                    value,
-                    time_remaining: duration,
-                });
+                self.active[status_effect_type] = Some(ActiveStatusEffect { value, expire_time });
                 true
             }
         }

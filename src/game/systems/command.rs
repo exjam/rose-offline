@@ -3,24 +3,20 @@ use std::time::Duration;
 use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
-use crate::{
-    data::GetAbilityValues,
-    game::{
-        bundles::client_entity_leave_zone,
-        components::{
-            AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack,
-            CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
-            CommandPickupDroppedItem, Destination, DroppedItem, GameClient, HealthPoints,
-            Inventory, MotionData, MoveMode, MoveSpeed, NextCommand, Owner, PersonalStore,
-            Position, StatusEffects, Target,
-        },
-        events::{DamageEvent, SkillEvent, SkillEventTarget},
-        messages::server::{
-            self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
-            ServerMessage,
-        },
-        resources::{ClientEntityList, GameData, ServerMessages, ServerTime},
+use crate::game::{
+    bundles::client_entity_leave_zone,
+    components::{
+        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
+        CommandCastSkillTarget, CommandData, CommandMove, CommandPickupDroppedItem, Destination,
+        DroppedItem, GameClient, HealthPoints, Inventory, MotionData, MoveMode, MoveSpeed,
+        NextCommand, Owner, PersonalStore, Position, Target,
     },
+    events::{DamageEvent, SkillEvent, SkillEventTarget},
+    messages::server::{
+        self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
+        ServerMessage,
+    },
+    resources::{ClientEntityList, GameData, ServerMessages, ServerTime},
 };
 
 const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
@@ -72,35 +68,14 @@ fn is_valid_move_target<'a>(
 fn is_valid_attack_target<'a>(
     position: &Position,
     target_entity: Entity,
-    attack_target_query: &'a Query<(
-        &ClientEntity,
-        &Position,
-        &AbilityValues,
-        &HealthPoints,
-        &StatusEffects,
-    )>,
-) -> Option<(
-    &'a ClientEntity,
-    &'a Position,
-    &'a AbilityValues,
-    &'a StatusEffects,
-)> {
+    attack_target_query: &'a Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
+) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
     // TODO: Check Team
-    if let Ok((
-        target_client_entity,
-        target_position,
-        target_ability_values,
-        target_health,
-        target_status_effects,
-    )) = attack_target_query.get(target_entity)
+    if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
+        attack_target_query.get(target_entity)
     {
         if target_position.zone_id == position.zone_id && target_health.hp > 0 {
-            return Some((
-                target_client_entity,
-                target_position,
-                target_ability_values,
-                target_status_effects,
-            ));
+            return Some((target_client_entity, target_position, target_ability_values));
         }
     }
 
@@ -110,22 +85,11 @@ fn is_valid_attack_target<'a>(
 fn is_valid_skill_target<'a>(
     position: &Position,
     target_entity: Entity,
-    attack_target_query: &'a Query<(
-        &ClientEntity,
-        &Position,
-        &AbilityValues,
-        &HealthPoints,
-        &StatusEffects,
-    )>,
+    attack_target_query: &'a Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
 ) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
     // TODO: Check Team
-    if let Ok((
-        target_client_entity,
-        target_position,
-        target_ability_values,
-        _target_health,
-        _target_status_effects,
-    )) = attack_target_query.get(target_entity)
+    if let Ok((target_client_entity, target_position, target_ability_values, _target_health)) =
+        attack_target_query.get(target_entity)
     {
         if target_position.zone_id == position.zone_id {
             return Some((target_client_entity, target_position, target_ability_values));
@@ -178,7 +142,6 @@ pub fn command_system(
         &Position,
         &MotionData,
         &AbilityValues,
-        &StatusEffects,
         &MoveMode,
         &mut Command,
         &mut NextCommand,
@@ -187,13 +150,7 @@ pub fn command_system(
         Option<&PersonalStore>,
     )>,
     move_target_query: Query<(&ClientEntity, &Position)>,
-    attack_target_query: Query<(
-        &ClientEntity,
-        &Position,
-        &AbilityValues,
-        &HealthPoints,
-        &StatusEffects,
-    )>,
+    attack_target_query: Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
     mut pickup_dropped_item_target_query: Query<(
         &ClientEntity,
         &Position,
@@ -214,7 +171,6 @@ pub fn command_system(
             position,
             motion_data,
             ability_values,
-            status_effects,
             move_mode,
             mut command,
             mut next_command,
@@ -222,8 +178,6 @@ pub fn command_system(
             inventory,
             personal_store,
         )| {
-            let ability_values = (ability_values, status_effects);
-
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 // Send any server message required for update client next command
                 match next_command.command.as_mut().unwrap() {
@@ -564,15 +518,10 @@ pub fn command_system(
                 &mut CommandData::Attack(CommandAttack {
                     target: target_entity,
                 }) => {
-                    if let Some((
-                        _,
-                        target_position,
-                        target_ability_values,
-                        target_status_effects,
-                    )) = is_valid_attack_target(position, target_entity, &attack_target_query)
+                    if let Some((_, target_position, target_ability_values)) =
+                        is_valid_attack_target(position, target_entity, &attack_target_query)
                     {
                         let mut entity_commands = commands.entity(entity);
-                        let target_ability_values = (target_ability_values, target_status_effects);
                         let distance =
                             (target_position.position.xy() - position.position.xy()).magnitude();
 

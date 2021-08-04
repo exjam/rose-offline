@@ -1,10 +1,9 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, Local, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Entity, EventReader, Local, Mut, Query, Res, ResMut};
 use log::warn;
 
 use crate::{
     data::{SkillAddAbility, SkillData, SkillTargetFilter, SkillType, StatusEffectType},
     game::{
-        bundles::client_entity_recalculate_ability_values,
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
             HealthPoints, Level, MoveMode, Npc, Position, SkillList, StatusEffects, Team,
@@ -23,11 +22,11 @@ enum SkillCastError {
     NotEnoughUseAbility,
 }
 
-struct SkillWorld<'a, 'b, 'c, 'd, 'e, 'f> {
-    commands: &'a mut Commands<'b>,
+struct SkillWorld<'c, 'd, 'e, 'f> {
     client_entity_list: &'c ClientEntityList,
     game_data: &'d GameData,
     server_messages: &'e mut ResMut<'f, ServerMessages>,
+    server_time: &'d ServerTime,
 }
 
 struct SkillCaster<'a> {
@@ -43,11 +42,12 @@ struct SkillTargetEntity<'a, 'b> {
     entity: Entity,
     client_entity: &'a ClientEntity,
     position: &'a Position,
+    ability_values: &'a AbilityValues,
     status_effects: &'a mut Mut<'b, StatusEffects>,
     team: &'a Team,
     health_points: &'a HealthPoints,
     level: &'a Level,
-    move_mode: Option<&'a MoveMode>,
+    move_mode: &'a MoveMode,
 
     // To update character ability_values
     character_info: Option<&'a CharacterInfo>,
@@ -169,7 +169,7 @@ fn apply_skill_status_effects_to_entity(
             {
                 skill_target.status_effects.apply_status_effect(
                     status_effect_data,
-                    skill_data.status_effect_duration,
+                    skill_world.server_time.now + skill_data.status_effect_duration,
                     value,
                 );
 
@@ -188,31 +188,13 @@ fn apply_skill_status_effects_to_entity(
         }
     }
 
-    // Update ability values
-    client_entity_recalculate_ability_values(
-        skill_world.commands,
-        skill_world.game_data.ability_value_calculator.as_ref(),
-        skill_target.client_entity,
-        skill_target.entity,
-        skill_target.status_effects,
-        skill_target.basic_stats,
-        skill_target.character_info,
-        skill_target.equipment,
-        Some(skill_target.level),
-        skill_target.move_mode,
-        skill_target.skill_list,
-        skill_target.npc,
-        None, // TODO: Update of skill target HP / MP
-        None,
-    );
-
     if effect_success.iter().any(|x| *x) {
         skill_world.server_messages.send_entity_message(
             skill_target.client_entity,
             ServerMessage::ApplySkillEffect(ApplySkillEffect {
                 entity_id: skill_target.client_entity.id,
                 caster_entity_id: skill_caster.client_entity.id,
-                caster_intelligence: skill_caster.ability_values.intelligence,
+                caster_intelligence: skill_caster.ability_values.get_intelligence(),
                 skill_id: skill_data.id,
                 effect_success,
             }),
@@ -231,11 +213,12 @@ fn apply_skill_status_effects(
     target_query: &mut Query<(
         &ClientEntity,
         &Position,
+        &AbilityValues,
         &mut StatusEffects,
         &Team,
         &HealthPoints,
         &Level,
-        Option<&MoveMode>,
+        &MoveMode,
         Option<&CharacterInfo>,
         Option<&Equipment>,
         Option<&BasicStats>,
@@ -268,6 +251,7 @@ fn apply_skill_status_effects(
             if let Ok((
                 target_client_entity,
                 target_position,
+                target_ability_values,
                 mut target_status_effects,
                 target_team,
                 target_health_points,
@@ -287,6 +271,7 @@ fn apply_skill_status_effects(
                         entity: target_entity,
                         client_entity: target_client_entity,
                         position: target_position,
+                        ability_values: target_ability_values,
                         status_effects: &mut target_status_effects,
                         team: target_team,
                         health_points: target_health_points,
@@ -309,6 +294,7 @@ fn apply_skill_status_effects(
         if let Ok((
             target_client_entity,
             target_position,
+            target_ability_values,
             mut target_status_effects,
             target_team,
             target_health_points,
@@ -329,6 +315,7 @@ fn apply_skill_status_effects(
                     entity: target_entity,
                     client_entity: target_client_entity,
                     position: target_position,
+                    ability_values: target_ability_values,
                     status_effects: &mut target_status_effects,
                     team: target_team,
                     health_points: target_health_points,
@@ -352,16 +339,16 @@ fn apply_skill_status_effects(
 
 #[allow(clippy::type_complexity)]
 pub fn skill_effect_system(
-    mut commands: Commands,
     caster_query: Query<(&ClientEntity, &Position, &AbilityValues, &Team)>,
     mut target_query: Query<(
         &ClientEntity,
         &Position,
+        &AbilityValues,
         &mut StatusEffects,
         &Team,
         &HealthPoints,
         &Level,
-        Option<&MoveMode>,
+        &MoveMode,
         Option<&CharacterInfo>,
         Option<&Equipment>,
         Option<&BasicStats>,
@@ -376,10 +363,10 @@ pub fn skill_effect_system(
     server_time: Res<ServerTime>,
 ) {
     let mut skill_world = SkillWorld {
-        commands: &mut commands,
         client_entity_list: &client_entity_list,
         game_data: &game_data,
         server_messages: &mut server_messages,
+        server_time: &server_time,
     };
 
     // Read events into pending_skill_events for executing at specific time

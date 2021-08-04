@@ -168,20 +168,25 @@ pub fn monster_spawn_system(
             for (id, count) in spawn_queue {
                 for _ in 0..count {
                     let npc_data = game_data.npcs.get_npc(id);
-                    let ability_values = game_data.ability_value_calculator.calculate_npc(id);
+                    let status_effects = StatusEffects::new();
+                    let ability_values =
+                        game_data
+                            .ability_value_calculator
+                            .calculate_npc(id, None, &status_effects);
 
                     if let (Some(npc_data), Some(ability_values)) = (npc_data, ability_values) {
                         let npc_ai = Some(npc_data.ai_file_index)
                             .filter(|ai_file_index| *ai_file_index != 0)
                             .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
-                        let damage_sources = Some(ability_values.max_damage_sources)
+                        let damage_sources = Some(ability_values.get_max_damage_sources())
                             .filter(|max_damage_sources| *max_damage_sources > 0)
                             .map(DamageSources::new);
-                        let health_points = HealthPoints::new(ability_values.max_health as u32);
-                        let level = Level::new(ability_values.level as u32);
+                        let health_points =
+                            HealthPoints::new(ability_values.get_max_health() as u32);
+                        let level = Level::new(ability_values.get_level() as u32);
                         let move_mode = MoveMode::Walk;
-                        let move_speed = MoveSpeed::new(ability_values.walk_speed as f32);
+                        let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
 
                         let position = Position::new(
                             Point3::new(
@@ -210,7 +215,7 @@ pub fn monster_spawn_system(
                             next_command: NextCommand::default(),
                             npc: Npc::new(id, 0),
                             position: position.clone(),
-                            status_effects: StatusEffects::new(),
+                            status_effects,
                             spawn_origin: SpawnOrigin::MonsterSpawnPoint(
                                 spawn_point_entity,
                                 spawn_point_position,

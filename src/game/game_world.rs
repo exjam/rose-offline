@@ -18,14 +18,14 @@ use crate::game::{
         ServerMessages, ServerTime, WorldRates, WorldTime,
     },
     systems::{
-        bot_ai_system, chat_commands_system, client_entity_visibility_system, command_system,
-        control_server_system, damage_system, experience_points_system, expire_time_system,
-        game_server_authentication_system, game_server_join_system, game_server_main_system,
-        login_server_authentication_system, login_server_system, monster_spawn_system,
-        npc_ai_system, personal_store_system, quest_system, save_system, server_messages_system,
-        skill_effect_system, startup_zones_system, status_effect_system, update_position_system,
-        use_item_system, world_server_authentication_system, world_server_system,
-        world_time_system,
+        ability_values_system, bot_ai_system, chat_commands_system,
+        client_entity_visibility_system, command_system, control_server_system, damage_system,
+        experience_points_system, expire_time_system, game_server_authentication_system,
+        game_server_join_system, game_server_main_system, login_server_authentication_system,
+        login_server_system, monster_spawn_system, npc_ai_system, personal_store_system,
+        quest_system, save_system, server_messages_system, skill_effect_system,
+        startup_zones_system, status_effect_system, update_position_system, use_item_system,
+        world_server_authentication_system, world_server_system, world_time_system,
     },
 };
 
@@ -146,6 +146,7 @@ impl GameWorld {
             GameStages::PostUpdate,
             GameStages::Output,
             SystemStage::parallel()
+                .with_system(ability_values_system.system())
                 .with_system(server_messages_system.system())
                 .with_system(save_system.system()),
         );

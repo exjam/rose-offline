@@ -1,3 +1,4 @@
+mod ability_values;
 mod bot_ai;
 mod chat_commands;
 mod client_entity_visibility;
@@ -22,6 +23,7 @@ mod use_item;
 mod world_server;
 mod world_time;
 
+pub use ability_values::ability_values_system;
 pub use bot_ai::bot_ai_system;
 pub use chat_commands::chat_commands_system;
 pub use client_entity_visibility::client_entity_visibility_system;
