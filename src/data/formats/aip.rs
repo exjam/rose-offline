@@ -9,7 +9,7 @@ use crate::data::{
     ItemReference,
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum AipAbilityType {
     Level,
     Attack,
@@ -31,7 +31,7 @@ fn decode_ability_type(value: u8) -> Result<AipAbilityType, AipReadError> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum AipOperatorType {
     Equals,
     GreaterThan,
@@ -53,7 +53,7 @@ fn decode_operator_type(value: u8) -> Result<AipOperatorType, AipReadError> {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum AipResultOperator {
     Set,
     Add,
@@ -69,19 +69,20 @@ fn decode_result_operator_type(value: u8) -> Result<AipResultOperator, AipReadEr
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipHaveStatusTarget {
     This,
     Target,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipHaveStatusType {
     Good,
     Bad,
     Any,
 }
 
+#[derive(Debug)]
 pub struct AipConditionFindNearbyEntities {
     pub distance: AipDistance,
     pub is_allied: bool,
@@ -90,45 +91,47 @@ pub struct AipConditionFindNearbyEntities {
     pub count: i32,
 }
 
+#[derive(Debug)]
 pub struct AipConditionMonthDayTime {
     pub month_day: u8,                          // 1 - 31
     pub hour_range: Option<RangeInclusive<u8>>, // 1 - 24
     pub minute_range: RangeInclusive<u8>,       // 1 - 60
 }
 
+#[derive(Debug)]
 pub struct AipConditionWeekDayTime {
     pub week_day: u8,                     // 0 - 6
     pub hour_range: RangeInclusive<u8>,   // 1 - 24
     pub minute_range: RangeInclusive<u8>, // 1 - 60
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipMoveMode {
     Walk,
     Run,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipAttackNearbyStat {
     Lowest,
     Highest,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipMoveOrigin {
     Spawn,
     CurrentPosition,
     FindChar,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipSpawnNpcOrigin {
     CurrentPosition,
     AttackerPosition,
     TargetPosition,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipSkillTarget {
     FindChar,
     Target,
@@ -136,7 +139,7 @@ pub enum AipSkillTarget {
     NearChar,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipVariableType {
     LocalNpcObject,
     Ai,
@@ -144,27 +147,27 @@ pub enum AipVariableType {
     Economy,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipMessageType {
     Say,
     Shout,
     Announce,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipMonsterSpawnState {
     Disabled,
     Enabled,
     Toggle,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipDamageType {
     Received,
     Given,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum AipDistanceOrigin {
     Spawn,
     Owner,
@@ -178,6 +181,7 @@ pub type AipMotionId = i32;
 pub type AipZoneId = usize;
 pub type AipIsSpawnOwner = bool;
 
+#[derive(Debug)]
 pub enum AipCondition {
     CompareAttackerAndTargetAbilityValue(AipOperatorType, AipAbilityType),
     FindNearbyEntities(AipConditionFindNearbyEntities),
@@ -204,6 +208,7 @@ pub enum AipCondition {
     ZoneTime(RangeInclusive<u32>),
 }
 
+#[derive(Debug)]
 pub enum AipAction {
     Stop,
     Emote(u8),
