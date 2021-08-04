@@ -125,16 +125,17 @@ fn ai_condition_count_nearby_entities(
         }
 
         // Check level and team requirements
-        if !ai_world
-            .nearby_query
-            .get(entity)
-            .map_or(false, |(level, team)| {
-                let level_diff = ai_parameters.source.level.level as i32 - level.level as i32;
+        let meets_requirements =
+            ai_world
+                .nearby_query
+                .get(entity)
+                .map_or(false, |(level, team)| {
+                    let level_diff = ai_parameters.source.level.level as i32 - level.level as i32;
 
-                is_allied == (team.id == ai_parameters.source.team.id)
-                    && level_diff_range.contains(&level_diff)
-            })
-        {
+                    is_allied == (team.id == ai_parameters.source.team.id)
+                        && level_diff_range.contains(&level_diff)
+                });
+        if !meets_requirements {
             continue;
         }
 

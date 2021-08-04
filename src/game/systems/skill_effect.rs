@@ -4,7 +4,7 @@ use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
     data::{
-        Damage, SkillData, SkillTargetFilter, SkillType, StatusEffectClearedByType,
+        AbilityType, Damage, SkillData, SkillTargetFilter, SkillType, StatusEffectClearedByType,
         StatusEffectType,
     },
     game::{
@@ -201,17 +201,13 @@ fn apply_skill_status_effects_to_entity(
 
     for add_ability in skill_data.add_ability.iter() {
         match add_ability.ability_type {
-            /*
-            TODO:
-            AbilityType::Stamina => {},
-            AbilityType::Money => {},
-            AbilityType::Health => {},
-            AbilityType::Mana => {},
-            */
-            _ => warn!(
-                "Unimplemented skill status effect add ability_type {:?}, value {}",
-                add_ability.ability_type, add_ability.value
-            ),
+            AbilityType::Stamina | AbilityType::Money | AbilityType::Health | AbilityType::Mana => {
+                warn!(
+                    "Unimplemented skill status effect add ability_type {:?}, value {}",
+                    add_ability.ability_type, add_ability.value
+                )
+            }
+            _ => {}
         }
     }
 
