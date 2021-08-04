@@ -4,8 +4,8 @@ pub struct ObjectVariables {
 
 impl ObjectVariables {
     pub fn new(count: usize) -> Self {
-        let mut variables = Vec::with_capacity(count);
-        variables.resize(count, 0);
-        Self { variables }
+        Self {
+            variables: vec![0; count],
+        }
     }
 }

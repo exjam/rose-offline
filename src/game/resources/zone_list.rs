@@ -5,7 +5,6 @@ use bevy_ecs::prelude::Entity;
 use crate::data::{NpcId, ZoneId};
 
 struct ZoneData {
-    id: ZoneId,
     local_npcs: HashMap<NpcId, Entity>,
 }
 
@@ -24,7 +23,6 @@ impl ZoneList {
         self.zones.insert(
             zone_id,
             ZoneData {
-                id: zone_id,
                 local_npcs: Default::default(),
             },
         );

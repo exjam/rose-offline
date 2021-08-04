@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 
 use crate::game::{
     components::{
-        BotAi, BotAiState, Command, CommandData, CommandDie, Destination, DroppedItem, Inventory,
+        BotAi, BotAiState, Command, CommandData, Destination, DroppedItem, Inventory,
         InventoryPageType, NextCommand, Npc, Owner, Position, Team,
     },
     resources::ClientEntityList,

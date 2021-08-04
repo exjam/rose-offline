@@ -4,6 +4,7 @@ use std::{str::FromStr, time::Duration};
 
 pub const WORLD_TICK_DURATION: Duration = Duration::from_secs(10);
 
+#[allow(dead_code)]
 pub const WORLD_MONTH_PER_YEAR: u64 = 12;
 pub const WORLD_DAYS_PER_MONTH: u64 = 54;
 

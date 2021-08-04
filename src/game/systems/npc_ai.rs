@@ -1,7 +1,6 @@
 use std::{
     num::NonZeroU8,
     ops::{Range, RangeInclusive},
-    sync::mpsc::channel,
     time::Duration,
 };
 
