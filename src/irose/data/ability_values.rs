@@ -274,6 +274,17 @@ impl AbilityValueCalculator for AbilityValuesData {
         }
     }
 
+    fn calculate_skill_adjust_value(
+        &self,
+        skill_add_ability: &SkillAddAbility,
+        caster_intelligence: i32,
+        ability_value: i32,
+    ) -> i32 {
+        ((ability_value * skill_add_ability.rate) as f32 / 100.0
+            + skill_add_ability.value as f32 * (caster_intelligence as f32 + 300.0) / 315.0)
+            as i32
+    }
+
     fn calculate_give_xp(
         &self,
         attacker_level: i32,
@@ -938,13 +949,10 @@ fn calculate_passive_skill_ability_values<'a>(
     for &skill_id in passive_skills {
         if let Some(skill_data) = skill_database.get_skill(skill_id) {
             for add_ability in &skill_data.add_ability {
-                match add_ability {
-                    SkillAddAbility::Rate(ability_type, rate) => {
-                        result.add_ability_rate(*ability_type, *rate);
-                    }
-                    SkillAddAbility::Value(ability_type, value) => {
-                        result.add_ability_value(*ability_type, *value);
-                    }
+                if add_ability.rate != 0 {
+                    result.add_ability_rate(add_ability.ability_type, add_ability.rate);
+                } else {
+                    result.add_ability_value(add_ability.ability_type, add_ability.value);
                 }
             }
         }

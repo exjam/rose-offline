@@ -24,9 +24,10 @@ pub enum SkillPageType {
 }
 
 #[derive(Debug)]
-pub enum SkillAddAbility {
-    Value(AbilityType, i32),
-    Rate(AbilityType, i32),
+pub struct SkillAddAbility {
+    pub ability_type: AbilityType,
+    pub rate: i32,
+    pub value: i32,
 }
 
 #[derive(Debug, FromPrimitive)]

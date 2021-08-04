@@ -56,16 +56,18 @@ pub fn damage_system(
                 .hp
                 .saturating_sub(damage_event.damage.amount as u32);
 
-            if let Some(attacker_entity_id) = attacker_entity_id {
-                server_messages.send_zone_message(
-                    position.zone_id,
-                    ServerMessage::DamageEntity(DamageEntity {
-                        attacker_entity_id,
-                        defender_entity_id: client_entity.id,
-                        damage: damage_event.damage,
-                        is_killed: health_points.hp == 0,
-                    }),
-                );
+            if damage_event.damage.amount > 0 {
+                if let Some(attacker_entity_id) = attacker_entity_id {
+                    server_messages.send_zone_message(
+                        position.zone_id,
+                        ServerMessage::DamageEntity(DamageEntity {
+                            attacker_entity_id,
+                            defender_entity_id: client_entity.id,
+                            damage: damage_event.damage,
+                            is_killed: health_points.hp == 0,
+                        }),
+                    );
+                }
             }
 
             if let Some(mut damage_sources) = damage_sources {

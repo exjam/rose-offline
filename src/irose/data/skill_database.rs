@@ -127,12 +127,11 @@ impl StbSkill {
             )
             .map(
                 |(ability_type, (rate, value))| match (ability_type, rate, value) {
-                    (Some(ability_type), Some(rate), _) => {
-                        Some(SkillAddAbility::Rate(*ability_type, *rate))
-                    }
-                    (Some(ability_type), None, Some(value)) => {
-                        Some(SkillAddAbility::Value(*ability_type, *value))
-                    }
+                    (&Some(ability_type), &Some(rate), &Some(value)) => Some(SkillAddAbility {
+                        ability_type,
+                        rate,
+                        value,
+                    }),
                     _ => None,
                 },
             )

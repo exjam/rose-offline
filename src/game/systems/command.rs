@@ -581,18 +581,6 @@ pub fn command_system(
                         *next_command = NextCommand::default();
                     }
                 }
-                /*
-                TODO:
-                - Save previous command
-                + Move to within cast range
-                - Check skill usage requirements to start the casting (eg check mana cost, required weapon equipped)
-                - Deduct skill usage requirements (like mana cost)
-                + If skill on target entity then send GSV_SKILL_START
-                + If the entity has a casting animation - do casting animation for a required_duration
-                - Apply skill effects (damage, etc) send GSV_DAMAGE_OF_SKILL / GSV_EFFECT_OF_SKILL and GSV_RESULT_OF_SKILL
-                + Start the skill doing animation for a required_duration
-                - Set NextCommand depending on skill action mode
-                */
                 &mut CommandData::CastSkill(CommandCastSkill {
                     skill_id,
                     skill_target,
@@ -629,6 +617,7 @@ pub fn command_system(
                             let casting_duration = skill_data
                                 .casting_motion_id
                                 .and_then(|motion_id| {
+                                    // TODO: Fix me for NPC skill casting
                                     game_data.motions.find_first_character_motion(motion_id)
                                 })
                                 .map(|motion_data| motion_data.duration)
@@ -638,6 +627,7 @@ pub fn command_system(
                             let action_duration = skill_data
                                 .action_motion_id
                                 .and_then(|motion_id| {
+                                    // TODO: Fix me for NPC skill casting
                                     game_data.motions.find_first_character_motion(motion_id)
                                 })
                                 .map(|motion_data| motion_data.duration)

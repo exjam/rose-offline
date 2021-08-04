@@ -8,6 +8,8 @@ use crate::{
     },
 };
 
+use super::SkillAddAbility;
+
 #[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum AbilityType {
     Gender = 2,
@@ -150,6 +152,13 @@ pub trait AbilityValueCalculator {
         defender: &AbilityValues,
         hit_count: i32,
     ) -> Damage;
+
+    fn calculate_skill_adjust_value(
+        &self,
+        skill_add_ability: &SkillAddAbility,
+        caster_intelligence: i32,
+        ability_value: i32,
+    ) -> i32;
 
     fn calculate_give_xp(
         &self,
