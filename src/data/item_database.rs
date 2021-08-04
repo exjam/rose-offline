@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::{
     item::{ItemClass, ItemType},
-    AbilityType, SkillId,
+    AbilityType, SkillId, StatusEffectId,
 };
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -126,7 +126,7 @@ pub struct ConsumableItemData {
     pub add_ability: Option<(AbilityType, i32)>,
     pub learn_skill_id: Option<SkillId>,
     pub use_skill_id: Option<SkillId>,
-    pub apply_status_effect_id: Option<usize>,
+    pub apply_status_effect_id: Option<StatusEffectId>,
     pub cooldown_type_id: usize,
     pub cooldown_duration: Duration,
 }

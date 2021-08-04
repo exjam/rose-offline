@@ -7,7 +7,7 @@ use crate::data::{
     item::ItemClass,
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
     FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData,
-    JewelleryItemData, MaterialItemData, QuestItemData, SkillId, SubWeaponItemData,
+    JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId, SubWeaponItemData,
     VehicleItemData, WeaponItemData,
 };
 pub struct StbItem(pub StbFile);
@@ -157,7 +157,7 @@ impl StbItem {
     stb_column! { 21, get_consumeable_use_script_index, usize }
     stb_column! { 22, get_consumeable_use_effect_index, usize }
     stb_column! { 23, get_consumeable_use_sound_index, usize }
-    stb_column! { 24, get_consumeable_apply_status_effect_id, usize }
+    stb_column! { 24, get_consumeable_apply_status_effect_id, StatusEffectId }
     stb_column! { 25, get_consumeable_cooldown_type_id, usize }
     stb_column! { 26, get_consumeable_cooldown_duration_seconds, u32 }
 
@@ -290,9 +290,7 @@ fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Con
         add_ability: data.get_consumeable_add_ability(id),
         learn_skill_id: data.get_consumeable_learn_skill_id(id),
         use_skill_id: data.get_consumeable_use_skill_id(id),
-        apply_status_effect_id: data
-            .get_consumeable_apply_status_effect_id(id)
-            .filter(|value| *value != 0),
+        apply_status_effect_id: data.get_consumeable_apply_status_effect_id(id),
         cooldown_type_id: data.get_consumeable_cooldown_type_id(id).unwrap_or(0),
         cooldown_duration: Duration::from_secs(
             data.get_consumeable_cooldown_duration_seconds(id)
