@@ -5,12 +5,15 @@ use crate::game::{
         AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
         ClientEntityVisibility, Command, Equipment, ExperiencePoints, GameClient, HealthPoints,
         Hotbar, Inventory, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc,
-        NpcStandingDirection, Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina,
-        StatPoints, StatusEffects, Team, UnionMembership,
+        NpcStandingDirection, ObjectVariables, Position, QuestState, SkillList, SkillPoints,
+        SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
     },
     messages::server::{ServerMessage, Teleport},
     resources::ClientEntityList,
 };
+
+pub const NPC_OBJECT_VARIABLES_COUNT: usize = 20;
+pub const MONSTER_OBJECT_VARIABLES_COUNT: usize = 5;
 
 #[derive(Bundle)]
 pub struct NpcBundle {
@@ -24,6 +27,7 @@ pub struct NpcBundle {
     pub next_command: NextCommand,
     pub npc: Npc,
     //pub npc_ai: Option<NpcAi>,
+    pub object_variables: ObjectVariables,
     pub position: Position,
     pub standing_direction: NpcStandingDirection,
     pub status_effects: StatusEffects,
@@ -71,6 +75,7 @@ pub struct MonsterBundle {
     pub next_command: NextCommand,
     pub npc: Npc,
     //pub npc_ai: Option<NpcAi>,
+    pub object_variables: ObjectVariables,
     pub position: Position,
     pub spawn_origin: SpawnOrigin,
     pub status_effects: StatusEffects,

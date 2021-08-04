@@ -5,11 +5,11 @@ use rand::Rng;
 use crate::{
     data::NpcId,
     game::{
-        bundles::{client_entity_join_zone, MonsterBundle},
+        bundles::{client_entity_join_zone, MonsterBundle, MONSTER_OBJECT_VARIABLES_COUNT},
         components::{
             ClientEntityType, Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, Position, SpawnOrigin, StatusEffects,
-            Team,
+            MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, ObjectVariables, Position, SpawnOrigin,
+            StatusEffects, Team,
         },
         resources::{ClientEntityList, GameData, ServerTime},
     },
@@ -214,6 +214,7 @@ pub fn monster_spawn_system(
                             move_speed,
                             next_command: NextCommand::default(),
                             npc: Npc::new(id, 0),
+                            object_variables: ObjectVariables::new(MONSTER_OBJECT_VARIABLES_COUNT),
                             position: position.clone(),
                             status_effects,
                             spawn_origin: SpawnOrigin::MonsterSpawnPoint(

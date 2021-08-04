@@ -2,10 +2,11 @@ use bevy_ecs::prelude::{Commands, Res, ResMut};
 use log::warn;
 
 use crate::game::{
-    bundles::{client_entity_join_zone, NpcBundle},
+    bundles::{client_entity_join_zone, NpcBundle, NPC_OBJECT_VARIABLES_COUNT},
     components::{
         ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveMode, MoveSpeed,
-        NextCommand, Npc, NpcAi, NpcStandingDirection, Position, StatusEffects, Team,
+        NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Position, StatusEffects,
+        Team,
     },
     resources::{ClientEntityList, GameData, ZoneList},
 };
@@ -95,6 +96,7 @@ pub fn startup_zones_system(
                 move_speed,
                 next_command: NextCommand::default(),
                 npc: Npc::new(npc.npc_id, conversation_index as u16),
+                object_variables: ObjectVariables::new(NPC_OBJECT_VARIABLES_COUNT),
                 position: position.clone(),
                 standing_direction: NpcStandingDirection::new(npc.direction),
                 status_effects,
