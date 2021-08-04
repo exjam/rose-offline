@@ -8,12 +8,12 @@ use log::debug;
 use std::time::{Duration, Instant};
 
 use crate::game::{
-    events::{ChatCommandEvent, DamageEvent, PersonalStoreEvent, QuestTriggerEvent},
+    events::{ChatCommandEvent, DamageEvent, PersonalStoreEvent, QuestTriggerEvent, SaveEvent},
     messages::control::ControlMessage,
     resources::{
-        BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, PendingSaveList,
-        PendingSkillEffectList, PendingUseItemList, PendingXpList, ServerList, ServerMessages,
-        ServerTime, WorldRates, WorldTime,
+        BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, PendingSkillEffectList,
+        PendingUseItemList, PendingXpList, ServerList, ServerMessages, ServerTime, WorldRates,
+        WorldTime,
     },
     systems::{
         bot_ai_system, chat_commands_system, client_entity_visibility_system, command_system,
@@ -59,7 +59,6 @@ impl GameWorld {
         world.insert_resource(LoginTokens::new());
         world.insert_resource(ServerMessages::new());
         world.insert_resource(ClientEntityList::new(&game_data.zones));
-        world.insert_resource(PendingSaveList::new());
         world.insert_resource(PendingSkillEffectList::new());
         world.insert_resource(PendingUseItemList::new());
         world.insert_resource(PendingXpList::new());
@@ -71,6 +70,7 @@ impl GameWorld {
         world.insert_resource(Events::<DamageEvent>::default());
         world.insert_resource(Events::<PersonalStoreEvent>::default());
         world.insert_resource(Events::<QuestTriggerEvent>::default());
+        world.insert_resource(Events::<SaveEvent>::default());
 
         let mut schedule = Schedule::default();
         schedule.add_stage(
@@ -86,7 +86,8 @@ impl GameWorld {
                 .with_system(Events::<ChatCommandEvent>::update_system)
                 .with_system(Events::<DamageEvent>::update_system)
                 .with_system(Events::<PersonalStoreEvent>::update_system)
-                .with_system(Events::<QuestTriggerEvent>::update_system),
+                .with_system(Events::<QuestTriggerEvent>::update_system)
+                .with_system(Events::<SaveEvent>::update_system),
         );
         schedule.add_stage_after(
             GameStages::First,

@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Query, ResMut};
+use bevy_ecs::prelude::{Commands, EventReader, Query, ResMut};
 use log::{error, info};
 
 use crate::{
@@ -10,7 +10,8 @@ use crate::{
             Hotbar, Inventory, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints,
             Stamina, StatPoints, UnionMembership,
         },
-        resources::{ClientEntityList, PendingCharacterSave, PendingSave, PendingSaveList},
+        events::{SaveEvent, SaveEventCharacter},
+        resources::ClientEntityList,
     },
 };
 
@@ -35,11 +36,11 @@ pub fn save_system(
         (&QuestState, &UnionMembership, &Stamina),
     )>,
     mut client_entity_list: ResMut<ClientEntityList>,
-    mut pending_save_list: ResMut<PendingSaveList>,
+    mut save_events: EventReader<SaveEvent>,
 ) {
-    for pending_save in pending_save_list.drain(..) {
-        match pending_save {
-            PendingSave::Character(PendingCharacterSave {
+    for pending_save in save_events.iter() {
+        match *pending_save {
+            SaveEvent::Character(SaveEventCharacter {
                 entity,
                 remove_after_save,
             }) => {

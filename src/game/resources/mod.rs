@@ -3,7 +3,6 @@ mod client_entity_list;
 mod control_channel;
 mod game_data;
 mod login_tokens;
-mod pending_save_list;
 mod pending_skill_effect_list;
 mod pending_use_item_list;
 mod pending_xp_list;
@@ -18,7 +17,6 @@ pub use client_entity_list::{ClientEntityList, ClientEntitySet, ClientEntityZone
 pub use control_channel::ControlChannel;
 pub use game_data::GameData;
 pub use login_tokens::{LoginToken, LoginTokens};
-pub use pending_save_list::{PendingCharacterSave, PendingSave, PendingSaveList};
 pub use pending_skill_effect_list::{
     PendingSkillEffect, PendingSkillEffectList, PendingSkillEffectTarget,
 };

@@ -1,19 +1,17 @@
 use bevy_ecs::prelude::Entity;
 
-pub struct PendingCharacterSave {
+pub struct SaveEventCharacter {
     pub entity: Entity,
     pub remove_after_save: bool,
 }
 
-pub enum PendingSave {
-    Character(PendingCharacterSave),
+pub enum SaveEvent {
+    Character(SaveEventCharacter),
 }
 
-pub type PendingSaveList = Vec<PendingSave>;
-
-impl PendingSave {
+impl SaveEvent {
     pub fn with_character(entity: Entity, remove_after_save: bool) -> Self {
-        Self::Character(PendingCharacterSave {
+        Self::Character(SaveEventCharacter {
             entity,
             remove_after_save,
         })

@@ -1,18 +1,17 @@
-use bevy_ecs::prelude::{Commands, Res, ResMut};
+use bevy_ecs::prelude::{Commands, EventWriter, Res, ResMut};
 
 use crate::game::{
     components::{GameClient, LoginClient, ServerInfo, WorldClient},
+    events::SaveEvent,
     messages::control::{ClientType, ControlMessage},
-    resources::{
-        ControlChannel, GameServer, PendingSave, PendingSaveList, ServerList, WorldServer,
-    },
+    resources::{ControlChannel, GameServer, ServerList, WorldServer},
 };
 
 pub fn control_server_system(
     mut commands: Commands,
     channel: Res<ControlChannel>,
     mut server_list: ResMut<ServerList>,
-    mut pending_save_list: ResMut<PendingSaveList>,
+    mut save_events: EventWriter<SaveEvent>,
 ) {
     while let Ok(message) = channel.control_rx.try_recv() {
         match message {
@@ -42,9 +41,7 @@ pub fn control_server_system(
                 client_type,
                 entity,
             } => match client_type {
-                ClientType::Game => {
-                    pending_save_list.push(PendingSave::with_character(entity, true))
-                }
+                ClientType::Game => save_events.send(SaveEvent::with_character(entity, true)),
                 _ => commands.entity(entity).despawn(),
             },
             ControlMessage::AddWorldServer {
