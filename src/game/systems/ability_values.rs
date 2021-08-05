@@ -1,5 +1,4 @@
-use bevy_ecs::prelude::{Changed, Entity, Or, Query, QuerySet, Res};
-use log::info;
+use bevy_ecs::prelude::{Changed, Or, Query, QuerySet, Res};
 
 use crate::game::{
     components::{
@@ -15,7 +14,6 @@ pub fn ability_values_system(
         Query<
             (
                 &mut AbilityValues,
-                Entity,
                 &CharacterInfo,
                 &Level,
                 &Equipment,
@@ -52,7 +50,6 @@ pub fn ability_values_system(
     query_set.q0_mut().for_each_mut(
         |(
             mut ability_values,
-            entity,
             character_info,
             level,
             equipment,
@@ -60,10 +57,6 @@ pub fn ability_values_system(
             skill_list,
             status_effects,
         )| {
-            info!(
-                "Character entity {:?} requires ability value recalculation",
-                entity
-            );
             *ability_values = game_data.ability_value_calculator.calculate(
                 character_info,
                 level,
