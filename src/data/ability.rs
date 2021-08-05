@@ -1,14 +1,12 @@
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::NpcId,
+    data::{NpcId, SkillAddAbility, SkillData},
     game::components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
         StatusEffects,
     },
 };
-
-use super::SkillAddAbility;
 
 #[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum AbilityType {
@@ -159,6 +157,14 @@ pub trait AbilityValueCalculator {
         caster_intelligence: i32,
         ability_value: i32,
     ) -> i32;
+
+    fn calculate_skill_damage(
+        &self,
+        attacker: &AbilityValues,
+        defender: &AbilityValues,
+        skill_data: &SkillData,
+        hit_count: i32,
+    ) -> Damage;
 
     fn calculate_give_xp(
         &self,

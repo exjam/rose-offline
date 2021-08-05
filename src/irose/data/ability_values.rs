@@ -7,7 +7,7 @@ use crate::{
     data::{
         item::{ItemClass, ItemWeaponType},
         AbilityType, AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, NpcId,
-        SkillAddAbility, SkillDatabase, SkillId,
+        SkillAddAbility, SkillData, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
@@ -283,6 +283,253 @@ impl AbilityValueCalculator for AbilityValuesData {
         ((ability_value * skill_add_ability.rate) as f32 / 100.0
             + skill_add_ability.value as f32 * (caster_intelligence as f32 + 300.0) / 315.0)
             as i32
+    }
+
+    fn calculate_skill_damage(
+        &self,
+        attacker: &AbilityValues,
+        defender: &AbilityValues,
+        skill_data: &SkillData,
+        hit_count: i32,
+    ) -> Damage {
+        let mut rng = rand::thread_rng();
+        let mut damage = match skill_data.damage_type {
+            1 => {
+                let success = ((attacker.get_level() + 20) - defender.get_level()
+                    + rng.gen_range(1..=60)) as f32
+                    * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.6
+                        + rng.gen_range(1..=70) as f32
+                        + 10.0)
+                    / 110.0;
+
+                if success < 10.0 {
+                    0.0
+                } else if success < 20.0 {
+                    (skill_data.power as f32
+                        * 0.4
+                        * (attacker.get_attack_power() as f32 + 50.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_sense() as f32 * 1.2
+                            + 340.0))
+                        / (defender.get_defence() + defender.get_resistance() + 20) as f32
+                        / (250 + defender.get_level() - attacker.get_level()) as f32
+                        + 20.0
+                } else if matches!(attacker.damage_category, DamageCategory::Character)
+                    && matches!(defender.damage_category, DamageCategory::Character)
+                {
+                    ((skill_data.power as f32 + attacker.get_attack_power() as f32 * 0.2)
+                        * (attacker.get_attack_power() as f32 + 60.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_sense() as f32 * 0.7
+                            + 370.0))
+                        * 0.01
+                        * (320 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32
+                            + defender.get_resistance() as f32 * 0.8
+                            + defender.get_avoid() as f32 * 0.4
+                            + 40.0)
+                        / 1600.0
+                        + 60.0
+                } else {
+                    ((skill_data.power as f32 + attacker.get_attack_power() as f32 * 0.2)
+                        * (attacker.get_attack_power() as f32 + 60.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_sense() as f32 * 0.7
+                            + 370.0))
+                        * 0.01
+                        * (120 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32
+                            + defender.get_resistance() as f32 * 0.8
+                            + defender.get_avoid() as f32 * 0.4
+                            + 20.0)
+                        / 270.0
+                        + 20.0
+                }
+            }
+            2 => {
+                let success = ((attacker.get_level() + 30) - defender.get_level()
+                    + rng.gen_range(1..=50)) as f32
+                    * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.56
+                        + rng.gen_range(1..=70) as f32
+                        + 10.0)
+                    / 110.0;
+
+                if success < 8.0 {
+                    0.0
+                } else if success < 20.0 {
+                    (skill_data.power as f32
+                        * (attacker.get_attack_power() as f32 * 0.8
+                            + attacker.get_intelligence() as f32
+                            + 80.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_sense() as f32 * 1.3
+                            + 280.0)
+                        * 0.2)
+                        / (defender.get_defence() as f32 * 0.3
+                            + defender.get_resistance() as f32
+                            + 30.0)
+                        / (250 + defender.get_level() - attacker.get_level()) as f32
+                        + 20.0
+                } else if matches!(attacker.damage_category, DamageCategory::Character)
+                    && matches!(defender.damage_category, DamageCategory::Character)
+                {
+                    ((skill_data.power as f32 + 50.0)
+                        * (attacker.get_attack_power() as f32 * 0.8
+                            + (attacker.get_intelligence() as f32 * 1.2)
+                            + 100.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_sense() as f32 * 0.7
+                            + 350.0)
+                        * 0.01)
+                        * (380 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32 * 0.4
+                            + defender.get_resistance() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 60.0)
+                        / 2500.0
+                        + 60.0
+                } else {
+                    (skill_data.power as f32
+                        * (attacker.get_attack_power() as f32 * 0.8
+                            + (attacker.get_intelligence() as f32 * 1.2)
+                            + 100.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_sense() as f32 * 0.7
+                            + 350.0)
+                        * 0.01)
+                        * (150 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32 * 0.3
+                            + defender.get_resistance() as f32
+                            + defender.get_avoid() as f32 * 0.3
+                            + 60.0)
+                        / 350.0
+                        + 20.0
+                }
+            }
+            3 => {
+                let success = ((attacker.get_level() + 10) - defender.get_level()
+                    + rng.gen_range(1..=80)) as f32
+                    * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.5
+                        + rng.gen_range(1..=50) as f32
+                        + 50.0)
+                    / 90.0;
+                if success < 6.0 {
+                    0.0
+                } else if success < 20.0 {
+                    (skill_data.power as f32
+                        * (skill_data.power as f32 + attacker.get_intelligence() as f32 + 80.0)
+                        * (rng.gen_range(1..=30) + attacker.get_sense() * 2 + 290) as f32
+                        * 0.2)
+                        / (defender.get_defence() as f32 * 0.2
+                            + defender.get_resistance() as f32
+                            + 30.0)
+                        / (250 + defender.get_level() - attacker.get_level()) as f32
+                        + 20.0
+                } else if matches!(attacker.damage_category, DamageCategory::Character)
+                    && matches!(defender.damage_category, DamageCategory::Character)
+                {
+                    ((skill_data.power as f32 + 35.0)
+                        * (skill_data.power as f32 + attacker.get_intelligence() as f32 + 140.0)
+                        * (rng.gen_range(1..=30) + attacker.get_sense() + 380) as f32
+                        * 0.01)
+                        * (400 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32 * 0.5
+                            + defender.get_resistance() as f32 * 1.2
+                            + defender.get_avoid() as f32 * 0.4
+                            + 20.0)
+                        / 3400.0
+                        + 40.0
+                } else {
+                    ((skill_data.power as f32 + 35.0)
+                        * (skill_data.power as f32 + attacker.get_intelligence() as f32 + 140.0)
+                        * (rng.gen_range(1..=30) + attacker.get_sense() + 380) as f32
+                        * 0.01)
+                        * (150 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32 * 0.35
+                            + defender.get_resistance() as f32 * 1.2
+                            + defender.get_avoid() as f32 * 0.4
+                            + 10.0)
+                        / 730.0
+                        + 20.0
+                }
+            }
+            _ => {
+                let success = ((attacker.get_level() + 8) - defender.get_level()
+                    + rng.gen_range(1..=80)) as f32
+                    * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.6
+                        + rng.gen_range(1..=50) as f32
+                        + 50.0)
+                    / 90.0;
+                if success < 10.0 {
+                    0.0
+                } else if success < 20.0 {
+                    ((skill_data.power as f32 + 40.0)
+                        * (attacker.get_attack_power() as f32 + 40.0)
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_critical() as f32 * 0.2
+                            + 40.0))
+                        * 0.4
+                        / (defender.get_defence() as f32
+                            + defender.get_resistance() as f32 * 0.3
+                            + defender.get_avoid() as f32 * 0.4
+                            + 10.0)
+                        / 80.0
+                        + 5.0
+                } else if matches!(attacker.damage_category, DamageCategory::Character)
+                    && matches!(defender.damage_category, DamageCategory::Character)
+                {
+                    ((skill_data.power as f32 + attacker.get_critical() as f32 * 0.15 + 40.0)
+                        * attacker.get_attack_power() as f32
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_critical() as f32 * 0.32
+                            + 35.0))
+                        * 0.01
+                        * (350 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32
+                            + defender.get_resistance() as f32 * 0.3
+                            + defender.get_avoid() as f32 * 0.4
+                            + 35.0)
+                        / 400.0
+                        + 20.0
+                } else {
+                    ((skill_data.power as f32 + attacker.get_critical() as f32 * 0.15 + 40.0)
+                        * attacker.get_attack_power() as f32
+                        * (rng.gen_range(1..=30) as f32
+                            + attacker.get_critical() as f32 * 0.32
+                            + 35.0))
+                        * 0.01
+                        * (120 - defender.get_level() + attacker.get_level()) as f32
+                        / (defender.get_defence() as f32
+                            + defender.get_resistance() as f32 * 0.3
+                            + defender.get_avoid() as f32 * 0.4
+                            + 10.0)
+                        / 100.0
+                        + 20.0
+                }
+            }
+        };
+
+        // TODO: Apply additional damage buff
+        damage = f32::max(damage, 5.0) * hit_count as f32;
+
+        if attacker.get_damage_category() == DamageCategory::Character
+            && defender.get_damage_category() == DamageCategory::Character
+        {
+            damage = f32::min(damage, defender.get_max_health() as f32 * 0.45);
+        }
+
+        damage = f32::min(damage, 2047.0);
+
+        let apply_hit_stun = (damage * (rng.gen_range(1..=100) as f32 + 100.0)
+            / (defender.get_avoid() as f32 + 40.0)
+            / 14.0)
+            >= 10.0;
+
+        Damage {
+            amount: damage as u32,
+            is_critical: false,
+            apply_hit_stun,
+        }
     }
 
     fn calculate_give_xp(
