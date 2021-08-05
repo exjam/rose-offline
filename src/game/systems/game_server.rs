@@ -591,7 +591,8 @@ pub fn game_server_main_system(
                     }
                     ClientMessage::CastSkillSelf(skill_slot) => {
                         if let Some(skill) = skill_list.get_skill(skill_slot) {
-                            entity_commands.insert(NextCommand::with_cast_skill_target_self(skill));
+                            entity_commands
+                                .insert(NextCommand::with_cast_skill_target_self(skill, None));
                         }
                     }
                     ClientMessage::CastSkillTargetEntity(skill_slot, target_entity_id) => {
@@ -603,6 +604,7 @@ pub fn game_server_main_system(
                                 entity_commands.insert(NextCommand::with_cast_skill_target_entity(
                                     skill,
                                     *target_entity,
+                                    None,
                                 ));
                             }
                         }

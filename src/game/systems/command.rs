@@ -584,7 +584,7 @@ pub fn command_system(
                 &mut CommandData::CastSkill(CommandCastSkill {
                     skill_id,
                     skill_target,
-                    ..
+                    ref use_item,
                 }) => {
                     if let Some(skill_data) = game_data.skills.get_skill(skill_id) {
                         let mut entity_commands = commands.entity(entity);
@@ -656,6 +656,7 @@ pub fn command_system(
                                         SkillEventTarget::Position(target_position)
                                     }
                                 },
+                                use_item.clone(),
                             ));
 
                             // Set current command to cast skill

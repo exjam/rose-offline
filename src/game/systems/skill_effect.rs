@@ -11,10 +11,13 @@ use crate::{
         bundles::ability_values_get_value,
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
-            HealthPoints, Level, MoveSpeed, Npc, Position, SkillList, StatusEffects, Team,
+            GameClient, HealthPoints, Inventory, Level, MoveSpeed, Npc, Position, SkillList,
+            StatusEffects, Team,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
-        messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage},
+        messages::server::{
+            ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UpdateInventory, UseItem,
+        },
         resources::{ClientEntityList, ServerMessages, ServerTime},
         GameData,
     },
@@ -383,7 +386,15 @@ fn apply_skill_status_effects(
 
 #[allow(clippy::type_complexity)]
 pub fn skill_effect_system(
-    caster_query: Query<(&ClientEntity, &Position, &AbilityValues, &Team, &Level)>,
+    mut caster_query: Query<(
+        &ClientEntity,
+        &Position,
+        &AbilityValues,
+        &Team,
+        &Level,
+        Option<&GameClient>,
+        Option<&mut Inventory>,
+    )>,
     target_query: Query<(
         &ClientEntity,
         &Position,
@@ -436,6 +447,7 @@ pub fn skill_effect_system(
             skill_id,
             caster_entity,
             skill_target,
+            use_item,
             ..
         } = pending_skill_events.remove(i);
 
@@ -451,7 +463,9 @@ pub fn skill_effect_system(
             caster_ability_values,
             caster_team,
             caster_level,
-        )) = caster_query.get(caster_entity)
+            caster_game_client,
+            mut caster_inventory,
+        )) = caster_query.get_mut(caster_entity)
         {
             let skill_caster = SkillCaster {
                 entity: caster_entity,
@@ -462,40 +476,106 @@ pub fn skill_effect_system(
                 team: caster_team,
             };
 
-            let result = match skill_data.skill_type {
-                SkillType::SelfBoundDuration
-                | SkillType::SelfStateDuration
-                | SkillType::TargetBoundDuration
-                | SkillType::TargetStateDuration => apply_skill_status_effects(
-                    &mut skill_world,
-                    &skill_caster,
-                    &skill_target,
-                    skill_data,
-                    &mut skill_target_query,
-                ),
-                _ => {
-                    warn!("Unimplemented skill used {:?}", skill_data);
-                    Ok(())
+            let mut consumed_item = None;
+            let mut result = Ok(());
+
+            // If the skill is to use an item, try take it from inventory now
+            if let Some((item_slot, item)) = use_item {
+                if let Some(caster_inventory) = caster_inventory.as_mut() {
+                    if let Some(inventory_item) = caster_inventory.get_item(item_slot) {
+                        if item.is_same_item(inventory_item) {
+                            if let Some(item) = caster_inventory.try_take_quantity(item_slot, 1) {
+                                consumed_item = Some((item_slot, item));
+                            }
+                        }
+                    }
                 }
-            };
+
+                if consumed_item.is_none() {
+                    // Failed to take item from inventory, cancel the skill
+                    result = Err(SkillCastError::NotEnoughUseAbility);
+                }
+            }
+
+            if result.is_ok() {
+                result = match skill_data.skill_type {
+                    SkillType::SelfBoundDuration
+                    | SkillType::SelfStateDuration
+                    | SkillType::TargetBoundDuration
+                    | SkillType::TargetStateDuration => apply_skill_status_effects(
+                        &mut skill_world,
+                        &skill_caster,
+                        &skill_target,
+                        skill_data,
+                        &mut skill_target_query,
+                    ),
+                    _ => {
+                        warn!("Unimplemented skill used {:?}", skill_data);
+                        Ok(())
+                    }
+                };
+            }
 
             match result {
-                Ok(_) => skill_world.server_messages.send_entity_message(
-                    caster_client_entity,
-                    ServerMessage::FinishCastingSkill(caster_client_entity.id, skill_id),
-                ),
-                Err(error) => skill_world.server_messages.send_entity_message(
-                    caster_client_entity,
-                    ServerMessage::CancelCastingSkill(
-                        caster_client_entity.id,
-                        match error {
-                            SkillCastError::NotEnoughUseAbility => {
-                                CancelCastingSkillReason::NeedAbility
+                Ok(_) => {
+                    // Send message notifying client of consumption of item
+                    if let Some((item_slot, _)) = consumed_item {
+                        if let (Some(caster_inventory), Some(caster_game_client)) =
+                            (caster_inventory, caster_game_client)
+                        {
+                            match caster_inventory.get_item(item_slot) {
+                                None => {
+                                    // When the item has been fully consumed we send UpdateInventory packet
+                                    caster_game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::UpdateInventory(UpdateInventory {
+                                            is_reward: false,
+                                            items: vec![(item_slot, None)],
+                                        }))
+                                        .ok();
+                                }
+                                Some(item) => {
+                                    // When there is still remaining quantity we send UseItem packet
+                                    caster_game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::UseItem(UseItem {
+                                            entity_id: skill_caster.client_entity.id,
+                                            item: item.get_item_reference(),
+                                            inventory_slot: item_slot,
+                                        }))
+                                        .ok();
+                                }
                             }
-                            _ => CancelCastingSkillReason::NeedTarget,
-                        },
-                    ),
-                ),
+                        }
+                    }
+
+                    skill_world.server_messages.send_entity_message(
+                        caster_client_entity,
+                        ServerMessage::FinishCastingSkill(caster_client_entity.id, skill_id),
+                    )
+                }
+                Err(error) => {
+                    // Return unused item to inventory
+                    if let Some((item_slot, item)) = consumed_item {
+                        caster_inventory
+                            .unwrap()
+                            .try_stack_with_item(item_slot, item)
+                            .expect("Unexpected error returning unconsumed item to inventory");
+                    }
+
+                    skill_world.server_messages.send_entity_message(
+                        caster_client_entity,
+                        ServerMessage::CancelCastingSkill(
+                            caster_client_entity.id,
+                            match error {
+                                SkillCastError::NotEnoughUseAbility => {
+                                    CancelCastingSkillReason::NeedAbility
+                                }
+                                _ => CancelCastingSkillReason::NeedTarget,
+                            },
+                        ),
+                    )
+                }
             }
         }
     }

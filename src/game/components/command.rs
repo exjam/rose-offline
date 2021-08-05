@@ -4,8 +4,8 @@ use bevy_ecs::prelude::Entity;
 use nalgebra::{Point2, Point3};
 
 use crate::{
-    data::{Damage, SkillId},
-    game::components::MoveMode,
+    data::{item::Item, Damage, SkillId},
+    game::components::{ItemSlot, MoveMode},
 };
 
 #[derive(Clone)]
@@ -41,6 +41,7 @@ pub enum CommandCastSkillTarget {
 pub struct CommandCastSkill {
     pub skill_id: SkillId,
     pub skill_target: Option<CommandCastSkillTarget>,
+    pub use_item: Option<(ItemSlot, Item)>,
 }
 
 #[derive(Clone)]
@@ -126,21 +127,30 @@ impl NextCommand {
         }
     }
 
-    pub fn with_cast_skill_target_self(skill_id: SkillId) -> Self {
+    pub fn with_cast_skill_target_self(
+        skill_id: SkillId,
+        use_item: Option<(ItemSlot, Item)>,
+    ) -> Self {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 skill_target: None,
+                use_item,
             })),
             has_sent_server_message: false,
         }
     }
 
-    pub fn with_cast_skill_target_entity(skill_id: SkillId, target_entity: Entity) -> Self {
+    pub fn with_cast_skill_target_entity(
+        skill_id: SkillId,
+        target_entity: Entity,
+        use_item: Option<(ItemSlot, Item)>,
+    ) -> Self {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
+                use_item,
             })),
             has_sent_server_message: false,
         }
@@ -151,6 +161,7 @@ impl NextCommand {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Position(position)),
+                use_item: None,
             })),
             has_sent_server_message: false,
         }
@@ -240,6 +251,7 @@ impl Command {
             CommandData::CastSkill(CommandCastSkill {
                 skill_id,
                 skill_target,
+                use_item: None,
             }),
             Some(casting_duration + action_duration),
         )

@@ -4,14 +4,15 @@ use log::warn;
 use crate::{
     data::{
         item::{ItemClass, ItemType},
-        AbilityType,
+        AbilityType, SkillType,
     },
     game::{
         bundles::{ability_values_add_value, ability_values_get_value, skill_list_try_learn_skill},
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints,
             GameClient, HealthPoints, Inventory, ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed,
-            SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+            NextCommand, SkillList, SkillPoints, Stamina, StatPoints, StatusEffects, Team,
+            UnionMembership,
         },
         events::UseItemEvent,
         messages::server::{ServerMessage, UpdateInventory, UseItem},
@@ -59,7 +60,7 @@ fn use_inventory_item(
     use_item_world: &mut UseItemWorld,
     use_item_user: &mut UseItemUser,
     item_slot: ItemSlot,
-    _target_entity: Option<Entity>,
+    target_entity: Option<Entity>,
     _repair_item_slot: Option<ItemSlot>,
 ) -> Result<(), UseItemError> {
     let item = use_item_user
@@ -112,12 +113,33 @@ fn use_inventory_item(
         .ok_or(UseItemError::InvalidItem)?;
 
     let (consume_item, message_to_nearby) = match item_data.item_data.class {
-        /*ItemClass::MagicItem => {
-            let _skill = item_data.use_skill_id;
-            // TODO: Use skill skill_index
-            // TODO: Set NextCommand to UseSkill(UseSkill::ItemSelf(item_slot)) / UseSkill(UseSkill::ItemTarget(item_slot))
+        ItemClass::MagicItem => {
+            if let Some(skill_id) = item_data.use_skill_id {
+                if let Some(skill_data) = use_item_world.game_data.skills.get_skill(skill_id) {
+                    if skill_data.skill_type.is_self_skill() {
+                        use_item_world.commands.entity(use_item_user.entity).insert(
+                            NextCommand::with_cast_skill_target_self(
+                                skill_id,
+                                Some((item_slot, item.clone())),
+                            ),
+                        );
+                    } else if skill_data.skill_type.is_target_skill() && target_entity.is_some() {
+                        use_item_world.commands.entity(use_item_user.entity).insert(
+                            NextCommand::with_cast_skill_target_entity(
+                                skill_id,
+                                target_entity.unwrap(),
+                                Some((item_slot, item.clone())),
+                            ),
+                        );
+                    } else if matches!(skill_data.skill_type, SkillType::Warp) {
+                        // TODO: Handle warp immediately rather than casting skill
+                        warn!("Unimplemented use of Warp item with item {:?}", item);
+                    }
+                }
+            }
+
             (false, false)
-        }*/
+        }
         ItemClass::SkillBook => {
             if let Some(skill_id) = item_data.learn_skill_id {
                 (
@@ -135,10 +157,7 @@ fn use_inventory_item(
                 (false, false)
             }
         }
-        ItemClass::MagicItem
-        | ItemClass::RepairTool
-        | ItemClass::EngineFuel
-        | ItemClass::TimeCoupon => {
+        ItemClass::RepairTool | ItemClass::EngineFuel | ItemClass::TimeCoupon => {
             warn!(
                 "Unimplemented use item ItemClass {:?} with item {:?}",
                 item_data.item_data.class, item

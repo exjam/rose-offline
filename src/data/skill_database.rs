@@ -76,6 +76,34 @@ pub enum SkillType {
     Resurrection = 20,
 }
 
+impl SkillType {
+    pub fn is_self_skill(&self) -> bool {
+        matches!(
+            self,
+            SkillType::SelfBoundDuration
+                | SkillType::SelfBound
+                | SkillType::SelfStateDuration
+                | SkillType::SummonPet
+                | SkillType::SelfDamage
+        )
+    }
+
+    pub fn is_target_skill(&self) -> bool {
+        matches!(
+            self,
+            SkillType::Immediate
+                | SkillType::EnforceWeapon
+                | SkillType::EnforceBullet
+                | SkillType::FireBullet
+                | SkillType::TargetBoundDuration
+                | SkillType::TargetBound
+                | SkillType::TargetStateDuration
+                | SkillType::SelfAndTarget
+                | SkillType::Resurrection
+        )
+    }
+}
+
 #[derive(Debug)]
 pub struct SkillCooldownGroup(pub NonZeroUsize);
 
