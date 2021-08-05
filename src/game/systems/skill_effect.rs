@@ -502,7 +502,9 @@ pub fn skill_effect_system(
                     SkillType::SelfBoundDuration
                     | SkillType::SelfStateDuration
                     | SkillType::TargetBoundDuration
-                    | SkillType::TargetStateDuration => apply_skill_status_effects(
+                    | SkillType::TargetStateDuration
+                    | SkillType::SelfBound
+                    | SkillType::TargetBound => apply_skill_status_effects(
                         &mut skill_world,
                         &skill_caster,
                         &skill_target,
@@ -510,7 +512,7 @@ pub fn skill_effect_system(
                         &mut skill_target_query,
                     ),
                     _ => {
-                        warn!("Unimplemented skill used {:?}", skill_data);
+                        warn!("Unimplemented skill type used {:?}", skill_data);
                         Ok(())
                     }
                 };
