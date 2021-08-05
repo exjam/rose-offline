@@ -70,6 +70,7 @@ lazy_static! {
             )
             .subcommand(App::new("level").arg(Arg::new("level").required(true)))
             .subcommand(App::new("bot").arg(Arg::new("n").required(true)))
+            .subcommand(App::new("snowball_fight").arg(Arg::new("n").required(true)))
             .subcommand(App::new("shop").arg(Arg::new("item_type").required(true)))
             .subcommand(
                 App::new("add")
@@ -386,6 +387,31 @@ fn handle_gm_command(
                 chat_command_user.position.clone(),
                 chat_command_user.entity,
             );
+        }
+        ("snowball_fight", arg_matches) => {
+            let num_bots = arg_matches.value_of("n").unwrap().parse::<usize>()?;
+            let bot_entities = create_random_bot_entities(
+                chat_command_world,
+                num_bots,
+                15.0,
+                chat_command_user.position.clone(),
+                chat_command_user.entity,
+            );
+
+            for entity in bot_entities.into_iter() {
+                let mut inventory = Inventory::new();
+                inventory
+                    .try_add_item(
+                        Item::new(&ItemReference::new(ItemType::Consumable, 326), 999).unwrap(),
+                    )
+                    .ok();
+
+                chat_command_world
+                    .commands
+                    .entity(entity)
+                    .insert(inventory)
+                    .insert(BotAi::new(BotAiState::SnowballFight));
+            }
         }
         ("shop", arg_matches) => {
             let item_type: Option<ItemType> =

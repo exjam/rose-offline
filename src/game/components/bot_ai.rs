@@ -8,6 +8,7 @@ pub const BOT_IDLE_CHECK_DURATION: Duration = Duration::from_secs(3);
 pub enum BotAiState {
     Farm,
     PickupItem(Entity),
+    SnowballFight,
 }
 
 pub struct BotAi {
