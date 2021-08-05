@@ -4,11 +4,13 @@ use rand::seq::SliceRandom;
 use crate::game::{
     components::{
         BotAi, BotAiState, Command, CommandData, Destination, DroppedItem, Inventory,
-        InventoryPageType, NextCommand, Npc, Owner, Position, Team,
+        InventoryPageType, NextCommand, Npc, Owner, Position, Team, BOT_IDLE_CHECK_DURATION,
     },
-    resources::ClientEntityList,
+    resources::{ClientEntityList, ServerTime},
     GameData,
 };
+
+const BOT_SEARCH_ENTITY_DISTANCE: f32 = 1500.0f32;
 
 #[allow(clippy::type_complexity)]
 pub fn bot_ai_system(
@@ -28,6 +30,7 @@ pub fn bot_ai_system(
     nearby_enemy_query: Query<(Option<&Npc>, &Team)>,
     client_entity_list: Res<ClientEntityList>,
     game_data: Res<GameData>,
+    server_time: Res<ServerTime>,
 ) {
     bot_query.for_each_mut(
         |(entity, mut bot_ai, command, _next_command, inventory, position, owner, team)| {
@@ -35,21 +38,25 @@ pub fn bot_ai_system(
 
             match command.command {
                 CommandData::Stop => {
-                    match bot_ai.state {
-                        BotAiState::Default => {
-                            let search_distance = 2000.0f32;
-                            let mut rng = rand::thread_rng();
+                    bot_ai.time_since_last_idle_check += server_time.delta;
+                    if bot_ai.time_since_last_idle_check < BOT_IDLE_CHECK_DURATION {
+                        return;
+                    }
+                    bot_ai.time_since_last_idle_check -= BOT_IDLE_CHECK_DURATION;
 
+                    match bot_ai.state {
+                        BotAiState::Farm => {
                             if let Some(zone_entities) =
                                 client_entity_list.get_zone(position.zone_id)
                             {
+                                let mut rng = rand::thread_rng();
                                 let mut nearby_items = Vec::new();
                                 let mut nearby_monsters = Vec::new();
 
                                 for (nearby_entity, nearby_position) in zone_entities
                                     .iter_entities_within_distance(
                                         position.position.xy(),
-                                        search_distance,
+                                        BOT_SEARCH_ENTITY_DISTANCE,
                                     )
                                 {
                                     if let Ok((Some(dropped_item), dropped_item_owner)) =
@@ -112,7 +119,7 @@ pub fn bot_ai_system(
                             commands
                                 .entity(entity)
                                 .insert(NextCommand::with_pickup_dropped_item(target_item));
-                            bot_ai.state = BotAiState::Default;
+                            bot_ai.state = BotAiState::Farm;
                         }
                     }
                 }

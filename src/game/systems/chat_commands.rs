@@ -20,7 +20,7 @@ use crate::{
             CharacterBundle,
         },
         components::{
-            AbilityValues, BasicStats, BotAi, ClientEntity, ClientEntityType, Command,
+            AbilityValues, BasicStats, BotAi, BotAiState, ClientEntity, ClientEntityType, Command,
             EquipmentIndex, EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveMode,
             MoveSpeed, NextCommand, Owner, PersonalStore, Position, SkillPoints, Stamina,
             StatPoints, StatusEffects, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
@@ -198,7 +198,7 @@ fn create_bot_entity(
     let entity = chat_command_world
         .commands
         .spawn()
-        .insert(BotAi::new())
+        .insert(BotAi::new(BotAiState::Farm))
         .insert(Owner::new(owner))
         .insert_bundle(CharacterBundle {
             ability_values,

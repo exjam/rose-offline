@@ -48,7 +48,7 @@ mod world_client;
 pub use ability_values::{AbilityValues, DamageCategory, DamageType};
 pub use account::*;
 pub use basic_stats::*;
-pub use bot_ai::{BotAi, BotAiState};
+pub use bot_ai::{BotAi, BotAiState, BOT_IDLE_CHECK_DURATION};
 pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::*;
 pub use character_list::CharacterList;
