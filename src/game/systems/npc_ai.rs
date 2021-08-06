@@ -39,15 +39,24 @@ const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
-struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> {
+struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k> {
     commands: &'a mut Commands<'b>,
     client_entity_list: &'a mut ClientEntityList,
     game_data: &'c GameData,
     server_time: &'c ServerTime,
     world_time: &'c WorldTime,
     zone_list: &'c ZoneList,
-    target_query: Query<'d, (&'e Level, &'f Team, &'g StatusEffects)>,
-    object_variable_query: Query<'h, &'i mut ObjectVariables>,
+    target_query: Query<
+        'd,
+        (
+            &'e Level,
+            &'f Team,
+            &'g AbilityValues,
+            &'h StatusEffects,
+            &'i HealthPoints,
+        ),
+    >,
+    object_variable_query: Query<'j, &'k mut ObjectVariables>,
     rng: ThreadRng,
 }
 
@@ -131,7 +140,7 @@ fn ai_condition_count_nearby_entities(
             ai_world
                 .target_query
                 .get(entity)
-                .map_or(false, |(level, team, _)| {
+                .map_or(false, |(level, team, ..)| {
                     let level_diff = ai_parameters.source.level.level as i32 - level.level as i32;
 
                     is_allied == (team.id == ai_parameters.source.team.id)
@@ -447,7 +456,7 @@ fn ai_condition_has_status_effect(
             .source
             .target
             .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
-            .map(|(_, _, status_effects)| status_effects),
+            .map(|(_, _, _, status_effects, _)| status_effects),
     };
 
     if let Some(status_effects) = status_effects {
@@ -474,6 +483,71 @@ fn ai_condition_has_status_effect(
             AipHaveStatusType::Good => have == has_good,
             AipHaveStatusType::Bad => have == has_bad,
         }
+    } else {
+        false
+    }
+}
+
+fn get_aip_ability_value(
+    ability_values: &AbilityValues,
+    health_points: &HealthPoints,
+    aip_ability_type: AipAbilityType,
+) -> i32 {
+    match aip_ability_type {
+        AipAbilityType::Level => ability_values.get_level(),
+        AipAbilityType::Attack => ability_values.get_attack_power(),
+        AipAbilityType::Defence => ability_values.get_defence(),
+        AipAbilityType::Resistance => ability_values.get_resistance(),
+        AipAbilityType::HealthPoints => health_points.hp as i32,
+        AipAbilityType::Charm => ability_values.get_charm(),
+    }
+}
+
+fn ai_condition_target_ability_value(
+    ai_world: &mut AiWorld,
+    ai_parameters: &AiParameters,
+    operator: AipOperatorType,
+    aip_ability_type: AipAbilityType,
+    value: i32,
+) -> bool {
+    if let Some((_, _, ability_values, _, health_points)) = ai_parameters
+        .source
+        .target
+        .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
+    {
+        let ability_value = get_aip_ability_value(ability_values, health_points, aip_ability_type);
+        compare_aip_value(operator, ability_value, value)
+    } else {
+        false
+    }
+}
+
+fn ai_condition_attacker_and_target_ability_value(
+    ai_world: &mut AiWorld,
+    ai_parameters: &AiParameters,
+    operator: AipOperatorType,
+    aip_ability_type: AipAbilityType,
+) -> bool {
+    let attacker_ability_value = ai_parameters.attacker.map(|attacker_data| {
+        get_aip_ability_value(
+            attacker_data.ability_values,
+            attacker_data.health_points,
+            aip_ability_type,
+        )
+    });
+
+    let target_ability_value = ai_parameters
+        .source
+        .target
+        .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
+        .map(|(_, _, ability_values, _, health_points)| {
+            get_aip_ability_value(ability_values, health_points, aip_ability_type)
+        });
+
+    if let (Some(attacker_ability_value), Some(target_ability_value)) =
+        (attacker_ability_value, target_ability_value)
+    {
+        compare_aip_value(operator, attacker_ability_value, target_ability_value)
     } else {
         false
     }
@@ -569,12 +643,27 @@ fn npc_ai_check_conditions(
                     have,
                 )
             }
+            AipCondition::TargetAbilityValue(operator, aip_ability_type, value) => {
+                ai_condition_target_ability_value(
+                    ai_world,
+                    ai_parameters,
+                    operator,
+                    aip_ability_type,
+                    value,
+                )
+            }
+            AipCondition::CompareAttackerAndTargetAbilityValue(operator, aip_ability_type) => {
+                ai_condition_attacker_and_target_ability_value(
+                    ai_world,
+                    ai_parameters,
+                    operator,
+                    aip_ability_type,
+                )
+            }
             /*
-            AipCondition::CompareAttackerAndTargetAbilityValue(_, _) => false,
             AipCondition::IsAttackerClanMaster => false,
             AipCondition::IsTargetClanMaster => false,
             AipCondition::OwnerHasTarget => false,
-            AipCondition::TargetAbilityValue(_, _, _) => false,
             */
             _ => {
                 warn!("Unimplemented AI condition: {:?}", condition);
@@ -776,7 +865,7 @@ pub fn npc_ai_system(
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
     )>,
-    target_query: Query<(&Level, &Team, &StatusEffects)>,
+    target_query: Query<(&Level, &Team, &AbilityValues, &StatusEffects, &HealthPoints)>,
     object_variable_query: Query<&mut ObjectVariables>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
@@ -946,7 +1035,7 @@ pub fn npc_ai_system(
                                         continue;
                                     }
 
-                                    if let Ok((damage_source_level, _, _)) =
+                                    if let Ok((damage_source_level, ..)) =
                                         ai_world.target_query.get(damage_source.entity)
                                     {
                                         let reward_xp =
