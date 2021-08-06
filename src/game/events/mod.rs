@@ -8,7 +8,7 @@ mod skill_event;
 mod use_item_event;
 
 pub use chat_command_event::ChatCommandEvent;
-pub use damage_event::DamageEvent;
+pub use damage_event::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged};
 pub use personal_store_event::{
     PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
 };

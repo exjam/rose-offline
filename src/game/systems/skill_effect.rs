@@ -191,14 +191,9 @@ fn apply_skill_status_effects_to_entity(
     }
 
     if skill_data.harm != 0 {
-        skill_world.damage_events.send(DamageEvent::new(
+        skill_world.damage_events.send(DamageEvent::with_tagged(
             skill_caster.entity,
             skill_target.entity,
-            Damage {
-                amount: 0,
-                is_critical: false,
-                apply_hit_stun: false,
-            },
         ));
     }
 

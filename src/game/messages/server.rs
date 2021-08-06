@@ -151,6 +151,7 @@ pub struct DamageEntity {
     pub defender_entity_id: ClientEntityId,
     pub damage: Damage,
     pub is_killed: bool,
+    pub from_skill: Option<(SkillId, i32)>,
 }
 
 #[derive(Clone)]

@@ -546,7 +546,7 @@ pub fn command_system(
                             entity_commands.insert(Target::new(target_entity));
 
                             // Send damage event to damage system
-                            damage_events.send(DamageEvent::new(
+                            damage_events.send(DamageEvent::with_attack(
                                 entity,
                                 target_entity,
                                 game_data.ability_value_calculator.calculate_damage(
