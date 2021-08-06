@@ -317,7 +317,6 @@ fn apply_skill_status_effects_to_entity(
     Ok(())
 }
 
-#[allow(clippy::type_complexity)]
 fn apply_skill_status_effects(
     skill_world: &mut SkillWorld,
     skill_caster: &SkillCaster,
@@ -370,6 +369,103 @@ fn apply_skill_status_effects(
                 skill_data,
             )
             .ok();
+            Ok(())
+        } else {
+            Err(SkillCastError::InvalidTarget)
+        }
+    } else {
+        Err(SkillCastError::InvalidTarget)
+    }
+}
+
+fn apply_skill_damage_to_entity(
+    skill_world: &mut SkillWorld,
+    skill_caster: &SkillCaster,
+    skill_target: &mut SkillTargetData,
+    skill_data: &SkillData,
+) -> Result<Damage, SkillCastError> {
+    if !check_skill_target_filter(skill_world, skill_caster, skill_target, skill_data) {
+        return Err(SkillCastError::InvalidTarget);
+    }
+
+    // TODO: Get hit count from skill action motion
+    let damage = skill_world
+        .game_data
+        .ability_value_calculator
+        .calculate_skill_damage(
+            skill_caster.ability_values,
+            skill_target.ability_values,
+            skill_data,
+            1,
+        );
+
+    if matches!(skill_data.skill_type, SkillType::FireBullet) {
+        skill_world.damage_events.send(DamageEvent::with_attack(
+            skill_caster.entity,
+            skill_target.entity,
+            damage.clone(),
+        ));
+    } else {
+        skill_world.damage_events.send(DamageEvent::with_skill(
+            skill_caster.entity,
+            skill_target.entity,
+            damage.clone(),
+            skill_data.id,
+            skill_caster.ability_values.get_intelligence(),
+        ));
+    }
+
+    Ok(damage)
+}
+
+fn apply_skill_damage(
+    skill_world: &mut SkillWorld,
+    skill_caster: &SkillCaster,
+    skill_target: &SkillEventTarget,
+    skill_data: &SkillData,
+    skill_target_query: &mut SkillTargetQuery,
+) -> Result<(), SkillCastError> {
+    if skill_data.scope > 0 {
+        // Apply in AOE around target position
+        let client_entity_zone = skill_world
+            .client_entity_list
+            .get_zone(skill_caster.position.zone_id)
+            .ok_or(SkillCastError::InvalidTarget)?;
+
+        let skill_position = match *skill_target {
+            SkillEventTarget::Entity(target_entity) => {
+                if let Some(skill_target) = skill_target_query.get_skill_target_data(target_entity)
+                {
+                    Some(skill_target.position.position.xy())
+                } else {
+                    None
+                }
+            }
+            SkillEventTarget::Position(position) => Some(position),
+        }
+        .ok_or(SkillCastError::InvalidTarget)?;
+
+        for (target_entity, _) in client_entity_zone
+            .iter_entities_within_distance(skill_position, skill_data.scope as f32)
+        {
+            if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity)
+            {
+                apply_skill_damage_to_entity(
+                    skill_world,
+                    skill_caster,
+                    &mut skill_target,
+                    skill_data,
+                )
+                .ok();
+            }
+        }
+
+        Ok(())
+    } else if let SkillEventTarget::Entity(target_entity) = *skill_target {
+        // Apply directly to entity
+        if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity) {
+            apply_skill_damage_to_entity(skill_world, skill_caster, &mut skill_target, skill_data)
+                .ok();
             Ok(())
         } else {
             Err(SkillCastError::InvalidTarget)
@@ -494,6 +590,29 @@ pub fn skill_effect_system(
 
             if result.is_ok() {
                 result = match skill_data.skill_type {
+                    SkillType::Immediate
+                    | SkillType::EnforceWeapon
+                    | SkillType::EnforceBullet
+                    | SkillType::FireBullet
+                    | SkillType::AreaTarget
+                    | SkillType::SelfDamage => {
+                        match apply_skill_damage(
+                            &mut skill_world,
+                            &skill_caster,
+                            &skill_target,
+                            skill_data,
+                            &mut skill_target_query,
+                        ) {
+                            Ok(_) => apply_skill_status_effects(
+                                &mut skill_world,
+                                &skill_caster,
+                                &skill_target,
+                                skill_data,
+                                &mut skill_target_query,
+                            ),
+                            Err(err) => Err(err),
+                        }
+                    }
                     SkillType::SelfBoundDuration
                     | SkillType::SelfStateDuration
                     | SkillType::TargetBoundDuration
@@ -506,7 +625,41 @@ pub fn skill_effect_system(
                         skill_data,
                         &mut skill_target_query,
                     ),
-                    _ => {
+                    SkillType::SelfAndTarget => {
+                        // Only applies status effect if damage > 0
+                        if let SkillEventTarget::Entity(target_entity) = skill_target {
+                            if let Some(mut skill_target_data) =
+                                skill_target_query.get_skill_target_data(target_entity)
+                            {
+                                match apply_skill_damage_to_entity(
+                                    &mut skill_world,
+                                    &skill_caster,
+                                    &mut skill_target_data,
+                                    skill_data,
+                                ) {
+                                    Ok(damage) if damage.amount > 0 => apply_skill_status_effects(
+                                        &mut skill_world,
+                                        &skill_caster,
+                                        &skill_target,
+                                        skill_data,
+                                        &mut skill_target_query,
+                                    ),
+                                    Ok(_) => Ok(()),
+                                    Err(err) => Err(err),
+                                }
+                            } else {
+                                Err(SkillCastError::InvalidTarget)
+                            }
+                        } else {
+                            Err(SkillCastError::InvalidTarget)
+                        }
+                    }
+                    SkillType::BasicAction
+                    | SkillType::CreateWindow
+                    | SkillType::Passive
+                    | SkillType::Emote
+                    | SkillType::Warp => Ok(()),
+                    SkillType::SummonPet | SkillType::Resurrection => {
                         warn!("Unimplemented skill type used {:?}", skill_data);
                         Ok(())
                     }
