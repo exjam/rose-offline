@@ -26,7 +26,7 @@ use crate::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
             MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin,
-            StatusEffects, Team,
+            StatusEffects, Target, Team,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -39,7 +39,7 @@ const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
-struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k> {
+struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n> {
     commands: &'a mut Commands<'b>,
     client_entity_list: &'a mut ClientEntityList,
     game_data: &'c GameData,
@@ -57,6 +57,7 @@ struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k> {
         ),
     >,
     object_variable_query: Query<'j, &'k mut ObjectVariables>,
+    owner_query: Query<'l, (&'m Position, Option<&'n Target>)>,
     rng: ThreadRng,
 }
 
@@ -553,6 +554,14 @@ fn ai_condition_attacker_and_target_ability_value(
     }
 }
 
+fn ai_condition_owner_has_target(ai_world: &mut AiWorld, ai_parameters: &AiParameters) -> bool {
+    ai_parameters
+        .source
+        .owner
+        .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+        .map_or(false, |(_, target)| target.is_some())
+}
+
 fn npc_ai_check_conditions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
@@ -660,10 +669,10 @@ fn npc_ai_check_conditions(
                     aip_ability_type,
                 )
             }
+            AipCondition::OwnerHasTarget => ai_condition_owner_has_target(ai_world, ai_parameters),
             /*
             AipCondition::IsAttackerClanMaster => false,
             AipCondition::IsTargetClanMaster => false,
-            AipCondition::OwnerHasTarget => false,
             */
             _ => {
                 warn!("Unimplemented AI condition: {:?}", condition);
@@ -863,9 +872,11 @@ pub fn npc_ai_system(
         &StatusEffects,
         Option<&Owner>,
         Option<&SpawnOrigin>,
+        Option<&Target>,
         Option<&DamageSources>,
     )>,
     target_query: Query<(&Level, &Team, &AbilityValues, &StatusEffects, &HealthPoints)>,
+    owner_query: Query<(&Position, Option<&Target>)>,
     object_variable_query: Query<&mut ObjectVariables>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
@@ -887,6 +898,7 @@ pub fn npc_ai_system(
         zone_list: &zone_list,
         target_query,
         object_variable_query,
+        owner_query,
         rng: rand::thread_rng(),
     };
 
@@ -905,6 +917,7 @@ pub fn npc_ai_system(
             status_effects,
             owner,
             spawn_origin,
+            target,
             damage_sources,
         )| {
             let ai_source_data = AiSourceData {
@@ -916,7 +929,7 @@ pub fn npc_ai_system(
                 position,
                 spawn_origin,
                 status_effects,
-                target: None,
+                target: target.map(|target| target.entity),
                 team,
             };
 

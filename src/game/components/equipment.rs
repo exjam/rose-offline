@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{
-    item::{EquipmentItem, Item, ItemType, StackableItem},
+    item::{EquipmentItem, ItemType, StackableItem},
     ItemDatabase, ItemReference, WeaponItemData,
 };
 
