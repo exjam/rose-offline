@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        ItemReference, SkillPageType, StatusEffectType,
+        Damage, ItemReference, SkillPageType, StatusEffectType,
     },
     game::components::{
         Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
@@ -485,6 +485,45 @@ impl PacketWriteStatusEffects for PacketWriter {
             status_effects.get_status_effect_value(StatusEffectType::DecreaseAttackSpeed)
         {
             self.write_u16(value as u16);
+        }
+    }
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+pub struct PacketServerDamage {
+    #[skip(getters)]
+    amount: B11,
+    #[skip(getters)]
+    action: B5,
+}
+
+pub trait PacketWriteDamage {
+    fn write_damage_u16(&mut self, damage: &Damage, is_killed: bool);
+}
+
+impl PacketWriteDamage for PacketWriter {
+    fn write_damage_u16(&mut self, damage: &Damage, is_killed: bool) {
+        let mut action = 0u8;
+
+        if damage.is_critical {
+            action |= 0x08;
+        }
+
+        if damage.apply_hit_stun {
+            action |= 0x04;
+        }
+
+        if is_killed {
+            action |= 0x10;
+        }
+
+        let damage = PacketServerDamage::new()
+            .with_amount(damage.amount as u16)
+            .with_action(action);
+
+        for b in damage.into_bytes().iter() {
+            self.write_u8(*b);
         }
     }
 }

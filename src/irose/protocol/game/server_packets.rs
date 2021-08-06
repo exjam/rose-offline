@@ -24,13 +24,11 @@ use crate::{
         },
     },
     irose::protocol::game::common_packets::{
-        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
-        PacketWriteSkillSlot,
+        PacketWriteDamage, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+        PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
     },
     protocol::{Packet, PacketWriter},
 };
-
-use super::common_packets::PacketWriteStatusEffects;
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {
@@ -73,6 +71,7 @@ pub enum ServerPackets {
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
     ApplySkillEffect = 0x7b5,
+    ApplySkillDamage = 0x7b6,
     UpdateStatusEffects = 0x7b7,
     UpdateSpeed = 0x7b8,
     FinishCastingSkill = 0x7b9,
@@ -416,15 +415,6 @@ impl From<&PacketServerAttackEntity> for Packet {
     }
 }
 
-#[bitfield]
-#[derive(Clone, Copy)]
-pub struct PacketServerDamage {
-    #[skip(getters)]
-    amount: B11,
-    #[skip(getters)]
-    action: B5,
-}
-
 pub struct PacketServerDamageEntity {
     pub attacker_entity_id: ClientEntityId,
     pub defender_entity_id: ClientEntityId,
@@ -438,25 +428,7 @@ impl From<&PacketServerDamageEntity> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::DamageEntity as u16);
         writer.write_entity_id(packet.attacker_entity_id);
         writer.write_entity_id(packet.defender_entity_id);
-
-        let mut action = 0u8;
-        if packet.damage.is_critical {
-            action |= 0x08;
-        }
-        if packet.damage.apply_hit_stun {
-            action |= 0x04;
-        }
-        if packet.is_killed {
-            action |= 0x10;
-        }
-
-        let damage = PacketServerDamage::new()
-            .with_amount(packet.damage.amount as u16)
-            .with_action(action);
-
-        for b in damage.into_bytes().iter() {
-            writer.write_u8(*b);
-        }
+        writer.write_damage_u16(&packet.damage, packet.is_killed);
         writer.into()
     }
 }
@@ -1344,6 +1316,37 @@ impl From<&PacketServerApplySkillEffect> for Packet {
             writer.write_u8(*b);
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketServerApplySkillDamage {
+    pub entity_id: ClientEntityId,
+    pub caster_entity_id: ClientEntityId,
+    pub caster_intelligence: i32,
+    pub skill_id: SkillId,
+    pub effect_success: [bool; 2],
+    pub damage: Damage,
+    pub is_killed: bool,
+    // TODO: Optional item drop with damage
+}
+
+impl From<&PacketServerApplySkillDamage> for Packet {
+    fn from(packet: &PacketServerApplySkillDamage) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ApplySkillDamage as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_entity_id(packet.caster_entity_id);
+
+        let data = SkillEffectData::new()
+            .with_skill_id(packet.skill_id.get() as u16)
+            .with_effect_success_1(packet.effect_success[0])
+            .with_effect_success_2(packet.effect_success[1])
+            .with_caster_intelligence(packet.caster_intelligence as u16);
+        for b in data.into_bytes().iter() {
+            writer.write_u8(*b);
+        }
+
+        writer.write_damage_u16(&packet.damage, packet.is_killed);
         writer.into()
     }
 }

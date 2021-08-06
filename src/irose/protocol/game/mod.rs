@@ -342,15 +342,30 @@ impl GameClient {
                     .await?;
             }
             ServerMessage::DamageEntity(message) => {
-                client
-                    .connection
-                    .write_packet(Packet::from(&PacketServerDamageEntity {
-                        attacker_entity_id: message.attacker_entity_id,
-                        defender_entity_id: message.defender_entity_id,
-                        damage: message.damage,
-                        is_killed: message.is_killed,
-                    }))
-                    .await?;
+                if message.from_skill.is_none() {
+                    client
+                        .connection
+                        .write_packet(Packet::from(&PacketServerDamageEntity {
+                            attacker_entity_id: message.attacker_entity_id,
+                            defender_entity_id: message.defender_entity_id,
+                            damage: message.damage,
+                            is_killed: message.is_killed,
+                        }))
+                        .await?;
+                } else if let Some((skill_id, caster_intelligence)) = message.from_skill {
+                    client
+                        .connection
+                        .write_packet(Packet::from(&PacketServerApplySkillDamage {
+                            entity_id: message.defender_entity_id,
+                            caster_entity_id: message.attacker_entity_id,
+                            caster_intelligence,
+                            skill_id,
+                            effect_success: [false, false],
+                            damage: message.damage,
+                            is_killed: message.is_killed,
+                        }))
+                        .await?;
+                }
             }
             ServerMessage::StopMoveEntity(message) => {
                 client
