@@ -15,8 +15,8 @@ use crate::{
         formats::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities,
             AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistanceOrigin,
-            AipEvent, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType, AipTrigger,
-            AipVariableType,
+            AipEvent, AipHaveStatusTarget, AipHaveStatusType, AipMoveMode, AipMoveOrigin, AipNpcId,
+            AipOperatorType, AipTrigger, AipVariableType,
         },
         Damage, NpcId,
     },
@@ -25,7 +25,8 @@ use crate::{
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
             DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin, Team,
+            MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin,
+            StatusEffects, Team,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -39,36 +40,37 @@ const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
 struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> {
-    client_entity_list: &'a mut ClientEntityList,
     commands: &'a mut Commands<'b>,
+    client_entity_list: &'a mut ClientEntityList,
     game_data: &'c GameData,
-    nearby_query: &'c Query<'d, (&'e Level, &'f Team)>,
-    object_variable_query: &'g mut Query<'h, &'i mut ObjectVariables>,
-    rng: ThreadRng,
     server_time: &'c ServerTime,
     world_time: &'c WorldTime,
     zone_list: &'c ZoneList,
+    target_query: Query<'d, (&'e Level, &'f Team, &'g StatusEffects)>,
+    object_variable_query: Query<'h, &'i mut ObjectVariables>,
+    rng: ThreadRng,
 }
 
 struct AiSourceData<'a> {
     entity: Entity,
-    position: &'a Position,
-    level: &'a Level,
-    team: &'a Team,
     ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
-    target: Option<Entity>,
+    level: &'a Level,
     owner: Option<Entity>,
+    position: &'a Position,
     spawn_origin: Option<&'a SpawnOrigin>,
+    status_effects: &'a StatusEffects,
+    target: Option<Entity>,
+    team: &'a Team,
 }
 
 struct AiAttackerData<'a> {
     entity: Entity,
     _position: &'a Position,
-    level: &'a Level,
     _team: &'a Team,
     ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
+    level: &'a Level,
     // TODO: Missing data on if clan master
 }
 
@@ -127,9 +129,9 @@ fn ai_condition_count_nearby_entities(
         // Check level and team requirements
         let meets_requirements =
             ai_world
-                .nearby_query
+                .target_query
                 .get(entity)
-                .map_or(false, |(level, team)| {
+                .map_or(false, |(level, team, _)| {
                     let level_diff = ai_parameters.source.level.level as i32 - level.level as i32;
 
                     is_allied == (team.id == ai_parameters.source.team.id)
@@ -432,6 +434,51 @@ fn ai_condition_server_channel_number(
     channel_range.contains(&1)
 }
 
+fn ai_condition_has_status_effect(
+    ai_world: &mut AiWorld,
+    ai_parameters: &AiParameters,
+    who: AipHaveStatusTarget,
+    status_effect_category: AipHaveStatusType,
+    have: bool,
+) -> bool {
+    let status_effects = match who {
+        AipHaveStatusTarget::This => Some(ai_parameters.source.status_effects),
+        _ => ai_parameters
+            .source
+            .target
+            .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
+            .map(|(_, _, status_effects)| status_effects),
+    };
+
+    if let Some(status_effects) = status_effects {
+        let mut has_any = false;
+        let mut has_bad = false;
+        let mut has_good = false;
+
+        for (status_effect_type, active_status_effect) in status_effects.active.iter() {
+            if active_status_effect.is_some() {
+                has_any = true;
+
+                if status_effect_type.is_good() {
+                    has_good = true;
+                }
+
+                if status_effect_type.is_bad() {
+                    has_bad = true;
+                }
+            }
+        }
+
+        match status_effect_category {
+            AipHaveStatusType::Any => have == has_any,
+            AipHaveStatusType::Good => have == has_good,
+            AipHaveStatusType::Bad => have == has_bad,
+        }
+    } else {
+        false
+    }
+}
+
 fn npc_ai_check_conditions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
@@ -513,9 +560,17 @@ fn npc_ai_check_conditions(
             AipCondition::ServerChannelNumber(ref channel_range) => {
                 ai_condition_server_channel_number(ai_world, &channel_range)
             }
+            AipCondition::HasStatusEffect(who, status_effect_category, have) => {
+                ai_condition_has_status_effect(
+                    ai_world,
+                    ai_parameters,
+                    who,
+                    status_effect_category,
+                    have,
+                )
+            }
             /*
             AipCondition::CompareAttackerAndTargetAbilityValue(_, _) => false,
-            AipCondition::HasStatusEffect(_, _, _) => false,
             AipCondition::IsAttackerClanMaster => false,
             AipCondition::IsTargetClanMaster => false,
             AipCondition::OwnerHasTarget => false,
@@ -692,10 +747,10 @@ fn get_attacker_data<'a>(
         Some(AiAttackerData::<'a> {
             entity,
             _position: attacker_position,
-            level: attacker_level,
             _team: attacker_team,
             ability_values: attacker_ability_values,
             health_points: attacker_health_points,
+            level: attacker_level,
         })
     } else {
         None
@@ -716,15 +771,15 @@ pub fn npc_ai_system(
         &Team,
         &HealthPoints,
         &AbilityValues,
+        &StatusEffects,
         Option<&Owner>,
         Option<&SpawnOrigin>,
         Option<&DamageSources>,
     )>,
+    target_query: Query<(&Level, &Team, &StatusEffects)>,
+    object_variable_query: Query<&mut ObjectVariables>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
-    nearby_query: Query<(&Level, &Team)>,
-    mut object_variable_query: Query<&mut ObjectVariables>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
-    level_query: Query<&Level>,
     killer_query: Query<(&Level, &AbilityValues, Option<&GameClient>)>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
@@ -738,12 +793,12 @@ pub fn npc_ai_system(
         client_entity_list: &mut client_entity_list,
         commands: &mut commands,
         game_data: &game_data,
-        nearby_query: &nearby_query,
-        object_variable_query: &mut object_variable_query,
-        rng: rand::thread_rng(),
         server_time: &server_time,
         world_time: &world_time,
         zone_list: &zone_list,
+        target_query,
+        object_variable_query,
+        rng: rand::thread_rng(),
     };
 
     npc_query.for_each_mut(
@@ -758,20 +813,22 @@ pub fn npc_ai_system(
             team,
             health_points,
             ability_values,
+            status_effects,
             owner,
             spawn_origin,
             damage_sources,
         )| {
             let ai_source_data = AiSourceData {
                 entity,
-                position,
-                level,
                 ability_values,
-                target: None,
                 health_points,
-                team,
+                level,
                 owner: owner.map(|owner| owner.entity),
+                position,
                 spawn_origin,
+                status_effects,
+                target: None,
+                team,
             };
 
             if !npc_ai.has_run_created_trigger {
@@ -889,8 +946,8 @@ pub fn npc_ai_system(
                                         continue;
                                     }
 
-                                    if let Ok(damage_source_level) =
-                                        level_query.get(damage_source.entity)
+                                    if let Ok((damage_source_level, _, _)) =
+                                        ai_world.target_query.get(damage_source.entity)
                                     {
                                         let reward_xp =
                                             game_data.ability_value_calculator.calculate_give_xp(
