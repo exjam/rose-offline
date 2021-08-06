@@ -76,6 +76,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             avoid: npc_data.avoid,
             max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
             drop_rate: 0,
+            max_weight: 0,
             adjust: status_effects.into(),
         })
     }
@@ -231,6 +232,14 @@ impl AbilityValueCalculator for AbilityValuesData {
             ),
             max_damage_sources: 0,
             drop_rate: calculate_drop_rate(&equipment_ability_values, &passive_ability_values),
+            max_weight: calculate_max_weight(
+                &self.item_database,
+                &level,
+                &basic_stats,
+                &equipment,
+                &equipment_ability_values,
+                &passive_ability_values,
+            ),
             adjust: status_effects.into(),
         }
     }
@@ -901,7 +910,7 @@ struct EquipmentAbilityValue {
     pub avoid: i32,
     pub move_speed: i32,
     pub attack_speed: i32,
-    pub weight: i32,
+    pub max_weight: i32,
     pub critical: i32,
     pub recover_health: i32,
     pub recover_mana: i32,
@@ -974,7 +983,7 @@ impl EquipmentAbilityValue {
             AbilityType::Avoid => self.avoid += value,
             AbilityType::Speed => self.move_speed += value,
             AbilityType::AttackSpeed => self.attack_speed += value,
-            AbilityType::Weight => self.weight += value,
+            AbilityType::Weight => self.max_weight += value,
             AbilityType::Critical => self.critical += value,
             AbilityType::RecoverHealth => self.recover_health += value,
             AbilityType::RecoverMana => self.recover_mana += value,
@@ -1075,7 +1084,7 @@ struct PassiveSkillAbilities {
     max_mana: i32,
     recover_health: i32,
     recover_mana: i32,
-    weight: i32,
+    max_weight: i32,
     buy_skill: i32,
     sell_skill: i32,
     save_mana: i32,
@@ -1152,7 +1161,7 @@ impl PassiveSkillAbilityValues {
             AbilityType::PassiveMaxMana => abilities.max_mana += value,
             AbilityType::PassiveRecoverHealth => abilities.recover_health += value,
             AbilityType::PassiveRecoverMana => abilities.recover_mana += value,
-            AbilityType::PassiveWeight => abilities.weight += value,
+            AbilityType::PassiveWeight => abilities.max_weight += value,
             AbilityType::PassiveBuySkill => abilities.buy_skill += value,
             AbilityType::PassiveSellSkill => abilities.sell_skill += value,
             AbilityType::PassiveSaveMana => abilities.save_mana += value,
@@ -1689,4 +1698,33 @@ fn calculate_drop_rate(
         + (drop_rate * passive_ability_values.rate.drop_rate as f32 / 100.0);
 
     (drop_rate + passive_drop_rate) as i32
+}
+
+fn calculate_max_weight(
+    item_database: &ItemDatabase,
+    level: &Level,
+    basic_stats: &BasicStats,
+    equipment: &Equipment,
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let mut max_weight = 1100
+        + level.level as i32 * 5
+        + basic_stats.strength * 6
+        + equipment_ability_values.max_weight;
+
+    // If user has a bag equipped, apply max weight passives
+    if equipment
+        .get_equipment_item(EquipmentIndex::Back)
+        .filter(|x| x.life > 0)
+        .and_then(|x| item_database.get_base_item(x.item))
+        .filter(|x| matches!(x.class, ItemClass::Bag))
+        .is_some()
+    {
+        max_weight += (passive_ability_values.value.max_weight as f32
+            + max_weight as f32 * passive_ability_values.rate.max_weight as f32 / 100.0)
+            as i32;
+    }
+
+    max_weight
 }

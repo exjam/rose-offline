@@ -122,6 +122,7 @@ pub struct AbilityValues {
     pub avoid: i32,
     pub max_damage_sources: usize,
     pub drop_rate: i32,
+    pub max_weight: i32,
     pub adjust: AbilityValuesAdjust,
 }
 
@@ -189,6 +190,10 @@ impl AbilityValues {
 
     pub fn get_drop_rate(&self) -> i32 {
         self.drop_rate
+    }
+
+    pub fn max_weight(&self) -> i32 {
+        self.max_weight
     }
 
     pub fn get_additional_damage_multipler(&self) -> f32 {
