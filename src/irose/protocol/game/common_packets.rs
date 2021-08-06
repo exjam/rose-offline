@@ -436,7 +436,7 @@ fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
         StatusEffectType::Disguise => 0x02000000,
         StatusEffectType::Transparent => 0x04000000,
         StatusEffectType::ShieldDamage => 0x08000000,
-        StatusEffectType::DummyDamage => 0x10000000,
+        StatusEffectType::AdditionalDamageRate => 0x10000000,
         StatusEffectType::DecreaseLifeTime => 0x20000000,
         StatusEffectType::Revive => 0x40000000,
         StatusEffectType::Taunt => 0x80000000,

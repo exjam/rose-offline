@@ -16,6 +16,7 @@ pub enum DamageType {
 
 #[derive(Clone, Debug)]
 pub struct AbilityValuesAdjust {
+    pub additional_damage_multiplier: f32,
     pub attack_speed: i32,
     pub attack_power: i32,
     pub avoid: i32,
@@ -31,6 +32,10 @@ pub struct AbilityValuesAdjust {
 impl From<&StatusEffects> for AbilityValuesAdjust {
     fn from(status_effects: &StatusEffects) -> Self {
         Self {
+            additional_damage_multiplier: status_effects
+                .get_status_effect_value(StatusEffectType::AdditionalDamageRate)
+                .unwrap_or(100) as f32
+                / 100.0,
             attack_speed: status_effects
                 .get_status_effect_value(StatusEffectType::IncreaseAttackSpeed)
                 .unwrap_or(0)
@@ -125,50 +130,69 @@ impl AbilityValues {
     pub fn get_damage_category(&self) -> DamageCategory {
         self.damage_category
     }
+
     pub fn get_level(&self) -> i32 {
         self.level
     }
+
     pub fn get_walk_speed(&self) -> f32 {
         self.walk_speed
     }
+
     pub fn get_strength(&self) -> i32 {
         self.strength
     }
+
     pub fn get_dexterity(&self) -> i32 {
         self.dexterity
     }
+
     pub fn get_intelligence(&self) -> i32 {
         self.intelligence
     }
+
     pub fn get_concentration(&self) -> i32 {
         self.concentration
     }
+
     pub fn get_charm(&self) -> i32 {
         self.charm
     }
+
     pub fn get_sense(&self) -> i32 {
         self.sense
     }
+
     pub fn get_additional_health_recovery(&self) -> i32 {
         self.additional_health_recovery
     }
+
     pub fn get_additional_mana_recovery(&self) -> i32 {
         self.additional_mana_recovery
     }
+
     pub fn get_attack_damage_type(&self) -> DamageType {
         self.attack_damage_type
     }
+
     pub fn get_passive_attack_speed(&self) -> i32 {
         self.passive_attack_speed
     }
+
     pub fn get_attack_range(&self) -> i32 {
         self.attack_range
     }
+
     pub fn get_max_damage_sources(&self) -> usize {
         self.max_damage_sources
     }
+
     pub fn get_drop_rate(&self) -> i32 {
         self.drop_rate
+    }
+
+    pub fn get_additional_damage_multipler(&self) -> f32 {
+        self.adjust.additional_damage_multiplier
     }
 
     pub fn get_attack_speed(&self) -> i32 {

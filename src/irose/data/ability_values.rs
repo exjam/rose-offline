@@ -121,7 +121,6 @@ impl AbilityValueCalculator for AbilityValuesData {
         /*
         TODO:
         Cal_MaxWEIGHT ();
-        Cal_DropRATE ();
         m_fRateUseMP
         class based += stats + immunity
         */
@@ -509,7 +508,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             }
         };
 
-        // TODO: Apply additional damage buff
+        damage *= attacker.get_additional_damage_multipler();
         damage = f32::max(damage, 5.0) * hit_count as f32;
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -722,8 +721,7 @@ fn calculate_attack_damage_physical(
                             + 5.0)))
         };
 
-        // TODO: Add damage from +additional damage buffs
-
+        damage *= attacker.get_additional_damage_multipler();
         damage = f32::max(damage * hit_count as f32, 10.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -762,8 +760,7 @@ fn calculate_attack_damage_physical(
                             + 5.0)))
         };
 
-        // TODO: Add damage from +additional damage buffs
-
+        damage *= attacker.get_additional_damage_multipler();
         damage = f32::max(damage * hit_count as f32, 5.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -819,8 +816,7 @@ fn calculate_attack_damage_magic(
                             + 5.0)))
         };
 
-        // TODO: Add damage from +additional damage buffs
-
+        damage *= attacker.get_additional_damage_multipler();
         damage = f32::max(damage * hit_count as f32, 10.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -861,8 +857,7 @@ fn calculate_attack_damage_magic(
                             + 5.0)))
         };
 
-        // TODO: Add damage from +additional damage buffs
-
+        damage *= attacker.get_additional_damage_multipler();
         damage = f32::max(damage * hit_count as f32, 5.0);
 
         if attacker.get_damage_category() == DamageCategory::Character

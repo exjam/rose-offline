@@ -38,7 +38,7 @@ pub enum StatusEffectType {
     Disguise = 25,
     Transparent = 26,
     ShieldDamage = 27,
-    DummyDamage = 28,
+    AdditionalDamageRate = 28,
     DecreaseLifeTime = 29,
     ClearGood = 30,
     ClearBad = 31,
@@ -84,7 +84,7 @@ impl StatusEffectType {
                 | StatusEffectType::Disguise
                 | StatusEffectType::Transparent
                 | StatusEffectType::ShieldDamage
-                | StatusEffectType::DummyDamage
+                | StatusEffectType::AdditionalDamageRate
         )
     }
 }

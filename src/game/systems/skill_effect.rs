@@ -247,34 +247,38 @@ fn apply_skill_status_effects_to_entity(
                 }
             }
 
-            let adjust_value =
-                if let Some(skill_add_ability) = skill_data.add_ability.get(effect_index) {
-                    let ability_value = ability_values_get_value(
-                        skill_add_ability.ability_type,
-                        skill_target.ability_values,
-                        skill_target.level,
-                        skill_target.move_speed,
-                        skill_target.team,
-                        skill_target.character_info,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
+            let adjust_value = if matches!(
+                status_effect_data.status_effect_type,
+                StatusEffectType::AdditionalDamageRate
+            ) {
+                skill_data.power as i32
+            } else if let Some(skill_add_ability) = skill_data.add_ability.get(effect_index) {
+                let ability_value = ability_values_get_value(
+                    skill_add_ability.ability_type,
+                    skill_target.ability_values,
+                    skill_target.level,
+                    skill_target.move_speed,
+                    skill_target.team,
+                    skill_target.character_info,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .unwrap_or(0);
+                skill_world
+                    .game_data
+                    .ability_value_calculator
+                    .calculate_skill_adjust_value(
+                        skill_add_ability,
+                        skill_caster.ability_values.get_intelligence(),
+                        ability_value,
                     )
-                    .unwrap_or(0);
-                    skill_world
-                        .game_data
-                        .ability_value_calculator
-                        .calculate_skill_adjust_value(
-                            skill_add_ability,
-                            skill_caster.ability_values.get_intelligence(),
-                            ability_value,
-                        )
-                } else {
-                    0
-                };
+            } else {
+                0
+            };
 
             if skill_target
                 .status_effects
@@ -403,13 +407,13 @@ fn apply_skill_damage_to_entity(
         skill_world.damage_events.send(DamageEvent::with_attack(
             skill_caster.entity,
             skill_target.entity,
-            damage.clone(),
+            damage,
         ));
     } else {
         skill_world.damage_events.send(DamageEvent::with_skill(
             skill_caster.entity,
             skill_target.entity,
-            damage.clone(),
+            damage,
             skill_data.id,
             skill_caster.ability_values.get_intelligence(),
         ));
