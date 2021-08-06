@@ -20,6 +20,7 @@ mod startup_zones;
 mod status_effect;
 mod update_position;
 mod use_item;
+mod weight;
 mod world_server;
 mod world_time;
 
@@ -47,5 +48,6 @@ pub use startup_zones::startup_zones_system;
 pub use status_effect::status_effect_system;
 pub use update_position::update_position_system;
 pub use use_item::use_item_system;
+pub use weight::weight_system;
 pub use world_server::{world_server_authentication_system, world_server_system};
 pub use world_time::world_time_system;

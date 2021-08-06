@@ -43,6 +43,7 @@ mod status_effects;
 mod target;
 mod team;
 mod union_membership;
+mod weight;
 mod world_client;
 
 pub use ability_values::{AbilityValues, DamageCategory, DamageType};
@@ -93,4 +94,5 @@ pub use status_effects::StatusEffects;
 pub use target::Target;
 pub use team::Team;
 pub use union_membership::UnionMembership;
+pub use weight::Weight;
 pub use world_client::*;

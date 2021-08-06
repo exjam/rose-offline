@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{
-    item::{EquipmentItem, ItemType, StackableItem},
+    item::{EquipmentItem, Item, ItemType, StackableItem},
     ItemDatabase, ItemReference, WeaponItemData,
 };
 
@@ -150,5 +150,17 @@ impl Equipment {
         }
 
         (updated_slots, remaining_items)
+    }
+
+    pub fn iter_items(&self) -> impl Iterator<Item = &Option<EquipmentItem>> {
+        self.equipped_items.iter()
+    }
+
+    pub fn iter_vehicles(&self) -> impl Iterator<Item = &Option<EquipmentItem>> {
+        self.equipped_vehicle.iter()
+    }
+
+    pub fn iter_ammo(&self) -> impl Iterator<Item = &Option<StackableItem>> {
+        self.equipped_ammo.iter()
     }
 }

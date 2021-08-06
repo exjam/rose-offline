@@ -325,4 +325,13 @@ impl Inventory {
             .iter()
             .any(|slot| slot.is_none())
     }
+
+    pub fn iter(&self) -> impl Iterator<Item = &Option<Item>> {
+        self.equipment
+            .slots
+            .iter()
+            .chain(self.consumables.slots.iter())
+            .chain(self.materials.slots.iter())
+            .chain(self.vehicles.slots.iter())
+    }
 }

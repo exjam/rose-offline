@@ -26,7 +26,7 @@ use crate::game::{
         login_server_system, monster_spawn_system, npc_ai_system, personal_store_system,
         quest_system, save_system, server_messages_system, skill_effect_system,
         startup_zones_system, status_effect_system, update_position_system, use_item_system,
-        world_server_authentication_system, world_server_system, world_time_system,
+        weight_system, world_server_authentication_system, world_server_system, world_time_system,
     },
 };
 
@@ -141,7 +141,8 @@ impl GameWorld {
             GameStages::PostUpdate,
             SystemStage::parallel()
                 .with_system(experience_points_system.system())
-                .with_system(client_entity_visibility_system.system()),
+                .with_system(client_entity_visibility_system.system())
+                .with_system(weight_system.system()),
         );
 
         schedule.add_stage_after(
