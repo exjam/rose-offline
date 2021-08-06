@@ -726,6 +726,33 @@ fn ai_action_move_random_distance(
     }
 }
 
+fn ai_action_move_near_owner(ai_world: &mut AiWorld, ai_parameters: &mut AiParameters) {
+    if let Some(owner_position) = ai_parameters
+        .source
+        .owner
+        .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+        .map(|(position, _)| position.clone())
+    {
+        let distance = (0.2
+            * nalgebra::distance(
+                &owner_position.position.xy(),
+                &ai_parameters.source.position.position.xy(),
+            )) as i32;
+        let dx = ai_world.rng.gen_range(-distance..distance);
+        let dy = ai_world.rng.gen_range(-distance..distance);
+
+        let destination = owner_position.position + Vector3::new(dx as f32, dy as f32, 0.0);
+        ai_world
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(NextCommand::with_move(
+                destination,
+                None,
+                Some(MoveMode::Run),
+            ));
+    }
+}
+
 fn npc_ai_do_actions(
     ai_program_event: &AipEvent,
     ai_world: &mut AiWorld,
@@ -774,6 +801,20 @@ fn npc_ai_do_actions(
                     .insert(HealthPoints::new(0))
                     .insert(Command::with_die(None, None, None));
             }
+            AipAction::MoveNearOwner => ai_action_move_near_owner(ai_world, ai_parameters),
+            AipAction::AttackOwnerTarget => {
+                if let Some(owner_target_entity) = ai_parameters
+                    .source
+                    .owner
+                    .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+                    .and_then(|(_, target)| target.map(|target| target.entity))
+                {
+                    ai_world
+                        .commands
+                        .entity(ai_parameters.source.entity)
+                        .insert(NextCommand::with_attack(owner_target_entity));
+                }
+            }
             /*
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
@@ -789,9 +830,7 @@ fn npc_ai_do_actions(
             AipAction::UseSkill(_, _, _) => {}
             AipAction::SetVariable(_, _, _, _) => {}
             AipAction::Message(_, _) => {}
-            AipAction::MoveNearOwner => {}
             AipAction::DoQuestTrigger(_) => {}
-            AipAction::AttackOwnerTarget => {}
             AipAction::SetPvpFlag(_, _) => {}
             AipAction::SetMonsterSpawnState(_, _) => {}
             AipAction::GiveItemToOwner(_, _) => {}
