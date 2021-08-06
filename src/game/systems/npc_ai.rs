@@ -200,6 +200,7 @@ fn ai_condition_damage(
 }
 
 fn ai_condition_distance(
+    ai_world: &AiWorld,
     ai_parameters: &mut AiParameters,
     origin: AipDistanceOrigin,
     operator: AipOperatorType,
@@ -207,21 +208,23 @@ fn ai_condition_distance(
 ) -> bool {
     let distance_squared = match origin {
         AipDistanceOrigin::Spawn => match ai_parameters.source.spawn_origin {
-            Some(SpawnOrigin::MonsterSpawnPoint(_, spawn_position)) => Some(
-                (ai_parameters.source.position.position.xy() - spawn_position.xy())
-                    .magnitude_squared() as i32,
-            ),
+            Some(SpawnOrigin::MonsterSpawnPoint(_, spawn_position)) => Some(spawn_position.xy()),
             _ => None,
         },
-        AipDistanceOrigin::Owner => {
-            // TODO: Distance to owner
-            None
-        }
-        AipDistanceOrigin::Target => {
-            // TODO: Distance to target
-            None
-        }
-    };
+        AipDistanceOrigin::Owner => ai_parameters
+            .source
+            .owner
+            .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+            .map(|(position, _)| position.position.xy()),
+        AipDistanceOrigin::Target => ai_parameters
+            .source
+            .target
+            .and_then(|target_entity| ai_world.owner_query.get(target_entity).ok())
+            .map(|(position, _)| position.position.xy()),
+    }
+    .map(|compare_position| {
+        (ai_parameters.source.position.position.xy() - compare_position).magnitude_squared() as i32
+    });
 
     if let Some(distance_squared) = distance_squared {
         compare_aip_value(operator, distance_squared, value * value)
@@ -589,7 +592,7 @@ fn npc_ai_check_conditions(
                 ai_condition_damage(ai_parameters, damage_type, operator, value)
             }
             AipCondition::Distance(origin, operator, value) => {
-                ai_condition_distance(ai_parameters, origin, operator, value)
+                ai_condition_distance(ai_world, ai_parameters, origin, operator, value)
             }
             AipCondition::HasOwner => ai_condition_has_owner(ai_parameters),
             AipCondition::HealthPercent(operator, value) => {
