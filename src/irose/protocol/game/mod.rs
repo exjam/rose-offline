@@ -309,7 +309,9 @@ impl GameClient {
                         client.client_message_tx.send(ClientMessage::SitToggle())?;
                     }
                     PacketClientMoveToggleType::Drive => {
-                        client.client_message_tx.send(ClientMessage::DriveToggle())?;
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::DriveToggle())?;
                     }
                 }
             }

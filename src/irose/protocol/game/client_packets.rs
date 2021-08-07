@@ -513,8 +513,6 @@ impl TryFrom<&Packet> for PacketClientMoveToggle {
             _ => return Err(ProtocolError::InvalidPacket),
         };
 
-        Ok(PacketClientMoveToggle {
-            toggle_type,
-        })
+        Ok(PacketClientMoveToggle { toggle_type })
     }
 }
