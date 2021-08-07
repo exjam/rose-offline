@@ -7,7 +7,6 @@ use crate::{
     game::{
         components::{
             ClientEntity, Command, DamageSource, DamageSources, HealthPoints, MotionData, NpcAi,
-            Position,
         },
         events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged},
         messages::server::{DamageEntity, ServerMessage},
