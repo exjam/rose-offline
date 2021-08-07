@@ -347,6 +347,22 @@ fn quest_condition_week_day_time(
     day_minutes_range.contains(&local_day_minutes)
 }
 
+fn quest_condition_have_skill(
+    quest_parameters: &QuestParameters,
+    skill_id_range: &RangeInclusive<QsdSkillId>,
+    have: bool,
+) -> bool {
+    if let Some(skill_list) = &quest_parameters.source.skill_list {
+        for skill_id in skill_list.iter_skills() {
+            if skill_id_range.contains(&(skill_id.get() as QsdSkillId)) {
+                return have;
+            }
+        }
+    }
+
+    !have
+}
+
 fn quest_trigger_check_conditions(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -390,12 +406,14 @@ fn quest_trigger_check_conditions(
                 week_day,
                 ref day_minutes_range,
             }) => quest_condition_week_day_time(quest_world, week_day, day_minutes_range),
+            QsdCondition::HasSkill(ref skill_id_range, have) => {
+                quest_condition_have_skill(quest_parameters, skill_id_range, have)
+            }
             _ => {
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
               QsdCondition::Party(_) => todo!(),
-              QsdCondition::HasSkill(_, _) => todo!(),
               QsdCondition::RandomPercent(_) => todo!(),
               QsdCondition::ObjectVariable(_) => todo!(),
               QsdCondition::SelectEventObject(_) => todo!(),
