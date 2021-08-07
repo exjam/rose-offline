@@ -96,4 +96,14 @@ impl SkillList {
     pub fn get_passive_skills(&self) -> impl Iterator<Item = &SkillId> + '_ {
         self.passive.skills.iter().filter_map(|x| x.as_ref())
     }
+
+    pub fn iter_skills(&self) -> impl Iterator<Item = &SkillId> {
+        self.basic
+            .skills
+            .iter()
+            .chain(self.active.skills.iter())
+            .chain(self.passive.skills.iter())
+            .chain(self.clan.skills.iter())
+            .filter_map(|x| x.as_ref())
+    }
 }
