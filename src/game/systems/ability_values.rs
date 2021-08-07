@@ -31,8 +31,8 @@ pub fn ability_values_system(
             )>,
         >,
         Query<
-            (&mut AbilityValues, &Level, &Npc, &StatusEffects),
-            Or<(Changed<Level>, Changed<Npc>, Changed<StatusEffects>)>,
+            (&mut AbilityValues, &Npc, &StatusEffects),
+            Or<(Changed<Npc>, Changed<StatusEffects>)>,
         >,
         Query<
             (
@@ -70,7 +70,7 @@ pub fn ability_values_system(
 
     query_set
         .q1_mut()
-        .for_each_mut(|(mut ability_values, level, npc, status_effects)| {
+        .for_each_mut(|(mut ability_values, npc, status_effects)| {
             *ability_values = game_data
                 .ability_value_calculator
                 .calculate_npc(
