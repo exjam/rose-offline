@@ -284,4 +284,7 @@ pub enum ClientMessage {
     CastSkillSelf(SkillSlot),
     CastSkillTargetEntity(SkillSlot, ClientEntityId),
     CastSkillTargetPosition(SkillSlot, Point2<f32>),
+    RunToggle(),
+    SitToggle(),
+    DriveToggle(),
 }

@@ -299,6 +299,20 @@ impl GameClient {
                         packet.position,
                     ))?;
             }
+            Some(ClientPackets::MoveToggle) => {
+                let packet = PacketClientMoveToggle::try_from(&packet)?;
+                match packet.toggle_type {
+                    PacketClientMoveToggleType::Run => {
+                        client.client_message_tx.send(ClientMessage::RunToggle())?;
+                    }
+                    PacketClientMoveToggleType::Sit => {
+                        client.client_message_tx.send(ClientMessage::SitToggle())?;
+                    }
+                    PacketClientMoveToggleType::Drive => {
+                        client.client_message_tx.send(ClientMessage::DriveToggle())?;
+                    }
+                }
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
