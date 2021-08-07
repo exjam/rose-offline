@@ -1,7 +1,7 @@
 use log::warn;
 use nalgebra::Point2;
 use num_traits::FromPrimitive;
-use std::{collections::HashMap, ops::RangeInclusive, time::Duration};
+use std::{collections::HashMap, num::NonZeroU8, ops::RangeInclusive, time::Duration};
 
 use crate::{
     data::{
@@ -43,7 +43,7 @@ impl From<ItemReferenceDecodeError> for QsdReadError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdVariableType {
     Variable,
     Switch,
@@ -155,15 +155,13 @@ pub struct QsdConditionSelectEventObject {
 #[derive(Debug)]
 pub struct QsdConditionWeekDayTime {
     pub week_day: u8,
-    pub hour_range: RangeInclusive<u8>,
-    pub minute_range: RangeInclusive<u8>,
+    pub day_minutes_range: RangeInclusive<i32>,
 }
 
 #[derive(Debug)]
 pub struct QsdConditionMonthDayTime {
-    pub month_day: u8,
-    pub hour_range: RangeInclusive<u8>,
-    pub minute_range: RangeInclusive<u8>,
+    pub month_day: Option<NonZeroU8>,
+    pub day_minutes_range: RangeInclusive<i32>,
 }
 
 #[derive(Debug)]
@@ -175,7 +173,6 @@ pub enum QsdCondition {
     Party(QsdConditionCheckParty),
     Position(QsdZoneId, Point2<f32>, QsdDistance),
     WorldTime(RangeInclusive<u32>),
-    QuestTimeRemaining(QsdConditionOperator, u32),
     HasSkill(RangeInclusive<QsdSkillId>, bool),
     RandomPercent(RangeInclusive<u8>),
     ObjectVariable(QsdConditionObjectVariable),
@@ -474,11 +471,18 @@ impl QsdFile {
                             conditions.push(QsdCondition::WorldTime(start_time..=end_time));
                         }
                         8 => {
-                            let time = reader.read_u32()?;
+                            let value = reader.read_i32()?;
                             let operator = decode_condition_operator(reader.read_u8()?)?;
                             reader.skip(3); // padding
 
-                            conditions.push(QsdCondition::QuestTimeRemaining(operator, time));
+                            conditions.push(QsdCondition::QuestVariable(vec![
+                                QsdConditionQuestVariable {
+                                    variable_type: QsdVariableType::Timer,
+                                    variable_id: 0,
+                                    operator,
+                                    value,
+                                },
+                            ]));
                         }
                         9 => {
                             let start_skill_id = reader.read_u32()? as QsdSkillId;
@@ -583,30 +587,31 @@ impl QsdFile {
                             ));
                         }
                         18 => {
-                            let month_day = reader.read_u8()?;
-                            let hour_start = reader.read_u8()?;
-                            let minute_start = reader.read_u8()?;
-                            let hour_end = reader.read_u8()?;
-                            let minute_end = reader.read_u8()?;
+                            let day = reader.read_u8()?;
+                            let hour_min = reader.read_u8()?;
+                            let minute_min = reader.read_u8()?;
+                            let hour_max = reader.read_u8()?;
+                            let minute_max = reader.read_u8()?;
                             reader.skip(3); // padding
+
                             conditions.push(QsdCondition::MonthDayTime(QsdConditionMonthDayTime {
-                                month_day,
-                                hour_range: hour_start..=hour_end,
-                                minute_range: minute_start..=minute_end,
+                                month_day: NonZeroU8::new(day),
+                                day_minutes_range: (hour_min as i32 * 60 + minute_min as i32)
+                                    ..=(hour_max as i32 * 60 + minute_max as i32),
                             }));
                         }
                         19 => {
-                            let week_day = reader.read_u8()?;
-                            let hour_start = reader.read_u8()?;
-                            let minute_start = reader.read_u8()?;
-                            let hour_end = reader.read_u8()?;
-                            let minute_end = reader.read_u8()?;
+                            let day = reader.read_u8()?;
+                            let hour_min = reader.read_u8()?;
+                            let minute_min = reader.read_u8()?;
+                            let hour_max = reader.read_u8()?;
+                            let minute_max = reader.read_u8()?;
                             reader.skip(3); // padding
 
                             conditions.push(QsdCondition::WeekDayTime(QsdConditionWeekDayTime {
-                                week_day,
-                                hour_range: hour_start..=hour_end,
-                                minute_range: minute_start..=minute_end,
+                                week_day: day,
+                                day_minutes_range: (hour_min as i32 * 60 + minute_min as i32)
+                                    ..=(hour_max as i32 * 60 + minute_max as i32),
                             }));
                         }
                         20 => {
