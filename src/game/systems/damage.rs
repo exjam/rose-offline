@@ -69,13 +69,8 @@ pub fn damage_system(
             .map(|client_entity| Some(client_entity.id))
             .unwrap_or(None);
 
-        if let Ok((
-            client_entity,
-            mut health_points,
-            damage_sources,
-            npc_ai,
-            motion_data,
-        )) = defender_query.get_mut(defender_entity)
+        if let Ok((client_entity, mut health_points, damage_sources, npc_ai, motion_data)) =
+            defender_query.get_mut(defender_entity)
         {
             if damage.apply_hit_stun {
                 // TODO: Apply hit stun by setting next command to HitStun ?
