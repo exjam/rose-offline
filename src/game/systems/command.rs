@@ -672,13 +672,6 @@ pub fn command_system(
 
                             // Remove our destination component, as we have reached it!
                             entity_commands.remove::<Destination>();
-
-                            // Update target
-                            if let Some(target_entity) = target_entity {
-                                entity_commands.insert(Target::new(target_entity));
-                            } else {
-                                entity_commands.remove::<Target>();
-                            }
                         } else {
                             // Not in range, set current command to move
                             let target_position = target_position.unwrap();
@@ -690,13 +683,13 @@ pub fn command_system(
 
                             // Set destination to move towards
                             entity_commands.insert(Destination::new(target_position));
+                        }
 
-                            // Update target
-                            if let Some(target_entity) = target_entity {
-                                entity_commands.insert(Target::new(target_entity));
-                            } else {
-                                entity_commands.remove::<Target>();
-                            }
+                        // Update target
+                        if let Some(target_entity) = target_entity {
+                            entity_commands.insert(Target::new(target_entity));
+                        } else {
+                            entity_commands.remove::<Target>();
                         }
                     }
                 }
