@@ -1,4 +1,8 @@
+// We must globally allow dead_code because of modular-bitfield..
+#![allow(dead_code)]
+#![allow(clippy::enum_variant_names)]
 #![allow(clippy::too_many_arguments)]
+#![allow(clippy::type_complexity)]
 
 mod data;
 mod game;

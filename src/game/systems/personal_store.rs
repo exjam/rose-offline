@@ -13,7 +13,6 @@ use crate::{
     },
 };
 
-#[allow(clippy::type_complexity)]
 pub fn personal_store_system(
     mut entity_query: Query<(
         &mut Inventory,

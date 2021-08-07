@@ -530,7 +530,6 @@ fn handle_chat_command(
     Ok(())
 }
 
-#[allow(clippy::type_complexity)]
 pub fn chat_commands_system(
     mut commands: Commands,
     mut user_query: Query<(

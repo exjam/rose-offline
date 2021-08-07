@@ -912,7 +912,6 @@ fn get_attacker_data<'a>(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn npc_ai_system(
     mut commands: Commands,
     mut npc_query: Query<(
