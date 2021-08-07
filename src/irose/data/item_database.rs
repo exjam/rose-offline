@@ -320,7 +320,7 @@ macro_rules! load_items {
             }
         }
         items
-    };};
+    }};
     ($vfs:ident, $path:literal, $stl_path:literal, $load_item_fn:ident, $item_data_type:ident) => {{
         let mut items: HashMap<u16, $item_data_type> = HashMap::new();
         let file = $vfs.open_file($stl_path)?;
@@ -333,7 +333,7 @@ macro_rules! load_items {
             }
         }
         items
-    };};
+    }};
 }
 
 pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
