@@ -57,8 +57,8 @@ pub struct ChatCommandUser<'world, 'a> {
 }
 
 lazy_static! {
-    pub static ref GM_COMMANDS: App<'static> = {
-        App::new("GM Commands")
+    pub static ref CHAT_COMMANDS: App<'static> = {
+        App::new("Chat Commands")
             .subcommand(App::new("help"))
             .subcommand(App::new("where"))
             .subcommand(App::new("ability_values"))
@@ -93,8 +93,8 @@ fn send_multiline_whisper(client: &GameClient, str: &str) {
     }
 }
 
-fn send_gm_commands_help(client: &GameClient) {
-    for subcommand in GM_COMMANDS.get_subcommands() {
+fn send_chat_commands_help(client: &GameClient) {
+    for subcommand in CHAT_COMMANDS.get_subcommands() {
         let mut help_string = String::from(subcommand.get_name());
         for arg in subcommand.get_arguments() {
             help_string.push(' ');
@@ -117,18 +117,18 @@ fn send_gm_commands_help(client: &GameClient) {
     }
 }
 
-pub enum GMCommandError {
+pub enum ChatCommandError {
     InvalidCommand,
     InvalidArguments,
 }
 
-impl From<shellwords::MismatchedQuotes> for GMCommandError {
+impl From<shellwords::MismatchedQuotes> for ChatCommandError {
     fn from(_: shellwords::MismatchedQuotes) -> Self {
         Self::InvalidCommand
     }
 }
 
-impl From<clap::Error> for GMCommandError {
+impl From<clap::Error> for ChatCommandError {
     fn from(error: clap::Error) -> Self {
         match error.kind {
             clap::ErrorKind::MissingRequiredArgument => Self::InvalidArguments,
@@ -137,13 +137,13 @@ impl From<clap::Error> for GMCommandError {
     }
 }
 
-impl From<ParseIntError> for GMCommandError {
+impl From<ParseIntError> for ChatCommandError {
     fn from(_: ParseIntError) -> Self {
         Self::InvalidArguments
     }
 }
 
-impl From<ParseFloatError> for GMCommandError {
+impl From<ParseFloatError> for ChatCommandError {
     fn from(_: ParseFloatError) -> Self {
         Self::InvalidArguments
     }
@@ -281,18 +281,18 @@ fn create_random_bot_entities(
     bot_entities
 }
 
-fn handle_gm_command(
+fn handle_chat_command(
     chat_command_world: &mut ChatCommandWorld,
     chat_command_user: &mut ChatCommandUser,
     command_text: &str,
-) -> Result<(), GMCommandError> {
+) -> Result<(), ChatCommandError> {
     let mut args = shellwords::split(command_text)?;
     args.insert(0, String::new()); // Clap expects arg[0] to be like executable name
-    let command_matches = GM_COMMANDS.clone().try_get_matches_from(args)?;
+    let command_matches = CHAT_COMMANDS.clone().try_get_matches_from(args)?;
 
     match command_matches
         .subcommand()
-        .ok_or(GMCommandError::InvalidCommand)?
+        .ok_or(ChatCommandError::InvalidCommand)?
     {
         ("where", _) => {
             let sector = chat_command_world
@@ -486,7 +486,7 @@ fn handle_gm_command(
                 "union_point8" => AbilityType::UnionPoint8,
                 "union_point9" => AbilityType::UnionPoint9,
                 "union_point10" => AbilityType::UnionPoint10,
-                _ => return Err(GMCommandError::InvalidArguments),
+                _ => return Err(ChatCommandError::InvalidArguments),
             };
 
             if ability_values_add_value(
@@ -524,7 +524,7 @@ fn handle_gm_command(
                 }),
             );
         }
-        _ => return Err(GMCommandError::InvalidCommand),
+        _ => return Err(ChatCommandError::InvalidCommand),
     }
 
     Ok(())
@@ -596,14 +596,14 @@ pub fn chat_commands_system(
                 union_membership: &mut union_membership,
             };
 
-            if handle_gm_command(
+            if handle_chat_command(
                 &mut chat_command_world,
                 &mut chat_command_user,
                 &command[1..],
             )
             .is_err()
             {
-                send_gm_commands_help(chat_command_user.game_client);
+                send_chat_commands_help(chat_command_user.game_client);
             }
         }
     }
