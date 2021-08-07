@@ -3,7 +3,7 @@ use nalgebra::Point3;
 use rand::Rng;
 
 use crate::{
-    data::{NpcId, SkillId, ZoneId},
+    data::{NpcId, ZoneId},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,

@@ -21,7 +21,6 @@ pub fn damage_system(
     attacker_query: Query<&ClientEntity>,
     mut defender_query: Query<(
         &ClientEntity,
-        &Position,
         &mut HealthPoints,
         Option<&mut DamageSources>,
         Option<&mut NpcAi>,
@@ -72,7 +71,6 @@ pub fn damage_system(
 
         if let Ok((
             client_entity,
-            position,
             mut health_points,
             damage_sources,
             npc_ai,
@@ -92,8 +90,8 @@ pub fn damage_system(
 
             if !matches!(damage_event, DamageEvent::Tagged(_)) {
                 if let Some(attacker_entity_id) = attacker_entity_id {
-                    server_messages.send_zone_message(
-                        position.zone_id,
+                    server_messages.send_entity_message(
+                        client_entity,
                         ServerMessage::DamageEntity(DamageEntity {
                             attacker_entity_id,
                             defender_entity_id: client_entity.id,
