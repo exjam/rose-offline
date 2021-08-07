@@ -230,7 +230,6 @@ fn use_inventory_item(
     Ok(())
 }
 
-#[allow(clippy::type_complexity)]
 pub fn use_item_system(
     mut commands: Commands,
     mut query: Query<(

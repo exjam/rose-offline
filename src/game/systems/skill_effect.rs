@@ -71,7 +71,6 @@ struct SkillTargetData<'a> {
     npc: Option<&'a Npc>,
 }
 
-#[allow(clippy::type_complexity)]
 struct SkillTargetQuery<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n> {
     query: Query<
         'a,
@@ -480,7 +479,6 @@ fn apply_skill_damage(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn skill_effect_system(
     mut commands: Commands,
     mut caster_query: Query<(

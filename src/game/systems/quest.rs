@@ -838,7 +838,6 @@ fn quest_trigger_apply_rewards(
     true
 }
 
-#[allow(clippy::type_complexity)]
 pub fn quest_system(
     mut commands: Commands,
     mut query: Query<(

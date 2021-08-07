@@ -8,7 +8,6 @@ use crate::game::{
     GameData,
 };
 
-#[allow(clippy::type_complexity)]
 pub fn ability_values_system(
     mut query_set: QuerySet<(
         Query<

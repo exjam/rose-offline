@@ -5,7 +5,6 @@ use crate::game::{
     GameData,
 };
 
-#[allow(clippy::type_complexity)]
 pub fn weight_system(
     mut commands: Commands,
     calculate_weight_query: Query<

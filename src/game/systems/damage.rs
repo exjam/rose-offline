@@ -14,7 +14,6 @@ use crate::{
     },
 };
 
-#[allow(clippy::type_complexity)]
 pub fn damage_system(
     mut commands: Commands,
     attacker_query: Query<&ClientEntity>,

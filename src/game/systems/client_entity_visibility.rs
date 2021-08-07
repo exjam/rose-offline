@@ -14,7 +14,6 @@ use crate::game::{
     resources::{ClientEntityList, ServerTime},
 };
 
-#[allow(clippy::type_complexity)]
 pub fn client_entity_visibility_system(
     mut clients_query: Query<(
         &mut ClientEntityVisibility,

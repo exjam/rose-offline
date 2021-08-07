@@ -99,7 +99,6 @@ fn is_valid_skill_target<'a>(
     None
 }
 
-#[allow(clippy::type_complexity)]
 fn is_valid_pickup_target<'a>(
     position: &Position,
     target_entity: Entity,
@@ -133,7 +132,6 @@ fn is_valid_pickup_target<'a>(
     None
 }
 
-#[allow(clippy::type_complexity)]
 pub fn command_system(
     mut commands: Commands,
     mut query: Query<(

@@ -12,7 +12,6 @@ use crate::game::{
     GameData,
 };
 
-#[allow(clippy::type_complexity)]
 pub fn experience_points_system(
     mut entity_query: Query<(
         Entity,

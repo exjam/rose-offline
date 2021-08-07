@@ -15,7 +15,6 @@ use crate::{
     },
 };
 
-#[allow(clippy::type_complexity)]
 pub fn save_system(
     mut commands: Commands,
     query: Query<(

@@ -170,7 +170,6 @@ pub fn game_server_authentication_system(
     });
 }
 
-#[allow(clippy::type_complexity)]
 pub fn game_server_join_system(
     mut commands: Commands,
     query: Query<
@@ -235,7 +234,6 @@ pub fn game_server_join_system(
     );
 }
 
-#[allow(clippy::type_complexity)]
 pub fn game_server_main_system(
     mut commands: Commands,
     mut game_client_query: Query<(

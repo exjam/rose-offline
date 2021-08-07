@@ -14,7 +14,6 @@ use crate::game::{
 
 const BOT_SEARCH_ENTITY_DISTANCE: f32 = 1500.0f32;
 
-#[allow(clippy::type_complexity)]
 pub fn bot_ai_system(
     mut commands: Commands,
     mut bot_query: Query<(
