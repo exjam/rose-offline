@@ -244,8 +244,17 @@ fn ai_condition_health_percent(
     compare_aip_value(operator, (100 * current) / max, value)
 }
 
-fn ai_condition_has_owner(ai_parameters: &mut AiParameters) -> bool {
-    ai_parameters.source.owner.is_some()
+fn ai_condition_has_no_owner(ai_world: &AiWorld, ai_parameters: &mut AiParameters) -> bool {
+    if let Some(owner_position) = ai_parameters
+        .source
+        .owner
+        .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+        .map(|(position, _)| position.clone())
+    {
+        owner_position.zone_id == ai_parameters.source.position.zone_id
+    } else {
+        false
+    }
 }
 
 fn ai_condition_is_attacker_current_target(ai_parameters: &mut AiParameters) -> bool {
@@ -594,7 +603,7 @@ fn npc_ai_check_conditions(
             AipCondition::Distance(origin, operator, value) => {
                 ai_condition_distance(ai_world, ai_parameters, origin, operator, value)
             }
-            AipCondition::HasOwner => ai_condition_has_owner(ai_parameters),
+            AipCondition::HasNoOwner => ai_condition_has_no_owner(ai_world, ai_parameters),
             AipCondition::HealthPercent(operator, value) => {
                 ai_condition_health_percent(ai_parameters, operator, value)
             }
@@ -709,10 +718,15 @@ fn ai_action_move_random_distance(
     let dy = ai_world.rng.gen_range(-distance..distance);
     let move_origin = match move_origin {
         AipMoveOrigin::CurrentPosition => Some(ai_parameters.source.position.position),
-        AipMoveOrigin::Spawn => ai_parameters
-            .source
-            .spawn_origin
-            .map(|SpawnOrigin::MonsterSpawnPoint(_, spawn_position)| *spawn_position),
+        AipMoveOrigin::Spawn => {
+            ai_parameters
+                .source
+                .spawn_origin
+                .map(|spawn_origin| match *spawn_origin {
+                    SpawnOrigin::MonsterSpawnPoint(_, spawn_position) => spawn_position,
+                    SpawnOrigin::Summoned(_, spawn_position) => spawn_position,
+                })
+        }
         AipMoveOrigin::FindChar => ai_parameters.find_char.map(|(_, position)| position),
     };
 
@@ -798,6 +812,7 @@ fn npc_ai_do_actions(
                 }
             }
             AipAction::KillSelf => {
+                // TODO: Fix this, this doesn't send death to clients.
                 ai_world
                     .commands
                     .entity(ai_parameters.source.entity)
@@ -978,6 +993,9 @@ pub fn npc_ai_system(
             if !npc_ai.has_run_created_trigger {
                 if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
                     if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
+                        if ai_source_data.owner.is_some() {
+                            warn!("Running summon created ai");
+                        }
                         npc_ai_run_trigger(
                             &mut ai_world,
                             trigger_on_created,
@@ -1026,6 +1044,9 @@ pub fn npc_ai_system(
                             npc_ai.idle_duration += server_time.delta;
 
                             if npc_ai.idle_duration > ai_program.idle_trigger_interval {
+                                if ai_source_data.owner.is_some() {
+                                    warn!("Running summon idle ai");
+                                }
                                 npc_ai_run_trigger(
                                     &mut ai_world,
                                     trigger_on_idle,

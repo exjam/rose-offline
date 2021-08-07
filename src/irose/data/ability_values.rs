@@ -40,11 +40,32 @@ impl AbilityValueCalculator for AbilityValuesData {
     fn calculate_npc(
         &self,
         npc_id: NpcId,
-        level: Option<&Level>,
         status_effects: &StatusEffects,
+        owner_level: Option<i32>,
+        summon_skill_level: Option<i32>,
     ) -> Option<AbilityValues> {
         let npc_data = self.npc_database.get_npc(npc_id)?;
-        let level = level.map_or(npc_data.level, |level| level.level as i32);
+        let mut level = npc_data.level;
+        let mut max_health = npc_data.level * npc_data.health_points;
+        let mut attack_power = npc_data.attack;
+        let mut hit = npc_data.hit;
+        let mut defence = npc_data.defence;
+        let mut resistance = npc_data.resistance;
+        let mut avoid = npc_data.avoid;
+
+        if let Some(owner_level) = owner_level {
+            let summon_skill_level = summon_skill_level.unwrap_or(1);
+
+            level = owner_level as i32;
+            max_health =
+                (npc_data.health_points * (summon_skill_level + 16) * (owner_level + 85)) / 2600;
+            attack_power = (attack_power * (summon_skill_level + 22) * (owner_level + 100)) / 4000;
+            hit = (hit * (summon_skill_level + 30) * (owner_level + 50)) / 3200;
+            defence = (defence * (summon_skill_level + 30) * (owner_level + 80)) / 4400;
+            resistance = (resistance * (summon_skill_level + 24) * (owner_level + 90)) / 3600;
+            avoid = (avoid * (summon_skill_level + 22) * (owner_level + 90)) / 3400;
+        }
+
         Some(AbilityValues {
             damage_category: DamageCategory::Npc,
             walk_speed: npc_data.walk_speed as f32,
@@ -56,7 +77,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             concentration: 0,
             charm: 0,
             sense: npc_data.level,
-            max_health: npc_data.level * npc_data.health_points,
+            max_health,
             max_mana: 100,
             additional_health_recovery: 0,
             additional_mana_recovery: 0,
@@ -65,18 +86,20 @@ impl AbilityValueCalculator for AbilityValuesData {
             } else {
                 DamageType::Physical
             },
-            attack_power: npc_data.attack,
+            attack_power,
             attack_speed: npc_data.attack_speed,
             passive_attack_speed: 0,
             attack_range: npc_data.attack_range,
-            hit: npc_data.hit,
-            defence: npc_data.defence,
-            resistance: npc_data.resistance,
+            hit,
+            defence,
+            resistance,
             critical: (npc_data.level as f32 * 2.5) as i32,
-            avoid: npc_data.avoid,
+            avoid,
             max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
             drop_rate: 0,
             max_weight: 0,
+            summon_owner_level: owner_level,
+            summon_skill_level,
             adjust: status_effects.into(),
         })
     }
@@ -240,6 +263,8 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 &passive_ability_values,
             ),
+            summon_owner_level: None,
+            summon_skill_level: None,
             adjust: status_effects.into(),
         }
     }

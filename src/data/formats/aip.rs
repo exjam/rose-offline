@@ -186,7 +186,7 @@ pub enum AipCondition {
     FindNearbyEntities(AipConditionFindNearbyEntities),
     Damage(AipDamageType, AipOperatorType, i32),
     Distance(AipDistanceOrigin, AipOperatorType, AipDistance),
-    HasOwner,
+    HasNoOwner,
     HasStatusEffect(AipHaveStatusTarget, AipHaveStatusType, bool),
     HealthPercent(AipOperatorType, i32),
     IsAttackerClanMaster,
@@ -565,7 +565,7 @@ impl AipFile {
                                 value,
                             ));
                         }
-                        22 => conditions.push(AipCondition::HasOwner),
+                        22 => conditions.push(AipCondition::HasNoOwner),
                         23 => conditions.push(AipCondition::OwnerHasTarget),
                         24 => {
                             let start_time = reader.read_u32()?;

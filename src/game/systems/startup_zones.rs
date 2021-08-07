@@ -55,10 +55,12 @@ pub fn startup_zones_system(
         for npc in zone_data.npcs.iter() {
             let npc_data = game_data.npcs.get_npc(npc.npc_id);
             let status_effects = StatusEffects::new();
-            let ability_values =
-                game_data
-                    .ability_value_calculator
-                    .calculate_npc(npc.npc_id, None, &status_effects);
+            let ability_values = game_data.ability_value_calculator.calculate_npc(
+                npc.npc_id,
+                &status_effects,
+                None,
+                None,
+            );
 
             if npc_data.is_none() || ability_values.is_none() {
                 warn!(

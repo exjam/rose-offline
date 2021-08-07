@@ -123,6 +123,8 @@ pub struct AbilityValues {
     pub max_damage_sources: usize,
     pub drop_rate: i32,
     pub max_weight: i32,
+    pub summon_owner_level: Option<i32>,
+    pub summon_skill_level: Option<i32>,
     pub adjust: AbilityValuesAdjust,
 }
 

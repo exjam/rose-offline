@@ -140,8 +140,9 @@ pub trait AbilityValueCalculator {
     fn calculate_npc(
         &self,
         npc_id: NpcId,
-        level: Option<&Level>,
         status_effects: &StatusEffects,
+        owner_level: Option<i32>,
+        summon_skill_level: Option<i32>,
     ) -> Option<AbilityValues>;
 
     fn calculate_damage(

@@ -73,7 +73,12 @@ pub fn ability_values_system(
         .for_each_mut(|(mut ability_values, level, npc, status_effects)| {
             *ability_values = game_data
                 .ability_value_calculator
-                .calculate_npc(npc.id, Some(level), status_effects)
+                .calculate_npc(
+                    npc.id,
+                    status_effects,
+                    ability_values.summon_owner_level,
+                    ability_values.summon_skill_level,
+                )
                 .unwrap();
         });
 

@@ -1,4 +1,6 @@
-use bevy_ecs::prelude::{Entity, EventReader, EventWriter, Local, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{
+    Commands, Entity, EventReader, EventWriter, Local, Mut, Query, Res, ResMut,
+};
 use log::warn;
 use rand::{prelude::ThreadRng, Rng};
 
@@ -8,11 +10,11 @@ use crate::{
         StatusEffectType,
     },
     game::{
-        bundles::ability_values_get_value,
+        bundles::{ability_values_get_value, MonsterBundle},
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
             GameClient, HealthPoints, Inventory, Level, MoveSpeed, Npc, Position, SkillList,
-            StatusEffects, Team,
+            SpawnOrigin, StatusEffects, Team,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
@@ -30,8 +32,7 @@ enum SkillCastError {
     NotEnoughUseAbility,
 }
 
-struct SkillWorld<'a, 'b, 'c, 'd, 'e, 'f> {
-    client_entity_list: &'a ClientEntityList,
+struct SkillWorld<'b, 'c, 'd, 'e, 'f> {
     game_data: &'b GameData,
     server_messages: &'c mut ResMut<'d, ServerMessages>,
     server_time: &'b ServerTime,
@@ -323,6 +324,7 @@ fn apply_skill_status_effects_to_entity(
 
 fn apply_skill_status_effects(
     skill_world: &mut SkillWorld,
+    client_entity_list: &ClientEntityList,
     skill_caster: &SkillCaster,
     skill_target: &SkillEventTarget,
     skill_data: &SkillData,
@@ -330,8 +332,7 @@ fn apply_skill_status_effects(
 ) -> Result<(), SkillCastError> {
     if skill_data.scope > 0 {
         // Apply in AOE around target position
-        let client_entity_zone = skill_world
-            .client_entity_list
+        let client_entity_zone = client_entity_list
             .get_zone(skill_caster.position.zone_id)
             .ok_or(SkillCastError::InvalidTarget)?;
 
@@ -424,6 +425,7 @@ fn apply_skill_damage_to_entity(
 
 fn apply_skill_damage(
     skill_world: &mut SkillWorld,
+    client_entity_list: &ClientEntityList,
     skill_caster: &SkillCaster,
     skill_target: &SkillEventTarget,
     skill_data: &SkillData,
@@ -431,8 +433,7 @@ fn apply_skill_damage(
 ) -> Result<(), SkillCastError> {
     if skill_data.scope > 0 {
         // Apply in AOE around target position
-        let client_entity_zone = skill_world
-            .client_entity_list
+        let client_entity_zone = client_entity_list
             .get_zone(skill_caster.position.zone_id)
             .ok_or(SkillCastError::InvalidTarget)?;
 
@@ -481,6 +482,7 @@ fn apply_skill_damage(
 
 #[allow(clippy::type_complexity)]
 pub fn skill_effect_system(
+    mut commands: Commands,
     mut caster_query: Query<(
         &ClientEntity,
         &Position,
@@ -506,7 +508,7 @@ pub fn skill_effect_system(
         Option<&Npc>,
     )>,
     game_data: Res<GameData>,
-    client_entity_list: Res<ClientEntityList>,
+    mut client_entity_list: ResMut<ClientEntityList>,
     mut skill_events: EventReader<SkillEvent>,
     mut damage_events: EventWriter<DamageEvent>,
     mut pending_skill_events: Local<Vec<SkillEvent>>,
@@ -514,7 +516,6 @@ pub fn skill_effect_system(
     server_time: Res<ServerTime>,
 ) {
     let mut skill_world = SkillWorld {
-        client_entity_list: &client_entity_list,
         damage_events: &mut damage_events,
         game_data: &game_data,
         server_messages: &mut server_messages,
@@ -602,6 +603,7 @@ pub fn skill_effect_system(
                     | SkillType::SelfDamage => {
                         match apply_skill_damage(
                             &mut skill_world,
+                            &client_entity_list,
                             &skill_caster,
                             &skill_target,
                             skill_data,
@@ -609,6 +611,7 @@ pub fn skill_effect_system(
                         ) {
                             Ok(_) => apply_skill_status_effects(
                                 &mut skill_world,
+                                &client_entity_list,
                                 &skill_caster,
                                 &skill_target,
                                 skill_data,
@@ -624,6 +627,7 @@ pub fn skill_effect_system(
                     | SkillType::SelfBound
                     | SkillType::TargetBound => apply_skill_status_effects(
                         &mut skill_world,
+                        &client_entity_list,
                         &skill_caster,
                         &skill_target,
                         skill_data,
@@ -643,6 +647,7 @@ pub fn skill_effect_system(
                                 ) {
                                     Ok(damage) if damage.amount > 0 => apply_skill_status_effects(
                                         &mut skill_world,
+                                        &client_entity_list,
                                         &skill_caster,
                                         &skill_target,
                                         skill_data,
@@ -658,12 +663,41 @@ pub fn skill_effect_system(
                             Err(SkillCastError::InvalidTarget)
                         }
                     }
+                    SkillType::SummonPet => {
+                        if let Some(npc_id) = skill_data.summon_npc_id {
+                            if MonsterBundle::spawn(
+                                &mut commands,
+                                &mut client_entity_list,
+                                &skill_world.game_data,
+                                npc_id,
+                                skill_caster.position.zone_id,
+                                SpawnOrigin::Summoned(
+                                    skill_caster.entity,
+                                    skill_caster.position.position,
+                                ),
+                                150,
+                                skill_caster.team.clone(),
+                                Some((skill_caster.entity, &skill_caster.level)),
+                                Some(skill_data.level as i32),
+                            )
+                            .is_some()
+                            {
+                                // TODO: Increase summon count point thing
+                                // TODO: Apply status effect to decrease life over time
+                                Ok(())
+                            } else {
+                                Err(SkillCastError::InvalidSkill)
+                            }
+                        } else {
+                            Err(SkillCastError::InvalidSkill)
+                        }
+                    }
                     SkillType::BasicAction
                     | SkillType::CreateWindow
                     | SkillType::Passive
                     | SkillType::Emote
                     | SkillType::Warp => Ok(()),
-                    SkillType::SummonPet | SkillType::Resurrection => {
+                    SkillType::Resurrection => {
                         warn!("Unimplemented skill type used {:?}", skill_data);
                         Ok(())
                     }

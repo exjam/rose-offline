@@ -1,15 +1,22 @@
 use bevy_ecs::prelude::{Bundle, Commands, Entity};
+use nalgebra::Point3;
+use rand::Rng;
 
-use crate::game::{
-    components::{
-        AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
-        ClientEntityVisibility, Command, Equipment, ExperiencePoints, GameClient, HealthPoints,
-        Hotbar, Inventory, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc,
-        NpcStandingDirection, ObjectVariables, Position, QuestState, SkillList, SkillPoints,
-        SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+use crate::{
+    data::{NpcId, SkillId, ZoneId},
+    game::{
+        components::{
+            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
+            ClientEntityType, ClientEntityVisibility, Command, DamageSources, Equipment,
+            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
+            MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection,
+            ObjectVariables, Owner, Position, QuestState, SkillList, SkillPoints, SpawnOrigin,
+            Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+        },
+        messages::server::{ServerMessage, Teleport},
+        resources::ClientEntityList,
+        GameData,
     },
-    messages::server::{ServerMessage, Teleport},
-    resources::ClientEntityList,
 };
 
 pub const NPC_OBJECT_VARIABLES_COUNT: usize = 20;
@@ -80,6 +87,100 @@ pub struct MonsterBundle {
     pub spawn_origin: SpawnOrigin,
     pub status_effects: StatusEffects,
     pub team: Team,
+}
+
+impl MonsterBundle {
+    pub fn spawn(
+        commands: &mut Commands,
+        client_entity_list: &mut ClientEntityList,
+        game_data: &GameData,
+        npc_id: NpcId,
+        spawn_zone: ZoneId,
+        spawn_origin: SpawnOrigin,
+        spawn_range: i32,
+        team: Team,
+        owner: Option<(Entity, &Level)>,
+        summon_skill_level: Option<i32>,
+    ) -> Option<Entity> {
+        let npc_data = game_data.npcs.get_npc(npc_id)?;
+        let npc_ai = Some(npc_data.ai_file_index)
+            .filter(|ai_file_index| *ai_file_index != 0)
+            .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
+
+        let status_effects = StatusEffects::new();
+
+        let ability_values = game_data.ability_value_calculator.calculate_npc(
+            npc_id,
+            &status_effects,
+            owner.map(|(_, owner_level)| owner_level.level as i32),
+            summon_skill_level,
+        )?;
+
+        let damage_sources = Some(ability_values.get_max_damage_sources())
+            .filter(|max_damage_sources| *max_damage_sources > 0)
+            .map(DamageSources::new);
+        let health_points = HealthPoints::new(ability_values.get_max_health() as u32);
+        let level = Level::new(ability_values.get_level() as u32);
+        let move_mode = MoveMode::Walk;
+        let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
+
+        let spawn_position = match spawn_origin {
+            SpawnOrigin::Summoned(_, spawn_position) => spawn_position,
+            SpawnOrigin::MonsterSpawnPoint(_, spawn_position) => spawn_position,
+        };
+
+        let position = Position::new(
+            Point3::new(
+                spawn_position.x + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
+                spawn_position.y + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
+                0.0,
+            ),
+            spawn_zone,
+        );
+
+        let mut entity_commands = commands.spawn();
+        let entity = entity_commands.id();
+
+        entity_commands.insert_bundle(MonsterBundle {
+            ability_values,
+            command: Command::default(),
+            health_points,
+            level,
+            motion_data: game_data.npcs.get_npc_motions(npc_id),
+            move_mode,
+            move_speed,
+            next_command: NextCommand::default(),
+            npc: Npc::new(npc_id, 0),
+            object_variables: ObjectVariables::new(MONSTER_OBJECT_VARIABLES_COUNT),
+            position: position.clone(),
+            status_effects,
+            spawn_origin,
+            team,
+        });
+
+        if let Some(damage_sources) = damage_sources {
+            entity_commands.insert(damage_sources);
+        }
+
+        if let Some(npc_ai) = npc_ai {
+            entity_commands.insert(npc_ai);
+        }
+
+        if let Some((owner_entity, ..)) = owner {
+            entity_commands.insert(Owner::new(owner_entity));
+        }
+
+        client_entity_join_zone(
+            commands,
+            client_entity_list,
+            entity,
+            ClientEntityType::Monster,
+            &position,
+        )
+        .expect("Failed to join monster into zone");
+
+        Some(entity)
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

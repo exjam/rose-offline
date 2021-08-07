@@ -1,16 +1,10 @@
 use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
-use nalgebra::Point3;
-use rand::Rng;
 
 use crate::{
     data::NpcId,
     game::{
-        bundles::{client_entity_join_zone, MonsterBundle, MONSTER_OBJECT_VARIABLES_COUNT},
-        components::{
-            ClientEntityType, Command, DamageSources, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, ObjectVariables, Position, SpawnOrigin,
-            StatusEffects, Team,
-        },
+        bundles::MonsterBundle,
+        components::{MonsterSpawnPoint, Position, SpawnOrigin, Team},
         resources::{ClientEntityList, GameData, ServerTime},
     },
 };
@@ -165,82 +159,22 @@ pub fn monster_spawn_system(
             let spawn_point_position = spawn_point_position.position;
             let spawn_range = (spawn_point.range * 100) as i32;
 
-            for (id, count) in spawn_queue {
+            for (npc_id, count) in spawn_queue {
                 for _ in 0..count {
-                    let npc_data = game_data.npcs.get_npc(id);
-                    let status_effects = StatusEffects::new();
-                    let ability_values =
-                        game_data
-                            .ability_value_calculator
-                            .calculate_npc(id, None, &status_effects);
-
-                    if let (Some(npc_data), Some(ability_values)) = (npc_data, ability_values) {
-                        let npc_ai = Some(npc_data.ai_file_index)
-                            .filter(|ai_file_index| *ai_file_index != 0)
-                            .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
-
-                        let damage_sources = Some(ability_values.get_max_damage_sources())
-                            .filter(|max_damage_sources| *max_damage_sources > 0)
-                            .map(DamageSources::new);
-                        let health_points =
-                            HealthPoints::new(ability_values.get_max_health() as u32);
-                        let level = Level::new(ability_values.get_level() as u32);
-                        let move_mode = MoveMode::Walk;
-                        let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
-
-                        let position = Position::new(
-                            Point3::new(
-                                spawn_point_position.x
-                                    + rand::thread_rng().gen_range(-spawn_range..spawn_range)
-                                        as f32,
-                                spawn_point_position.y
-                                    + rand::thread_rng().gen_range(-spawn_range..spawn_range)
-                                        as f32,
-                                0.0,
-                            ),
-                            spawn_point_zone,
-                        );
-
-                        let mut entity_commands = commands.spawn();
-                        let entity = entity_commands.id();
-
-                        entity_commands.insert_bundle(MonsterBundle {
-                            ability_values,
-                            command: Command::default(),
-                            health_points,
-                            level,
-                            motion_data: game_data.npcs.get_npc_motions(id),
-                            move_mode,
-                            move_speed,
-                            next_command: NextCommand::default(),
-                            npc: Npc::new(id, 0),
-                            object_variables: ObjectVariables::new(MONSTER_OBJECT_VARIABLES_COUNT),
-                            position: position.clone(),
-                            status_effects,
-                            spawn_origin: SpawnOrigin::MonsterSpawnPoint(
-                                spawn_point_entity,
-                                spawn_point_position,
-                            ),
-                            team: Team::default_monster(),
-                        });
-
-                        if let Some(damage_sources) = damage_sources {
-                            entity_commands.insert(damage_sources);
-                        }
-
-                        if let Some(npc_ai) = npc_ai {
-                            entity_commands.insert(npc_ai);
-                        }
-
-                        client_entity_join_zone(
-                            &mut commands,
-                            &mut client_entity_list,
-                            entity,
-                            ClientEntityType::Monster,
-                            &position,
-                        )
-                        .expect("Failed to join monster into zone");
-
+                    if MonsterBundle::spawn(
+                        &mut commands,
+                        &mut client_entity_list,
+                        &game_data,
+                        npc_id,
+                        spawn_point_zone,
+                        SpawnOrigin::MonsterSpawnPoint(spawn_point_entity, spawn_point_position),
+                        spawn_range,
+                        Team::default_monster(),
+                        None,
+                        None,
+                    )
+                    .is_some()
+                    {
                         spawn_point.num_alive_monsters += 1;
                     }
                 }
