@@ -102,7 +102,7 @@ pub fn save_system(
                             &mut client_entity_list,
                             entity,
                             client_entity,
-                            &position,
+                            position,
                         );
                     }
 

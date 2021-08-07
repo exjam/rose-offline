@@ -163,7 +163,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &self.item_database,
                 &basic_stats,
                 &equipment_ability_values,
-                &equipment,
+                equipment,
                 &passive_ability_values,
             ),
             max_health: calculate_max_health(
@@ -227,7 +227,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             defence: calculate_defence(
                 &self.item_database,
                 &basic_stats,
-                &level,
+                level,
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
@@ -235,7 +235,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             resistance: calculate_resistance(
                 &self.item_database,
                 &basic_stats,
-                &level,
+                level,
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
@@ -257,9 +257,9 @@ impl AbilityValueCalculator for AbilityValuesData {
             drop_rate: calculate_drop_rate(&equipment_ability_values, &passive_ability_values),
             max_weight: calculate_max_weight(
                 &self.item_database,
-                &level,
+                level,
                 &basic_stats,
-                &equipment,
+                equipment,
                 &equipment_ability_values,
                 &passive_ability_values,
             ),

@@ -521,7 +521,7 @@ pub fn game_server_main_system(
                                 client_entity,
                                 position,
                                 new_position,
-                                Some(&client),
+                                Some(client),
                             );
                         }
                     }

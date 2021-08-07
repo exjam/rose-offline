@@ -39,7 +39,7 @@ use status_effect_database::get_status_effect_database;
 use zone_database::get_zone_database;
 
 pub fn get_game_data() -> GameData {
-    let vfs_index = VfsIndex::load(&Path::new("data.idx")).expect("Failed reading data.idx");
+    let vfs_index = VfsIndex::load(Path::new("data.idx")).expect("Failed reading data.idx");
 
     let item_database =
         Arc::new(get_item_database(&vfs_index).expect("Failed to load item database"));

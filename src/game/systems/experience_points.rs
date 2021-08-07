@@ -101,12 +101,12 @@ pub fn experience_points_system(
                 {
                     // Set to max hp / mana on levelup
                     let ability_values = game_data.ability_value_calculator.calculate(
-                        &character_info,
+                        character_info,
                         &level,
-                        &equipment,
-                        &basic_stats,
-                        &skill_list,
-                        &status_effects,
+                        equipment,
+                        basic_stats,
+                        skill_list,
+                        status_effects,
                     );
 
                     health_points.hp = ability_values.get_max_health() as u32;

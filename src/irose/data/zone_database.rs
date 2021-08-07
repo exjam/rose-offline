@@ -236,7 +236,7 @@ fn load_zone(
 
     let name = stl
         .get_text_string(1, data.get_zone_string_id(id).unwrap_or(""))
-        .unwrap_or(&"")
+        .unwrap_or("")
         .to_string();
     debug!(
         "Loaded zone {} {} blocks: {}, spawns: {}, npcs: {}, sectors ({}, {}), start: {}",

@@ -214,7 +214,7 @@ impl<'a> FileReader<'a> {
         let end = self.cursor.get_ref().len() - 1;
 
         for i in start..end {
-            if self.cursor.get_ref().as_ref()[i] == 0 {
+            if self.cursor.get_ref()[i] == 0 {
                 self.cursor.set_position((i + 1) as u64);
                 return Ok(&self.cursor.get_ref()[start..i]);
             }

@@ -235,59 +235,59 @@ impl ItemDatabase {
             ItemType::Face => self
                 .face
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Face(&x)),
+                .map(|x| ItemData::Face(x)),
             ItemType::Head => self
                 .head
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Head(&x)),
+                .map(|x| ItemData::Head(x)),
             ItemType::Body => self
                 .body
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Body(&x)),
+                .map(|x| ItemData::Body(x)),
             ItemType::Hands => self
                 .hands
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Hands(&x)),
+                .map(|x| ItemData::Hands(x)),
             ItemType::Feet => self
                 .feet
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Feet(&x)),
+                .map(|x| ItemData::Feet(x)),
             ItemType::Back => self
                 .back
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Back(&x)),
+                .map(|x| ItemData::Back(x)),
             ItemType::Jewellery => self
                 .jewellery
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Jewellery(&x)),
+                .map(|x| ItemData::Jewellery(x)),
             ItemType::Weapon => self
                 .weapon
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Weapon(&x)),
+                .map(|x| ItemData::Weapon(x)),
             ItemType::SubWeapon => self
                 .subweapon
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::SubWeapon(&x)),
+                .map(|x| ItemData::SubWeapon(x)),
             ItemType::Consumable => self
                 .consumable
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Consumable(&x)),
+                .map(|x| ItemData::Consumable(x)),
             ItemType::Gem => self
                 .gem
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Gem(&x)),
+                .map(|x| ItemData::Gem(x)),
             ItemType::Material => self
                 .material
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Material(&x)),
+                .map(|x| ItemData::Material(x)),
             ItemType::Quest => self
                 .quest
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Quest(&x)),
+                .map(|x| ItemData::Quest(x)),
             ItemType::Vehicle => self
                 .vehicle
                 .get(&(item.item_number as u16))
-                .map(|x| ItemData::Vehicle(&x)),
+                .map(|x| ItemData::Vehicle(x)),
             _ => None,
         }
     }

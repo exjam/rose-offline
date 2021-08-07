@@ -653,7 +653,7 @@ fn npc_ai_check_conditions(
                 )
             }
             AipCondition::ServerChannelNumber(ref channel_range) => {
-                ai_condition_server_channel_number(ai_world, &channel_range)
+                ai_condition_server_channel_number(ai_world, channel_range)
             }
             AipCondition::HasStatusEffect(who, status_effect_category, have) => {
                 ai_condition_has_status_effect(

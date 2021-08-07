@@ -221,7 +221,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         id: skill_id,
         name: stl
             .get_text_string(1, data.0.get(id, data.0.columns() - 1))
-            .unwrap_or(&"")
+            .unwrap_or("")
             .to_string(),
         base_skill_id: data.get_base_skill_id(id),
         action_mode: data.get_action_mode(id).unwrap_or(SkillActionMode::Stop),
