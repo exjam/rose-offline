@@ -105,7 +105,7 @@ impl LoginClient {
                                 low_age: 0u8,
                                 high_age: 100u8,
                                 percent_full: 50u16,
-                                name: &name,
+                                name,
                             });
                         }
 

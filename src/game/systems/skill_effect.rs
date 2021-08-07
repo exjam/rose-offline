@@ -668,7 +668,7 @@ pub fn skill_effect_system(
                             if MonsterBundle::spawn(
                                 &mut commands,
                                 &mut client_entity_list,
-                                &skill_world.game_data,
+                                skill_world.game_data,
                                 npc_id,
                                 skill_caster.position.zone_id,
                                 SpawnOrigin::Summoned(
@@ -677,7 +677,7 @@ pub fn skill_effect_system(
                                 ),
                                 150,
                                 skill_caster.team.clone(),
-                                Some((skill_caster.entity, &skill_caster.level)),
+                                Some((skill_caster.entity, skill_caster.level)),
                                 Some(skill_data.level as i32),
                             )
                             .is_some()

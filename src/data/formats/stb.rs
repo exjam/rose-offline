@@ -143,7 +143,7 @@ impl StbFile {
     }
 
     pub fn get_row_name(&self, row: usize) -> &str {
-        self.try_get_row_name(row).unwrap_or(&"")
+        self.try_get_row_name(row).unwrap_or("")
     }
 
     pub fn try_get(&self, row: usize, column: usize) -> Option<&str> {
@@ -160,7 +160,7 @@ impl StbFile {
     }
 
     pub fn get(&self, row: usize, column: usize) -> &str {
-        self.try_get(row, column).unwrap_or(&"")
+        self.try_get(row, column).unwrap_or("")
     }
 
     pub fn try_get_int(&self, row: usize, column: usize) -> Option<i32> {
@@ -170,7 +170,7 @@ impl StbFile {
 
     pub fn get_int(&self, row: usize, column: usize) -> i32 {
         self.try_get(row, column)
-            .unwrap_or(&"")
+            .unwrap_or("")
             .parse::<i32>()
             .unwrap_or(0)
     }

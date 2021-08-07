@@ -243,7 +243,7 @@ impl ClientEntityZone {
         let max_sector = self.calculate_sector(origin + Vector2::new(distance, distance));
 
         ClientEntityZoneEntityIterator {
-            zone: &self,
+            zone: self,
             min_sector,
             max_sector,
             current_sector: min_sector,

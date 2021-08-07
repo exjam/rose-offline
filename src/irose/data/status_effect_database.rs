@@ -72,7 +72,7 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
         name: data
             .get_string_id(row)
             .and_then(|string_id| stl.get_text_string(1, string_id))
-            .unwrap_or(&"")
+            .unwrap_or("")
             .to_string(),
         status_effect_type,
         can_be_reapplied: data.get_can_be_reapplied(row).unwrap_or(false),

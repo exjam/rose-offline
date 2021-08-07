@@ -211,7 +211,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 create_sound_index: data.get_create_sound_index(id).unwrap_or(0),
                 death_quest_trigger_name: data
                     .get_death_quest_trigger_name(id)
-                    .unwrap_or(&"")
+                    .unwrap_or("")
                     .to_string(),
                 npc_height: data.get_npc_height(id).unwrap_or(0),
                 motion_data,
@@ -232,9 +232,9 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
             key.unwrap().to_string(),
             NpcConversationData {
                 index: id,
-                name: data.get_name(id).unwrap_or(&"").to_string(),
-                _type: data.get_type(id).unwrap_or(&"").to_string(),
-                description: data.get_description(id).unwrap_or(&"").to_string(),
+                name: data.get_name(id).unwrap_or("").to_string(),
+                _type: data.get_type(id).unwrap_or("").to_string(),
+                description: data.get_description(id).unwrap_or("").to_string(),
                 filename: filename.unwrap().to_string(),
             },
         );

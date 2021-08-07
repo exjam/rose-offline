@@ -224,7 +224,7 @@ fn load_base_item(
     Some(BaseItemData {
         name: stl
             .get_text_string(1, data.0.get(id, data.0.columns() - 1))
-            .unwrap_or(&"")
+            .unwrap_or("")
             .to_string(),
         class: data.get_item_class(id).unwrap_or(ItemClass::Unknown),
         base_price: data.get_base_price(id).unwrap_or(0),

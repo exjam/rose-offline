@@ -166,7 +166,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
 
         writer.write_u32(character_info.face as u32);
         writer.write_u32(character_info.hair as u32);
-        writer.write_equipment_visible_part(&packet.equipment);
+        writer.write_equipment_visible_part(packet.equipment);
 
         // tagBasicInfo
         writer.write_u8(character_info.birth_stone);
@@ -750,7 +750,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
 
         writer.write_u32(packet.character_info.face as u32);
         writer.write_u32(packet.character_info.hair as u32);
-        writer.write_equipment_visible_part(&packet.equipment);
+        writer.write_equipment_visible_part(packet.equipment);
 
         for index in &[AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
             writer.write_equipment_ammo_part(packet.equipment.get_ammo_item(*index));
