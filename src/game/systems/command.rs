@@ -133,7 +133,7 @@ fn is_valid_pickup_target<'a>(
     None
 }
 
-#[allow(clippy::clippy::type_complexity)]
+#[allow(clippy::type_complexity)]
 pub fn command_system(
     mut commands: Commands,
     mut query: Query<(
