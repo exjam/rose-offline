@@ -80,7 +80,7 @@ impl Random {
 }
 
 fn seed_table(table: &mut [u32; 16 * 2048], mut seed: &mut Random, seed_types: &[SeedType]) {
-    #[allow(clippy::clippy::needless_range_loop)]
+    #[allow(clippy::needless_range_loop)]
     for i in 0..16 {
         let seed_next_fn = Random::get_next_fn(seed_types[i]);
         let table_start = i * 2048;

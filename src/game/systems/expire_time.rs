@@ -6,7 +6,7 @@ use crate::game::{
     resources::{ClientEntityList, ServerTime},
 };
 
-#[allow(clippy::clippy::type_complexity)]
+#[allow(clippy::type_complexity)]
 pub fn expire_time_system(
     mut commands: Commands,
     query: Query<(
