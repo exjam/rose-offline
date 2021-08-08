@@ -318,6 +318,22 @@ impl GameClient {
                         sell_items: packet.sell_items,
                     }))?;
             }
+            Some(ClientPackets::MoveToggle) => {
+                let packet = PacketClientMoveToggle::try_from(&packet)?;
+                match packet.toggle_type {
+                    PacketClientMoveToggleType::Run => {
+                        client.client_message_tx.send(ClientMessage::RunToggle())?;
+                    }
+                    PacketClientMoveToggleType::Sit => {
+                        client.client_message_tx.send(ClientMessage::SitToggle())?;
+                    }
+                    PacketClientMoveToggleType::Drive => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::DriveToggle())?;
+                    }
+                }
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -957,6 +973,20 @@ impl GameClient {
                     .connection
                     .write_packet(Packet::from(&PacketServerNpcStoreTransactionError {
                         error,
+                    }))
+                    .await?;
+            }
+            ServerMessage::MoveToggle(MoveToggle {
+                entity_id,
+                move_mode,
+                run_speed,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerMoveToggle {
+                        entity_id,
+                        move_mode,
+                        run_speed,
                     }))
                     .await?;
             }

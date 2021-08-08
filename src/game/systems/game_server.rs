@@ -375,6 +375,7 @@ pub fn game_server_main_system(
         &CharacterInfo,
         &SkillList,
         &mut QuestState,
+        &mut MoveMode,
     )>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
@@ -402,6 +403,7 @@ pub fn game_server_main_system(
             character_info,
             skill_list,
             mut quest_state,
+            mut move_mode,
         )| {
             let mut entity_commands = commands.entity(entity);
 
@@ -804,6 +806,20 @@ pub fn game_server_main_system(
                                 sell_items,
                             });
                         }
+                    ClientMessage::RunToggle() => {
+                        if matches!(*move_mode, MoveMode::Run) {
+                            *move_mode = MoveMode::Walk;
+                        } else {
+                            *move_mode = MoveMode::Run;
+                        }
+                        server_messages.send_entity_message(
+                            client_entity,
+                            ServerMessage::MoveToggle(server::MoveToggle {
+                                entity_id: client_entity.id,
+                                move_mode: *move_mode,
+                                run_speed: None,
+                            }),
+                        );
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
