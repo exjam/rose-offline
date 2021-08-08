@@ -31,12 +31,20 @@ pub struct ZoneNpcSpawn {
     pub conversation: NpcConversationId,
 }
 
+pub struct ZoneEventObject {
+    pub event_id: u16,
+    pub map_chunk_x: i32,
+    pub map_chunk_y: i32,
+    pub position: Point3<f32>,
+}
+
 pub struct ZoneData {
     pub id: ZoneId,
     pub name: String,
     pub sector_size: u32,
     pub grid_per_patch: f32,
     pub grid_size: f32,
+    pub event_objects: Vec<ZoneEventObject>,
     pub monster_spawns: Vec<ZoneMonsterSpawnPoint>,
     pub npcs: Vec<ZoneNpcSpawn>,
     pub sectors_base_position: Point2<f32>,

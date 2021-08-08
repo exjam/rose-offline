@@ -8,8 +8,8 @@ use crate::{
             ifo::{self, IfoReadError, MonsterSpawn},
             FileReader, IfoFile, StbFile, StlFile, VfsIndex, ZonFile, ZonReadError,
         },
-        NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneId, ZoneMonsterSpawnPoint,
-        ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
+        NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId,
+        ZoneMonsterSpawnPoint, ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
     },
     stb_column,
 };
@@ -135,6 +135,20 @@ fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn
     }
 }
 
+fn create_event_object(
+    event_object: &ifo::EventObject,
+    object_offset: Vector3<f32>,
+    map_chunk_x: i32,
+    map_chunk_y: i32,
+) -> ZoneEventObject {
+    ZoneEventObject {
+        event_id: event_object.object.event_id,
+        map_chunk_x,
+        map_chunk_y,
+        position: event_object.object.position + object_offset,
+    }
+}
+
 fn load_zone(
     vfs: &VfsIndex,
     data: &StbZone,
@@ -154,6 +168,7 @@ fn load_zone(
 
     let mut monster_spawns = Vec::new();
     let mut npcs = Vec::new();
+    let mut event_objects = Vec::new();
     let mut ifo_count = 0;
 
     let mut min_x = None;
@@ -186,6 +201,9 @@ fn load_zone(
                         .iter()
                         .map(|x| create_npc_spawn(x, objects_offset)),
                 );
+                event_objects.extend(ifo_file.event_objects.iter().map(|event_object| {
+                    create_event_object(event_object, objects_offset, x as i32, y as i32)
+                }));
                 ifo_count += 1;
 
                 min_x = Some(min_x.map_or(x, |value| u32::min(value, x)));
@@ -255,6 +273,7 @@ fn load_zone(
         sector_size,
         grid_per_patch: zon_file.grid_per_patch,
         grid_size: zon_file.grid_size,
+        event_objects,
         monster_spawns,
         npcs,
         sectors_base_position: Point2::new(

@@ -110,4 +110,6 @@ pub use world::{
     WorldTicks, WORLD_DAYS_PER_MONTH, WORLD_MONTH_PER_YEAR, WORLD_TICKS_PER_DAY,
     WORLD_TICKS_PER_MONTH, WORLD_TICKS_PER_YEAR, WORLD_TICK_DURATION,
 };
-pub use zone_database::{ZoneData, ZoneDatabase, ZoneId, ZoneMonsterSpawnPoint, ZoneNpcSpawn};
+pub use zone_database::{
+    ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneMonsterSpawnPoint, ZoneNpcSpawn,
+};

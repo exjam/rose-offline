@@ -2,11 +2,14 @@ use bevy_ecs::prelude::{Commands, Res, ResMut};
 use log::warn;
 
 use crate::game::{
-    bundles::{client_entity_join_zone, NpcBundle, NPC_OBJECT_VARIABLES_COUNT},
+    bundles::{
+        client_entity_join_zone, NpcBundle, EVENT_OBJECT_VARIABLES_COUNT,
+        NPC_OBJECT_VARIABLES_COUNT,
+    },
     components::{
-        ClientEntityType, Command, HealthPoints, Level, MonsterSpawnPoint, MoveMode, MoveSpeed,
-        NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Position, StatusEffects,
-        Team,
+        ClientEntityType, Command, EventObject, HealthPoints, Level, MonsterSpawnPoint, MoveMode,
+        MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Position,
+        StatusEffects, Team,
     },
     resources::{ClientEntityList, GameData, ZoneList},
 };
@@ -20,6 +23,24 @@ pub fn startup_zones_system(
     for (&zone_id, zone_data) in game_data.zones.iter() {
         // Add to zone list
         zone_list.add_zone(zone_id);
+
+        // Create the Event Object entities
+        for event_object in zone_data.event_objects.iter() {
+            let entity = commands
+                .spawn()
+                .insert(EventObject::new(event_object.event_id))
+                .insert(Position::new(event_object.position, zone_id))
+                .insert(ObjectVariables::new(EVENT_OBJECT_VARIABLES_COUNT))
+                .id();
+
+            zone_list.add_event_object(
+                zone_id,
+                event_object.event_id,
+                event_object.map_chunk_x,
+                event_object.map_chunk_y,
+                entity,
+            );
+        }
 
         // Create the MonsterSpawnPoint entities
         for spawn in zone_data.monster_spawns.iter() {
