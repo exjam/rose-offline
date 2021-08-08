@@ -81,6 +81,7 @@ pub enum ServerPackets {
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
+    MoveToggle = 0x782,
 }
 
 trait PacketWriteEntityId {
@@ -1421,6 +1422,21 @@ impl<'a> From<&'a PacketServerUpdateStatusEffects<'a>> for Packet {
             writer.write_u32(updated_mp.mp);
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketServerMoveToggle {
+    pub entity_id: ClientEntityId,
+    pub move_mode: MoveMode,
+    pub run_speed: Option<i32>,
+}
+
+impl From<&PacketServerMoveToggle> for Packet {
+    fn from(packet: &PacketServerMoveToggle) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::MoveToggle as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_move_mode_toggle_u8(packet.move_mode);
         writer.into()
     }
 }

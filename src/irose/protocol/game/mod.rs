@@ -14,13 +14,13 @@ use crate::{
         },
         server::{
             ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity, CastSkillTargetPosition,
-            LocalChat, LogoutReply, OpenPersonalStore, PersonalStoreTransactionCancelled,
-            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-            PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
-            QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
-            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateSpeed,
-            UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
+            LocalChat, LogoutReply, MoveToggle, OpenPersonalStore,
+            PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
+            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
+            PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
+            ServerMessage, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
+            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
+            UpdateMoney, UpdateSpeed, UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -914,6 +914,17 @@ impl GameClient {
                         skill_id,
                     }))
                     .await?;
+            }
+            ServerMessage::MoveToggle(MoveToggle {
+                entity_id,
+                move_mode,
+                run_speed,
+            }) => {
+                client.connection.write_packet(Packet::from(&PacketServerMoveToggle {
+                    entity_id,
+                    move_mode,
+                    run_speed,
+                })).await?;
             }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
