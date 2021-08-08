@@ -10,11 +10,12 @@ use crate::{
     data::{
         formats::qsd::{
             QsdCondition, QsdConditionMonthDayTime, QsdConditionOperator, QsdConditionQuestItem,
-            QsdConditionWeekDayTime, QsdReward, QsdRewardCalculatedItem, QsdRewardOperator,
-            QsdRewardQuestAction, QsdRewardTarget, QsdSkillId, QsdVariableType, QsdZoneId,
+            QsdConditionWeekDayTime, QsdNpcId, QsdReward, QsdRewardCalculatedItem,
+            QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget, QsdServerChannelId,
+            QsdSkillId, QsdTeamNumber, QsdVariableType, QsdZoneId,
         },
         item::{EquipmentItem, Item},
-        AbilityType, ItemReference, QuestTrigger, SkillId, WorldTicks, ZoneId,
+        AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
     },
     game::{
         bundles::{
@@ -29,7 +30,7 @@ use crate::{
         },
         events::{QuestTriggerEvent, RewardXpEvent},
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
-        resources::{ClientEntityList, ServerTime, WorldRates, WorldTime},
+        resources::{ClientEntityList, ServerTime, WorldRates, WorldTime, ZoneList},
         GameData,
     },
 };
@@ -58,6 +59,8 @@ struct QuestSourceEntity<'world, 'a> {
 
 struct QuestParameters<'a, 'world, 'b> {
     source: &'a mut QuestSourceEntity<'world, 'b>,
+    selected_event_object: Option<Entity>,
+    selected_npc: Option<Entity>,
     selected_quest_index: Option<usize>,
     next_trigger_name: Option<String>,
 }
@@ -69,6 +72,7 @@ struct QuestWorld<'a, 'b, 'c, 'd> {
     server_time: &'a ServerTime,
     world_rates: &'a WorldRates,
     world_time: &'a WorldTime,
+    zone_list: &'a ZoneList,
     reward_xp_events: &'a mut EventWriter<'d, RewardXpEvent>,
     rng: ThreadRng,
 }
@@ -363,6 +367,34 @@ fn quest_condition_have_skill(
     !have
 }
 
+fn quest_condition_team_number(
+    quest_parameters: &QuestParameters,
+    range: &RangeInclusive<QsdTeamNumber>,
+) -> bool {
+    range.contains(&(quest_parameters.source.team.id as QsdTeamNumber))
+}
+
+fn quest_condition_server_channel_number(
+    channel_range: &RangeInclusive<QsdServerChannelId>,
+) -> bool {
+    // TODO: Do we need to have channel numbers?
+    channel_range.contains(&1)
+}
+
+fn quest_condition_select_local_npc(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    npc_id: QsdNpcId,
+) -> bool {
+    let local_npc = NpcId::new(npc_id as u16).and_then(|npc_id| {
+        quest_world
+            .zone_list
+            .find_local_npc(quest_parameters.source.position.zone_id, npc_id)
+    });
+    quest_parameters.selected_npc = local_npc;
+    local_npc.is_some()
+}
+
 fn quest_trigger_check_conditions(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -409,21 +441,34 @@ fn quest_trigger_check_conditions(
             QsdCondition::HasSkill(ref skill_id_range, have) => {
                 quest_condition_have_skill(quest_parameters, skill_id_range, have)
             }
+            QsdCondition::TeamNumber(ref range) => {
+                quest_condition_team_number(quest_parameters, range)
+            }
+            QsdCondition::ServerChannelNumber(ref range) => {
+                quest_condition_server_channel_number(range)
+            }
+            QsdCondition::SelectNpc(npc_id) => {
+                quest_condition_select_local_npc(quest_world, quest_parameters, npc_id)
+            }
+            QsdCondition::RandomPercent(_) => {
+                // Random percent is only checked on client
+                true
+            }
             _ => {
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
-              QsdCondition::Party(_) => todo!(),
-              QsdCondition::RandomPercent(_) => todo!(),
-              QsdCondition::ObjectVariable(_) => todo!(),
               QsdCondition::SelectEventObject(_) => todo!(),
-              QsdCondition::SelectNpc(_) => todo!(),
-              QsdCondition::PartyMemberCount(_) => todo!(),
+              QsdCondition::ObjectVariable(_) => todo!(),
               QsdCondition::ObjectZoneTime(_, _) => todo!(),
-              QsdCondition::CompareNpcVariables(_, _, _) => todo!(),
-              QsdCondition::TeamNumber(_) => todo!(),
               QsdCondition::ObjectDistance(_, _) => todo!(),
-              QsdCondition::ServerChannelNumber(_) => todo!(),
+              QsdCondition::CompareNpcVariables(_, _, _) => todo!(),
+
+              // TODO: Implement party system
+              QsdCondition::Party(_) => todo!(),
+              QsdCondition::PartyMemberCount(_) => todo!(),
+
+              // TODO: Implement clan system
               QsdCondition::InClan(_) => todo!(),
               QsdCondition::ClanPosition(_, _) => todo!(),
               QsdCondition::ClanPointContribution(_, _) => todo!(),
@@ -964,6 +1009,9 @@ fn quest_trigger_apply_rewards(
               QsdReward::SetTeamNumber(_) => todo!(),
               QsdReward::SetRevivePosition(_) => todo!(),
               QsdReward::SetMonsterSpawnState(_, _) => todo!(),
+              QsdReward::ResetSkills => todo!(),
+
+              // TODO: Implement clans
               QsdReward::ClanLevel(_, _) => todo!(),
               QsdReward::ClanMoney(_, _) => todo!(),
               QsdReward::ClanPoints(_, _) => todo!(),
@@ -971,7 +1019,6 @@ fn quest_trigger_apply_rewards(
               QsdReward::RemoveClanSkill(_) => todo!(),
               QsdReward::ClanPointContribution(_, _) => todo!(),
               QsdReward::TeleportNearbyClanMembers(_, _, _) => todo!(),
-              QsdReward::ResetSkills => todo!(),
               */
         };
 
@@ -1010,10 +1057,11 @@ pub fn quest_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
-    mut quest_trigger_events: EventReader<QuestTriggerEvent>,
-    mut reward_xp_events: EventWriter<RewardXpEvent>,
     server_time: Res<ServerTime>,
     world_time: Res<WorldTime>,
+    zone_list: Res<ZoneList>,
+    mut quest_trigger_events: EventReader<QuestTriggerEvent>,
+    mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
     let mut quest_world = QuestWorld {
         commands: &mut commands,
@@ -1022,6 +1070,7 @@ pub fn quest_system(
         server_time: &server_time,
         world_rates: &world_rates,
         world_time: &world_time,
+        zone_list: &zone_list,
         reward_xp_events: &mut reward_xp_events,
         rng: rand::thread_rng(),
     };
@@ -1079,6 +1128,8 @@ pub fn quest_system(
                     team: &mut team,
                     union_membership: union_membership.as_mut(),
                 },
+                selected_event_object: None,
+                selected_npc: None,
                 selected_quest_index: None,
                 next_trigger_name: None,
             };
