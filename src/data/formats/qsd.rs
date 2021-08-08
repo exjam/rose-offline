@@ -107,7 +107,7 @@ pub type QsdServerChannelId = usize;
 pub type QsdEquationId = usize;
 pub type QsdStringId = usize;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdObjectType {
     Npc,
     Event,
