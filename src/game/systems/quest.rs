@@ -9,11 +9,11 @@ use rand::{prelude::ThreadRng, Rng};
 use crate::{
     data::{
         formats::qsd::{
-            QsdCondition, QsdConditionMonthDayTime, QsdConditionOperator, QsdConditionQuestItem,
-            QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdEventId, QsdNpcId,
-            QsdReward, QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction,
-            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableType,
-            QsdZoneId,
+            QsdCondition, QsdConditionMonthDayTime, QsdConditionObjectVariable,
+            QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
+            QsdConditionWeekDayTime, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
+            QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
+            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableType, QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -26,8 +26,8 @@ use crate::{
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
             EquipmentIndex, ExperiencePoints, GameClient, Inventory, Level, Money, MoveSpeed,
-            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, Team,
-            UnionMembership,
+            ObjectVariables, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
+            Team, UnionMembership,
         },
         events::{QuestTriggerEvent, RewardXpEvent},
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
@@ -66,7 +66,7 @@ struct QuestParameters<'a, 'world, 'b> {
     next_trigger_name: Option<String>,
 }
 
-struct QuestWorld<'a, 'b, 'c, 'd> {
+struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f> {
     commands: &'a mut Commands<'b>,
     client_entity_list: &'a mut ResMut<'c, ClientEntityList>,
     game_data: &'a GameData,
@@ -75,6 +75,7 @@ struct QuestWorld<'a, 'b, 'c, 'd> {
     world_time: &'a WorldTime,
     zone_list: &'a ZoneList,
     reward_xp_events: &'a mut EventWriter<'d, RewardXpEvent>,
+    object_variables_query: &'a mut Query<'e, &'f mut ObjectVariables>,
     rng: ThreadRng,
 }
 
@@ -413,6 +414,31 @@ fn quest_condition_select_local_npc(
     local_npc.is_some()
 }
 
+fn quest_condition_object_variable(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    object_type: QsdObjectType,
+    variable_id: usize,
+    operator: QsdConditionOperator,
+    value: i32,
+) -> bool {
+    let entity = match object_type {
+        QsdObjectType::Event => quest_parameters.selected_event_object,
+        QsdObjectType::Npc => quest_parameters.selected_npc,
+        QsdObjectType::Owner => Some(quest_parameters.source.entity),
+    };
+
+    let variable_value = entity
+        .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
+        .and_then(|object_variables| object_variables.variables.get(variable_id).cloned());
+
+    if let Some(variable_value) = variable_value {
+        quest_condition_operator(operator, variable_value, value)
+    } else {
+        false
+    }
+}
+
 fn quest_trigger_check_conditions(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -480,6 +506,19 @@ fn quest_trigger_check_conditions(
                 chunk.x as i32,
                 chunk.y as i32,
             ),
+            QsdCondition::ObjectVariable(QsdConditionObjectVariable {
+                object_type,
+                variable_id,
+                operator,
+                value,
+            }) => quest_condition_object_variable(
+                quest_world,
+                quest_parameters,
+                object_type,
+                variable_id,
+                operator,
+                value,
+            ),
             QsdCondition::RandomPercent(_) => {
                 // Random percent is only checked on client
                 true
@@ -488,7 +527,6 @@ fn quest_trigger_check_conditions(
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
-              QsdCondition::ObjectVariable(_) => todo!(),
               QsdCondition::ObjectZoneTime(_, _) => todo!(),
               QsdCondition::ObjectDistance(_, _) => todo!(),
               QsdCondition::CompareNpcVariables(_, _, _) => todo!(),
@@ -1083,6 +1121,7 @@ pub fn quest_system(
         ),
         Option<&GameClient>,
     )>,
+    mut object_variables_query: Query<&mut ObjectVariables>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
@@ -1101,6 +1140,7 @@ pub fn quest_system(
         world_time: &world_time,
         zone_list: &zone_list,
         reward_xp_events: &mut reward_xp_events,
+        object_variables_query: &mut object_variables_query,
         rng: rand::thread_rng(),
     };
 
