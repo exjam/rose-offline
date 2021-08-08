@@ -13,17 +13,18 @@ struct EventObjectKey {
 
 struct ZoneData {
     event_objects: HashMap<EventObjectKey, Entity>,
-    local_npcs: HashMap<NpcId, Entity>,
 }
 
 pub struct ZoneList {
     zones: HashMap<ZoneId, ZoneData>,
+    npcs: HashMap<NpcId, Entity>,
 }
 
 impl ZoneList {
     pub fn new() -> Self {
         Self {
             zones: Default::default(),
+            npcs: Default::default(),
         }
     }
 
@@ -32,7 +33,6 @@ impl ZoneList {
             zone_id,
             ZoneData {
                 event_objects: Default::default(),
-                local_npcs: Default::default(),
             },
         );
     }
@@ -75,15 +75,11 @@ impl ZoneList {
         })
     }
 
-    pub fn add_local_npc(&mut self, zone_id: ZoneId, npc_id: NpcId, entity: Entity) {
-        if let Some(zone) = self.zones.get_mut(&zone_id) {
-            zone.local_npcs.insert(npc_id, entity);
-        }
+    pub fn add_npc(&mut self, npc_id: NpcId, entity: Entity) {
+        self.npcs.insert(npc_id, entity);
     }
 
-    pub fn find_local_npc(&self, zone_id: ZoneId, npc_id: NpcId) -> Option<Entity> {
-        self.zones
-            .get(&zone_id)
-            .and_then(|zone| zone.local_npcs.get(&npc_id).cloned())
+    pub fn find_npc(&self, npc_id: NpcId) -> Option<Entity> {
+        self.npcs.get(&npc_id).cloned()
     }
 }

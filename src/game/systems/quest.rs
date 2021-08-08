@@ -400,18 +400,14 @@ fn quest_condition_select_event_object(
     event_object.is_some()
 }
 
-fn quest_condition_select_local_npc(
+fn quest_condition_select_npc(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
     npc_id: QsdNpcId,
 ) -> bool {
-    let local_npc = NpcId::new(npc_id as u16).and_then(|npc_id| {
-        quest_world
-            .zone_list
-            .find_local_npc(quest_parameters.source.position.zone_id, npc_id)
-    });
-    quest_parameters.selected_npc = local_npc;
-    local_npc.is_some()
+    quest_parameters.selected_npc =
+        NpcId::new(npc_id as u16).and_then(|npc_id| quest_world.zone_list.find_npc(npc_id));
+    quest_parameters.selected_npc.is_some()
 }
 
 fn quest_condition_object_variable(
@@ -544,7 +540,7 @@ fn quest_trigger_check_conditions(
                 quest_condition_server_channel_number(range)
             }
             QsdCondition::SelectNpc(npc_id) => {
-                quest_condition_select_local_npc(quest_world, quest_parameters, npc_id)
+                quest_condition_select_npc(quest_world, quest_parameters, npc_id)
             }
             QsdCondition::SelectEventObject(QsdConditionSelectEventObject {
                 zone,
