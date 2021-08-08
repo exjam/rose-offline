@@ -10,9 +10,10 @@ use crate::{
     data::{
         formats::qsd::{
             QsdCondition, QsdConditionMonthDayTime, QsdConditionOperator, QsdConditionQuestItem,
-            QsdConditionWeekDayTime, QsdNpcId, QsdReward, QsdRewardCalculatedItem,
-            QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget, QsdServerChannelId,
-            QsdSkillId, QsdTeamNumber, QsdVariableType, QsdZoneId,
+            QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdEventId, QsdNpcId,
+            QsdReward, QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction,
+            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableType,
+            QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -381,6 +382,23 @@ fn quest_condition_server_channel_number(
     channel_range.contains(&1)
 }
 
+fn quest_condition_select_event_object(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    zone_id: QsdZoneId,
+    event_id: QsdEventId,
+    map_chunk_x: i32,
+    map_chunk_y: i32,
+) -> bool {
+    let event_object = ZoneId::new(zone_id as u16).and_then(|zone_id| {
+        quest_world
+            .zone_list
+            .find_event_object(zone_id, event_id as u16, map_chunk_x, map_chunk_y)
+    });
+    quest_parameters.selected_event_object = event_object;
+    event_object.is_some()
+}
+
 fn quest_condition_select_local_npc(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -450,6 +468,18 @@ fn quest_trigger_check_conditions(
             QsdCondition::SelectNpc(npc_id) => {
                 quest_condition_select_local_npc(quest_world, quest_parameters, npc_id)
             }
+            QsdCondition::SelectEventObject(QsdConditionSelectEventObject {
+                zone,
+                ref chunk,
+                event_id,
+            }) => quest_condition_select_event_object(
+                quest_world,
+                quest_parameters,
+                zone,
+                event_id,
+                chunk.x as i32,
+                chunk.y as i32,
+            ),
             QsdCondition::RandomPercent(_) => {
                 // Random percent is only checked on client
                 true
@@ -458,7 +488,6 @@ fn quest_trigger_check_conditions(
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
-              QsdCondition::SelectEventObject(_) => todo!(),
               QsdCondition::ObjectVariable(_) => todo!(),
               QsdCondition::ObjectZoneTime(_, _) => todo!(),
               QsdCondition::ObjectDistance(_, _) => todo!(),
