@@ -66,7 +66,7 @@ struct QuestParameters<'a, 'world, 'b> {
     next_trigger_name: Option<String>,
 }
 
-struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f> {
+struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g> {
     commands: &'a mut Commands<'b>,
     client_entity_list: &'a mut ResMut<'c, ClientEntityList>,
     game_data: &'a GameData,
@@ -75,7 +75,7 @@ struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f> {
     world_time: &'a WorldTime,
     zone_list: &'a ZoneList,
     reward_xp_events: &'a mut EventWriter<'d, RewardXpEvent>,
-    object_variables_query: &'a mut Query<'e, &'f mut ObjectVariables>,
+    object_variables_query: &'a mut Query<'e, (&'f mut ObjectVariables, &'g Position)>,
     rng: ThreadRng,
 }
 
@@ -425,18 +425,70 @@ fn quest_condition_object_variable(
     let entity = match object_type {
         QsdObjectType::Event => quest_parameters.selected_event_object,
         QsdObjectType::Npc => quest_parameters.selected_npc,
-        QsdObjectType::Owner => Some(quest_parameters.source.entity),
+        _ => return false,
     };
 
     let variable_value = entity
         .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
-        .and_then(|object_variables| object_variables.variables.get(variable_id).cloned());
+        .and_then(|(object_variables, _)| object_variables.variables.get(variable_id).cloned());
 
     if let Some(variable_value) = variable_value {
         quest_condition_operator(operator, variable_value, value)
     } else {
         false
     }
+}
+
+fn quest_condition_object_zone_time(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    object_type: QsdObjectType,
+    range: &RangeInclusive<u32>,
+) -> bool {
+    let entity = match object_type {
+        QsdObjectType::Event => quest_parameters.selected_event_object,
+        QsdObjectType::Npc => quest_parameters.selected_npc,
+        QsdObjectType::Owner => Some(quest_parameters.source.entity),
+    };
+
+    let zone_data = entity
+        .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
+        .map(|(_, position)| position.zone_id)
+        .and_then(|zone_id| quest_world.game_data.zones.get_zone(zone_id));
+
+    let world_time = quest_world.world_time.ticks.get_world_time();
+    let zone_time = if let Some(zone_data) = zone_data {
+        world_time % zone_data.day_cycle
+    } else {
+        world_time
+    };
+    range.contains(&zone_time)
+}
+
+fn quest_condition_object_distance(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    object_type: QsdObjectType,
+    distance: i32,
+) -> bool {
+    let entity = match object_type {
+        QsdObjectType::Event => quest_parameters.selected_event_object,
+        QsdObjectType::Npc => quest_parameters.selected_npc,
+        _ => return false,
+    };
+
+    entity
+        .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
+        .map(|(_, position)| position)
+        .filter(|position| position.zone_id == quest_parameters.source.position.zone_id)
+        .map(|position| {
+            nalgebra::distance(
+                &position.position.xy(),
+                &quest_parameters.source.position.position.xy(),
+            ) as i32
+        })
+        .map(|object_distance| object_distance < distance)
+        .unwrap_or(false)
 }
 
 fn quest_trigger_check_conditions(
@@ -519,6 +571,15 @@ fn quest_trigger_check_conditions(
                 operator,
                 value,
             ),
+            QsdCondition::ObjectZoneTime(object_type, ref range) => {
+                quest_condition_object_zone_time(quest_world, quest_parameters, object_type, range)
+            }
+            QsdCondition::ObjectDistance(object_type, distance) => quest_condition_object_distance(
+                quest_world,
+                quest_parameters,
+                object_type,
+                distance,
+            ),
             QsdCondition::RandomPercent(_) => {
                 // Random percent is only checked on client
                 true
@@ -527,8 +588,6 @@ fn quest_trigger_check_conditions(
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
-              QsdCondition::ObjectZoneTime(_, _) => todo!(),
-              QsdCondition::ObjectDistance(_, _) => todo!(),
               QsdCondition::CompareNpcVariables(_, _, _) => todo!(),
 
               // TODO: Implement party system
@@ -1121,7 +1180,7 @@ pub fn quest_system(
         ),
         Option<&GameClient>,
     )>,
-    mut object_variables_query: Query<&mut ObjectVariables>,
+    mut object_variables_query: Query<(&mut ObjectVariables, &Position)>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
