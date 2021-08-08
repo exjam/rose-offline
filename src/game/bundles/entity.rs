@@ -19,6 +19,7 @@ use crate::{
     },
 };
 
+pub const EVENT_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const NPC_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const MONSTER_OBJECT_VARIABLES_COUNT: usize = 5;
 
