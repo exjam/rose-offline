@@ -140,7 +140,7 @@ pub fn startup_zones_system(
             )
             .expect("Failed to join zone with NPC");
 
-            zone_list.add_local_npc(zone_id, npc.npc_id, entity);
+            zone_list.add_npc(npc.npc_id, entity);
         }
     }
 }

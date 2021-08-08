@@ -325,11 +325,8 @@ fn ai_condition_select_local_npc(
     ai_parameters: &mut AiParameters,
     npc_id: AipNpcId,
 ) -> bool {
-    let local_npc = NpcId::new(npc_id as u16).and_then(|npc_id| {
-        ai_world
-            .zone_list
-            .find_local_npc(ai_parameters.source.position.zone_id, npc_id)
-    });
+    let local_npc =
+        NpcId::new(npc_id as u16).and_then(|npc_id| ai_world.zone_list.find_npc(npc_id));
     ai_parameters.selected_local_npc = local_npc;
     local_npc.is_some()
 }
