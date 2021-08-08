@@ -13,7 +13,8 @@ use crate::{
             QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
             QsdConditionWeekDayTime, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
             QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
-            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableType, QsdZoneId,
+            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId, QsdVariableType,
+            QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -487,6 +488,27 @@ fn quest_condition_object_distance(
         .unwrap_or(false)
 }
 
+fn quest_condition_compare_npc_object_variables(
+    quest_world: &mut QuestWorld,
+    npc_variable1: (QsdNpcId, QsdVariableId),
+    operator: QsdConditionOperator,
+    npc_variable2: (QsdNpcId, QsdVariableId),
+) -> bool {
+    let value1 = NpcId::new(npc_variable1.0 as u16)
+        .and_then(|npc_id| quest_world.zone_list.find_npc(npc_id))
+        .and_then(|npc_entity| quest_world.object_variables_query.get_mut(npc_entity).ok())
+        .and_then(|(object_variables, _)| object_variables.variables.get(npc_variable1.1).cloned())
+        .unwrap_or(0);
+
+    let value2 = NpcId::new(npc_variable2.0 as u16)
+        .and_then(|npc_id| quest_world.zone_list.find_npc(npc_id))
+        .and_then(|npc_entity| quest_world.object_variables_query.get_mut(npc_entity).ok())
+        .and_then(|(object_variables, _)| object_variables.variables.get(npc_variable2.1).cloned())
+        .unwrap_or(0);
+
+    quest_condition_operator(operator, value1, value2)
+}
+
 fn quest_trigger_check_conditions(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -576,6 +598,14 @@ fn quest_trigger_check_conditions(
                 object_type,
                 distance,
             ),
+            QsdCondition::CompareNpcVariables(npc_variable1, operator, npc_variable2) => {
+                quest_condition_compare_npc_object_variables(
+                    quest_world,
+                    npc_variable1,
+                    operator,
+                    npc_variable2,
+                )
+            }
             QsdCondition::RandomPercent(_) => {
                 // Random percent is only checked on client
                 true
@@ -584,8 +614,6 @@ fn quest_trigger_check_conditions(
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
-              QsdCondition::CompareNpcVariables(_, _, _) => todo!(),
-
               // TODO: Implement party system
               QsdCondition::Party(_) => todo!(),
               QsdCondition::PartyMemberCount(_) => todo!(),
