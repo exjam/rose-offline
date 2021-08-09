@@ -12,9 +12,9 @@ use crate::{
             QsdCondition, QsdConditionMonthDayTime, QsdConditionObjectVariable,
             QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
             QsdConditionWeekDayTime, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
-            QsdRewardCalculatedItem, QsdRewardOperator, QsdRewardQuestAction, QsdRewardTarget,
-            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId, QsdVariableType,
-            QsdZoneId,
+            QsdRewardCalculatedItem, QsdRewardObjectVariable, QsdRewardOperator,
+            QsdRewardQuestAction, QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber,
+            QsdVariableId, QsdVariableType, QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -1198,6 +1198,33 @@ fn quest_reward_set_health_mana_percent(
     true
 }
 
+fn quest_reward_object_variable(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    object_type: QsdObjectType,
+    variable_id: usize,
+    operator: QsdRewardOperator,
+    value: i32,
+) -> bool {
+    let entity = match object_type {
+        QsdObjectType::Event => quest_parameters.selected_event_object,
+        QsdObjectType::Npc => quest_parameters.selected_npc,
+        _ => return false,
+    };
+
+    entity
+        .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
+        .map(|(mut object_variables, _)| {
+            if let Some(variable_value) = object_variables.variables.get_mut(variable_id) {
+                *variable_value = quest_reward_operator(operator, *variable_value, value);
+                true
+            } else {
+                false
+            }
+        })
+        .unwrap_or(false)
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1301,13 +1328,25 @@ fn quest_trigger_apply_rewards(
                     mana_percent as i32,
                 )
             }
+            QsdReward::ObjectVariable(QsdRewardObjectVariable {
+                object_type,
+                variable_id,
+                operator,
+                value,
+            }) => quest_reward_object_variable(
+                quest_world,
+                quest_parameters,
+                object_type,
+                variable_id,
+                operator,
+                value,
+            ),
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
               QsdReward::SpawnNpc(_) => todo!(),
               QsdReward::ResetBasicStats => todo!(),
-              QsdReward::ObjectVariable(_) => todo!(),
               QsdReward::NpcMessage(_, _) => todo!(),
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
               QsdReward::RemoveSkill(_) => todo!(),
