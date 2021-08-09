@@ -1,7 +1,10 @@
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{item::Item, ItemReference, WorldTicks};
+use crate::data::{
+    item::{Item, ItemSlotBehaviour},
+    ItemReference, WorldTicks,
+};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActiveQuest {
@@ -54,6 +57,20 @@ impl ActiveQuest {
         }
 
         Err(item)
+    }
+
+    pub fn try_take_item(&mut self, item_reference: ItemReference, quantity: u32) -> Option<Item> {
+        for i in 0..self.items.len() {
+            if let Some(quest_item) = &mut self.items[i] {
+                if quest_item.is_same_item_reference(item_reference) {
+                    if let Some(taken_item) = self.items[i].try_take_quantity(quantity) {
+                        return Some(taken_item);
+                    }
+                }
+            }
+        }
+
+        None
     }
 }
 

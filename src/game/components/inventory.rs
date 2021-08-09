@@ -158,6 +158,24 @@ impl InventoryPage {
         }
     }
 
+    pub fn try_take_item(
+        &mut self,
+        item_reference: ItemReference,
+        quantity: u32,
+    ) -> Option<(ItemSlot, Item)> {
+        for i in 0..self.slots.len() {
+            if let Some(slot_item) = &self.slots[i] {
+                if slot_item.is_same_item_reference(item_reference) {
+                    if let Some(taken_item) = self.slots[i].try_take_quantity(quantity) {
+                        return Some((ItemSlot::Inventory(self.page_type, i), taken_item));
+                    }
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {
         for i in 0..self.slots.len() {
             if let Some(slot_item) = &self.slots[i] {
@@ -300,6 +318,16 @@ impl Inventory {
     pub fn try_take_quantity(&mut self, slot: ItemSlot, quantity: u32) -> Option<Item> {
         self.get_item_slot_mut(slot)
             .and_then(|item_slot| item_slot.try_take_quantity(quantity))
+    }
+
+    pub fn try_take_item(
+        &mut self,
+        item_reference: ItemReference,
+        quantity: u32,
+    ) -> Option<(ItemSlot, Item)> {
+        let page_type = InventoryPageType::from_item_type(item_reference.item_type);
+        self.get_page_mut(page_type)
+            .try_take_item(item_reference, quantity)
     }
 
     pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {

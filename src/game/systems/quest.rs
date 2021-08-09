@@ -265,20 +265,18 @@ fn quest_condition_position(
         < distance
 }
 
-fn quest_condition_quest_variable(
+fn get_quest_variable(
     quest_world: &QuestWorld,
     quest_parameters: &QuestParameters,
     variable_type: QsdVariableType,
     variable_id: usize,
-    operator: QsdConditionOperator,
-    value: i32,
-) -> bool {
+) -> Option<i32> {
     if let Some(quest_state) = &quest_parameters.source.quest_state {
         let active_quest = quest_parameters
             .selected_quest_index
             .and_then(|quest_index| quest_state.get_quest(quest_index));
 
-        let variable_value = match variable_type {
+        match variable_type {
             QsdVariableType::Variable => active_quest
                 .and_then(|active_quest| active_quest.variables.get(variable_id))
                 .map(|x| *x as i32),
@@ -306,13 +304,24 @@ fn quest_condition_quest_variable(
                 .union_variables
                 .get(variable_id)
                 .map(|x| *x as i32),
-        };
-
-        if let Some(variable_value) = variable_value {
-            quest_condition_operator(operator, variable_value, value)
-        } else {
-            false
         }
+    } else {
+        None
+    }
+}
+
+fn quest_condition_quest_variable(
+    quest_world: &QuestWorld,
+    quest_parameters: &QuestParameters,
+    variable_type: QsdVariableType,
+    variable_id: usize,
+    operator: QsdConditionOperator,
+    value: i32,
+) -> bool {
+    if let Some(variable_value) =
+        get_quest_variable(quest_world, quest_parameters, variable_type, variable_id)
+    {
+        quest_condition_operator(operator, variable_value, value)
     } else {
         false
     }
@@ -976,6 +985,34 @@ fn quest_reward_add_item(
     false
 }
 
+fn quest_reward_remove_item(
+    quest_parameters: &mut QuestParameters,
+    item_reference: ItemReference,
+    quantity: usize,
+) -> bool {
+    if item_reference.item_type.is_quest_item() {
+        // Remove from quest items
+        if let (Some(quest_state), Some(selected_quest_index)) = (
+            quest_parameters.source.quest_state.as_mut(),
+            quest_parameters.selected_quest_index,
+        ) {
+            return quest_state
+                .get_quest_mut(selected_quest_index)
+                .and_then(|active_quest| {
+                    active_quest.try_take_item(item_reference, quantity as u32)
+                })
+                .is_some();
+        }
+    } else if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
+        // We do not need to send packet to client updating inventory
+        return inventory
+            .try_take_item(item_reference, quantity as u32)
+            .is_some();
+    }
+
+    false
+}
+
 fn quest_reward_add_skill(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1016,6 +1053,130 @@ fn quest_reward_teleport(
     true
 }
 
+fn quest_reward_ability_value(
+    quest_parameters: &mut QuestParameters,
+    reward_operator: QsdRewardOperator,
+    ability_type: AbilityType,
+    value: i32,
+) -> bool {
+    match reward_operator {
+        QsdRewardOperator::Set => ability_values_set_value(
+            ability_type,
+            value,
+            quest_parameters.source.basic_stats.as_deref_mut(),
+            quest_parameters.source.character_info.as_deref_mut(),
+            quest_parameters.source.union_membership.as_deref_mut(),
+            quest_parameters.source.game_client.as_deref(),
+        ),
+        QsdRewardOperator::Add => ability_values_add_value(
+            ability_type,
+            value,
+            quest_parameters.source.basic_stats.as_deref_mut(),
+            quest_parameters.source.inventory.as_deref_mut(),
+            quest_parameters.source.skill_points.as_deref_mut(),
+            quest_parameters.source.stamina.as_deref_mut(),
+            quest_parameters.source.stat_points.as_deref_mut(),
+            quest_parameters.source.union_membership.as_deref_mut(),
+            quest_parameters.source.game_client.as_deref(),
+        ),
+        QsdRewardOperator::Subtract => ability_values_add_value(
+            ability_type,
+            -value,
+            quest_parameters.source.basic_stats.as_deref_mut(),
+            quest_parameters.source.inventory.as_deref_mut(),
+            quest_parameters.source.skill_points.as_deref_mut(),
+            quest_parameters.source.stamina.as_deref_mut(),
+            quest_parameters.source.stat_points.as_deref_mut(),
+            quest_parameters.source.union_membership.as_deref_mut(),
+            quest_parameters.source.game_client.as_deref(),
+        ),
+        QsdRewardOperator::Zero => ability_values_set_value(
+            ability_type,
+            0,
+            quest_parameters.source.basic_stats.as_deref_mut(),
+            quest_parameters.source.character_info.as_deref_mut(),
+            quest_parameters.source.union_membership.as_deref_mut(),
+            quest_parameters.source.game_client.as_deref(),
+        ),
+        QsdRewardOperator::One => ability_values_set_value(
+            ability_type,
+            1,
+            quest_parameters.source.basic_stats.as_deref_mut(),
+            quest_parameters.source.character_info.as_deref_mut(),
+            quest_parameters.source.union_membership.as_deref_mut(),
+            quest_parameters.source.game_client.as_deref(),
+        ),
+    }
+}
+
+fn quest_reward_operator(operator: QsdRewardOperator, variable_value: i32, value: i32) -> i32 {
+    match operator {
+        QsdRewardOperator::Set => value,
+        QsdRewardOperator::Add => variable_value + value,
+        QsdRewardOperator::Subtract => variable_value - value,
+        QsdRewardOperator::Zero => 0,
+        QsdRewardOperator::One => 1,
+    }
+}
+
+fn set_quest_variable(
+    quest_parameters: &mut QuestParameters,
+    variable_type: QsdVariableType,
+    variable_id: usize,
+    value: i32,
+) {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
+        let active_quest = quest_parameters
+            .selected_quest_index
+            .and_then(|quest_index| quest_state.get_quest_mut(quest_index));
+
+        match variable_type {
+            QsdVariableType::Variable => active_quest
+                .and_then(|active_quest| active_quest.variables.get_mut(variable_id))
+                .map(|x| *x = value as u16),
+            QsdVariableType::Switch => active_quest
+                .and_then(|active_quest| active_quest.switches.get_mut(variable_id))
+                .map(|mut x| *x = value != 0),
+            QsdVariableType::Episode => quest_state
+                .episode_variables
+                .get_mut(variable_id)
+                .map(|x| *x = value as u16),
+            QsdVariableType::Job => quest_state
+                .job_variables
+                .get_mut(variable_id)
+                .map(|x| *x = value as u16),
+            QsdVariableType::Planet => quest_state
+                .planet_variables
+                .get_mut(variable_id)
+                .map(|x| *x = value as u16),
+            QsdVariableType::Union => quest_state
+                .union_variables
+                .get_mut(variable_id)
+                .map(|x| *x = value as u16),
+            QsdVariableType::Timer => None, // Does nothing
+        };
+    }
+}
+
+fn quest_reward_quest_variable(
+    quest_world: &QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    variable_type: QsdVariableType,
+    variable_id: usize,
+    operator: QsdRewardOperator,
+    value: i32,
+) -> bool {
+    if let Some(variable_value) =
+        get_quest_variable(quest_world, quest_parameters, variable_type, variable_id)
+    {
+        let value = quest_reward_operator(operator, variable_value, value);
+        set_quest_variable(quest_parameters, variable_type, variable_id, value);
+        true
+    } else {
+        false
+    }
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1027,60 +1188,21 @@ fn quest_trigger_apply_rewards(
                 quest_reward_quest_action(quest_world, quest_parameters, action)
             }
             QsdReward::AbilityValue(ref values) => {
-                for (ability_type, reward_operator, value) in values {
-                    match reward_operator {
-                        QsdRewardOperator::Set => ability_values_set_value(
-                            *ability_type,
-                            *value,
-                            quest_parameters.source.basic_stats.as_deref_mut(),
-                            quest_parameters.source.character_info.as_deref_mut(),
-                            quest_parameters.source.union_membership.as_deref_mut(),
-                            quest_parameters.source.game_client.as_deref(),
-                        ),
-                        QsdRewardOperator::Add => ability_values_add_value(
-                            *ability_type,
-                            *value,
-                            quest_parameters.source.basic_stats.as_deref_mut(),
-                            quest_parameters.source.inventory.as_deref_mut(),
-                            quest_parameters.source.skill_points.as_deref_mut(),
-                            quest_parameters.source.stamina.as_deref_mut(),
-                            quest_parameters.source.stat_points.as_deref_mut(),
-                            quest_parameters.source.union_membership.as_deref_mut(),
-                            quest_parameters.source.game_client.as_deref(),
-                        ),
-                        QsdRewardOperator::Subtract => ability_values_add_value(
-                            *ability_type,
-                            -*value,
-                            quest_parameters.source.basic_stats.as_deref_mut(),
-                            quest_parameters.source.inventory.as_deref_mut(),
-                            quest_parameters.source.skill_points.as_deref_mut(),
-                            quest_parameters.source.stamina.as_deref_mut(),
-                            quest_parameters.source.stat_points.as_deref_mut(),
-                            quest_parameters.source.union_membership.as_deref_mut(),
-                            quest_parameters.source.game_client.as_deref(),
-                        ),
-                        QsdRewardOperator::Zero => ability_values_set_value(
-                            *ability_type,
-                            0,
-                            quest_parameters.source.basic_stats.as_deref_mut(),
-                            quest_parameters.source.character_info.as_deref_mut(),
-                            quest_parameters.source.union_membership.as_deref_mut(),
-                            quest_parameters.source.game_client.as_deref(),
-                        ),
-                        QsdRewardOperator::One => ability_values_set_value(
-                            *ability_type,
-                            1,
-                            quest_parameters.source.basic_stats.as_deref_mut(),
-                            quest_parameters.source.character_info.as_deref_mut(),
-                            quest_parameters.source.union_membership.as_deref_mut(),
-                            quest_parameters.source.game_client.as_deref(),
-                        ),
-                    };
+                for &(ability_type, reward_operator, value) in values {
+                    quest_reward_ability_value(
+                        quest_parameters,
+                        reward_operator,
+                        ability_type,
+                        value,
+                    );
                 }
                 true
             }
             QsdReward::AddItem(_reward_target, item, quantity) => {
                 quest_reward_add_item(quest_parameters, item, quantity)
+            }
+            QsdReward::RemoveItem(_reward_target, item, quantity) => {
+                quest_reward_remove_item(quest_parameters, item, quantity)
             }
             QsdReward::AddSkill(skill_id) => {
                 quest_reward_add_skill(quest_world, quest_parameters, skill_id).is_some()
@@ -1139,12 +1261,22 @@ fn quest_trigger_apply_rewards(
                 quest_parameters.next_trigger_name = Some(name.clone());
                 true
             }
+            QsdReward::QuestVariable(ref quest_variables) => {
+                quest_variables.iter().all(|quest_variable| {
+                    quest_reward_quest_variable(
+                        quest_world,
+                        quest_parameters,
+                        quest_variable.variable_type,
+                        quest_variable.variable_id,
+                        quest_variable.operator,
+                        quest_variable.value,
+                    )
+                })
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
-              QsdReward::RemoveItem(_, _, _) => todo!(),
-              QsdReward::QuestVariable(_) => todo!(),
               QsdReward::SetHealthManaPercent(_, _, _) => todo!(),
               QsdReward::SpawnNpc(_) => todo!(),
               QsdReward::ResetBasicStats => todo!(),
