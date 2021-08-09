@@ -97,6 +97,10 @@ impl SkillList {
         self.passive.skills.iter().filter_map(|x| x.as_ref())
     }
 
+    pub fn get_slot_mut(&mut self, skill_slot: SkillSlot) -> Option<&mut Option<SkillId>> {
+        self.get_page_mut(skill_slot.0).skills.get_mut(skill_slot.1)
+    }
+
     pub fn iter_skills(&self) -> impl Iterator<Item = &SkillId> {
         self.basic
             .skills

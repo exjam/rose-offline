@@ -1038,6 +1038,20 @@ fn quest_reward_add_skill(
     }
 }
 
+fn quest_reward_remove_skill(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    skill_id: QsdSkillId,
+) -> Option<()> {
+    let skill_id = SkillId::new(skill_id as u16)?;
+    let skill_data = quest_world.game_data.skills.get_skill(skill_id)?;
+    let skill_list = quest_parameters.source.skill_list.as_deref_mut()?;
+    let (skill_slot, _) = skill_list.find_skill(skill_data)?;
+    let skill_slot = skill_list.get_slot_mut(skill_slot)?;
+    *skill_slot = None;
+    Some(())
+}
+
 fn quest_reward_teleport(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1326,6 +1340,9 @@ fn quest_trigger_apply_rewards(
             QsdReward::AddSkill(skill_id) => {
                 quest_reward_add_skill(quest_world, quest_parameters, skill_id).is_some()
             }
+            QsdReward::RemoveSkill(skill_id) => {
+                quest_reward_remove_skill(quest_world, quest_parameters, skill_id).is_some()
+            }
             QsdReward::SetQuestSwitch(switch_id, value) => {
                 quest_reward_set_quest_switch(quest_parameters, switch_id, value)
             }
@@ -1438,7 +1455,6 @@ fn quest_trigger_apply_rewards(
               QsdReward::ResetBasicStats => todo!(),
               QsdReward::NpcMessage(_, _) => todo!(),
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
-              QsdReward::RemoveSkill(_) => todo!(),
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
               QsdReward::SetTeamNumber(_) => todo!(),
