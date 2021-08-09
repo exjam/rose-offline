@@ -26,9 +26,9 @@ use crate::{
         },
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
-            EquipmentIndex, ExperiencePoints, GameClient, Inventory, Level, Money, MoveSpeed,
-            ObjectVariables, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
-            Team, UnionMembership,
+            EquipmentIndex, ExperiencePoints, GameClient, HealthPoints, Inventory, Level,
+            ManaPoints, Money, MoveSpeed, ObjectVariables, Position, QuestState, SkillList,
+            SkillPoints, Stamina, StatPoints, Team, UnionMembership,
         },
         events::{QuestTriggerEvent, RewardXpEvent},
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
@@ -46,8 +46,10 @@ struct QuestSourceEntity<'world, 'a> {
     client_entity: &'a ClientEntity,
     equipment: Option<&'a Equipment>,
     experience_points: Option<&'a mut Mut<'world, ExperiencePoints>>,
+    health_points: Option<&'a mut Mut<'world, HealthPoints>>,
     inventory: Option<&'a mut Mut<'world, Inventory>>,
     level: &'a Level,
+    mana_points: Option<&'a mut Mut<'world, ManaPoints>>,
     move_speed: &'a MoveSpeed,
     position: &'a Position,
     quest_state: Option<&'a mut Mut<'world, QuestState>>,
@@ -1177,6 +1179,25 @@ fn quest_reward_quest_variable(
     }
 }
 
+fn quest_reward_set_health_mana_percent(
+    quest_parameters: &mut QuestParameters,
+    health_percent: i32,
+    mana_percent: i32,
+) -> bool {
+    if let Some(health_points) = quest_parameters.source.health_points.as_mut() {
+        health_points.hp = ((quest_parameters.source.ability_values.get_max_health()
+            * health_percent)
+            / 100) as u32;
+    }
+
+    if let Some(mana_points) = quest_parameters.source.mana_points.as_mut() {
+        mana_points.mp =
+            ((quest_parameters.source.ability_values.get_max_mana() * mana_percent) / 100) as u32;
+    }
+
+    true
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1273,11 +1294,17 @@ fn quest_trigger_apply_rewards(
                     )
                 })
             }
+            QsdReward::SetHealthManaPercent(_target, health_percent, mana_percent) => {
+                quest_reward_set_health_mana_percent(
+                    quest_parameters,
+                    health_percent as i32,
+                    mana_percent as i32,
+                )
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
-              QsdReward::SetHealthManaPercent(_, _, _) => todo!(),
               QsdReward::SpawnNpc(_) => todo!(),
               QsdReward::ResetBasicStats => todo!(),
               QsdReward::ObjectVariable(_) => todo!(),
@@ -1326,7 +1353,9 @@ pub fn quest_system(
             Option<&mut BasicStats>,
             Option<&mut CharacterInfo>,
             Option<&mut ExperiencePoints>,
+            Option<&mut HealthPoints>,
             Option<&mut Inventory>,
+            Option<&mut ManaPoints>,
             Option<&mut QuestState>,
             Option<&mut SkillList>,
             Option<&mut SkillPoints>,
@@ -1379,7 +1408,9 @@ pub fn quest_system(
                 mut basic_stats,
                 mut character_info,
                 mut experience_points,
+                mut health_points,
                 mut inventory,
+                mut mana_points,
                 mut quest_state,
                 mut skill_list,
                 mut skill_points,
@@ -1400,8 +1431,10 @@ pub fn quest_system(
                     client_entity,
                     equipment,
                     experience_points: experience_points.as_mut(),
+                    health_points: health_points.as_mut(),
                     inventory: inventory.as_mut(),
                     level,
+                    mana_points: mana_points.as_mut(),
                     move_speed,
                     position,
                     quest_state: quest_state.as_mut(),
