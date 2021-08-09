@@ -23,7 +23,7 @@ pub enum QsdReadError {
     InvalidObjectType,
     InvalidQuestAction,
     InvalidCalculatedRewardType,
-    InvalidSpawnNpcLocation,
+    InvalidSpawnMonsterLocation,
     InvalidMessageType,
     InvalidTeamNumberSource,
     InvalidMonsterSpawnState,
@@ -255,8 +255,8 @@ pub struct QsdRewardCalculatedItem {
 pub type QsdHealthPercent = u8;
 pub type QsdManaPercent = u8;
 
-#[derive(Debug)]
-pub enum QsdRewardSpawnNpcLocation {
+#[derive(Copy, Clone, Debug)]
+pub enum QsdRewardSpawnMonsterLocation {
     Owner,
     Npc,
     Event,
@@ -264,10 +264,10 @@ pub enum QsdRewardSpawnNpcLocation {
 }
 
 #[derive(Debug)]
-pub struct QsdRewardSpawnNpc {
+pub struct QsdRewardSpawnMonster {
     pub npc: QsdNpcId,
     pub count: usize,
-    pub location: QsdRewardSpawnNpcLocation,
+    pub location: QsdRewardSpawnMonsterLocation,
     pub distance: QsdDistance,
     pub team_number: QsdTeamNumber,
 }
@@ -313,7 +313,7 @@ pub enum QsdReward {
     CalculatedItem(QsdRewardTarget, QsdRewardCalculatedItem),
     SetHealthManaPercent(QsdRewardTarget, QsdHealthPercent, QsdManaPercent),
     Teleport(QsdRewardTarget, QsdZoneId, Point2<f32>),
-    SpawnNpc(QsdRewardSpawnNpc),
+    SpawnMonster(QsdRewardSpawnMonster),
     Trigger(String),
     ResetBasicStats,
     ObjectVariable(QsdRewardObjectVariable),
@@ -862,14 +862,16 @@ impl QsdFile {
                             let team_number = reader.read_u32()? as QsdTeamNumber;
 
                             let location = match location_type {
-                                0 => QsdRewardSpawnNpcLocation::Owner,
-                                1 => QsdRewardSpawnNpcLocation::Npc,
-                                2 => QsdRewardSpawnNpcLocation::Event,
-                                3 => QsdRewardSpawnNpcLocation::Position(zone, Point2::new(x, y)),
-                                _ => return Err(QsdReadError::InvalidSpawnNpcLocation),
+                                0 => QsdRewardSpawnMonsterLocation::Owner,
+                                1 => QsdRewardSpawnMonsterLocation::Npc,
+                                2 => QsdRewardSpawnMonsterLocation::Event,
+                                3 => {
+                                    QsdRewardSpawnMonsterLocation::Position(zone, Point2::new(x, y))
+                                }
+                                _ => return Err(QsdReadError::InvalidSpawnMonsterLocation),
                             };
 
-                            rewards.push(QsdReward::SpawnNpc(QsdRewardSpawnNpc {
+                            rewards.push(QsdReward::SpawnMonster(QsdRewardSpawnMonster {
                                 npc,
                                 count,
                                 location,

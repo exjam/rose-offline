@@ -8,6 +8,10 @@ impl Team {
     pub const DEFAULT_CHARACTER_TEAM_ID: u32 = 2;
     pub const DEFAULT_MONSTER_TEAM_ID: u32 = 100;
 
+    pub fn new(id: u32) -> Self {
+        Self { id }
+    }
+
     pub fn default_npc() -> Self {
         Self {
             id: Self::DEFAULT_NPC_TEAM_ID,

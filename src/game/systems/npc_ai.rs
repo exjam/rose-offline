@@ -722,6 +722,7 @@ fn ai_action_move_random_distance(
                 .map(|spawn_origin| match *spawn_origin {
                     SpawnOrigin::MonsterSpawnPoint(_, spawn_position) => spawn_position,
                     SpawnOrigin::Summoned(_, spawn_position) => spawn_position,
+                    SpawnOrigin::Quest(_, spawn_position) => spawn_position,
                 })
         }
         AipMoveOrigin::FindChar => ai_parameters.find_char.map(|(_, position)| position),

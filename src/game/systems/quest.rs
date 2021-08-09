@@ -11,10 +11,11 @@ use crate::{
         formats::qsd::{
             QsdCondition, QsdConditionMonthDayTime, QsdConditionObjectVariable,
             QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
-            QsdConditionWeekDayTime, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
+            QsdConditionWeekDayTime, QsdDistance, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
             QsdRewardCalculatedItem, QsdRewardObjectVariable, QsdRewardOperator,
-            QsdRewardQuestAction, QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber,
-            QsdVariableId, QsdVariableType, QsdZoneId,
+            QsdRewardQuestAction, QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation,
+            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId,
+            QsdVariableType, QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -22,13 +23,13 @@ use crate::{
     game::{
         bundles::{
             ability_values_add_value, ability_values_get_value, ability_values_set_value,
-            client_entity_teleport_zone, skill_list_try_learn_skill,
+            client_entity_teleport_zone, skill_list_try_learn_skill, MonsterBundle,
         },
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
             EquipmentIndex, ExperiencePoints, GameClient, HealthPoints, Inventory, Level,
             ManaPoints, Money, MoveSpeed, ObjectVariables, Position, QuestState, SkillList,
-            SkillPoints, Stamina, StatPoints, Team, UnionMembership,
+            SkillPoints, SpawnOrigin, Stamina, StatPoints, Team, UnionMembership,
         },
         events::{QuestTriggerEvent, RewardXpEvent},
         messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
@@ -1225,6 +1226,54 @@ fn quest_reward_object_variable(
         .unwrap_or(false)
 }
 
+fn quest_reward_spawn_monster(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    npc: QsdNpcId,
+    count: usize,
+    location: QsdRewardSpawnMonsterLocation,
+    distance: QsdDistance,
+    team_number: QsdTeamNumber,
+) -> bool {
+    if let Some(npc_id) = NpcId::new(npc as u16) {
+        if let Some((spawn_zone, spawn_position)) = match location {
+            QsdRewardSpawnMonsterLocation::Owner => Some((
+                quest_parameters.source.position.zone_id,
+                quest_parameters.source.position.position,
+            )),
+            QsdRewardSpawnMonsterLocation::Npc => quest_parameters
+                .selected_event_object
+                .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
+                .map(|(_, position)| (position.zone_id, position.position)),
+            QsdRewardSpawnMonsterLocation::Event => quest_parameters
+                .selected_npc
+                .and_then(|entity| quest_world.object_variables_query.get_mut(entity).ok())
+                .map(|(_, position)| (position.zone_id, position.position)),
+            QsdRewardSpawnMonsterLocation::Position(zone_id, position) => {
+                ZoneId::new(zone_id as u16)
+                    .map(|zone_id| (zone_id, Point3::new(position.x, position.y, 0.0)))
+            }
+        } {
+            for _ in 0..count {
+                MonsterBundle::spawn(
+                    quest_world.commands,
+                    quest_world.client_entity_list,
+                    quest_world.game_data,
+                    npc_id,
+                    spawn_zone,
+                    SpawnOrigin::Quest(quest_parameters.source.entity, spawn_position),
+                    distance,
+                    Team::new(team_number as u32),
+                    None,
+                    None,
+                );
+            }
+        }
+    }
+
+    true
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1341,11 +1390,25 @@ fn quest_trigger_apply_rewards(
                 operator,
                 value,
             ),
+            QsdReward::SpawnMonster(QsdRewardSpawnMonster {
+                npc,
+                count,
+                location,
+                distance,
+                team_number,
+            }) => quest_reward_spawn_monster(
+                quest_world,
+                quest_parameters,
+                npc,
+                count,
+                location,
+                distance,
+                team_number,
+            ),
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
-              QsdReward::SpawnNpc(_) => todo!(),
               QsdReward::ResetBasicStats => todo!(),
               QsdReward::NpcMessage(_, _) => todo!(),
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),

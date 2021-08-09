@@ -128,6 +128,7 @@ impl MonsterBundle {
         let spawn_position = match spawn_origin {
             SpawnOrigin::Summoned(_, spawn_position) => spawn_position,
             SpawnOrigin::MonsterSpawnPoint(_, spawn_position) => spawn_position,
+            SpawnOrigin::Quest(_, spawn_position) => spawn_position,
         };
 
         let position = Position::new(
