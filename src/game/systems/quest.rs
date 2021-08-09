@@ -1274,6 +1274,28 @@ fn quest_reward_spawn_monster(
     true
 }
 
+fn quest_reward_clear_all_switches(quest_parameters: &mut QuestParameters) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
+        quest_state.quest_switches.set_all(false);
+        true
+    } else {
+        false
+    }
+}
+
+fn quest_reward_clear_switch_group(quest_parameters: &mut QuestParameters, group: usize) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
+        for i in (32 * group)..(32 * (group + 1)) {
+            if let Some(mut switch) = quest_state.quest_switches.get_mut(i) {
+                *switch = false;
+            }
+        }
+        true
+    } else {
+        false
+    }
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1405,6 +1427,10 @@ fn quest_trigger_apply_rewards(
                 distance,
                 team_number,
             ),
+            QsdReward::ClearAllSwitches => quest_reward_clear_all_switches(quest_parameters),
+            QsdReward::ClearSwitchGroup(group) => {
+                quest_reward_clear_switch_group(quest_parameters, group)
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
@@ -1413,8 +1439,6 @@ fn quest_trigger_apply_rewards(
               QsdReward::NpcMessage(_, _) => todo!(),
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
               QsdReward::RemoveSkill(_) => todo!(),
-              QsdReward::ClearSwitchGroup(_) => todo!(),
-              QsdReward::ClearAllSwitches => todo!(),
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
               QsdReward::SetTeamNumber(_) => todo!(),
