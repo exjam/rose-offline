@@ -1052,6 +1052,33 @@ fn quest_reward_remove_skill(
     Some(())
 }
 
+fn quest_reward_reset_skills(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+) -> bool {
+    if let Some(skill_list) = quest_parameters.source.skill_list.as_deref_mut() {
+        skill_list.active.skills = Default::default();
+        skill_list.passive.skills = Default::default();
+        skill_list.clan.skills = Default::default();
+
+        let mut total_skill_points = 0;
+        for level in 2..=quest_parameters.source.level.level {
+            total_skill_points += quest_world
+                .game_data
+                .ability_value_calculator
+                .calculate_levelup_reward_skill_points(level);
+        }
+
+        if let Some(skill_points) = quest_parameters.source.skill_points.as_deref_mut() {
+            skill_points.points = total_skill_points;
+        }
+
+        true
+    } else {
+        false
+    }
+}
+
 fn quest_reward_teleport(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1343,6 +1370,7 @@ fn quest_trigger_apply_rewards(
             QsdReward::RemoveSkill(skill_id) => {
                 quest_reward_remove_skill(quest_world, quest_parameters, skill_id).is_some()
             }
+            QsdReward::ResetSkills => quest_reward_reset_skills(quest_world, quest_parameters),
             QsdReward::SetQuestSwitch(switch_id, value) => {
                 quest_reward_set_quest_switch(quest_parameters, switch_id, value)
             }
@@ -1460,7 +1488,6 @@ fn quest_trigger_apply_rewards(
               QsdReward::SetTeamNumber(_) => todo!(),
               QsdReward::SetRevivePosition(_) => todo!(),
               QsdReward::SetMonsterSpawnState(_, _) => todo!(),
-              QsdReward::ResetSkills => todo!(),
 
               // TODO: Implement clans
               QsdReward::ClanLevel(_, _) => todo!(),
