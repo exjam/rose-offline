@@ -12,11 +12,11 @@ use crate::{
             QsdCondition, QsdConditionMonthDayTime, QsdConditionObjectVariable,
             QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
             QsdConditionWeekDayTime, QsdDistance, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
-            QsdRewardCalculatedItem, QsdRewardMonsterSpawnState, QsdRewardObjectVariable,
-            QsdRewardOperator, QsdRewardQuestAction, QsdRewardSetTeamNumberSource,
-            QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation, QsdRewardTarget,
-            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId, QsdVariableType,
-            QsdZoneId,
+            QsdRewardCalculatedItem, QsdRewardMonsterSpawnState, QsdRewardNpcMessageType,
+            QsdRewardObjectVariable, QsdRewardOperator, QsdRewardQuestAction,
+            QsdRewardSetTeamNumberSource, QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation,
+            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId,
+            QsdVariableType, QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -29,12 +29,17 @@ use crate::{
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, Equipment,
             EquipmentIndex, ExperiencePoints, GameClient, HealthPoints, Inventory, Level,
-            ManaPoints, Money, MoveSpeed, ObjectVariables, Position, QuestState, SkillList,
+            ManaPoints, Money, MoveSpeed, Npc, ObjectVariables, Position, QuestState, SkillList,
             SkillPoints, SpawnOrigin, Stamina, StatPoints, Team, UnionMembership,
         },
         events::{QuestTriggerEvent, RewardXpEvent},
-        messages::server::{QuestTriggerResult, ServerMessage, UpdateInventory, UpdateMoney},
-        resources::{ClientEntityList, ServerTime, WorldRates, WorldTime, ZoneList},
+        messages::server::{
+            AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat, UpdateInventory,
+            UpdateMoney,
+        },
+        resources::{
+            ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
+        },
         GameData,
     },
 };
@@ -53,6 +58,7 @@ struct QuestSourceEntity<'world, 'a> {
     level: &'a Level,
     mana_points: Option<&'a mut Mut<'world, ManaPoints>>,
     move_speed: &'a MoveSpeed,
+    npc: Option<&'a Npc>,
     position: &'a Position,
     quest_state: Option<&'a mut Mut<'world, QuestState>>,
     skill_list: Option<&'a mut Mut<'world, SkillList>>,
@@ -71,10 +77,11 @@ struct QuestParameters<'a, 'world, 'b> {
     next_trigger_name: Option<String>,
 }
 
-struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h> {
+struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i> {
     commands: &'a mut Commands<'b>,
     client_entity_list: &'a mut ResMut<'c, ClientEntityList>,
     game_data: &'a GameData,
+    server_messages: &'a mut ResMut<'i, ServerMessages>,
     server_time: &'a ServerTime,
     world_rates: &'a WorldRates,
     world_time: &'a WorldTime,
@@ -1411,6 +1418,64 @@ fn quest_reward_set_monster_spawn_state(
     }
 }
 
+fn quest_reward_npc_message(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+    message_type: QsdRewardNpcMessageType,
+    string_id: usize,
+) -> bool {
+    if let Some(message) = quest_world
+        .game_data
+        .quests
+        .get_quest_string(string_id as u16)
+    {
+        let name = if let Some(character_info) = quest_parameters.source.character_info.as_ref() {
+            character_info.name.clone()
+        } else if let Some(npc) = quest_parameters.source.npc.as_ref() {
+            if let Some(npc_data) = quest_world.game_data.npcs.get_npc(npc.id) {
+                npc_data.name.clone()
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        };
+
+        match message_type {
+            QsdRewardNpcMessageType::Chat => {
+                quest_world.server_messages.send_entity_message(
+                    quest_parameters.source.client_entity,
+                    ServerMessage::LocalChat(LocalChat {
+                        entity_id: quest_parameters.source.client_entity.id,
+                        text: message.clone(),
+                    }),
+                );
+            }
+            QsdRewardNpcMessageType::Shout => {
+                // TODO: A shout message actually goes to adjacent 3 sectors rather than full zone
+                quest_world.server_messages.send_zone_message(
+                    quest_parameters.source.position.zone_id,
+                    ServerMessage::ShoutChat(ShoutChat {
+                        name,
+                        text: message.clone(),
+                    }),
+                );
+            }
+            QsdRewardNpcMessageType::Announce => {
+                quest_world.server_messages.send_zone_message(
+                    quest_parameters.source.position.zone_id,
+                    ServerMessage::AnnounceChat(AnnounceChat {
+                        name: Some(name),
+                        text: message.clone(),
+                    }),
+                );
+            }
+        };
+    }
+
+    true
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1559,11 +1624,13 @@ fn quest_trigger_apply_rewards(
             QsdReward::SetMonsterSpawnState(zone_id, state) => {
                 quest_reward_set_monster_spawn_state(quest_world, zone_id, state)
             }
+            QsdReward::NpcMessage(message_type, string_id) => {
+                quest_reward_npc_message(quest_world, quest_parameters, message_type, string_id)
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
-              QsdReward::NpcMessage(_, _) => todo!(),
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
@@ -1598,6 +1665,7 @@ pub fn quest_system(
         &MoveSpeed,
         &Position,
         Option<&Equipment>,
+        Option<&Npc>,
         (
             &mut Team,
             Option<&mut BasicStats>,
@@ -1619,6 +1687,7 @@ pub fn quest_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     world_rates: Res<WorldRates>,
+    mut server_messages: ResMut<ServerMessages>,
     server_time: Res<ServerTime>,
     world_time: Res<WorldTime>,
     mut zone_list: ResMut<ZoneList>,
@@ -1629,6 +1698,7 @@ pub fn quest_system(
         commands: &mut commands,
         client_entity_list: &mut client_entity_list,
         game_data: &game_data,
+        server_messages: &mut server_messages,
         server_time: &server_time,
         world_rates: &world_rates,
         world_time: &world_time,
@@ -1653,6 +1723,7 @@ pub fn quest_system(
             move_speed,
             position,
             equipment,
+            npc,
             (
                 mut team,
                 mut basic_stats,
@@ -1686,6 +1757,7 @@ pub fn quest_system(
                     level,
                     mana_points: mana_points.as_mut(),
                     move_speed,
+                    npc,
                     position,
                     quest_state: quest_state.as_mut(),
                     skill_list: skill_list.as_mut(),

@@ -84,6 +84,10 @@ impl QuestDatabase {
         self.quests.get(id)
     }
 
+    pub fn get_quest_string(&self, id: u16) -> Option<&String> {
+        self.strings.get(&id)
+    }
+
     pub fn get_trigger_by_name(&self, name: &str) -> Option<&QuestTrigger> {
         self.triggers.get(name)
     }
