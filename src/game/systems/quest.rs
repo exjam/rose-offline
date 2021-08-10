@@ -1052,6 +1052,39 @@ fn quest_reward_remove_skill(
     Some(())
 }
 
+fn quest_reward_reset_basic_stats(
+    quest_world: &mut QuestWorld,
+    quest_parameters: &mut QuestParameters,
+) -> bool {
+    if let Some(character_info) = quest_parameters.source.character_info.as_ref() {
+        if let Ok(reset_basic_stats) = quest_world
+            .game_data
+            .character_creator
+            .get_basic_stats(character_info.gender)
+        {
+            let mut total_stat_points = 0;
+            for level in 2..=quest_parameters.source.level.level {
+                total_stat_points += quest_world
+                    .game_data
+                    .ability_value_calculator
+                    .calculate_levelup_reward_stat_points(level);
+            }
+
+            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_deref_mut() {
+                **basic_stats = reset_basic_stats;
+            }
+
+            if let Some(stat_points) = quest_parameters.source.stat_points.as_deref_mut() {
+                stat_points.points = total_stat_points;
+            }
+
+            return true;
+        }
+    }
+
+    false
+}
+
 fn quest_reward_reset_skills(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1370,6 +1403,9 @@ fn quest_trigger_apply_rewards(
             QsdReward::RemoveSkill(skill_id) => {
                 quest_reward_remove_skill(quest_world, quest_parameters, skill_id).is_some()
             }
+            QsdReward::ResetBasicStats => {
+                quest_reward_reset_basic_stats(quest_world, quest_parameters)
+            }
             QsdReward::ResetSkills => quest_reward_reset_skills(quest_world, quest_parameters),
             QsdReward::SetQuestSwitch(switch_id, value) => {
                 quest_reward_set_quest_switch(quest_parameters, switch_id, value)
@@ -1480,7 +1516,6 @@ fn quest_trigger_apply_rewards(
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
-              QsdReward::ResetBasicStats => todo!(),
               QsdReward::NpcMessage(_, _) => todo!(),
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),

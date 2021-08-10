@@ -79,6 +79,8 @@ pub trait CharacterCreator {
         face: u8,
         hair: u8,
     ) -> Result<CharacterStorage, CharacterCreatorError>;
+
+    fn get_basic_stats(&self, gender: u8) -> Result<BasicStats, CharacterCreatorError>;
 }
 
 impl CharacterStorage {

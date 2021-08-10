@@ -181,6 +181,14 @@ impl CharacterCreator for CharacterCreatorData {
 
         Ok(character)
     }
+
+    fn get_basic_stats(&self, gender: u8) -> Result<BasicStats, CharacterCreatorError> {
+        let gender_data = self
+            .gender_data
+            .get(gender as usize)
+            .ok_or(CharacterCreatorError::InvalidGender)?;
+        Ok(gender_data.basic_stats.clone())
+    }
 }
 
 fn load_gender(data: &StbInitAvatar, id: usize) -> Option<CharacterGenderData> {
