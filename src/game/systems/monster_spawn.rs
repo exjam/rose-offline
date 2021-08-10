@@ -5,7 +5,7 @@ use crate::{
     game::{
         bundles::MonsterBundle,
         components::{MonsterSpawnPoint, Position, SpawnOrigin, Team},
-        resources::{ClientEntityList, GameData, ServerTime},
+        resources::{ClientEntityList, GameData, ServerTime, ZoneList},
     },
 };
 
@@ -15,9 +15,14 @@ pub fn monster_spawn_system(
     server_time: Res<ServerTime>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
+    zone_list: Res<ZoneList>,
 ) {
     query.for_each_mut(
         |(spawn_point_entity, mut spawn_point, spawn_point_position)| {
+            if !zone_list.get_monster_spawns_enabled(spawn_point_position.zone_id) {
+                return;
+            }
+
             let mut spawn_point = &mut *spawn_point;
             spawn_point.time_since_last_check += server_time.delta;
             if spawn_point.time_since_last_check < spawn_point.interval {

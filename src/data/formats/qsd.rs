@@ -280,21 +280,21 @@ pub struct QsdRewardObjectVariable {
     pub value: i32,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdRewardNpcMessageType {
     Chat,
     Shout,
     Announce,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdRewardSetTeamNumberSource {
     Unique,
     Clan,
     Party,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum QsdRewardMonsterSpawnState {
     Disabled,
     Enabled,

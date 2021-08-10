@@ -12,6 +12,7 @@ struct EventObjectKey {
 }
 
 struct ZoneData {
+    monster_spawns_enabled: bool,
     event_objects: HashMap<EventObjectKey, Entity>,
 }
 
@@ -32,9 +33,26 @@ impl ZoneList {
         self.zones.insert(
             zone_id,
             ZoneData {
+                monster_spawns_enabled: true,
                 event_objects: Default::default(),
             },
         );
+    }
+
+    pub fn get_monster_spawns_enabled(&self, zone_id: ZoneId) -> bool {
+        self.zones
+            .get(&zone_id)
+            .map(|zone| zone.monster_spawns_enabled)
+            .unwrap_or(false)
+    }
+
+    pub fn set_monster_spawns_enabled(&mut self, zone_id: ZoneId, enabled: bool) -> bool {
+        if let Some(zone) = self.zones.get_mut(&zone_id) {
+            zone.monster_spawns_enabled = enabled;
+            true
+        } else {
+            false
+        }
     }
 
     pub fn add_event_object(

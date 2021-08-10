@@ -12,10 +12,11 @@ use crate::{
             QsdCondition, QsdConditionMonthDayTime, QsdConditionObjectVariable,
             QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
             QsdConditionWeekDayTime, QsdDistance, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
-            QsdRewardCalculatedItem, QsdRewardObjectVariable, QsdRewardOperator,
-            QsdRewardQuestAction, QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation,
-            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId,
-            QsdVariableType, QsdZoneId,
+            QsdRewardCalculatedItem, QsdRewardMonsterSpawnState, QsdRewardObjectVariable,
+            QsdRewardOperator, QsdRewardQuestAction, QsdRewardSetTeamNumberSource,
+            QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation, QsdRewardTarget,
+            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId, QsdVariableType,
+            QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -70,14 +71,14 @@ struct QuestParameters<'a, 'world, 'b> {
     next_trigger_name: Option<String>,
 }
 
-struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g> {
+struct QuestWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h> {
     commands: &'a mut Commands<'b>,
     client_entity_list: &'a mut ResMut<'c, ClientEntityList>,
     game_data: &'a GameData,
     server_time: &'a ServerTime,
     world_rates: &'a WorldRates,
     world_time: &'a WorldTime,
-    zone_list: &'a ZoneList,
+    zone_list: &'a mut ResMut<'h, ZoneList>,
     reward_xp_events: &'a mut EventWriter<'d, RewardXpEvent>,
     object_variables_query: &'a mut Query<'e, (&'f mut ObjectVariables, &'g Position)>,
     rng: ThreadRng,
@@ -1370,6 +1371,46 @@ fn quest_reward_clear_switch_group(quest_parameters: &mut QuestParameters, group
     }
 }
 
+fn quest_reward_set_team_number(
+    quest_parameters: &mut QuestParameters,
+    source: QsdRewardSetTeamNumberSource,
+) -> bool {
+    let team = match source {
+        QsdRewardSetTeamNumberSource::Unique => {
+            Team::with_unique_id(quest_parameters.source.client_entity.id.0 as u32)
+        }
+        _ => {
+            warn!("Unimplemented set team number source {:?}", source);
+            return false;
+        }
+    };
+
+    **quest_parameters.source.team = team;
+    true
+}
+
+fn quest_reward_set_monster_spawn_state(
+    quest_world: &mut QuestWorld,
+    zone_id: QsdZoneId,
+    state: QsdRewardMonsterSpawnState,
+) -> bool {
+    if let Some(zone_id) = ZoneId::new(zone_id as u16) {
+        let enabled = match state {
+            QsdRewardMonsterSpawnState::Disabled => false,
+            QsdRewardMonsterSpawnState::Enabled => true,
+            QsdRewardMonsterSpawnState::Toggle => {
+                !quest_world.zone_list.get_monster_spawns_enabled(zone_id)
+            }
+        };
+
+        quest_world
+            .zone_list
+            .set_monster_spawns_enabled(zone_id, enabled)
+    } else {
+        false
+    }
+}
+
 fn quest_trigger_apply_rewards(
     quest_world: &mut QuestWorld,
     quest_parameters: &mut QuestParameters,
@@ -1512,6 +1553,12 @@ fn quest_trigger_apply_rewards(
             QsdReward::ClearSwitchGroup(group) => {
                 quest_reward_clear_switch_group(quest_parameters, group)
             }
+            QsdReward::SetTeamNumber(source) => {
+                quest_reward_set_team_number(quest_parameters, source)
+            }
+            QsdReward::SetMonsterSpawnState(zone_id, state) => {
+                quest_reward_set_monster_spawn_state(quest_world, zone_id, state)
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
@@ -1520,9 +1567,8 @@ fn quest_trigger_apply_rewards(
               QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
-              QsdReward::SetTeamNumber(_) => todo!(),
               QsdReward::SetRevivePosition(_) => todo!(),
-              QsdReward::SetMonsterSpawnState(_, _) => todo!(),
+
 
               // TODO: Implement clans
               QsdReward::ClanLevel(_, _) => todo!(),
@@ -1575,7 +1621,7 @@ pub fn quest_system(
     world_rates: Res<WorldRates>,
     server_time: Res<ServerTime>,
     world_time: Res<WorldTime>,
-    zone_list: Res<ZoneList>,
+    mut zone_list: ResMut<ZoneList>,
     mut quest_trigger_events: EventReader<QuestTriggerEvent>,
     mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
@@ -1586,7 +1632,7 @@ pub fn quest_system(
         server_time: &server_time,
         world_rates: &world_rates,
         world_time: &world_time,
-        zone_list: &zone_list,
+        zone_list: &mut zone_list,
         reward_xp_events: &mut reward_xp_events,
         object_variables_query: &mut object_variables_query,
         rng: rand::thread_rng(),
