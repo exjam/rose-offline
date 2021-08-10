@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::{
     data::{
-        formats::{ChrFile, FileReader, StbFile, VfsIndex, ZmoFile},
-        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcMotionAction,
+        formats::{ChrFile, FileReader, StbFile, StlFile, VfsIndex, ZmoFile},
+        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcMotionAction,
     },
     stb_column,
 };
@@ -134,6 +134,9 @@ fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
 }
 
 pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
+    let file = vfs.open_file("3DDATA/STB/LIST_NPC_S.STL")?;
+    let stl = StlFile::read(FileReader::from(&file)).ok()?;
+
     let file = vfs.open_file("3DDATA/NPC/LIST_NPC.CHR")?;
     let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
 
@@ -169,6 +172,11 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         npcs.insert(
             id as u16,
             NpcData {
+                name: npc_string_id
+                    .and_then(|string_id| stl.get_text_string(1, string_id))
+                    .unwrap_or("")
+                    .to_string(),
+                id: NpcId::new(id as u16).unwrap(),
                 walk_speed: data.get_walk_speed(id).unwrap_or(0),
                 run_speed: data.get_run_speed(id).unwrap_or(0),
                 scale: (data.get_scale(id).unwrap_or(100) as f32) / 100.0,
@@ -206,7 +214,6 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
                 die_sound_index: data.get_die_sound_index(id).unwrap_or(0),
                 npc_quest_type: data.get_npc_quest_type(id).unwrap_or(0),
                 glow_colour: data.get_glow_colour(id),
-                string_id: npc_string_id.map(|s| s.to_string()).unwrap_or_default(),
                 create_effect_index: data.get_create_effect_index(id).unwrap_or(0),
                 create_sound_index: data.get_create_sound_index(id).unwrap_or(0),
                 death_quest_trigger_name: data

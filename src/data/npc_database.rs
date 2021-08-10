@@ -31,6 +31,8 @@ pub enum NpcMotionAction {
 }
 
 pub struct NpcData {
+    pub id: NpcId,
+    pub name: String,
     pub walk_speed: i32,
     pub run_speed: i32,
     pub scale: f32,
@@ -68,7 +70,6 @@ pub struct NpcData {
     pub die_sound_index: u32,
     pub npc_quest_type: u32,
     pub glow_colour: (f32, f32, f32),
-    pub string_id: String,
     pub create_effect_index: u32,
     pub create_sound_index: u32,
     pub death_quest_trigger_name: String,
