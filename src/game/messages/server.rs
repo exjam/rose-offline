@@ -22,6 +22,18 @@ pub struct LocalChat {
 }
 
 #[derive(Clone)]
+pub struct ShoutChat {
+    pub name: String,
+    pub text: String,
+}
+
+#[derive(Clone)]
+pub struct AnnounceChat {
+    pub name: Option<String>,
+    pub text: String,
+}
+
+#[derive(Clone)]
 pub struct AttackEntity {
     pub entity_id: ClientEntityId,
     pub target_entity_id: ClientEntityId,
@@ -368,6 +380,8 @@ pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
     LocalChat(LocalChat),
+    ShoutChat(ShoutChat),
+    AnnounceChat(AnnounceChat),
     MoveEntity(MoveEntity),
     PickupDroppedItemResult(PickupDroppedItemResult),
     RemoveEntities(RemoveEntities),

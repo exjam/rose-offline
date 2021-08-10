@@ -32,6 +32,7 @@ use crate::{
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {
+    AnnounceChat = 0x702,
     LogoutResult = 0x707,
     ConnectReply = 0x70c,
     SelectCharacter = 0x715,
@@ -48,6 +49,7 @@ pub enum ServerPackets {
     JoinZone = 0x753,
     LocalChat = 0x783,
     Whisper = 0x784,
+    ShoutChat = 0x785,
     SpawnEntityNpc = 0x791,
     SpawnEntityMonster = 0x792,
     SpawnEntityCharacter = 0x793,
@@ -512,6 +514,36 @@ impl<'a> From<&'a PacketServerLocalChat<'a>> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::LocalChat as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_null_terminated_utf8(packet.text);
+        writer.into()
+    }
+}
+
+pub struct PacketServerShoutChat<'a> {
+    pub name: &'a str,
+    pub text: &'a str,
+}
+
+impl<'a> From<&'a PacketServerShoutChat<'a>> for Packet {
+    fn from(packet: &'a PacketServerShoutChat<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ShoutChat as u16);
+        writer.write_null_terminated_utf8(packet.name);
+        writer.write_null_terminated_utf8(packet.text);
+        writer.into()
+    }
+}
+
+pub struct PacketServerAnnounceChat<'a> {
+    pub name: Option<&'a str>,
+    pub text: &'a str,
+}
+
+impl<'a> From<&'a PacketServerAnnounceChat<'a>> for Packet {
+    fn from(packet: &'a PacketServerAnnounceChat<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::AnnounceChat as u16);
+        writer.write_null_terminated_utf8(packet.text);
+        if let Some(name) = packet.name {
+            writer.write_null_terminated_utf8(name);
+        }
         writer.into()
     }
 }

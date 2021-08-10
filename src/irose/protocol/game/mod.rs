@@ -13,14 +13,14 @@ use crate::{
             SetHotbarSlot,
         },
         server::{
-            ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity, CastSkillTargetPosition,
-            LocalChat, LogoutReply, OpenPersonalStore, PersonalStoreTransactionCancelled,
-            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-            PersonalStoreTransactionSuccess, PickupDroppedItemResult, QuestDeleteResult,
-            QuestTriggerResult, RemoveEntities, ServerMessage, SpawnEntityDroppedItem,
-            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateInventory, UpdateLevel, UpdateMoney, UpdateSpeed,
-            UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
+            AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
+            CastSkillTargetPosition, LocalChat, LogoutReply, OpenPersonalStore,
+            PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
+            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
+            PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
+            ServerMessage, ShoutChat, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
+            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
+            UpdateMoney, UpdateSpeed, UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -398,6 +398,21 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerLocalChat { entity_id, text }))
+                    .await?;
+            }
+            ServerMessage::ShoutChat(ShoutChat { ref name, ref text }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerShoutChat { name, text }))
+                    .await?;
+            }
+            ServerMessage::AnnounceChat(AnnounceChat { ref name, ref text }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerAnnounceChat {
+                        name: name.as_deref(),
+                        text,
+                    }))
                     .await?;
             }
             ServerMessage::Whisper(Whisper { ref from, ref text }) => {
