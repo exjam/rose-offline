@@ -1,7 +1,11 @@
-use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
+use std::{
+    collections::HashMap,
+    num::{NonZeroU16, NonZeroUsize},
+    str::FromStr,
+};
 
 use crate::{
-    data::MotionFileData,
+    data::{ItemReference, MotionFileData},
     game::components::{MotionData, MotionDataNpc},
 };
 
@@ -14,6 +18,11 @@ id_wrapper_impl!(NpcId, NonZeroU16, u16);
 pub struct NpcConversationId(String);
 
 id_wrapper_impl!(NpcConversationId, String);
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct NpcStoreTabId(NonZeroU16);
+
+id_wrapper_impl!(NpcStoreTabId, NonZeroU16, u16);
 
 #[derive(Hash, PartialEq, Eq)]
 pub enum NpcMotionAction {
@@ -54,8 +63,8 @@ pub struct NpcData {
     pub drop_item_rate: i32,
     pub npc_minimap_icon_index: u32,
     pub summon_point_requirement: u32,
-    pub shop_tabs: Vec<u32>,
-    pub shop_union_number: u32,
+    pub store_tabs: [Option<NpcStoreTabId>; 4],
+    pub store_union_number: Option<NonZeroUsize>,
     pub is_untargetable: bool,
     pub attack_range: i32,
     pub npc_type_index: u32,
@@ -85,19 +94,27 @@ pub struct NpcConversationData {
     pub filename: String,
 }
 
+pub struct NpcStoreTabData {
+    pub name: String,
+    pub items: HashMap<u16, ItemReference>,
+}
+
 pub struct NpcDatabase {
     npcs: HashMap<u16, NpcData>,
     conversation_files: HashMap<String, NpcConversationData>,
+    store_tabs: HashMap<u16, NpcStoreTabData>,
 }
 
 impl NpcDatabase {
     pub fn new(
         npcs: HashMap<u16, NpcData>,
         conversation_files: HashMap<String, NpcConversationData>,
+        store_tabs: HashMap<u16, NpcStoreTabData>,
     ) -> Self {
         Self {
             npcs,
             conversation_files,
+            store_tabs,
         }
     }
 
@@ -127,5 +144,9 @@ impl NpcDatabase {
             skill_action2: get_motion(NpcMotionAction::SkillAction2),
             etc: get_motion(NpcMotionAction::Etc),
         })
+    }
+
+    pub fn get_store_tab(&self, id: NpcStoreTabId) -> Option<&NpcStoreTabData> {
+        self.store_tabs.get(&(id.get() as u16))
     }
 }
