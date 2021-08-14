@@ -42,9 +42,6 @@ async fn main() {
     )
     .await
     .unwrap();
-    tokio::spawn(async move {
-        login_server.run().await;
-    });
 
     let mut world_server = WorldServer::new(
         String::from("_WorldServer"),
@@ -54,14 +51,10 @@ async fn main() {
     )
     .await
     .unwrap();
-    let world_server_entity = world_server.get_entity();
-    tokio::spawn(async move {
-        world_server.run().await;
-    });
 
     let mut game_server = GameServer::new(
         String::from("GameServer"),
-        world_server_entity,
+        world_server.get_entity(),
         TcpListener::bind("127.0.0.1:0").await.unwrap(),
         irose::game_protocol(),
         game_control_tx.clone(),
@@ -69,5 +62,13 @@ async fn main() {
     .await
     .unwrap();
 
-    game_server.run().await;
+    tokio::spawn(async move {
+        game_server.run().await;
+    });
+
+    tokio::spawn(async move {
+        world_server.run().await;
+    });
+
+    login_server.run().await;
 }
