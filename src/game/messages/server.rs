@@ -205,6 +205,7 @@ pub struct UpdateEquipment {
 pub struct UpdateInventory {
     pub is_reward: bool,
     pub items: Vec<(ItemSlot, Option<Item>)>,
+    pub with_money: Option<Money>,
 }
 
 #[derive(Clone)]
@@ -375,6 +376,18 @@ pub enum CancelCastingSkillReason {
     InvalidTarget,
 }
 
+#[allow(dead_code)]
+#[derive(Clone)]
+pub enum NpcStoreTransactionError {
+    InvalidTransactionEntity,
+    PriceDifference,
+    NpcNotFound,
+    NpcTooFarAway,
+    NotEnoughMoney,
+    NotSameUnion,
+    NotEnoughUnionPoints,
+}
+
 #[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
@@ -418,4 +431,5 @@ pub enum ServerMessage {
     ApplySkillEffect(ApplySkillEffect),
     FinishCastingSkill(ClientEntityId, SkillId),
     CancelCastingSkill(ClientEntityId, CancelCastingSkillReason),
+    NpcStoreTransactionError(NpcStoreTransactionError),
 }

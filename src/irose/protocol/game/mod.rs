@@ -9,8 +9,8 @@ use crate::{
     game::messages::{
         client::{
             Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,
-            LogoutRequest, Move, PersonalStoreBuyItem, PickupDroppedItem, QuestDelete,
-            SetHotbarSlot,
+            LogoutRequest, Move, NpcStoreTransaction, PersonalStoreBuyItem, PickupDroppedItem,
+            QuestDelete, SetHotbarSlot,
         },
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
@@ -299,6 +299,16 @@ impl GameClient {
                         packet.position,
                     ))?;
             }
+            Some(ClientPackets::NpcStoreTransaction) => {
+                let packet = PacketClientNpcStoreTransaction::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
+                        npc_entity_id: packet.npc_entity_id,
+                        buy_items: packet.buy_items,
+                        sell_items: packet.sell_items,
+                    }))?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -554,12 +564,14 @@ impl GameClient {
             ServerMessage::UpdateInventory(UpdateInventory {
                 is_reward,
                 ref items,
+                with_money,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateInventory {
                         is_reward,
                         items,
+                        with_money,
                     }))
                     .await?;
             }
@@ -911,6 +923,14 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerFinishCastingSkill {
                         entity_id,
                         skill_id,
+                    }))
+                    .await?;
+            }
+            ServerMessage::NpcStoreTransactionError(error) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerNpcStoreTransactionError {
+                        error,
                     }))
                     .await?;
             }

@@ -4,6 +4,7 @@ pub struct WorldRates {
     pub drop_money_rate: i32,
     pub reward_rate: i32,
     pub stamina_rate: i32,
+    pub prices_rate: i32,
 }
 
 impl WorldRates {
@@ -14,6 +15,7 @@ impl WorldRates {
             drop_money_rate: 300,
             reward_rate: 300,
             stamina_rate: 300,
+            prices_rate: 100,
         }
     }
 }

@@ -17,14 +17,14 @@ use crate::{
             SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
         events::{
-            ChatCommandEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
+            ChatCommandEvent, NpcStoreEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
             PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
         },
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-                JoinZoneResponse, LogoutRequest, PersonalStoreBuyItem, QuestDelete,
-                ReviveRequestType, SetHotbarSlot, SetHotbarSlotError,
+                JoinZoneResponse, LogoutRequest, NpcStoreTransaction, PersonalStoreBuyItem,
+                QuestDelete, ReviveRequestType, SetHotbarSlot, SetHotbarSlotError,
             },
             server::{
                 self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat,
@@ -255,8 +255,9 @@ pub fn game_server_main_system(
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
-    mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
+    mut npc_store_events: EventWriter<NpcStoreEvent>,
     mut personal_store_events: EventWriter<PersonalStoreEvent>,
+    mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut use_item_events: EventWriter<UseItemEvent>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
@@ -365,6 +366,7 @@ pub fn game_server_main_system(
                                                 ),
                                                 (item_slot, inventory_slot.clone()),
                                             ],
+                                            with_money: None,
                                         }))
                                         .ok();
 
@@ -395,6 +397,7 @@ pub fn game_server_main_system(
                                                     (ItemSlot::Equipped(equipment_index), None),
                                                     (inventory_slot, Some(item.clone())),
                                                 ],
+                                                with_money: None,
                                             }))
                                             .ok();
 
@@ -612,6 +615,23 @@ pub fn game_server_main_system(
                             entity_commands.insert(NextCommand::with_cast_skill_target_position(
                                 skill, position,
                             ));
+                        }
+                    }
+                    ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
+                        npc_entity_id,
+                        buy_items,
+                        sell_items,
+                    }) => {
+                        if let Some((npc_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone_id)
+                            .and_then(|zone| zone.get_entity(npc_entity_id))
+                        {
+                            npc_store_events.send(NpcStoreEvent {
+                                store_entity: *npc_entity,
+                                transaction_entity: entity,
+                                buy_items,
+                                sell_items,
+                            });
                         }
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),

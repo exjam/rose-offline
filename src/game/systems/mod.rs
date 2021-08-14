@@ -11,6 +11,7 @@ mod game_server;
 mod login_server;
 mod monster_spawn;
 mod npc_ai;
+mod npc_store_system;
 mod personal_store;
 mod quest;
 mod save;
@@ -39,6 +40,7 @@ pub use game_server::{
 pub use login_server::{login_server_authentication_system, login_server_system};
 pub use monster_spawn::monster_spawn_system;
 pub use npc_ai::npc_ai_system;
+pub use npc_store_system::npc_store_system;
 pub use personal_store::personal_store_system;
 pub use quest::quest_system;
 pub use save::save_system;

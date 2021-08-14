@@ -794,6 +794,7 @@ fn quest_reward_calculated_item(
                             .send(ServerMessage::UpdateInventory(UpdateInventory {
                                 is_reward: true,
                                 items: vec![(slot, Some(item.clone()))],
+                                with_money: None,
                             }))
                             .ok();
                     }
@@ -977,6 +978,7 @@ fn quest_reward_add_item(
                                 .send(ServerMessage::UpdateInventory(UpdateInventory {
                                     is_reward: true,
                                     items: vec![(slot, Some(item.clone()))],
+                                    with_money: None,
                                 }))
                                 .ok();
                         }

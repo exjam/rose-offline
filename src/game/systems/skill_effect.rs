@@ -717,6 +717,7 @@ pub fn skill_effect_system(
                                         .send(ServerMessage::UpdateInventory(UpdateInventory {
                                             is_reward: false,
                                             items: vec![(item_slot, None)],
+                                            with_money: None,
                                         }))
                                         .ok();
                                 }

@@ -19,8 +19,8 @@ use crate::{
             StatPoints, StatusEffects, Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
-            CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, PickupDroppedItemContent,
-            PickupDroppedItemError,
+            CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, NpcStoreTransactionError,
+            PickupDroppedItemContent, PickupDroppedItemError,
         },
     },
     irose::protocol::game::common_packets::{
@@ -37,6 +37,7 @@ pub enum ServerPackets {
     ConnectReply = 0x70c,
     SelectCharacter = 0x715,
     CharacterInventory = 0x716,
+    UpdateMoneyAndInventory = 0x717,
     UpdateInventory = 0x718,
     QuestData = 0x71b,
     UpdateMoney = 0x71d,
@@ -851,16 +852,24 @@ impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
 pub struct PacketServerUpdateInventory<'a> {
     pub is_reward: bool,
     pub items: &'a [(ItemSlot, Option<Item>)],
+    pub with_money: Option<Money>,
 }
 
 impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
     fn from(packet: &'a PacketServerUpdateInventory<'a>) -> Self {
         let command = if packet.is_reward {
             ServerPackets::UpdateInventoryReward
+        } else if packet.with_money.is_some() {
+            ServerPackets::UpdateMoneyAndInventory
         } else {
             ServerPackets::UpdateInventory
         };
         let mut writer = PacketWriter::new(command as u16);
+
+        if let Some(money) = packet.with_money {
+            writer.write_i64(money.0);
+        }
+
         writer.write_u8(packet.items.len() as u8);
         for (slot, item) in packet.items {
             writer.write_item_slot_u8(*slot);
@@ -1459,6 +1468,28 @@ impl<'a> From<&'a PacketServerUpdateStatusEffects<'a>> for Packet {
             writer.write_u32(updated_mp.mp);
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketServerNpcStoreTransactionError {
+    pub error: NpcStoreTransactionError,
+}
+impl From<&PacketServerNpcStoreTransactionError> for Packet {
+    fn from(packet: &PacketServerNpcStoreTransactionError) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateSpeed as u16);
+
+        let error = match packet.error {
+            NpcStoreTransactionError::PriceDifference => 1,
+            NpcStoreTransactionError::NpcNotFound => 2,
+            NpcStoreTransactionError::NpcTooFarAway => 3,
+            NpcStoreTransactionError::NotEnoughMoney => 4,
+            NpcStoreTransactionError::NotSameUnion => 5,
+            NpcStoreTransactionError::NotEnoughUnionPoints => 6,
+            _ => panic!("Unexpected PacketServerNpcStoreTransactionError"),
+        };
+
+        writer.write_u8(error as u8);
         writer.into()
     }
 }

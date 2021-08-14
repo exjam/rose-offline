@@ -202,6 +202,7 @@ fn use_inventory_item(
                         .send(ServerMessage::UpdateInventory(UpdateInventory {
                             is_reward: false,
                             items: vec![(item_slot, None)],
+                            with_money: None,
                         }))
                         .ok();
                 }

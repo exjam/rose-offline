@@ -254,6 +254,20 @@ pub struct PersonalStoreBuyItem {
 }
 
 #[derive(Debug)]
+pub struct NpcStoreBuyItem {
+    pub tab_index: usize,
+    pub item_index: usize,
+    pub quantity: usize,
+}
+
+#[derive(Debug)]
+pub struct NpcStoreTransaction {
+    pub npc_entity_id: ClientEntityId,
+    pub buy_items: Vec<NpcStoreBuyItem>,
+    pub sell_items: Vec<(ItemSlot, usize)>,
+}
+
+#[derive(Debug)]
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -284,4 +298,5 @@ pub enum ClientMessage {
     CastSkillSelf(SkillSlot),
     CastSkillTargetEntity(SkillSlot, ClientEntityId),
     CastSkillTargetPosition(SkillSlot, Point2<f32>),
+    NpcStoreTransaction(NpcStoreTransaction),
 }

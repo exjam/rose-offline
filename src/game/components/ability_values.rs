@@ -124,6 +124,8 @@ pub struct AbilityValues {
     pub summon_owner_level: Option<i32>,
     pub summon_skill_level: Option<i32>,
     pub adjust: AbilityValuesAdjust,
+    pub npc_store_buy_rate: i32,
+    pub npc_store_sell_rate: i32,
 }
 
 #[allow(dead_code)]
@@ -194,6 +196,14 @@ impl AbilityValues {
 
     pub fn max_weight(&self) -> i32 {
         self.max_weight
+    }
+
+    pub fn get_npc_store_buy_rate(&self) -> i32 {
+        self.npc_store_buy_rate
+    }
+
+    pub fn get_npc_store_sell_rate(&self) -> i32 {
+        self.npc_store_sell_rate
     }
 
     pub fn get_additional_damage_multipler(&self) -> f32 {

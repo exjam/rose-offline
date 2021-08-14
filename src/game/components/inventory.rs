@@ -59,7 +59,7 @@ impl From<Money> for u32 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
 pub enum InventoryPageType {
     Equipment,
     Consumables,
@@ -193,7 +193,7 @@ impl InventoryPage {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ItemSlot {
     Equipped(EquipmentIndex),
     Inventory(InventoryPageType, usize),

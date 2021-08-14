@@ -10,7 +10,7 @@ use crate::{
         components::{
             BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot, SkillSlot,
         },
-        messages::client::ReviveRequestType,
+        messages::client::{NpcStoreBuyItem, ReviveRequestType},
     },
     irose::protocol::game::common_packets::{
         PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
@@ -30,6 +30,7 @@ pub enum ClientPackets {
     StopMove = 0x796,
     Attack = 0x798,
     Move = 0x79a,
+    NpcStoreTransaction = 0x7a1,
     UseItem = 0x7a3,
     DropItem = 0x7a4,
     ChangeEquipment = 0x7a5,
@@ -482,6 +483,61 @@ impl TryFrom<&Packet> for PacketClientCastSkillTargetPosition {
         Ok(PacketClientCastSkillTargetPosition {
             skill_slot,
             position: Point2::new(x, y),
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientNpcStoreTransactionBuyItem {
+    pub tab: u8,
+    pub tab_item_index: u8,
+    pub quantity: u16,
+}
+
+#[derive(Debug)]
+pub struct PacketClientNpcStoreTransaction {
+    pub npc_entity_id: ClientEntityId,
+    pub buy_items: Vec<NpcStoreBuyItem>,
+    pub sell_items: Vec<(ItemSlot, usize)>,
+}
+
+impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::NpcStoreTransaction as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let npc_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let buy_item_count = reader.read_u8()?;
+        let sell_item_count = reader.read_u8()?;
+        let _economy_time = reader.read_u32()?;
+        let mut buy_items = Vec::new();
+        let mut sell_items = Vec::new();
+
+        for _ in 0..buy_item_count {
+            let tab_index = reader.read_u8()? as usize;
+            let item_index = reader.read_u8()? as usize;
+            let quantity = reader.read_u16()? as usize;
+            buy_items.push(NpcStoreBuyItem {
+                tab_index,
+                item_index,
+                quantity,
+            });
+        }
+
+        for _ in 0..sell_item_count {
+            let item_slot = reader.read_item_slot_u8()?;
+            let quantity = reader.read_u16()? as usize;
+            sell_items.push((item_slot, quantity));
+        }
+
+        Ok(PacketClientNpcStoreTransaction {
+            npc_entity_id,
+            buy_items,
+            sell_items,
         })
     }
 }
