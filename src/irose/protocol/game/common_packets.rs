@@ -8,8 +8,8 @@ use crate::{
         Damage, ItemReference, SkillPageType, StatusEffectType,
     },
     game::components::{
-        Equipment, EquipmentIndex, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
-        SkillSlot, StatusEffects, INVENTORY_PAGE_SIZE,
+        AmmoIndex, ClientEntityId, Equipment, EquipmentIndex, HotbarSlot, InventoryPageType,
+        ItemSlot, Money, MoveMode, SkillSlot, StatusEffects, VehiclePartIndex,
     },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
@@ -67,9 +67,9 @@ impl PacketWriteHotbarSlot for PacketWriter {
 #[derive(Clone, Copy)]
 pub struct PacketEquipmentAmmoPart {
     #[skip(getters)]
-    item_type: B5,
+    pub item_type: B5,
     #[skip(getters)]
-    item_number: B10,
+    pub item_number: B10,
     #[skip]
     __: B1,
 }
@@ -285,6 +285,90 @@ impl PacketWriteItems for PacketWriter {
     }
 }
 
+const EQUIPMENT_START_INDEX: usize = 1;
+const EQUIPMENT_END_INDEX: usize = 12;
+
+const INVENTORY_PAGE_SIZE: usize = 5 * 6;
+const INVENTORY_PAGES: usize = 4;
+const INVENTORY_START_INDEX: usize = EQUIPMENT_END_INDEX;
+const INVENTORY_END_INDEX: usize = INVENTORY_START_INDEX + INVENTORY_PAGE_SIZE * INVENTORY_PAGES;
+
+const AMMO_START_INDEX: usize = INVENTORY_END_INDEX;
+const AMMO_END_INDEX: usize = AMMO_START_INDEX + 3;
+
+const VEHICLE_START_INDEX: usize = AMMO_END_INDEX;
+const VEHICLE_END_INDEX: usize = VEHICLE_START_INDEX + 4;
+
+pub trait PacketReadEquipmentIndex {
+    fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, ProtocolError>;
+}
+
+pub trait PacketWriteEquipmentIndex {
+    fn write_equipment_index_u16(&mut self, equipment_index: EquipmentIndex);
+}
+
+pub fn decode_ammo_index(index: usize) -> Option<AmmoIndex> {
+    match index {
+        0 => Some(AmmoIndex::Arrow),
+        1 => Some(AmmoIndex::Bullet),
+        2 => Some(AmmoIndex::Throw),
+        _ => None,
+    }
+}
+
+pub fn decode_equipment_index(index: usize) -> Option<EquipmentIndex> {
+    match index {
+        1 => Some(EquipmentIndex::Face),
+        2 => Some(EquipmentIndex::Head),
+        3 => Some(EquipmentIndex::Body),
+        4 => Some(EquipmentIndex::Back),
+        5 => Some(EquipmentIndex::Hands),
+        6 => Some(EquipmentIndex::Feet),
+        7 => Some(EquipmentIndex::WeaponRight),
+        8 => Some(EquipmentIndex::WeaponLeft),
+        9 => Some(EquipmentIndex::Necklace),
+        10 => Some(EquipmentIndex::Ring),
+        11 => Some(EquipmentIndex::Earring),
+        _ => None,
+    }
+}
+
+pub fn encode_ammo_index(index: AmmoIndex) -> usize {
+    match index {
+        AmmoIndex::Arrow => 0,
+        AmmoIndex::Bullet => 1,
+        AmmoIndex::Throw => 2,
+    }
+}
+
+fn encode_equipment_index(index: EquipmentIndex) -> usize {
+    match index {
+        EquipmentIndex::Face => 1,
+        EquipmentIndex::Head => 2,
+        EquipmentIndex::Body => 3,
+        EquipmentIndex::Back => 4,
+        EquipmentIndex::Hands => 5,
+        EquipmentIndex::Feet => 6,
+        EquipmentIndex::WeaponRight => 7,
+        EquipmentIndex::WeaponLeft => 8,
+        EquipmentIndex::Necklace => 9,
+        EquipmentIndex::Ring => 10,
+        EquipmentIndex::Earring => 11,
+    }
+}
+
+impl<'a> PacketReadEquipmentIndex for PacketReader<'a> {
+    fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, ProtocolError> {
+        decode_equipment_index(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
+    }
+}
+
+impl PacketWriteEquipmentIndex for PacketWriter {
+    fn write_equipment_index_u16(&mut self, equipment_index: EquipmentIndex) {
+        self.write_u16(encode_equipment_index(equipment_index) as u16)
+    }
+}
+
 pub trait PacketReadItemSlot {
     fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError>;
     fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError>;
@@ -295,58 +379,74 @@ pub trait PacketWriteItemSlot {
     fn write_item_slot_u16(&mut self, item_slot: ItemSlot);
 }
 
-fn parse_item_slot(index: usize) -> Result<ItemSlot, ProtocolError> {
+pub fn decode_item_slot(index: usize) -> Option<ItemSlot> {
     if index == 0 {
-        Err(ProtocolError::InvalidPacket)
-    } else if index < 12 {
-        if let Some(equipment_index) = FromPrimitive::from_usize(index) {
-            Ok(ItemSlot::Equipped(equipment_index))
-        } else {
-            Err(ProtocolError::InvalidPacket)
-        }
-    } else {
-        let index = index - 12;
+        None
+    } else if (EQUIPMENT_START_INDEX..EQUIPMENT_END_INDEX).contains(&index) {
+        decode_equipment_index(index).map(ItemSlot::Equipment)
+    } else if (INVENTORY_START_INDEX..INVENTORY_END_INDEX).contains(&index) {
+        let index = index - INVENTORY_START_INDEX;
         let page = index / INVENTORY_PAGE_SIZE;
         let slot = index % INVENTORY_PAGE_SIZE;
         match page {
-            0 => Ok(ItemSlot::Inventory(InventoryPageType::Equipment, slot)),
-            1 => Ok(ItemSlot::Inventory(InventoryPageType::Consumables, slot)),
-            2 => Ok(ItemSlot::Inventory(InventoryPageType::Materials, slot)),
-            3 => Ok(ItemSlot::Inventory(InventoryPageType::Vehicles, slot)),
-            _ => Err(ProtocolError::InvalidPacket),
+            0 => Some(ItemSlot::Inventory(InventoryPageType::Equipment, slot)),
+            1 => Some(ItemSlot::Inventory(InventoryPageType::Consumables, slot)),
+            2 => Some(ItemSlot::Inventory(InventoryPageType::Materials, slot)),
+            3 => Some(ItemSlot::Inventory(InventoryPageType::Vehicles, slot)),
+            _ => None,
         }
+    } else if (AMMO_START_INDEX..AMMO_END_INDEX).contains(&index) {
+        decode_ammo_index(index - AMMO_START_INDEX).map(ItemSlot::Ammo)
+    } else if (VEHICLE_START_INDEX..VEHICLE_END_INDEX).contains(&index) {
+        match index - VEHICLE_START_INDEX {
+            0 => Some(ItemSlot::Vehicle(VehiclePartIndex::Body)),
+            1 => Some(ItemSlot::Vehicle(VehiclePartIndex::Engine)),
+            2 => Some(ItemSlot::Vehicle(VehiclePartIndex::Leg)),
+            3 => Some(ItemSlot::Vehicle(VehiclePartIndex::Arms)),
+            _ => None,
+        }
+    } else {
+        None
     }
 }
 
-fn item_slot_to_index(slot: ItemSlot) -> usize {
+fn encode_item_slot(slot: ItemSlot) -> usize {
     match slot {
-        ItemSlot::Equipped(equipment_index) => equipment_index as usize,
+        ItemSlot::Equipment(equipment_index) => encode_equipment_index(equipment_index),
         ItemSlot::Inventory(page_type, index) => match page_type {
-            InventoryPageType::Equipment => 12 + index,
-            InventoryPageType::Consumables => 12 + INVENTORY_PAGE_SIZE + index,
-            InventoryPageType::Materials => 12 + 2 * INVENTORY_PAGE_SIZE + index,
-            InventoryPageType::Vehicles => 12 + 3 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Equipment => INVENTORY_START_INDEX + index,
+            InventoryPageType::Consumables => INVENTORY_START_INDEX + INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Materials => INVENTORY_START_INDEX + 2 * INVENTORY_PAGE_SIZE + index,
+            InventoryPageType::Vehicles => INVENTORY_START_INDEX + 3 * INVENTORY_PAGE_SIZE + index,
         },
+        ItemSlot::Ammo(AmmoIndex::Arrow) => AMMO_START_INDEX,
+        ItemSlot::Ammo(AmmoIndex::Bullet) => AMMO_START_INDEX + 1,
+        ItemSlot::Ammo(AmmoIndex::Throw) => AMMO_START_INDEX + 2,
+        ItemSlot::Vehicle(VehiclePartIndex::Body) => VEHICLE_START_INDEX,
+        ItemSlot::Vehicle(VehiclePartIndex::Engine) => VEHICLE_START_INDEX + 1,
+        ItemSlot::Vehicle(VehiclePartIndex::Leg) => VEHICLE_START_INDEX + 2,
+        ItemSlot::Vehicle(VehiclePartIndex::Arms) => VEHICLE_START_INDEX + 3,
+        _ => 0,
     }
 }
 
 impl<'a> PacketReadItemSlot for PacketReader<'a> {
     fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError> {
-        parse_item_slot(self.read_u8()? as usize)
+        decode_item_slot(self.read_u8()? as usize).ok_or(ProtocolError::InvalidPacket)
     }
 
     fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError> {
-        parse_item_slot(self.read_u16()? as usize)
+        decode_item_slot(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
     }
 }
 
 impl PacketWriteItemSlot for PacketWriter {
     fn write_item_slot_u8(&mut self, item_slot: ItemSlot) {
-        self.write_u8(item_slot_to_index(item_slot) as u8)
+        self.write_u8(encode_item_slot(item_slot) as u8)
     }
 
     fn write_item_slot_u16(&mut self, item_slot: ItemSlot) {
-        self.write_u16(item_slot_to_index(item_slot) as u16)
+        self.write_u16(encode_item_slot(item_slot) as u16)
     }
 }
 
@@ -525,5 +625,20 @@ impl PacketWriteDamage for PacketWriter {
         for b in damage.into_bytes().iter() {
             self.write_u8(*b);
         }
+    }
+}
+
+pub trait PacketWriteEntityId {
+    fn write_entity_id(&mut self, entity_id: ClientEntityId);
+    fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>);
+}
+
+impl PacketWriteEntityId for PacketWriter {
+    fn write_entity_id(&mut self, entity_id: ClientEntityId) {
+        self.write_u16(entity_id.0 as u16);
+    }
+
+    fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>) {
+        self.write_u16(entity_id.map_or(0, |x| x.0) as u16);
     }
 }

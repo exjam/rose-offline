@@ -3,7 +3,11 @@ use log::warn;
 use nalgebra::Point3;
 
 use crate::{
-    data::{account::AccountStorage, character::CharacterStorage, item::Item},
+    data::{
+        account::AccountStorage,
+        character::CharacterStorage,
+        item::{Item, StackError, StackableSlotBehaviour},
+    },
     game::{
         bundles::{
             client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
@@ -357,7 +361,7 @@ pub fn game_server_main_system(
                                         .send(ServerMessage::UpdateInventory(
                                             vec![
                                                 (
-                                                    ItemSlot::Equipped(equipment_index),
+                                                    ItemSlot::Equipment(equipment_index),
                                                     equipment_slot.clone().map(Item::Equipment),
                                                 ),
                                                 (item_slot, inventory_slot.clone()),
@@ -389,7 +393,7 @@ pub fn game_server_main_system(
                                             .server_message_tx
                                             .send(ServerMessage::UpdateInventory(
                                                 vec![
-                                                    (ItemSlot::Equipped(equipment_index), None),
+                                                    (ItemSlot::Equipment(equipment_index), None),
                                                     (inventory_slot, Some(item.clone())),
                                                 ],
                                                 None,

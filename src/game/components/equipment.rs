@@ -6,7 +6,6 @@ use crate::data::{
     ItemDatabase, ItemReference, WeaponItemData,
 };
 
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]
 pub enum EquipmentIndex {
     Face = 1,
@@ -22,8 +21,7 @@ pub enum EquipmentIndex {
     Earring = 11,
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]
 pub enum VehiclePartIndex {
     Body = 0,
     Engine = 1,
@@ -32,8 +30,7 @@ pub enum VehiclePartIndex {
     Arms = 4,
 }
 
-#[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]
 pub enum AmmoIndex {
     Arrow = 0,
     Bullet = 1,
@@ -95,6 +92,10 @@ impl Equipment {
 
     pub fn get_ammo_item(&self, index: AmmoIndex) -> Option<&StackableItem> {
         self.equipped_ammo[index as usize].as_ref()
+    }
+
+    pub fn get_ammo_slot_mut(&mut self, index: AmmoIndex) -> &mut Option<StackableItem> {
+        &mut self.equipped_ammo[index as usize]
     }
 
     pub fn get_equipment_slot_mut(&mut self, index: EquipmentIndex) -> &mut Option<EquipmentItem> {

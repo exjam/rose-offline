@@ -7,7 +7,7 @@ use crate::{
         item::{EquipmentItem, Item, ItemSlotBehaviour, ItemType, StackableItem},
         ItemReference,
     },
-    game::components::EquipmentIndex,
+    game::components::{AmmoIndex, EquipmentIndex, VehiclePartIndex},
 };
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
@@ -195,8 +195,10 @@ impl InventoryPage {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ItemSlot {
-    Equipped(EquipmentIndex),
+    Equipment(EquipmentIndex),
     Inventory(InventoryPageType, usize),
+    Ammo(AmmoIndex),
+    Vehicle(VehiclePartIndex),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -294,14 +296,14 @@ impl Inventory {
                 .slots
                 .get(index)
                 .and_then(|x| x.as_ref()),
-            ItemSlot::Equipped(_) => None,
+            _ => None,
         }
     }
 
     pub fn get_item_slot(&self, slot: ItemSlot) -> Option<&Option<Item>> {
         match slot {
             ItemSlot::Inventory(page_type, index) => self.get_page(page_type).slots.get(index),
-            ItemSlot::Equipped(_) => None,
+            _ => None,
         }
     }
 
@@ -310,7 +312,7 @@ impl Inventory {
             ItemSlot::Inventory(page_type, index) => {
                 self.get_page_mut(page_type).slots.get_mut(index)
             }
-            ItemSlot::Equipped(_) => None,
+            _ => None,
         }
     }
 

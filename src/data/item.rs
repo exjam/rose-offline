@@ -283,6 +283,18 @@ impl StackableItem {
         self.quantity += stackable.quantity;
         Ok(())
     }
+
+    pub fn try_take_subquantity(&mut self, quantity: u32) -> Option<StackableItem> {
+        if self.quantity < quantity {
+            None
+        } else {
+            self.quantity -= quantity;
+
+            let mut item = self.clone();
+            item.quantity = quantity;
+            Some(item)
+        }
+    }
 }
 
 impl From<&StackableItem> for ItemReference {
@@ -337,18 +349,13 @@ impl Item {
         }
     }
 
-    // Only succeeds if quanity < self.quantity, this can not take the whole item
+    // Only succeeds if quantity < self.quantity, this can not take the whole item
     pub fn try_take_subquantity(&mut self, quantity: u32) -> Option<Item> {
         match self {
             Item::Equipment(_) => None,
-            Item::Stackable(stackable) => {
-                if stackable.quantity < quantity {
-                    None
-                } else {
-                    stackable.quantity -= quantity;
-                    Item::new(&stackable.item, quantity)
-                }
-            }
+            Item::Stackable(stackable) => stackable
+                .try_take_subquantity(quantity)
+                .map(Item::Stackable),
         }
     }
 
@@ -462,6 +469,55 @@ impl ItemSlotBehaviour for Option<Item> {
     fn contains_same_item(&self, compare_item: &Item) -> bool {
         match self {
             Some(item) => item.is_same_item(compare_item),
+            None => false,
+        }
+    }
+}
+
+pub trait StackableSlotBehaviour {
+    fn try_take_quantity(&mut self, quantity: u32) -> Option<StackableItem>;
+
+    fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError>;
+    fn try_stack_with(&mut self, with_item: StackableItem) -> Result<&StackableItem, StackError>;
+
+    fn contains_same_item(&self, compare_item: &StackableItem) -> bool;
+}
+
+impl StackableSlotBehaviour for Option<StackableItem> {
+    fn try_take_quantity(&mut self, quantity: u32) -> Option<StackableItem> {
+        match self {
+            Some(item) => match item.quantity.cmp(&quantity) {
+                Ordering::Less => None,
+                Ordering::Equal => self.take(),
+                Ordering::Greater => item.try_take_subquantity(quantity),
+            },
+            None => None,
+        }
+    }
+
+    fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
+        match self {
+            Some(item) => item.can_stack_with(stackable),
+            None => Ok(()),
+        }
+    }
+
+    fn try_stack_with(&mut self, with_item: StackableItem) -> Result<&StackableItem, StackError> {
+        match self {
+            Some(item) => match item.try_stack_with(with_item) {
+                Ok(_) => Ok(self.as_ref().unwrap()),
+                Err(err) => Err(err),
+            },
+            None => {
+                *self = Some(with_item);
+                Ok(self.as_ref().unwrap())
+            }
+        }
+    }
+
+    fn contains_same_item(&self, compare_item: &StackableItem) -> bool {
+        match self {
+            Some(item) => item.item == compare_item.item,
             None => false,
         }
     }

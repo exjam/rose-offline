@@ -6,7 +6,7 @@ use num_derive::FromPrimitive;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item},
+        item::{EquipmentItem, Item, StackableItem},
         AbilityType, Damage, ItemReference, NpcId, SkillId, WorldTicks, ZoneId,
     },
     game::{
@@ -24,7 +24,8 @@ use crate::{
         },
     },
     irose::protocol::game::common_packets::{
-        PacketWriteDamage, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+        encode_ammo_index, PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId,
+        PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
         PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
     },
     protocol::{Packet, PacketWriter},
@@ -84,21 +85,6 @@ pub enum ServerPackets {
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
-}
-
-trait PacketWriteEntityId {
-    fn write_entity_id(&mut self, entity_id: ClientEntityId);
-    fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>);
-}
-
-impl PacketWriteEntityId for PacketWriter {
-    fn write_entity_id(&mut self, entity_id: ClientEntityId) {
-        self.write_u16(entity_id.0 as u16);
-    }
-
-    fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>) {
-        self.write_u16(entity_id.map_or(0, |x| x.0) as u16);
-    }
 }
 
 #[allow(dead_code)]
@@ -927,7 +913,7 @@ impl From<&PacketServerUpdateEquipment> for Packet {
     fn from(packet: &PacketServerUpdateEquipment) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_u16(packet.equipment_index as u16);
+        writer.write_equipment_index_u16(packet.equipment_index);
         writer.write_equipment_item_part(packet.item.as_ref());
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed);
@@ -1508,7 +1494,7 @@ impl From<&PacketServerNpcStoreTransactionError> for Packet {
             _ => panic!("Unexpected PacketServerNpcStoreTransactionError"),
         };
 
-        writer.write_u8(error as u8);
+        writer.write_u8(error);
         writer.into()
     }
 }

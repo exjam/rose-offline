@@ -1,19 +1,24 @@
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
+use modular_bitfield::{
+    bitfield,
+    prelude::{B14, B2},
+};
 use nalgebra::Point2;
 use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 
 use crate::{
     data::item::Item,
     game::{
         components::{
-            BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot, SkillSlot,
+            AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,
+            SkillSlot,
         },
         messages::client::{NpcStoreBuyItem, ReviveRequestType},
     },
     irose::protocol::game::common_packets::{
-        PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
+        decode_ammo_index, decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot,
+        PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };
@@ -196,8 +201,7 @@ impl TryFrom<&Packet> for PacketClientChangeEquipment {
         }
 
         let mut reader = PacketReader::from(packet);
-        let equipment_index =
-            FromPrimitive::from_u16(reader.read_u16()?).ok_or(ProtocolError::InvalidPacket)?;
+        let equipment_index = reader.read_equipment_index_u16()?;
         let item_slot = reader.read_item_slot_u16().ok();
         Ok(PacketClientChangeEquipment {
             equipment_index,
