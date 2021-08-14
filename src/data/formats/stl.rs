@@ -5,7 +5,7 @@ use std::{
     str,
 };
 
-use super::{reader::ReadError, FileReader};
+use crate::data::formats::{reader::ReadError, FileReader};
 
 struct StlEntry {
     pub text_offset: u32,

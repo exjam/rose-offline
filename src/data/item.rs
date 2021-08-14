@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use super::ItemReference;
+use crate::data::ItemReference;
 
 const MAX_STACKABLE_ITEM_QUANTITY: u32 = 999;
 

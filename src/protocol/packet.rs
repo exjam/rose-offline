@@ -2,7 +2,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::io::Cursor;
 use std::str;
 
-use super::ProtocolError;
+use crate::protocol::ProtocolError;
 
 pub trait PacketCodec {
     fn get_seed(&self) -> u32;

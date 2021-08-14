@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::reader::{FileReader, ReadError};
+use crate::data::formats::reader::{FileReader, ReadError};
 
 pub struct ZmoFile {
     pub fps: usize,

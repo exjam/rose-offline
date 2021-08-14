@@ -1,9 +1,10 @@
-use super::reader::FileReader;
 use encoding_rs::EUC_KR;
 use memmap::{Mmap, MmapOptions};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+
+use crate::data::formats::reader::FileReader;
 
 struct FileEntry {
     offset: usize,

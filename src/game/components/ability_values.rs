@@ -1,6 +1,4 @@
-use crate::data::StatusEffectType;
-
-use super::StatusEffects;
+use crate::{data::StatusEffectType, game::components::StatusEffects};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum DamageCategory {

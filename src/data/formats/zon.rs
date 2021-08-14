@@ -1,7 +1,8 @@
-use super::reader::{FileReader, ReadError};
 use nalgebra::Point3;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+
+use crate::data::formats::reader::{FileReader, ReadError};
 
 pub struct ZonFile {
     pub grid_per_patch: f32,

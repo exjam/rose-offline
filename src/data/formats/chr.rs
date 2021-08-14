@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use super::reader::{FileReader, ReadError};
+use crate::data::formats::reader::{FileReader, ReadError};
 
 pub struct NpcModelData {
     pub name: String,

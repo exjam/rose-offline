@@ -1,6 +1,4 @@
-use crate::data::item::Item;
-
-use super::Money;
+use crate::{data::item::Item, game::components::Money};
 
 #[derive(Clone)]
 pub enum DroppedItem {

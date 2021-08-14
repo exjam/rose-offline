@@ -2,9 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::ops::{Add, Sub};
 
-use super::EquipmentIndex;
-use crate::data::item::{EquipmentItem, Item, ItemSlotBehaviour, ItemType, StackableItem};
-use crate::data::ItemReference;
+use crate::{
+    data::{
+        item::{EquipmentItem, Item, ItemSlotBehaviour, ItemType, StackableItem},
+        ItemReference,
+    },
+    game::components::EquipmentIndex,
+};
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
 

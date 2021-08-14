@@ -7,7 +7,7 @@ use std::{
 
 use nalgebra::{distance, Point2, Point3};
 
-use super::npc_database::{NpcConversationId, NpcId};
+use crate::data::npc_database::{NpcConversationId, NpcId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct ZoneId(pub NonZeroU16);

@@ -1,7 +1,8 @@
-use super::reader::{FileReader, ReadError};
 use nalgebra::{Point2, Point3, UnitQuaternion, Vector3};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+
+use crate::data::formats::reader::{FileReader, ReadError};
 
 #[derive(Debug)]
 pub enum IfoReadError {

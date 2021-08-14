@@ -3,7 +3,7 @@ use crossbeam_channel::Receiver;
 use tokio::sync::mpsc::UnboundedSender;
 use tokio::sync::oneshot;
 
-use super::{client::ClientMessage, server::ServerMessage};
+use crate::game::messages::{client::ClientMessage, server::ServerMessage};
 
 #[derive(Clone, Copy)]
 pub enum ClientType {
