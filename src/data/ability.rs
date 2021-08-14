@@ -1,7 +1,7 @@
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::{NpcId, SkillAddAbility, SkillData},
+    data::{BaseItemData, ItemReference, NpcId, SkillAddAbility, SkillData},
     game::components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
         StatusEffects,
@@ -203,5 +203,13 @@ pub trait AbilityValueCalculator {
         charm: i32,
         fame: i32,
         world_reward_rate: i32,
+    ) -> i32;
+
+    fn calculate_npc_store_item_buy_price(
+        &self,
+        item: ItemReference,
+        item_data: &BaseItemData,
+        buy_skill_value: i32,
+        world_prices_rate: i32,
     ) -> i32;
 }

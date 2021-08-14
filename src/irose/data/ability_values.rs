@@ -5,9 +5,9 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        item::{ItemClass, ItemWeaponType},
-        AbilityType, AbilityValueCalculator, Damage, ItemDatabase, NpcDatabase, NpcId,
-        SkillAddAbility, SkillData, SkillDatabase, SkillId,
+        item::{ItemClass, ItemType, ItemWeaponType},
+        AbilityType, AbilityValueCalculator, BaseItemData, Damage, ItemData, ItemDatabase,
+        ItemReference, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
@@ -101,6 +101,8 @@ impl AbilityValueCalculator for AbilityValuesData {
             summon_owner_level: owner_level,
             summon_skill_level,
             adjust: status_effects.into(),
+            npc_store_buy_rate: 0,
+            npc_store_sell_rate: 0,
         })
     }
 
@@ -266,6 +268,8 @@ impl AbilityValueCalculator for AbilityValuesData {
             summon_owner_level: None,
             summon_skill_level: None,
             adjust: status_effects.into(),
+            npc_store_buy_rate: passive_ability_values.value.buy_skill,
+            npc_store_sell_rate: passive_ability_values.value.sell_skill,
         }
     }
 
@@ -687,6 +691,44 @@ impl AbilityValueCalculator for AbilityValuesData {
                 ((base_reward_value + 20) * (level + charm) * (fame + 20) * world_reward_rate)
                     / 3000000
                     + base_reward_value
+            }
+            _ => 0,
+        }
+    }
+
+    fn calculate_npc_store_item_buy_price(
+        &self,
+        item: ItemReference,
+        item_data: &BaseItemData,
+        buy_skill_value: i32,
+        world_prices_rate: i32,
+    ) -> i32 {
+        match item.item_type {
+            ItemType::Face
+            | ItemType::Head
+            | ItemType::Body
+            | ItemType::Hands
+            | ItemType::Feet
+            | ItemType::Back
+            | ItemType::Weapon
+            | ItemType::SubWeapon
+            | ItemType::Vehicle => {
+                (item_data.base_price as f32
+                    * (item_data.quality as f32 + 50.0)
+                    * (1.0 - buy_skill_value as f32 * 0.01)
+                    / 100.0
+                    + 0.5) as i32
+            }
+            ItemType::Consumable
+            | ItemType::Material
+            | ItemType::Jewellery
+            | ItemType::Gem
+            | ItemType::Quest => {
+                (item_data.base_price as f32
+                    * 1000.0
+                    * (1.0 + buy_skill_value as f32 * 0.01)
+                    * (200.0 - world_prices_rate as f32)
+                    / 180000.0) as i32
             }
             _ => 0,
         }
