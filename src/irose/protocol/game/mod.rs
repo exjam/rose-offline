@@ -19,8 +19,8 @@ use crate::{
             PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
             PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
             ServerMessage, ShoutChat, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
-            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateInventory, UpdateLevel,
-            UpdateMoney, UpdateSpeed, UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
+            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed,
+            UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -561,24 +561,31 @@ impl GameClient {
                     }))
                     .await?;
             }
-            ServerMessage::UpdateInventory(UpdateInventory {
-                is_reward,
-                ref items,
-                with_money,
-            }) => {
+            ServerMessage::UpdateInventory(ref items, with_money) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateInventory {
-                        is_reward,
                         items,
                         with_money,
                     }))
                     .await?;
             }
-            ServerMessage::UpdateMoney(UpdateMoney { is_reward, money }) => {
+            ServerMessage::UpdateMoney(money) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerUpdateMoney { is_reward, money }))
+                    .write_packet(Packet::from(&PacketServerUpdateMoney { money }))
+                    .await?;
+            }
+            ServerMessage::RewardItems(ref items) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerRewardItems { items }))
+                    .await?;
+            }
+            ServerMessage::RewardMoney(money) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerRewardMoney { money }))
                     .await?;
             }
             ServerMessage::UpdateSpeed(UpdateSpeed {

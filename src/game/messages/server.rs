@@ -202,19 +202,6 @@ pub struct UpdateEquipment {
 }
 
 #[derive(Clone)]
-pub struct UpdateInventory {
-    pub is_reward: bool,
-    pub items: Vec<(ItemSlot, Option<Item>)>,
-    pub with_money: Option<Money>,
-}
-
-#[derive(Clone)]
-pub struct UpdateMoney {
-    pub is_reward: bool,
-    pub money: Money,
-}
-
-#[derive(Clone)]
 pub struct UpdateStatusEffects {
     pub entity_id: ClientEntityId,
     pub status_effects: StatusEffects,
@@ -407,12 +394,14 @@ pub enum ServerMessage {
     UpdateAbilityValue(UpdateAbilityValue),
     UpdateBasicStat(UpdateBasicStat),
     UpdateEquipment(UpdateEquipment),
-    UpdateInventory(UpdateInventory),
+    UpdateInventory(Vec<(ItemSlot, Option<Item>)>, Option<Money>),
     UpdateLevel(UpdateLevel),
-    UpdateMoney(UpdateMoney),
+    UpdateMoney(Money),
     UpdateStatusEffects(UpdateStatusEffects),
     UpdateSpeed(UpdateSpeed),
     UpdateXpStamina(UpdateXpStamina),
+    RewardItems(Vec<(ItemSlot, Option<Item>)>),
+    RewardMoney(Money),
     Whisper(Whisper),
     LogoutReply(LogoutReply),
     ReturnToCharacterSelect,

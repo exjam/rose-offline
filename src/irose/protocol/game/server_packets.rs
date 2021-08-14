@@ -41,8 +41,8 @@ pub enum ServerPackets {
     UpdateInventory = 0x718,
     QuestData = 0x71b,
     UpdateMoney = 0x71d,
-    UpdateMoneyReward = 0x71e,
-    UpdateInventoryReward = 0x71f,
+    RewardMoney = 0x71e,
+    RewardItems = 0x71f,
     UpdateAbilityValueRewardAdd = 0x720,
     UpdateAbilityValueRewardSet = 0x721,
     QuestResult = 0x730,
@@ -850,16 +850,13 @@ impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
 }
 
 pub struct PacketServerUpdateInventory<'a> {
-    pub is_reward: bool,
     pub items: &'a [(ItemSlot, Option<Item>)],
     pub with_money: Option<Money>,
 }
 
 impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
     fn from(packet: &'a PacketServerUpdateInventory<'a>) -> Self {
-        let command = if packet.is_reward {
-            ServerPackets::UpdateInventoryReward
-        } else if packet.with_money.is_some() {
+        let command = if packet.with_money.is_some() {
             ServerPackets::UpdateMoneyAndInventory
         } else {
             ServerPackets::UpdateInventory
@@ -880,18 +877,40 @@ impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
 }
 
 pub struct PacketServerUpdateMoney {
-    pub is_reward: bool,
     pub money: Money,
 }
 
 impl From<&PacketServerUpdateMoney> for Packet {
     fn from(packet: &PacketServerUpdateMoney) -> Self {
-        let command = if packet.is_reward {
-            ServerPackets::UpdateMoneyReward
-        } else {
-            ServerPackets::UpdateMoney
-        };
-        let mut writer = PacketWriter::new(command as u16);
+        let mut writer = PacketWriter::new(ServerPackets::UpdateMoney as u16);
+        writer.write_i64(packet.money.0);
+        writer.into()
+    }
+}
+
+pub struct PacketServerRewardItems<'a> {
+    pub items: &'a [(ItemSlot, Option<Item>)],
+}
+
+impl<'a> From<&'a PacketServerRewardItems<'a>> for Packet {
+    fn from(packet: &'a PacketServerRewardItems<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::RewardItems as u16);
+        writer.write_u8(packet.items.len() as u8);
+        for (slot, item) in packet.items {
+            writer.write_item_slot_u8(*slot);
+            writer.write_item_full(item.as_ref());
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerRewardMoney {
+    pub money: Money,
+}
+
+impl From<&PacketServerRewardMoney> for Packet {
+    fn from(packet: &PacketServerRewardMoney) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::RewardMoney as u16);
         writer.write_i64(packet.money.0);
         writer.into()
     }

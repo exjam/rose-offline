@@ -6,8 +6,8 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{ItemClass, ItemType, ItemWeaponType},
-        AbilityType, AbilityValueCalculator, BaseItemData, Damage, ItemData, ItemDatabase,
-        ItemReference, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
+        AbilityType, AbilityValueCalculator, BaseItemData, Damage, ItemDatabase, ItemReference,
+        NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,

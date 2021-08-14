@@ -33,10 +33,7 @@ use crate::{
             SkillPoints, SpawnOrigin, Stamina, StatPoints, Team, UnionMembership,
         },
         events::{QuestTriggerEvent, RewardXpEvent},
-        messages::server::{
-            AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat, UpdateInventory,
-            UpdateMoney,
-        },
+        messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
         resources::{
             ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
         },
@@ -791,11 +788,7 @@ fn quest_reward_calculated_item(
                     if let Some(game_client) = quest_parameters.source.game_client {
                         game_client
                             .server_message_tx
-                            .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                is_reward: true,
-                                items: vec![(slot, Some(item.clone()))],
-                                with_money: None,
-                            }))
+                            .send(ServerMessage::RewardItems(vec![(slot, Some(item.clone()))]))
                             .ok();
                     }
                 }
@@ -877,10 +870,7 @@ fn quest_reward_calculated_money(
             if let Some(game_client) = quest_parameters.source.game_client {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::UpdateMoney(UpdateMoney {
-                        is_reward: true,
-                        money: inventory.money,
-                    }))
+                    .send(ServerMessage::RewardMoney(inventory.money))
                     .ok();
             }
         }
@@ -975,11 +965,7 @@ fn quest_reward_add_item(
                         if let Some(game_client) = quest_parameters.source.game_client {
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                    is_reward: true,
-                                    items: vec![(slot, Some(item.clone()))],
-                                    with_money: None,
-                                }))
+                                .send(ServerMessage::RewardItems(vec![(slot, Some(item.clone()))]))
                                 .ok();
                         }
 

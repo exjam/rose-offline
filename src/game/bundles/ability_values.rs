@@ -12,7 +12,7 @@ use crate::{
             Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership,
             MAX_STAMINA,
         },
-        messages::server::{ServerMessage, UpdateAbilityValue, UpdateMoney},
+        messages::server::{ServerMessage, UpdateAbilityValue},
     },
 };
 
@@ -307,10 +307,7 @@ pub fn ability_values_add_value(
             if matches!(ability_type, AbilityType::Money) {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::UpdateMoney(UpdateMoney {
-                        is_reward: true,
-                        money: inventory.unwrap().money,
-                    }))
+                    .send(ServerMessage::RewardMoney(inventory.unwrap().money))
                     .ok();
             } else {
                 game_client

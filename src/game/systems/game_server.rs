@@ -26,10 +26,7 @@ use crate::{
                 JoinZoneResponse, LogoutRequest, NpcStoreTransaction, PersonalStoreBuyItem,
                 QuestDelete, ReviveRequestType, SetHotbarSlot, SetHotbarSlotError,
             },
-            server::{
-                self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat,
-                UpdateInventory,
-            },
+            server::{self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat},
         },
         resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, WorldTime},
     },
@@ -357,17 +354,16 @@ pub fn game_server_main_system(
 
                                     client
                                         .server_message_tx
-                                        .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                            is_reward: false,
-                                            items: vec![
+                                        .send(ServerMessage::UpdateInventory(
+                                            vec![
                                                 (
                                                     ItemSlot::Equipped(equipment_index),
                                                     equipment_slot.clone().map(Item::Equipment),
                                                 ),
                                                 (item_slot, inventory_slot.clone()),
                                             ],
-                                            with_money: None,
-                                        }))
+                                            None,
+                                        ))
                                         .ok();
 
                                     server_messages.send_entity_message(
@@ -391,14 +387,13 @@ pub fn game_server_main_system(
 
                                         client
                                             .server_message_tx
-                                            .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                                is_reward: false,
-                                                items: vec![
+                                            .send(ServerMessage::UpdateInventory(
+                                                vec![
                                                     (ItemSlot::Equipped(equipment_index), None),
                                                     (inventory_slot, Some(item.clone())),
                                                 ],
-                                                with_money: None,
-                                            }))
+                                                None,
+                                            ))
                                             .ok();
 
                                         server_messages.send_entity_message(

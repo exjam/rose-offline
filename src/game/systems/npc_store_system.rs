@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use bevy_ecs::prelude::{Entity, EventReader, Mut, Query, Res, ResMut};
+use bevy_ecs::prelude::{Entity, EventReader, Mut, Query, Res};
 use log::warn;
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
         events::NpcStoreEvent,
         messages::{
             client::NpcStoreBuyItem,
-            server::{NpcStoreTransactionError, ServerMessage, UpdateInventory},
+            server::{NpcStoreTransactionError, ServerMessage},
         },
         resources::WorldRates,
         GameData,
@@ -155,14 +155,13 @@ pub fn npc_store_system(
                     if let Some(game_client) = game_client {
                         game_client
                             .server_message_tx
-                            .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                is_reward: false,
-                                items: updated_items
+                            .send(ServerMessage::UpdateInventory(
+                                updated_items
                                     .iter()
                                     .map(|slot| (*slot, inventory.get_item(*slot).cloned()))
                                     .collect(),
-                                with_money: Some(inventory.money),
-                            }))
+                                Some(inventory.money),
+                            ))
                             .ok();
                     }
                 }

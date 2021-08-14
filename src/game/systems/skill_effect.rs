@@ -17,9 +17,7 @@ use crate::{
             SpawnOrigin, StatusEffects, Team,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
-        messages::server::{
-            ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UpdateInventory, UseItem,
-        },
+        messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseItem},
         resources::{ClientEntityList, ServerMessages, ServerTime},
         GameData,
     },
@@ -714,11 +712,10 @@ pub fn skill_effect_system(
                                     // When the item has been fully consumed we send UpdateInventory packet
                                     caster_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::UpdateInventory(UpdateInventory {
-                                            is_reward: false,
-                                            items: vec![(item_slot, None)],
-                                            with_money: None,
-                                        }))
+                                        .send(ServerMessage::UpdateInventory(
+                                            vec![(item_slot, None)],
+                                            None,
+                                        ))
                                         .ok();
                                 }
                                 Some(item) => {

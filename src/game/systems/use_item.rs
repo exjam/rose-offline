@@ -14,7 +14,7 @@ use crate::{
             StatPoints, Team, UnionMembership,
         },
         events::UseItemEvent,
-        messages::server::{ServerMessage, UpdateInventory, UseItem},
+        messages::server::{ServerMessage, UseItem},
         resources::ServerMessages,
         GameData,
     },
@@ -199,11 +199,10 @@ fn use_inventory_item(
                     // When the item has been fully consumed we send UpdateInventory packet
                     game_client
                         .server_message_tx
-                        .send(ServerMessage::UpdateInventory(UpdateInventory {
-                            is_reward: false,
-                            items: vec![(item_slot, None)],
-                            with_money: None,
-                        }))
+                        .send(ServerMessage::UpdateInventory(
+                            vec![(item_slot, None)],
+                            None,
+                        ))
                         .ok();
                 }
                 Some(item) => {
