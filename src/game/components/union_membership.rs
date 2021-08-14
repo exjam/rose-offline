@@ -1,8 +1,10 @@
+use std::num::NonZeroUsize;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct UnionMembership {
-    pub current_union: Option<usize>,
+    pub current_union: Option<NonZeroUsize>,
     pub points: [u32; 10],
 }
 

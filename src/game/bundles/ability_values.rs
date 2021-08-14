@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use bevy_ecs::prelude::Mut;
 use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
@@ -72,9 +74,9 @@ pub fn ability_values_get_value(
         AbilityType::Level => Some(level.level as i32),
         AbilityType::Money => inventory.map(|x| x.money.0 as i32),
         AbilityType::TeamNumber => Some(team_number.id as i32),
-        AbilityType::Union => union_membership
-            .and_then(|x| x.current_union)
-            .map(|x| x as i32),
+        AbilityType::Union => {
+            union_membership.map(|x| x.current_union.map(|x| x.get() as i32).unwrap_or(0))
+        }
         AbilityType::UnionPoint1 => union_membership.map(|x| x.points[0] as i32),
         AbilityType::UnionPoint2 => union_membership.map(|x| x.points[1] as i32),
         AbilityType::UnionPoint3 => union_membership.map(|x| x.points[2] as i32),
@@ -414,7 +416,7 @@ pub fn ability_values_set_value(
                 if value == 0 {
                     union_membership.current_union = None;
                 } else {
-                    union_membership.current_union = Some(value as usize);
+                    union_membership.current_union = NonZeroUsize::new(value as usize);
                 }
                 true
             } else {

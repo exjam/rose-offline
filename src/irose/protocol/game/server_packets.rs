@@ -175,7 +175,13 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u8(character_info.face as u8);
         writer.write_u8(character_info.hair as u8);
         writer.write_u16(character_info.job);
-        writer.write_u8(packet.union_membership.current_union.unwrap_or(0) as u8);
+        writer.write_u8(
+            packet
+                .union_membership
+                .current_union
+                .map(|union| union.get())
+                .unwrap_or(0) as u8,
+        );
         writer.write_u8(character_info.rank);
         writer.write_u8(character_info.fame);
 
