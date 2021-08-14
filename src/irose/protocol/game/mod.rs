@@ -182,6 +182,15 @@ impl GameClient {
                         .await?;
                 }
             }
+            Some(ClientPackets::ChangeAmmo) => {
+                let PacketClientChangeAmmo {
+                    ammo_index,
+                    item_slot,
+                } = PacketClientChangeAmmo::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ChangeAmmo(ammo_index, item_slot))?;
+            }
             Some(ClientPackets::ChangeEquipment) => {
                 let PacketClientChangeEquipment {
                     equipment_index,
@@ -615,6 +624,16 @@ impl GameClient {
                         status_effects,
                         updated_hp,
                         updated_mp,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UpdateAmmo(entity_id, ammo_index, item) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateAmmo {
+                        entity_id,
+                        ammo_index,
+                        item,
                     }))
                     .await?;
             }

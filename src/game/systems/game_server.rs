@@ -418,6 +418,100 @@ pub fn game_server_main_system(
                             }
                         }
                     }
+                    ClientMessage::ChangeAmmo(ammo_index, item_slot) => {
+                        if let Some(item_slot) = item_slot {
+                            // Try equip ammo from inventory
+                            if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
+                                let ammo_slot = equipment.get_ammo_slot_mut(ammo_index);
+
+                                if let Some(Item::Stackable(ammo_item)) = inventory_slot {
+                                    // TODO: Verify bullet type
+                                    match ammo_slot.can_stack_with(ammo_item) {
+                                        Ok(_) => {
+                                            // Can fully stack into ammo slot
+                                            ammo_slot.try_stack_with(ammo_item.clone()).unwrap();
+                                            *inventory_slot = None;
+                                        }
+                                        Err(StackError::PartialStack(partial_stack_quantity)) => {
+                                            // Can partially stack
+                                            ammo_slot
+                                                .try_stack_with(
+                                                    ammo_item
+                                                        .try_take_subquantity(
+                                                            partial_stack_quantity,
+                                                        )
+                                                        .unwrap(),
+                                                )
+                                                .unwrap();
+                                        }
+                                        Err(_) => {
+                                            // Can't stack, must swap
+                                            let previous = ammo_slot.take();
+                                            *ammo_slot = Some(ammo_item.clone());
+                                            *inventory_slot = previous.map(Item::Stackable);
+                                        }
+                                    }
+
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::UpdateInventory(
+                                            vec![
+                                                (
+                                                    ItemSlot::Ammo(ammo_index),
+                                                    ammo_slot.clone().map(Item::Stackable),
+                                                ),
+                                                (item_slot, inventory_slot.clone()),
+                                            ],
+                                            None,
+                                        ))
+                                        .ok();
+
+                                    server_messages.send_entity_message(
+                                        client_entity,
+                                        ServerMessage::UpdateAmmo(
+                                            client_entity.id,
+                                            ammo_index,
+                                            ammo_slot.clone(),
+                                        ),
+                                    );
+                                }
+                            }
+                        } else {
+                            // Try unequip to inventory
+                            let ammo_slot = equipment.get_ammo_slot_mut(ammo_index);
+                            let item = ammo_slot.take();
+                            if let Some(item) = item {
+                                match inventory.try_add_stackable_item(item) {
+                                    Ok((inventory_slot, item)) => {
+                                        *ammo_slot = None;
+
+                                        client
+                                            .server_message_tx
+                                            .send(ServerMessage::UpdateInventory(
+                                                vec![
+                                                    (ItemSlot::Ammo(ammo_index), None),
+                                                    (inventory_slot, Some(item.clone())),
+                                                ],
+                                                None,
+                                            ))
+                                            .ok();
+
+                                        server_messages.send_entity_message(
+                                            client_entity,
+                                            ServerMessage::UpdateAmmo(
+                                                client_entity.id,
+                                                ammo_index,
+                                                None,
+                                            ),
+                                        );
+                                    }
+                                    Err(item) => {
+                                        *ammo_slot = Some(item);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     ClientMessage::IncreaseBasicStat(basic_stat_type) => {
                         if let Some(cost) = game_data
                             .ability_value_calculator

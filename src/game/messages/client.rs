@@ -4,10 +4,10 @@ use tokio::sync::oneshot;
 use crate::{
     data::{character::CharacterStorage, item::Item, QuestTriggerHash, WorldTicks},
     game::components::{
-        BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId, Equipment,
-        EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
-        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, SkillSlot, Stamina,
-        StatPoints, Team, UnionMembership,
+        AmmoIndex, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId,
+        Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
+        ItemSlot, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, SkillSlot,
+        Stamina, StatPoints, Team, UnionMembership,
     },
 };
 
@@ -284,6 +284,7 @@ pub enum ClientMessage {
     Move(Move),
     Attack(Attack),
     SetHotbarSlot(SetHotbarSlot),
+    ChangeAmmo(AmmoIndex, Option<ItemSlot>),
     ChangeEquipment(ChangeEquipment),
     IncreaseBasicStat(BasicStatType),
     PickupDroppedItem(PickupDroppedItem),

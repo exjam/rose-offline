@@ -42,6 +42,7 @@ pub enum ClientPackets {
     PickupDroppedItem = 0x7a7,
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
+    ChangeAmmo = 0x7ab,
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
@@ -542,6 +543,43 @@ impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
             npc_entity_id,
             buy_items,
             sell_items,
+        })
+    }
+}
+
+#[bitfield]
+#[derive(Clone, Copy)]
+struct ChangeAmmoBits {
+    #[skip(setters)]
+    ammo_index: B2,
+    #[skip(setters)]
+    item_slot: B14,
+}
+
+#[derive(Debug)]
+pub struct PacketClientChangeAmmo {
+    pub ammo_index: AmmoIndex,
+    pub item_slot: Option<ItemSlot>,
+}
+
+impl TryFrom<&Packet> for PacketClientChangeAmmo {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ChangeAmmo as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let bytes = reader.read_fixed_length_bytes(2)?;
+        let change_ammo = ChangeAmmoBits::from_bytes(bytes[0..2].try_into().unwrap());
+        let item_slot = decode_item_slot(change_ammo.item_slot() as usize);
+        let ammo_index = decode_ammo_index(change_ammo.ammo_index() as usize)
+            .ok_or(ProtocolError::InvalidPacket)?;
+
+        Ok(PacketClientChangeAmmo {
+            ammo_index,
+            item_slot,
         })
     }
 }

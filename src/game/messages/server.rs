@@ -4,13 +4,13 @@ use nalgebra::Point2;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item},
+        item::{EquipmentItem, Item, StackableItem},
         AbilityType, Damage, ItemReference, NpcId, QuestTriggerHash, SkillId, ZoneId,
     },
     game::components::{
-        BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem, Equipment,
-        EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,
-        MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot,
+        AmmoIndex, BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem,
+        Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints,
+        Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot,
         StatPoints, StatusEffects, Team,
     },
 };
@@ -392,6 +392,7 @@ pub enum ServerMessage {
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
     UpdateAbilityValue(UpdateAbilityValue),
+    UpdateAmmo(ClientEntityId, AmmoIndex, Option<StackableItem>),
     UpdateBasicStat(UpdateBasicStat),
     UpdateEquipment(UpdateEquipment),
     UpdateInventory(Vec<(ItemSlot, Option<Item>)>, Option<Money>),

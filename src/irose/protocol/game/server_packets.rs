@@ -902,6 +902,34 @@ impl From<&PacketServerRewardMoney> for Packet {
     }
 }
 
+pub struct PacketServerUpdateAmmo {
+    pub entity_id: ClientEntityId,
+    pub ammo_index: AmmoIndex,
+    pub item: Option<StackableItem>,
+}
+
+impl From<&PacketServerUpdateAmmo> for Packet {
+    fn from(packet: &PacketServerUpdateAmmo) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
+        writer.write_entity_id(packet.entity_id);
+
+        let part = PacketEquipmentAmmoPart::new()
+            .with_item_number(
+                packet
+                    .item
+                    .as_ref()
+                    .map(|item| item.item.item_number)
+                    .unwrap_or(0) as u16,
+            )
+            .with_item_type(encode_ammo_index(packet.ammo_index) as u8);
+        for b in part.into_bytes().iter() {
+            writer.write_u8(*b);
+        }
+
+        writer.into()
+    }
+}
+
 pub struct PacketServerUpdateEquipment {
     pub entity_id: ClientEntityId,
     pub equipment_index: EquipmentIndex,
