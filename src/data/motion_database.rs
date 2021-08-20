@@ -67,7 +67,6 @@ impl MotionDatabase {
         self.motion_files.get(gender).and_then(|x| x.get(index))
     }
 
-    #[allow(dead_code)]
     pub fn find_first_character_motion(&self, motion_id: MotionId) -> Option<&MotionFileData> {
         let motion_id = motion_id.get() as usize;
 

@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    data::{ItemReference, MotionFileData},
+    data::{ItemReference, MotionFileData, MotionId},
     game::components::{MotionData, MotionDataNpc},
 };
 
@@ -24,19 +24,18 @@ pub struct NpcStoreTabId(NonZeroU16);
 
 id_wrapper_impl!(NpcStoreTabId, NonZeroU16, u16);
 
-#[derive(Hash, PartialEq, Eq)]
 pub enum NpcMotionAction {
-    Stop,
-    Move,
-    Attack,
-    Hit,
-    Die,
-    Run,
-    Cast1,
-    SkillAction1,
-    Cast2,
-    SkillAction2,
-    Etc,
+    Stop = 0,
+    Move = 1,
+    Attack = 2,
+    Hit = 3,
+    Die = 4,
+    Run = 5,
+    Cast1 = 6,
+    SkillAction1 = 7,
+    Cast2 = 8,
+    SkillAction2 = 9,
+    Etc = 10,
 }
 
 pub struct NpcData {
@@ -83,7 +82,7 @@ pub struct NpcData {
     pub create_sound_index: u32,
     pub death_quest_trigger_name: String,
     pub npc_height: i32,
-    pub motion_data: HashMap<NpcMotionAction, MotionFileData>,
+    pub motion_data: HashMap<u16, MotionFileData>,
 }
 
 pub struct NpcConversationData {
@@ -126,10 +125,16 @@ impl NpcDatabase {
         self.conversation_files.get(&key.0)
     }
 
-    pub fn get_npc_motions(&self, id: NpcId) -> MotionData {
+    pub fn get_npc_motion(&self, id: NpcId, motion_id: MotionId) -> Option<&MotionFileData> {
+        let npc_data = self.get_npc(id)?;
+        npc_data.motion_data.get(&motion_id.get())
+    }
+
+    pub fn get_npc_action_motions(&self, id: NpcId) -> MotionData {
         let npc_data = self.get_npc(id);
-        let get_motion =
-            |action| npc_data.and_then(|npc_data| npc_data.motion_data.get(&action).cloned());
+        let get_motion = |action| {
+            npc_data.and_then(|npc_data| npc_data.motion_data.get(&(action as u16)).cloned())
+        };
 
         MotionData::with_npc_motions(MotionDataNpc {
             stop: get_motion(NpcMotionAction::Stop),

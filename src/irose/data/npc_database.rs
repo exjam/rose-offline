@@ -4,7 +4,7 @@ use crate::{
     data::{
         formats::{ChrFile, FileReader, StbFile, StlFile, VfsIndex, ZmoFile},
         ItemReference, MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId,
-        NpcMotionAction, NpcStoreTabData, NpcStoreTabId,
+        NpcStoreTabData, NpcStoreTabId,
     },
     stb_column,
 };
@@ -96,23 +96,6 @@ impl StbEvent {
     stb_column! { 3, get_filename, &str }
 }
 
-fn get_npc_action(action_index: u16) -> Option<NpcMotionAction> {
-    match action_index {
-        0 => Some(NpcMotionAction::Stop),
-        1 => Some(NpcMotionAction::Move),
-        2 => Some(NpcMotionAction::Attack),
-        3 => Some(NpcMotionAction::Hit),
-        4 => Some(NpcMotionAction::Die),
-        5 => Some(NpcMotionAction::Run),
-        6 => Some(NpcMotionAction::Cast1),
-        7 => Some(NpcMotionAction::SkillAction1),
-        8 => Some(NpcMotionAction::Cast2),
-        9 => Some(NpcMotionAction::SkillAction2),
-        10 => Some(NpcMotionAction::Etc),
-        _ => None,
-    }
-}
-
 fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
     let file = vfs.open_file(path)?;
     let zmo = ZmoFile::read(FileReader::from(&file)).ok()?;
@@ -146,15 +129,13 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
 
         let mut motion_data = HashMap::new();
         if let Some(npc_model_data) = npc_model_data {
-            for (action, motion_index) in npc_model_data.motion_ids.iter() {
-                if let Some(action) = get_npc_action(*action) {
-                    if let Some(file) = model_data
-                        .motion_files
-                        .get(*motion_index as usize)
-                        .and_then(|path| load_zmo(vfs, path.as_str()))
-                    {
-                        motion_data.insert(action, file);
-                    }
+            for &(action_id, motion_id) in npc_model_data.motion_ids.iter() {
+                if let Some(file) = model_data
+                    .motion_files
+                    .get(motion_id as usize)
+                    .and_then(|path| load_zmo(vfs, path.as_str()))
+                {
+                    motion_data.insert(action_id, file);
                 }
             }
         }

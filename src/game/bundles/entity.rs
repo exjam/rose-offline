@@ -148,7 +148,7 @@ impl MonsterBundle {
             command: Command::default(),
             health_points,
             level,
-            motion_data: game_data.npcs.get_npc_motions(npc_id),
+            motion_data: game_data.npcs.get_npc_action_motions(npc_id),
             move_mode,
             move_speed,
             next_command: NextCommand::default(),

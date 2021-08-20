@@ -12,7 +12,7 @@ use crate::{
             CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
             CommandPickupDroppedItem, Destination, DroppedItem, Equipment, EquipmentIndex,
             GameClient, HealthPoints, Inventory, ItemSlot, MotionData, MoveMode, MoveSpeed,
-            NextCommand, Owner, PersonalStore, Position, Target,
+            NextCommand, Npc, Owner, PersonalStore, Position, Target,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
@@ -150,6 +150,7 @@ pub fn command_system(
         Option<&GameClient>,
         Option<&mut Equipment>,
         Option<&mut Inventory>,
+        Option<&Npc>,
         Option<&PersonalStore>,
     )>,
     move_target_query: Query<(&ClientEntity, &Position)>,
@@ -180,6 +181,7 @@ pub fn command_system(
             game_client,
             equipment,
             inventory,
+            npc,
             personal_store,
         )| {
             if !next_command.has_sent_server_message && next_command.command.is_some() {
@@ -696,8 +698,11 @@ pub fn command_system(
                             let casting_duration = skill_data
                                 .casting_motion_id
                                 .and_then(|motion_id| {
-                                    // TODO: Fix me for NPC skill casting
-                                    game_data.motions.find_first_character_motion(motion_id)
+                                    if let Some(npc) = npc {
+                                        game_data.npcs.get_npc_motion(npc.id, motion_id)
+                                    } else {
+                                        game_data.motions.find_first_character_motion(motion_id)
+                                    }
                                 })
                                 .map(|motion_data| motion_data.duration)
                                 .unwrap_or_else(|| Duration::from_secs(0))
@@ -706,8 +711,11 @@ pub fn command_system(
                             let action_duration = skill_data
                                 .action_motion_id
                                 .and_then(|motion_id| {
-                                    // TODO: Fix me for NPC skill casting
-                                    game_data.motions.find_first_character_motion(motion_id)
+                                    if let Some(npc) = npc {
+                                        game_data.npcs.get_npc_motion(npc.id, motion_id)
+                                    } else {
+                                        game_data.motions.find_first_character_motion(motion_id)
+                                    }
                                 })
                                 .map(|motion_data| motion_data.duration)
                                 .unwrap_or_else(|| Duration::from_secs(0))
