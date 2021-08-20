@@ -300,6 +300,18 @@ impl Inventory {
         }
     }
 
+    pub fn get_equipment_item(&self, slot: ItemSlot) -> Option<&EquipmentItem> {
+        match slot {
+            ItemSlot::Inventory(page_type, index) => self
+                .get_page(page_type)
+                .slots
+                .get(index)
+                .and_then(|x| x.as_ref())
+                .and_then(|x| x.as_equipment()),
+            _ => None,
+        }
+    }
+
     pub fn get_item_slot(&self, slot: ItemSlot) -> Option<&Option<Item>> {
         match slot {
             ItemSlot::Inventory(page_type, index) => self.get_page(page_type).slots.get(index),

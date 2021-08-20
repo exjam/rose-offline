@@ -164,6 +164,24 @@ pub enum ItemClass {
     CastleGearWeapon = 552,
 }
 
+impl ItemClass {
+    pub fn is_two_handed_weapon(&self) -> bool {
+        matches!(
+            *self,
+            ItemClass::TwoHandedSword
+                | ItemClass::Spear
+                | ItemClass::TwoHandedAxe
+                | ItemClass::Bow
+                | ItemClass::Gun
+                | ItemClass::Launcher
+                | ItemClass::MagicStaff
+                | ItemClass::Katar
+                | ItemClass::DualSwords
+                | ItemClass::DualGuns
+        )
+    }
+}
+
 #[derive(Copy, Clone)]
 pub enum ItemWeaponType {
     OneHanded,

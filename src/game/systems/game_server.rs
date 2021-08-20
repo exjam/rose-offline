@@ -6,7 +6,7 @@ use crate::{
     data::{
         account::AccountStorage,
         character::CharacterStorage,
-        item::{Item, StackError, StackableSlotBehaviour},
+        item::{Item, ItemType, StackError, StackableSlotBehaviour},
     },
     game::{
         bundles::{
@@ -235,6 +235,129 @@ pub fn game_server_join_system(
     );
 }
 
+enum UnequipError {
+    NoItem,
+    InventoryFull,
+}
+
+fn unequip_to_inventory(
+    equipment: &mut Equipment,
+    inventory: &mut Inventory,
+    equipment_index: EquipmentIndex,
+) -> Result<Vec<(ItemSlot, Option<Item>)>, UnequipError> {
+    let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
+    let equipment_item = equipment_slot.take().ok_or(UnequipError::NoItem)?;
+
+    match inventory.try_add_equipment_item(equipment_item) {
+        Ok((item_slot, item)) => Ok(vec![
+            (item_slot, Some(item.clone())),
+            (ItemSlot::Equipment(equipment_index), None),
+        ]),
+        Err(equipment_item) => {
+            // Failed to add to inventory, return item to equipment
+            *equipment_slot = Some(equipment_item);
+            Err(UnequipError::InventoryFull)
+        }
+    }
+}
+
+enum EquipItemError {
+    ItemBroken,
+    InvalidEquipmentIndex,
+    InvalidItem,
+    InvalidItemData,
+    CannotUnequipOffhand,
+    InventoryFull,
+}
+
+fn equip_from_inventory(
+    game_data: &GameData,
+    equipment: &mut Equipment,
+    inventory: &mut Inventory,
+    equipment_index: EquipmentIndex,
+    item_slot: ItemSlot,
+) -> Result<Vec<(ItemSlot, Option<Item>)>, EquipItemError> {
+    // TODO: Cannot change equipment whilst casting spell
+    // TODO: Cannot change equipment whilst stunned
+
+    let equipment_item = inventory
+        .get_equipment_item(item_slot)
+        .ok_or(EquipItemError::InvalidItem)?;
+
+    let item_data = game_data
+        .items
+        .get_base_item(equipment_item.item)
+        .ok_or(EquipItemError::InvalidItemData)?;
+
+    if equipment_item.life == 0 {
+        return Err(EquipItemError::ItemBroken);
+    }
+
+    let correct_equipment_index = match equipment_item.item.item_type {
+        ItemType::Face => matches!(equipment_index, EquipmentIndex::Face),
+        ItemType::Head => matches!(equipment_index, EquipmentIndex::Head),
+        ItemType::Body => matches!(equipment_index, EquipmentIndex::Body),
+        ItemType::Hands => matches!(equipment_index, EquipmentIndex::Hands),
+        ItemType::Feet => matches!(equipment_index, EquipmentIndex::Feet),
+        ItemType::Back => matches!(equipment_index, EquipmentIndex::Back),
+        ItemType::Jewellery => matches!(
+            equipment_index,
+            EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring
+        ),
+        ItemType::Weapon => matches!(
+            equipment_index,
+            EquipmentIndex::WeaponLeft | EquipmentIndex::WeaponRight
+        ),
+        ItemType::SubWeapon => matches!(equipment_index, EquipmentIndex::WeaponRight),
+        _ => false,
+    };
+    if !correct_equipment_index {
+        return Err(EquipItemError::InvalidEquipmentIndex);
+    }
+
+    let mut updated_inventory_items = Vec::new();
+
+    // If we are equipping a two handed weapon, we must unequip offhand first
+    if item_data.class.is_two_handed_weapon() {
+        let equipment_slot = equipment.get_equipment_slot_mut(EquipmentIndex::WeaponLeft);
+        if equipment_slot.is_some() {
+            let item = equipment_slot.take();
+            if let Some(item) = item {
+                match inventory.try_add_equipment_item(item) {
+                    Ok((inventory_slot, item)) => {
+                        updated_inventory_items
+                            .push((ItemSlot::Equipment(EquipmentIndex::WeaponLeft), None));
+                        updated_inventory_items.push((inventory_slot, Some(item.clone())));
+                    }
+                    Err(item) => {
+                        // Failed to add to inventory, return item to equipment
+                        *equipment_slot = Some(item);
+                        return Err(EquipItemError::CannotUnequipOffhand);
+                    }
+                }
+            }
+        }
+    }
+
+    // Equip item from inventory
+    let inventory_slot = inventory.get_item_slot_mut(item_slot).unwrap();
+    let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
+    let equipment_item = match inventory_slot.take() {
+        Some(Item::Equipment(equipment_item)) => equipment_item,
+        _ => unreachable!(),
+    };
+    *inventory_slot = equipment_slot.take().map(Item::Equipment);
+    *equipment_slot = Some(equipment_item);
+
+    updated_inventory_items.push((
+        ItemSlot::Equipment(equipment_index),
+        equipment_slot.clone().map(Item::Equipment),
+    ));
+    updated_inventory_items.push((item_slot, inventory_slot.clone()));
+
+    Ok(updated_inventory_items)
+}
+
 pub fn game_server_main_system(
     mut commands: Commands,
     mut game_client_query: Query<(
@@ -340,82 +463,37 @@ pub fn game_server_main_system(
                         equipment_index,
                         item_slot,
                     }) => {
-                        // TODO: Cannot change equipment whilst casting spell
-                        // TODO: Cannot change equipment whilst stunned
-
-                        if let Some(item_slot) = item_slot {
-                            // TODO: Check if satisfy equipment requirements
-                            // TODO: Handle 2 handed weapons
-                            // Try equip item from inventory
-                            if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
-                                let equipment_slot =
-                                    equipment.get_equipment_slot_mut(equipment_index);
-
-                                if let Some(Item::Equipment(equipment_item)) = inventory_slot {
-                                    let previous = equipment_slot.take();
-                                    *equipment_slot = Some(equipment_item.clone());
-                                    *inventory_slot = previous.map(Item::Equipment);
-
-                                    client
-                                        .server_message_tx
-                                        .send(ServerMessage::UpdateInventory(
-                                            vec![
-                                                (
-                                                    ItemSlot::Equipment(equipment_index),
-                                                    equipment_slot.clone().map(Item::Equipment),
-                                                ),
-                                                (item_slot, inventory_slot.clone()),
-                                            ],
-                                            None,
-                                        ))
-                                        .ok();
-
-                                    server_messages.send_entity_message(
-                                        client_entity,
-                                        ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                            entity_id: client_entity.id,
-                                            equipment_index,
-                                            item: equipment_slot.clone(),
-                                        }),
-                                    );
-                                }
-                            }
+                        let updated_inventory_items = if let Some(item_slot) = item_slot {
+                            equip_from_inventory(
+                                &game_data,
+                                &mut equipment,
+                                &mut inventory,
+                                equipment_index,
+                                item_slot,
+                            )
+                            .ok()
                         } else {
-                            // Try unequip to inventory
-                            let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
-                            let item = equipment_slot.take();
-                            if let Some(item) = item {
-                                match inventory.try_add_equipment_item(item) {
-                                    Ok((inventory_slot, item)) => {
-                                        *equipment_slot = None;
+                            unequip_to_inventory(&mut equipment, &mut inventory, equipment_index)
+                                .ok()
+                        };
 
-                                        client
-                                            .server_message_tx
-                                            .send(ServerMessage::UpdateInventory(
-                                                vec![
-                                                    (ItemSlot::Equipment(equipment_index), None),
-                                                    (inventory_slot, Some(item.clone())),
-                                                ],
-                                                None,
-                                            ))
-                                            .ok();
+                        if let Some(updated_inventory_items) = updated_inventory_items {
+                            client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateInventory(
+                                    updated_inventory_items,
+                                    None,
+                                ))
+                                .ok();
 
-                                        server_messages.send_entity_message(
-                                            client_entity,
-                                            ServerMessage::UpdateEquipment(
-                                                server::UpdateEquipment {
-                                                    entity_id: client_entity.id,
-                                                    equipment_index,
-                                                    item: None,
-                                                },
-                                            ),
-                                        );
-                                    }
-                                    Err(item) => {
-                                        *equipment_slot = Some(item);
-                                    }
-                                }
-                            }
+                            server_messages.send_entity_message(
+                                client_entity,
+                                ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                    entity_id: client_entity.id,
+                                    equipment_index,
+                                    item: equipment.get_equipment_item(equipment_index).cloned(),
+                                }),
+                            );
                         }
                     }
                     ClientMessage::ChangeAmmo(ammo_index, item_slot) => {
