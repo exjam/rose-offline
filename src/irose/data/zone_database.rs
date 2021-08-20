@@ -237,11 +237,8 @@ fn load_zone(
     let revive_event_position_name = data.get_zone_revive_event_position_name(id).unwrap_or("");
     let mut start_position = Point3::new(0.0, 0.0, 0.0);
     let mut revive_positions = Vec::new();
-    for (name, mut position) in zon_file.event_positions.iter() {
-        let y = position.y;
-        position.y = position.z;
-        position.z = y;
-        position += objects_offset;
+    for (name, position) in zon_file.event_positions.iter() {
+        let position = position.xzy() + objects_offset;
 
         if name == start_event_position_name {
             start_position = position;
