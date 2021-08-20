@@ -70,6 +70,7 @@ pub enum ServerPackets {
     Teleport = 0x7a8,
     UpdateBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
+    UpdateAmmo = 0x7ab,
     LearnSkillResult = 0x7b0,
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
@@ -910,7 +911,7 @@ pub struct PacketServerUpdateAmmo {
 
 impl From<&PacketServerUpdateAmmo> for Packet {
     fn from(packet: &PacketServerUpdateAmmo) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
+        let mut writer = PacketWriter::new(ServerPackets::UpdateAmmo as u16);
         writer.write_entity_id(packet.entity_id);
 
         let part = PacketEquipmentAmmoPart::new()
