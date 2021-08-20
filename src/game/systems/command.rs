@@ -3,20 +3,24 @@ use std::time::Duration;
 use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
-use crate::game::{
-    bundles::client_entity_leave_zone,
-    components::{
-        AbilityValues, ClientEntity, ClientEntityType, Command, CommandAttack, CommandCastSkill,
-        CommandCastSkillTarget, CommandData, CommandMove, CommandPickupDroppedItem, Destination,
-        DroppedItem, GameClient, HealthPoints, Inventory, MotionData, MoveMode, MoveSpeed,
-        NextCommand, Owner, PersonalStore, Position, Target,
+use crate::{
+    data::item::{Item, ItemClass, StackableSlotBehaviour},
+    game::{
+        bundles::client_entity_leave_zone,
+        components::{
+            AbilityValues, AmmoIndex, ClientEntity, ClientEntityType, Command, CommandAttack,
+            CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
+            CommandPickupDroppedItem, Destination, DroppedItem, Equipment, EquipmentIndex,
+            GameClient, HealthPoints, Inventory, ItemSlot, MotionData, MoveMode, MoveSpeed,
+            NextCommand, Owner, PersonalStore, Position, Target,
+        },
+        events::{DamageEvent, SkillEvent, SkillEventTarget},
+        messages::server::{
+            self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
+            ServerMessage,
+        },
+        resources::{ClientEntityList, GameData, ServerMessages, ServerTime},
     },
-    events::{DamageEvent, SkillEvent, SkillEventTarget},
-    messages::server::{
-        self, PickupDroppedItemContent, PickupDroppedItemError, PickupDroppedItemResult,
-        ServerMessage,
-    },
-    resources::{ClientEntityList, GameData, ServerMessages, ServerTime},
 };
 
 const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
@@ -144,6 +148,7 @@ pub fn command_system(
         &mut Command,
         &mut NextCommand,
         Option<&GameClient>,
+        Option<&mut Equipment>,
         Option<&mut Inventory>,
         Option<&PersonalStore>,
     )>,
@@ -173,6 +178,7 @@ pub fn command_system(
             mut command,
             mut next_command,
             game_client,
+            equipment,
             inventory,
             personal_store,
         )| {
@@ -534,25 +540,100 @@ pub fn command_system(
                                 })
                                 .unwrap_or_else(|| (Duration::from_secs(1), 1));
 
-                            // In range, set current command to attack
-                            *command = Command::with_attack(target_entity, attack_duration);
+                            // If the weapon uses ammo, we must consume the ammo
+                            let mut cancel_attack = false;
 
-                            // Remove our destination component, as we have reached it!
-                            entity_commands.remove::<Destination>();
+                            if let Some(mut equipment) = equipment {
+                                if let Some(weapon_data) = equipment
+                                    .get_equipment_item(EquipmentIndex::WeaponRight)
+                                    .and_then(|weapon_item| {
+                                        game_data.items.get_base_item(weapon_item.item)
+                                    })
+                                {
+                                    let ammo_index = match weapon_data.class {
+                                        ItemClass::Bow | ItemClass::Crossbow => {
+                                            Some(AmmoIndex::Arrow)
+                                        }
+                                        ItemClass::Gun | ItemClass::DualGuns => {
+                                            Some(AmmoIndex::Bullet)
+                                        }
+                                        ItemClass::Launcher => Some(AmmoIndex::Throw),
+                                        _ => None,
+                                    };
 
-                            // Update target
-                            entity_commands.insert(Target::new(target_entity));
+                                    if let Some(ammo_index) = ammo_index {
+                                        if equipment
+                                            .get_ammo_slot_mut(ammo_index)
+                                            .try_take_quantity(hit_count as u32)
+                                            .is_none()
+                                        {
+                                            cancel_attack = true;
+                                        } else if let Some(game_client) = game_client {
+                                            match equipment.get_ammo_item(ammo_index) {
+                                                Some(ammo_item) => {
+                                                    if (ammo_item.quantity & 0x0F) == 0 {
+                                                        game_client
+                                                            .server_message_tx
+                                                            .send(ServerMessage::UpdateInventory(
+                                                                vec![(
+                                                                    ItemSlot::Ammo(ammo_index),
+                                                                    Some(Item::Stackable(
+                                                                        ammo_item.clone(),
+                                                                    )),
+                                                                )],
+                                                                None,
+                                                            ))
+                                                            .ok();
+                                                    }
+                                                }
+                                                None => {
+                                                    server_messages.send_entity_message(
+                                                        client_entity,
+                                                        ServerMessage::UpdateAmmo(
+                                                            client_entity.id,
+                                                            ammo_index,
+                                                            None,
+                                                        ),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
-                            // Send damage event to damage system
-                            damage_events.send(DamageEvent::with_attack(
-                                entity,
-                                target_entity,
-                                game_data.ability_value_calculator.calculate_damage(
-                                    ability_values,
-                                    target_ability_values,
-                                    hit_count as i32,
-                                ),
-                            ));
+                            if cancel_attack {
+                                // Not enough ammo, cancel attack
+                                send_command_stop(
+                                    &mut commands,
+                                    &mut command,
+                                    entity,
+                                    client_entity,
+                                    position,
+                                    &mut server_messages,
+                                );
+                                *next_command = NextCommand::default();
+                            } else {
+                                // In range, set current command to attack
+                                *command = Command::with_attack(target_entity, attack_duration);
+
+                                // Remove our destination component, as we have reached it!
+                                entity_commands.remove::<Destination>();
+
+                                // Update target
+                                entity_commands.insert(Target::new(target_entity));
+
+                                // Send damage event to damage system
+                                damage_events.send(DamageEvent::with_attack(
+                                    entity,
+                                    target_entity,
+                                    game_data.ability_value_calculator.calculate_damage(
+                                        ability_values,
+                                        target_ability_values,
+                                        hit_count as i32,
+                                    ),
+                                ));
+                            }
                         } else {
                             // Not in range, set current command to move
                             *command = Command::with_move(
