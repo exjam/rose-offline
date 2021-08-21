@@ -1540,6 +1540,9 @@ impl From<&PacketServerMoveToggle> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::MoveToggle as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_move_mode_toggle_u8(packet.move_mode);
+        if let Some(run_speed) = packet.run_speed {
+            writer.write_u16(run_speed as u16);
+        }
         writer.into()
     }
 }

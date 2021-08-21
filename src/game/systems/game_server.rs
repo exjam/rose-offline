@@ -806,7 +806,8 @@ pub fn game_server_main_system(
                                 sell_items,
                             });
                         }
-                    ClientMessage::RunToggle() => {
+                    }
+                    ClientMessage::RunToggle => {
                         if matches!(*move_mode, MoveMode::Run) {
                             *move_mode = MoveMode::Walk;
                         } else {

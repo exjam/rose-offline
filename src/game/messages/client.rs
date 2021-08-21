@@ -300,7 +300,7 @@ pub enum ClientMessage {
     CastSkillTargetEntity(SkillSlot, ClientEntityId),
     CastSkillTargetPosition(SkillSlot, Point2<f32>),
     NpcStoreTransaction(NpcStoreTransaction),
-    RunToggle(),
-    SitToggle(),
-    DriveToggle(),
+    RunToggle,
+    SitToggle,
+    DriveToggle,
 }

@@ -14,7 +14,7 @@ use crate::{
         },
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
-            CastSkillTargetPosition, LocalChat, LogoutReply, OpenPersonalStore,
+            CastSkillTargetPosition, LocalChat, LogoutReply, MoveToggle, OpenPersonalStore,
             PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
             PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
             PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
@@ -322,15 +322,13 @@ impl GameClient {
                 let packet = PacketClientMoveToggle::try_from(&packet)?;
                 match packet.toggle_type {
                     PacketClientMoveToggleType::Run => {
-                        client.client_message_tx.send(ClientMessage::RunToggle())?;
+                        client.client_message_tx.send(ClientMessage::RunToggle)?;
                     }
                     PacketClientMoveToggleType::Sit => {
-                        client.client_message_tx.send(ClientMessage::SitToggle())?;
+                        client.client_message_tx.send(ClientMessage::SitToggle)?;
                     }
                     PacketClientMoveToggleType::Drive => {
-                        client
-                            .client_message_tx
-                            .send(ClientMessage::DriveToggle())?;
+                        client.client_message_tx.send(ClientMessage::DriveToggle)?;
                     }
                 }
             }
