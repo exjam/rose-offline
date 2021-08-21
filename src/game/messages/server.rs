@@ -376,6 +376,13 @@ pub enum NpcStoreTransactionError {
 }
 
 #[derive(Clone)]
+pub struct MoveToggle {
+    pub entity_id: ClientEntityId,
+    pub move_mode: MoveMode,
+    pub run_speed: Option<i32>,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -422,4 +429,5 @@ pub enum ServerMessage {
     FinishCastingSkill(ClientEntityId, SkillId),
     CancelCastingSkill(ClientEntityId, CancelCastingSkillReason),
     NpcStoreTransactionError(NpcStoreTransactionError),
+    MoveToggle(MoveToggle),
 }

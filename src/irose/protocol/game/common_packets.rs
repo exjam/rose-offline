@@ -491,6 +491,7 @@ impl PacketWriteSkillSlot for PacketWriter {
 
 pub trait PacketWriteMoveMode {
     fn write_move_mode_u8(&mut self, move_mode: MoveMode);
+    fn write_move_mode_toggle_u8(&mut self, move_mode: MoveMode);
 }
 
 impl PacketWriteMoveMode for PacketWriter {
@@ -498,6 +499,15 @@ impl PacketWriteMoveMode for PacketWriter {
         self.write_u8(match move_mode {
             MoveMode::Walk => 0,
             MoveMode::Run => 1,
+        })
+    }
+
+    fn write_move_mode_toggle_u8(&mut self, move_mode: MoveMode) {
+        // Client expects TOGGLE_TYPE_DRIVE = 0x02 to be added to the MoveMode
+        // https://github.com/rminderhoud/irose/blob/6dab4768daf3d027dbced053d680dea4b80ff851/src/client/Common/CObjAI.cpp#L928-L930
+        self.write_u8(match move_mode {
+            MoveMode::Walk => 2,
+            MoveMode::Run => 3,
         })
     }
 }

@@ -48,6 +48,7 @@ pub enum ClientPackets {
     CastSkillTargetPosition = 0x7b4,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
+    MoveToggle = 0x782,
 }
 
 #[derive(Debug)]
@@ -513,8 +514,8 @@ impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
         if packet.command != ClientPackets::NpcStoreTransaction as u16 {
             return Err(ProtocolError::InvalidPacket);
         }
-
         let mut reader = PacketReader::from(packet);
+
         let npc_entity_id = ClientEntityId(reader.read_u16()? as usize);
         let buy_item_count = reader.read_u8()?;
         let sell_item_count = reader.read_u8()?;
@@ -581,5 +582,34 @@ impl TryFrom<&Packet> for PacketClientChangeAmmo {
             ammo_index,
             item_slot,
         })
+    }
+}
+pub enum PacketClientMoveToggleType {
+    Run,
+    Sit,
+    Drive,
+}
+
+pub struct PacketClientMoveToggle {
+    pub toggle_type: PacketClientMoveToggleType,
+}
+
+impl TryFrom<&Packet> for PacketClientMoveToggle {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::MoveToggle as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let toggle_type = match reader.read_u8()? {
+            0 => PacketClientMoveToggleType::Run,
+            1 => PacketClientMoveToggleType::Sit,
+            2 => PacketClientMoveToggleType::Drive,
+            _ => return Err(ProtocolError::InvalidPacket),
+        };
+
+        Ok(PacketClientMoveToggle { toggle_type })
     }
 }
