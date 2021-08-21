@@ -37,7 +37,7 @@ pub enum ClientPackets {
     Move = 0x79a,
     NpcStoreTransaction = 0x7a1,
     UseItem = 0x7a3,
-    DropItem = 0x7a4,
+    DropItemFromInventory = 0x7a4,
     ChangeEquipment = 0x7a5,
     PickupDroppedItem = 0x7a7,
     IncreaseBasicStat = 0x7a9,
@@ -373,27 +373,27 @@ impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
 }
 
 #[derive(Debug)]
-pub struct PacketClientDropItem {
-    pub item_slot: ItemSlot,
-    pub quantity: u32,
+pub enum PacketClientDropItemFromInventory {
+    Item(ItemSlot, u32),
+    Money(u32),
 }
 
-impl TryFrom<&Packet> for PacketClientDropItem {
+impl TryFrom<&Packet> for PacketClientDropItemFromInventory {
     type Error = ProtocolError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
-        if packet.command != ClientPackets::DropItem as u16 {
+        if packet.command != ClientPackets::DropItemFromInventory as u16 {
             return Err(ProtocolError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
-        let item_slot = reader.read_item_slot_u8()?;
-        let quantity = reader.read_u32()?;
-
-        Ok(PacketClientDropItem {
-            item_slot,
-            quantity,
-        })
+        if let Ok(item_slot) = reader.read_item_slot_u8() {
+            let quantity = reader.read_u32()?;
+            Ok(PacketClientDropItemFromInventory::Item(item_slot, quantity))
+        } else {
+            let quantity = reader.read_u32()?;
+            Ok(PacketClientDropItemFromInventory::Money(quantity))
+        }
     }
 }
 
