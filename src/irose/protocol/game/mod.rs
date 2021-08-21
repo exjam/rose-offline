@@ -270,12 +270,20 @@ impl GameClient {
                         buy_item: packet.buy_item,
                     }))?;
             }
-            Some(ClientPackets::DropItem) => {
-                let packet = PacketClientDropItem::try_from(&packet)?;
-                client.client_message_tx.send(ClientMessage::DropItem(
-                    packet.item_slot,
-                    packet.quantity as usize,
-                ))?;
+            Some(ClientPackets::DropItemFromInventory) => {
+                let packet = PacketClientDropItemFromInventory::try_from(&packet)?;
+                match packet {
+                    PacketClientDropItemFromInventory::Item(item_slot, quantity) => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::DropItem(item_slot, quantity as usize))?;
+                    }
+                    PacketClientDropItemFromInventory::Money(quantity) => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::DropMoney(quantity as usize))?;
+                    }
+                }
             }
             Some(ClientPackets::UseItem) => {
                 let packet = PacketClientUseItem::try_from(&packet)?;

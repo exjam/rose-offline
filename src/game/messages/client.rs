@@ -295,6 +295,7 @@ pub enum ClientMessage {
     PersonalStoreListItems(ClientEntityId),
     PersonalStoreBuyItem(PersonalStoreBuyItem),
     DropItem(ItemSlot, usize),
+    DropMoney(usize),
     UseItem(ItemSlot, Option<ClientEntityId>),
     CastSkillSelf(SkillSlot),
     CastSkillTargetEntity(SkillSlot, ClientEntityId),
