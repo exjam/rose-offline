@@ -242,18 +242,12 @@ impl Inventory {
     }
 
     pub fn try_take_money(&mut self, money: Money) -> Result<Money, ()> {
-        if self.money > money {
+        if self.money >= money {
             self.money = self.money - money;
             Ok(money)
         } else {
-            let before = self.money;
-            self.money = Money(0);
-            Ok(before)
+            Err(())
         }
-    }
-
-    pub fn get_money(&self) -> Money {
-        self.money
     }
 
     fn get_page(&self, page_type: InventoryPageType) -> &InventoryPage {

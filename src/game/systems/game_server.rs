@@ -827,20 +827,25 @@ pub fn game_server_main_system(
                         );
                     }
                     ClientMessage::DropMoney(quantity) => {
-                        if let Ok(money) = inventory.try_take_money(Money(quantity as i64)) {
-                            DroppedItemBundle::spawn(
-                                &mut commands,
-                                &mut client_entity_list,
-                                DroppedItem::Money(money),
-                                position,
-                                entity,
-                                &server_time,
-                            );
-                            client
-                                .server_message_tx
-                                .send(ServerMessage::UpdateMoney(inventory.get_money()))
-                                .ok();
+                        let mut money = Money(quantity as i64);
+                        if money > inventory.money {
+                            money = inventory.money;
+                            inventory.money = Money(0)
+                        } else {
+                            inventory.money = inventory.money - money;
                         }
+                        DroppedItemBundle::spawn(
+                            &mut commands,
+                            &mut client_entity_list,
+                            DroppedItem::Money(money),
+                            position,
+                            entity,
+                            &server_time,
+                        );
+                        client
+                            .server_message_tx
+                            .send(ServerMessage::UpdateMoney(inventory.money))
+                            .ok();
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
