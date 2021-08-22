@@ -253,7 +253,7 @@ impl Inventory {
     }
 
     pub fn get_money(&self) -> Money {
-        return self.money;
+        self.money
     }
 
     fn get_page(&self, page_type: InventoryPageType) -> &InventoryPage {
