@@ -387,12 +387,13 @@ impl TryFrom<&Packet> for PacketClientDropItemFromInventory {
         }
 
         let mut reader = PacketReader::from(packet);
-        if let Ok(item_slot) = reader.read_item_slot_u8() {
-            let quantity = reader.read_u32()?;
-            Ok(PacketClientDropItemFromInventory::Item(item_slot, quantity))
-        } else {
-            let quantity = reader.read_u32()?;
-            Ok(PacketClientDropItemFromInventory::Money(quantity))
+        // A value of 0 for inventory_index is interpreted to mean dropping money.
+        // PacketReader::read_item_slot_u8 returns ProtocolError for value 0 but in this case it is interpreted to mean dropping money.
+        let inventory_index = reader.read_item_slot_u8();
+        let quantity = reader.read_u32()?;
+        match inventory_index {
+            Ok(item_slot) => Ok(PacketClientDropItemFromInventory::Item(item_slot, quantity)),
+            Err(_) => Ok(PacketClientDropItemFromInventory::Money(quantity)),
         }
     }
 }
