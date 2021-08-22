@@ -1241,11 +1241,7 @@ pub fn npc_ai_system(
                         ai_world.commands.entity(entity).despawn();
                     }
                 }
-                CommandData::Move(_) => {}
-                CommandData::Attack(_) => {}
-                CommandData::CastSkill(_) => {}
-                CommandData::PickupDroppedItem(_) => {}
-                CommandData::PersonalStore => {}
+                _ => {}
             }
         },
     );

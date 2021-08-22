@@ -53,8 +53,7 @@ pub enum CommandData {
     PickupDroppedItem(CommandPickupDroppedItem),
     PersonalStore,
     CastSkill(CommandCastSkill),
-    // TODO:
-    // Sit
+    Sit,
 }
 
 #[derive(Clone)]
@@ -193,6 +192,10 @@ impl Command {
         matches!(self.command, CommandData::Die(_))
     }
 
+    pub fn is_sit(&self) -> bool {
+        matches!(self.command, CommandData::Sit)
+    }
+
     pub fn with_die(
         killer: Option<Entity>,
         damage: Option<Damage>,
@@ -228,6 +231,10 @@ impl Command {
             CommandData::PickupDroppedItem(CommandPickupDroppedItem { target }),
             Some(duration),
         )
+    }
+
+    pub fn with_sit() -> Self {
+        Self::new(CommandData::Sit, None)
     }
 
     pub fn with_stop() -> Self {

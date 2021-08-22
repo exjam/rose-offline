@@ -190,6 +190,7 @@ pub fn command_system(
                     CommandData::Die(_) => {
                         panic!("Next command should never be set to die, set current command")
                     }
+                    CommandData::Sit => {}
                     CommandData::Stop => {}
                     CommandData::PersonalStore => {}
                     CommandData::PickupDroppedItem(_) => {}

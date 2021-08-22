@@ -636,8 +636,8 @@ impl PacketWriteCommand for PacketWriter {
                 skill_target: Some(CommandCastSkillTarget::Position(_)),
                 ..
             }) => 8,
-            // 9 = Run away
-            // 10 = Sit
+            // Run away => 9
+            CommandData::Sit => 10,
         };
         self.write_u16(command_id);
     }
