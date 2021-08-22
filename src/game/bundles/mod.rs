@@ -7,7 +7,7 @@ pub use ability_values::{
 };
 pub use entity::{
     client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
-    CharacterBundle, MonsterBundle, NpcBundle, EVENT_OBJECT_VARIABLES_COUNT,
+    CharacterBundle, DroppedItemBundle, MonsterBundle, NpcBundle, EVENT_OBJECT_VARIABLES_COUNT,
     MONSTER_OBJECT_VARIABLES_COUNT, NPC_OBJECT_VARIABLES_COUNT,
 };
 pub use skills::skill_list_try_learn_skill;
