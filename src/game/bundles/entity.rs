@@ -1,20 +1,21 @@
 use bevy_ecs::prelude::{Bundle, Commands, Entity};
 use nalgebra::Point3;
 use rand::Rng;
+use std::time::Duration;
 
 use crate::{
     data::{NpcId, ZoneId},
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
-            ClientEntityType, ClientEntityVisibility, Command, DamageSources, Equipment,
-            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
-            MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection,
-            ObjectVariables, Owner, Position, QuestState, SkillList, SkillPoints, SpawnOrigin,
-            Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+            ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
+            Equipment, ExperiencePoints, ExpireTime, GameClient, HealthPoints, Hotbar, Inventory,
+            Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
+            NpcStandingDirection, ObjectVariables, Owner, Position, QuestState, SkillList,
+            SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
         },
         messages::server::{ServerMessage, Teleport},
-        resources::ClientEntityList,
+        resources::{ClientEntityList, ServerTime},
         GameData,
     },
 };
@@ -22,6 +23,8 @@ use crate::{
 pub const EVENT_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const NPC_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const MONSTER_OBJECT_VARIABLES_COUNT: usize = 5;
+pub const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
+pub const DROP_ITEM_RADIUS: i32 = 200;
 
 #[derive(Bundle)]
 pub struct NpcBundle {
@@ -180,6 +183,53 @@ impl MonsterBundle {
             &position,
         )
         .expect("Failed to join monster into zone");
+
+        Some(entity)
+    }
+}
+
+#[derive(Bundle)]
+pub struct DroppedItemBundle {
+    pub item: DroppedItem,
+    pub position: Position,
+    pub owner: Owner,
+    pub expire_time: ExpireTime,
+}
+
+impl DroppedItemBundle {
+    pub fn spawn(
+        commands: &mut Commands,
+        client_entity_list: &mut ClientEntityList,
+        item: DroppedItem,
+        position: &Position,
+        owner_entity: &Entity,
+        server_time: &ServerTime,
+    ) -> Option<Entity> {
+        let mut rng = rand::thread_rng();
+        let drop_point = Point3::new(
+            position.position.x + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
+            position.position.y + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
+            position.position.z,
+        );
+        let drop_position = Position::new(drop_point, position.zone_id);
+        let mut entity_commands = commands.spawn();
+        let entity = entity_commands.id();
+
+        entity_commands.insert_bundle(DroppedItemBundle {
+            item,
+            position: drop_position.clone(),
+            owner: Owner::new(*owner_entity),
+            expire_time: ExpireTime::new(server_time.now + DROPPED_ITEM_EXPIRE_TIME),
+        });
+
+        client_entity_join_zone(
+            commands,
+            client_entity_list,
+            entity,
+            ClientEntityType::DroppedItem,
+            &drop_position,
+        )
+        .expect("Failed to drop item into zone");
 
         Some(entity)
     }
