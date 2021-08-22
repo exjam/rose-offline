@@ -246,8 +246,14 @@ impl Inventory {
             self.money = self.money - money;
             Ok(money)
         } else {
-            Err(())
+            let before = self.money;
+            self.money = Money(0);
+            Ok(before)
         }
+    }
+
+    pub fn get_money(&self) -> Money {
+        return self.money;
     }
 
     fn get_page(&self, page_type: InventoryPageType) -> &InventoryPage {

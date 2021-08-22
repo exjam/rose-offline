@@ -17,8 +17,8 @@ use crate::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
             EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemSlot, Level, ManaPoints, MoveMode, MoveSpeed, NextCommand, Position, QuestState,
-            SkillList, StatPoints, StatusEffects, Team, WorldClient,
+            ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Position,
+            QuestState, SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
@@ -821,6 +821,14 @@ pub fn game_server_main_system(
                                 run_speed: None,
                             }),
                         );
+                    }
+                    ClientMessage::DropMoney(quantity) => {
+                        if let Ok(money) = inventory.try_take_money(Money(quantity as i64)) {
+                            client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateMoney(inventory.get_money()))
+                                .ok();
+                        }
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
