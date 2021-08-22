@@ -190,7 +190,7 @@ impl MonsterBundle {
 
 #[derive(Bundle)]
 pub struct DroppedItemBundle {
-    pub item: DroppedItem,
+    pub item: Option<DroppedItem>,
     pub position: Position,
     pub owner: Owner,
     pub expire_time: ExpireTime,
@@ -202,23 +202,26 @@ impl DroppedItemBundle {
         client_entity_list: &mut ClientEntityList,
         item: DroppedItem,
         position: &Position,
-        owner_entity: &Entity,
+        owner_entity: Entity,
         server_time: &ServerTime,
     ) -> Option<Entity> {
         let mut rng = rand::thread_rng();
+
         let drop_point = Point3::new(
             position.position.x + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
             position.position.y + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
             position.position.z,
         );
+
         let drop_position = Position::new(drop_point, position.zone_id);
+
         let mut entity_commands = commands.spawn();
         let entity = entity_commands.id();
 
         entity_commands.insert_bundle(DroppedItemBundle {
-            item,
+            item: Some(item),
             position: drop_position.clone(),
-            owner: Owner::new(*owner_entity),
+            owner: Owner::new(owner_entity),
             expire_time: ExpireTime::new(server_time.now + DROPPED_ITEM_EXPIRE_TIME),
         });
 
