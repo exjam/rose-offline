@@ -18,8 +18,8 @@ use crate::{
             ClientEntityType, ClientEntityVisibility, Command, DroppedItem, Equipment,
             EquipmentIndex, EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints,
             Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed,
-            NextCommand, Position, QuestState, SkillList, StatPoints, StatusEffects, Team,
-            WorldClient,
+            NextCommand, PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints,
+            StatusEffects, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
@@ -134,6 +134,7 @@ pub fn game_server_authentication_system(
                                         move_mode,
                                         move_speed,
                                         next_command: NextCommand::default(),
+                                        passive_recovery_time: PassiveRecoveryTime::default(),
                                         position: position.clone(),
                                         quest_state: character.quest_state.clone(),
                                         skill_list: character.skill_list.clone(),
@@ -215,7 +216,8 @@ pub fn game_server_join_system(
                         ) {
                             commands
                                 .entity(entity)
-                                .insert(ClientEntityVisibility::new());
+                                .insert(ClientEntityVisibility::new())
+                                .insert(PassiveRecoveryTime::default());
 
                             message
                                 .response_tx

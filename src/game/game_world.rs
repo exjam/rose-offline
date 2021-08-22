@@ -24,10 +24,10 @@ use crate::game::{
         experience_points_system, expire_time_system, game_server_authentication_system,
         game_server_join_system, game_server_main_system, login_server_authentication_system,
         login_server_system, monster_spawn_system, npc_ai_system, npc_store_system,
-        personal_store_system, quest_system, save_system, server_messages_system,
-        skill_effect_system, startup_zones_system, status_effect_system, update_position_system,
-        use_item_system, weight_system, world_server_authentication_system, world_server_system,
-        world_time_system,
+        passive_recovery_system, personal_store_system, quest_system, save_system,
+        server_messages_system, skill_effect_system, startup_zones_system, status_effect_system,
+        update_position_system, use_item_system, weight_system, world_server_authentication_system,
+        world_server_system, world_time_system,
     },
 };
 
@@ -116,7 +116,8 @@ impl GameWorld {
                 .with_system(bot_ai_system.system())
                 .with_system(npc_ai_system.system())
                 .with_system(expire_time_system.system())
-                .with_system(status_effect_system.system()),
+                .with_system(status_effect_system.system())
+                .with_system(passive_recovery_system.system()),
         );
 
         schedule.add_stage_after(

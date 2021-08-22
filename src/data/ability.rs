@@ -126,6 +126,12 @@ pub struct Damage {
     pub apply_hit_stun: bool,
 }
 
+#[derive(Clone, Copy)]
+pub enum PassiveRecoveryState {
+    Normal,
+    Sitting,
+}
+
 pub trait AbilityValueCalculator {
     fn calculate(
         &self,
@@ -211,5 +217,17 @@ pub trait AbilityValueCalculator {
         item_data: &BaseItemData,
         buy_skill_value: i32,
         world_prices_rate: i32,
+    ) -> i32;
+
+    fn calculate_passive_recover_hp(
+        &self,
+        ability_values: &AbilityValues,
+        recovery_state: PassiveRecoveryState,
+    ) -> i32;
+
+    fn calculate_passive_recover_mp(
+        &self,
+        ability_values: &AbilityValues,
+        recovery_state: PassiveRecoveryState,
     ) -> i32;
 }

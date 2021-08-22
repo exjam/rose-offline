@@ -7,7 +7,8 @@ use crate::{
     data::{
         item::{ItemClass, ItemType, ItemWeaponType},
         AbilityType, AbilityValueCalculator, BaseItemData, Damage, ItemDatabase, ItemReference,
-        NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
+        NpcDatabase, NpcId, PassiveRecoveryState, SkillAddAbility, SkillData, SkillDatabase,
+        SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
@@ -731,6 +732,40 @@ impl AbilityValueCalculator for AbilityValuesData {
                     / 180000.0) as i32
             }
             _ => 0,
+        }
+    }
+
+    fn calculate_passive_recover_hp(
+        &self,
+        ability_values: &AbilityValues,
+        recovery_state: PassiveRecoveryState,
+    ) -> i32 {
+        match recovery_state {
+            PassiveRecoveryState::Normal => {
+                ((ability_values.get_additional_health_recovery() as f32
+                    + (ability_values.get_concentration() as f32 + 40.0) / 6.0)
+                    / 6.0) as i32
+            }
+            PassiveRecoveryState::Sitting => {
+                (ability_values.get_additional_health_recovery() as f32
+                    + ((((ability_values.get_concentration() as f32 + 30.0) / 8.0) * 23.0) / 10.0))
+                    as i32
+            }
+        }
+    }
+
+    fn calculate_passive_recover_mp(
+        &self,
+        ability_values: &AbilityValues,
+        recovery_state: PassiveRecoveryState,
+    ) -> i32 {
+        match recovery_state {
+            PassiveRecoveryState::Normal => 0,
+            PassiveRecoveryState::Sitting => {
+                (ability_values.get_additional_mana_recovery() as f32
+                    + ((((ability_values.get_concentration() as f32 + 20.0) / 10.0) * 20.0) / 7.0))
+                    as i32
+            }
         }
     }
 }
