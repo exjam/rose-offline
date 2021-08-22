@@ -11,14 +11,15 @@ use crate::{
     game::{
         bundles::{
             client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
-            CharacterBundle,
+            CharacterBundle, DroppedItemBundle,
         },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
-            ClientEntityType, ClientEntityVisibility, Command, Equipment, EquipmentIndex,
-            EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Position,
-            QuestState, SkillList, StatPoints, StatusEffects, Team, WorldClient,
+            ClientEntityType, ClientEntityVisibility, Command, DroppedItem, Equipment,
+            EquipmentIndex, EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints,
+            Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed,
+            NextCommand, Position, QuestState, SkillList, StatPoints, StatusEffects, Team,
+            WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
@@ -32,7 +33,9 @@ use crate::{
             },
             server::{self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat},
         },
-        resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, WorldTime},
+        resources::{
+            ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldTime,
+        },
     },
 };
 
@@ -386,6 +389,7 @@ pub fn game_server_main_system(
     mut use_item_events: EventWriter<UseItemEvent>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
+    server_time: Res<ServerTime>,
 ) {
     game_client_query.for_each_mut(
         |(
@@ -824,6 +828,14 @@ pub fn game_server_main_system(
                     }
                     ClientMessage::DropMoney(quantity) => {
                         if let Ok(money) = inventory.try_take_money(Money(quantity as i64)) {
+                            DroppedItemBundle::spawn(
+                                &mut commands,
+                                &mut client_entity_list,
+                                DroppedItem::Money(money),
+                                position,
+                                &entity,
+                                &server_time,
+                            );
                             client
                                 .server_message_tx
                                 .send(ServerMessage::UpdateMoney(inventory.get_money()))
