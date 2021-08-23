@@ -73,4 +73,18 @@ impl MotionData {
             MotionData::Npc(_) => None,
         }
     }
+
+    pub fn get_sit_sitting(&self) -> Option<&MotionFileData> {
+        match self {
+            MotionData::Character(character) => character.sitting.as_ref(),
+            MotionData::Npc(_) => None,
+        }
+    }
+
+    pub fn get_sit_standing(&self) -> Option<&MotionFileData> {
+        match self {
+            MotionData::Character(character) => character.standup.as_ref(),
+            MotionData::Npc(_) => None,
+        }
+    }
 }

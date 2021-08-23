@@ -430,4 +430,5 @@ pub enum ServerMessage {
     CancelCastingSkill(ClientEntityId, CancelCastingSkillReason),
     NpcStoreTransactionError(NpcStoreTransactionError),
     MoveToggle(MoveToggle),
+    SitToggle(ClientEntityId),
 }

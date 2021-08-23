@@ -59,7 +59,7 @@ pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_visibility::ClientEntityVisibility;
 pub use command::{
     Command, CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandDie,
-    CommandMove, CommandPickupDroppedItem, NextCommand,
+    CommandMove, CommandPickupDroppedItem, CommandSit, NextCommand,
 };
 pub use damage_sources::{DamageSource, DamageSources};
 pub use destination::Destination;

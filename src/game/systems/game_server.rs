@@ -15,11 +15,11 @@ use crate::{
         },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
-            ClientEntityType, ClientEntityVisibility, Command, DroppedItem, Equipment,
-            EquipmentIndex, EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints,
-            Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed,
-            NextCommand, PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints,
-            StatusEffects, Team, WorldClient,
+            ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit,
+            DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase, ExperiencePoints,
+            GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money,
+            MoveMode, MoveSpeed, NextCommand, PassiveRecoveryTime, Position, QuestState, SkillList,
+            StatPoints, StatusEffects, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
@@ -813,12 +813,20 @@ pub fn game_server_main_system(
                             });
                         }
                     }
+                    ClientMessage::SitToggle => {
+                        if matches!(command.command, CommandData::Sit(CommandSit::Sit)) {
+                            entity_commands.insert(NextCommand::with_standing());
+                        } else {
+                            entity_commands.insert(NextCommand::with_sitting());
+                        }
+                    }
                     ClientMessage::RunToggle => {
                         if matches!(*move_mode, MoveMode::Run) {
                             *move_mode = MoveMode::Walk;
                         } else {
                             *move_mode = MoveMode::Run;
                         }
+
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::MoveToggle(server::MoveToggle {

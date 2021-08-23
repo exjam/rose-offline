@@ -44,6 +44,13 @@ pub struct CommandCastSkill {
     pub use_item: Option<(ItemSlot, Item)>,
 }
 
+#[derive(Copy, Clone)]
+pub enum CommandSit {
+    Sitting,
+    Sit,
+    Standing,
+}
+
 #[derive(Clone)]
 pub enum CommandData {
     Die(CommandDie),
@@ -53,7 +60,13 @@ pub enum CommandData {
     PickupDroppedItem(CommandPickupDroppedItem),
     PersonalStore,
     CastSkill(CommandCastSkill),
-    Sit,
+    Sit(CommandSit),
+}
+
+impl CommandData {
+    pub fn is_manual_complete(&self) -> bool {
+        matches!(*self, CommandData::Sit(_) | CommandData::PersonalStore)
+    }
 }
 
 #[derive(Clone)]
@@ -108,6 +121,27 @@ impl NextCommand {
             command: Some(CommandData::PickupDroppedItem(CommandPickupDroppedItem {
                 target,
             })),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_sitting() -> Self {
+        Self {
+            command: Some(CommandData::Sit(CommandSit::Sitting)),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_sit() -> Self {
+        Self {
+            command: Some(CommandData::Sit(CommandSit::Sit)),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_standing() -> Self {
+        Self {
+            command: Some(CommandData::Sit(CommandSit::Standing)),
             has_sent_server_message: false,
         }
     }
@@ -193,7 +227,10 @@ impl Command {
     }
 
     pub fn is_sit(&self) -> bool {
-        matches!(self.command, CommandData::Sit)
+        matches!(
+            self.command,
+            CommandData::Sit(CommandSit::Sit) | CommandData::Sit(CommandSit::Sitting)
+        )
     }
 
     pub fn with_die(
@@ -234,7 +271,15 @@ impl Command {
     }
 
     pub fn with_sit() -> Self {
-        Self::new(CommandData::Sit, None)
+        Self::new(CommandData::Sit(CommandSit::Sit), None)
+    }
+
+    pub fn with_sitting(duration: Duration) -> Self {
+        Self::new(CommandData::Sit(CommandSit::Sitting), Some(duration))
+    }
+
+    pub fn with_standing(duration: Duration) -> Self {
+        Self::new(CommandData::Sit(CommandSit::Standing), Some(duration))
     }
 
     pub fn with_stop() -> Self {

@@ -10,9 +10,9 @@ use crate::{
         components::{
             AbilityValues, AmmoIndex, ClientEntity, ClientEntityType, Command, CommandAttack,
             CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
-            CommandPickupDroppedItem, Destination, DroppedItem, Equipment, EquipmentIndex,
-            GameClient, HealthPoints, Inventory, ItemSlot, MotionData, MoveMode, MoveSpeed,
-            NextCommand, Npc, Owner, PersonalStore, Position, Target,
+            CommandPickupDroppedItem, CommandSit, Destination, DroppedItem, Equipment,
+            EquipmentIndex, GameClient, HealthPoints, Inventory, ItemSlot, MotionData, MoveMode,
+            MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
@@ -190,7 +190,7 @@ pub fn command_system(
                     CommandData::Die(_) => {
                         panic!("Next command should never be set to die, set current command")
                     }
-                    CommandData::Sit => {}
+                    CommandData::Sit(_) => {}
                     CommandData::Stop => {}
                     CommandData::PersonalStore => {}
                     CommandData::PickupDroppedItem(_) => {}
@@ -326,27 +326,50 @@ pub fn command_system(
                 _ => command.required_duration,
             };
 
-            let command_complete = required_duration.map_or_else(
+            let command_motion_completed = required_duration.map_or_else(
                 || true,
                 |required_duration| command.duration >= required_duration,
             );
-            if !command_complete {
+            if !command_motion_completed {
                 // Current command still in animation
                 return;
             }
 
-            if command.is_dead() {
-                // We can't perform NextCommand if we are dead!
-                return;
+            match command.command {
+                CommandData::Die(_) => {
+                    // We can't perform NextCommand if we are dead!
+                    return;
+                }
+                CommandData::Sit(CommandSit::Sitting) => {
+                    // When sitting animation is complete transition to Sit
+                    *command = Command::with_sit();
+                }
+                _ => {}
             }
 
             if next_command.command.is_none() {
                 // If we have completed current command, and there is no next command, then clear current.
-                if command_complete {
+                // This does not apply for some commands which must be manually completed, such as Sit
+                // where you need to stand after.
+                if command_motion_completed && !command.command.is_manual_complete() {
                     *command = Command::default();
                 }
 
                 // Nothing to do when there is no next command
+                return;
+            }
+
+            if matches!(command.command, CommandData::Sit(CommandSit::Sit)) {
+                // If current command is sit, we must stand before performing NextCommand
+                let duration = motion_data
+                    .get_sit_standing()
+                    .map(|motion_data| motion_data.duration)
+                    .unwrap_or_else(|| Duration::from_secs(0));
+
+                *command = Command::with_standing(duration);
+
+                server_messages
+                    .send_entity_message(client_entity, ServerMessage::SitToggle(client_entity.id));
                 return;
             }
 
@@ -793,6 +816,28 @@ pub fn command_system(
                     );
 
                     *command = Command::with_personal_store();
+                    *next_command = NextCommand::default();
+                }
+                CommandData::Sit(CommandSit::Sitting) => {
+                    let duration = motion_data
+                        .get_sit_sitting()
+                        .map(|motion_data| motion_data.duration)
+                        .unwrap_or_else(|| Duration::from_secs(0));
+
+                    *command = Command::with_sitting(duration);
+                    *next_command = NextCommand::default();
+
+                    server_messages.send_entity_message(
+                        client_entity,
+                        ServerMessage::SitToggle(client_entity.id),
+                    );
+                }
+                CommandData::Sit(CommandSit::Standing) => {
+                    // The transition from Sit to Standing happens above
+                    *next_command = NextCommand::default();
+                }
+                CommandData::Sit(CommandSit::Sit) => {
+                    // The transition from Sitting to Sit happens above
                     *next_command = NextCommand::default();
                 }
                 _ => {}

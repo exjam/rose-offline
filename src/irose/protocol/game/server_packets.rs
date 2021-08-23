@@ -637,7 +637,7 @@ impl PacketWriteCommand for PacketWriter {
                 ..
             }) => 8,
             // Run away => 9
-            CommandData::Sit => 10,
+            CommandData::Sit(_) => 10,
         };
         self.write_u16(command_id);
     }
@@ -1543,6 +1543,19 @@ impl From<&PacketServerMoveToggle> for Packet {
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed as u16);
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerSitToggle {
+    pub entity_id: ClientEntityId,
+}
+
+impl From<&PacketServerSitToggle> for Packet {
+    fn from(packet: &PacketServerSitToggle) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::MoveToggle as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_u8(1);
         writer.into()
     }
 }

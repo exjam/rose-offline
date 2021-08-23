@@ -996,6 +996,12 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::SitToggle(entity_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerSitToggle { entity_id }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")
