@@ -6,7 +6,7 @@ use crate::{
     data::{
         account::AccountStorage,
         character::CharacterStorage,
-        item::{Item, ItemType, StackError, StackableSlotBehaviour},
+        item::{Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour},
     },
     game::{
         bundles::{
@@ -844,18 +844,53 @@ pub fn game_server_main_system(
                         } else {
                             inventory.money = inventory.money - money;
                         }
-                        DroppedItemBundle::spawn(
-                            &mut commands,
-                            &mut client_entity_list,
-                            DroppedItem::Money(money),
-                            position,
-                            entity,
-                            &server_time,
-                        );
-                        client
-                            .server_message_tx
-                            .send(ServerMessage::UpdateMoney(inventory.money))
-                            .ok();
+
+                        if money > Money(0) {
+                            DroppedItemBundle::spawn(
+                                &mut commands,
+                                &mut client_entity_list,
+                                DroppedItem::Money(money),
+                                position,
+                                entity,
+                                &server_time,
+                            );
+
+                            client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateMoney(inventory.money))
+                                .ok();
+                        }
+                    }
+                    ClientMessage::DropItem(item_slot, quantity) => {
+                        if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
+                            let quantity = u32::min(
+                                quantity as u32,
+                                inventory_slot
+                                    .as_ref()
+                                    .map(|item| item.get_quantity())
+                                    .unwrap_or(0),
+                            );
+                            let item = inventory_slot.try_take_quantity(quantity);
+
+                            if let Some(item) = item {
+                                DroppedItemBundle::spawn(
+                                    &mut commands,
+                                    &mut client_entity_list,
+                                    DroppedItem::Item(item),
+                                    position,
+                                    entity,
+                                    &server_time,
+                                );
+
+                                client
+                                    .server_message_tx
+                                    .send(ServerMessage::UpdateInventory(
+                                        vec![(item_slot, inventory_slot.clone())],
+                                        None,
+                                    ))
+                                    .ok();
+                            }
+                        }
                     }
                     ClientMessage::UseEmote(motion_id, is_stop) => {
                         if is_stop {
