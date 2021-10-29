@@ -8,7 +8,7 @@ use nalgebra::Point2;
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::item::Item,
+    data::{item::Item, MotionId},
     game::{
         components::{
             AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,
@@ -31,6 +31,7 @@ pub enum ClientPackets {
     QuestRequest = 0x730,
     JoinZone = 0x753,
     ReviveRequest = 0x755,
+    Emote = 0x781,
     Chat = 0x783,
     StopMove = 0x796,
     Attack = 0x798,
@@ -585,6 +586,7 @@ impl TryFrom<&Packet> for PacketClientChangeAmmo {
         })
     }
 }
+
 pub enum PacketClientMoveToggleType {
     Run,
     Sit,
@@ -612,5 +614,27 @@ impl TryFrom<&Packet> for PacketClientMoveToggle {
         };
 
         Ok(PacketClientMoveToggle { toggle_type })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientEmote {
+    pub motion_id: MotionId,
+    pub is_stop: bool,
+}
+
+impl TryFrom<&Packet> for PacketClientEmote {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::Emote as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let motion_id = MotionId::new(reader.read_u16()?);
+        let is_stop = reader.read_u16()? != 0;
+
+        Ok(PacketClientEmote { motion_id, is_stop })
     }
 }

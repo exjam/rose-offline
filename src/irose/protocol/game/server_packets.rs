@@ -7,7 +7,7 @@ use num_derive::FromPrimitive;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        AbilityType, Damage, ItemReference, NpcId, SkillId, WorldTicks, ZoneId,
+        AbilityType, Damage, ItemReference, MotionId, NpcId, SkillId, WorldTicks, ZoneId,
     },
     game::{
         components::{
@@ -49,6 +49,7 @@ pub enum ServerPackets {
     QuestResult = 0x730,
     RunNpcDeathTrigger = 0x731,
     JoinZone = 0x753,
+    UseEmote = 0x781,
     LocalChat = 0x783,
     Whisper = 0x784,
     ShoutChat = 0x785,
@@ -1556,6 +1557,22 @@ impl From<&PacketServerSitToggle> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::MoveToggle as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_u8(1);
+        writer.into()
+    }
+}
+
+pub struct PacketServerUseEmote {
+    pub entity_id: ClientEntityId,
+    pub motion_id: MotionId,
+    pub is_stop: bool,
+}
+
+impl From<&PacketServerUseEmote> for Packet {
+    fn from(packet: &PacketServerUseEmote) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UseEmote as u16);
+        writer.write_u16(packet.motion_id.get());
+        writer.write_u16(if packet.is_stop { 1 << 15 } else { 0 });
+        writer.write_entity_id(packet.entity_id);
         writer.into()
     }
 }

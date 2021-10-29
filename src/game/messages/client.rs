@@ -2,7 +2,7 @@ use nalgebra::Point2;
 use tokio::sync::oneshot;
 
 use crate::{
-    data::{character::CharacterStorage, item::Item, QuestTriggerHash, WorldTicks},
+    data::{character::CharacterStorage, item::Item, MotionId, QuestTriggerHash, WorldTicks},
     game::components::{
         AmmoIndex, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId,
         Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
@@ -304,4 +304,5 @@ pub enum ClientMessage {
     RunToggle,
     SitToggle,
     DriveToggle,
+    UseEmote(MotionId, bool),
 }

@@ -5,7 +5,7 @@ use nalgebra::Point2;
 use crate::{
     data::{
         item::{EquipmentItem, Item, StackableItem},
-        AbilityType, Damage, ItemReference, NpcId, QuestTriggerHash, SkillId, ZoneId,
+        AbilityType, Damage, ItemReference, MotionId, NpcId, QuestTriggerHash, SkillId, ZoneId,
     },
     game::components::{
         AmmoIndex, BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem,
@@ -383,6 +383,13 @@ pub struct MoveToggle {
 }
 
 #[derive(Clone)]
+pub struct UseEmote {
+    pub entity_id: ClientEntityId,
+    pub motion_id: MotionId,
+    pub is_stop: bool,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -431,4 +438,5 @@ pub enum ServerMessage {
     NpcStoreTransactionError(NpcStoreTransactionError),
     MoveToggle(MoveToggle),
     SitToggle(ClientEntityId),
+    UseEmote(UseEmote),
 }

@@ -20,7 +20,7 @@ use crate::{
             PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
             ServerMessage, ShoutChat, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
             UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed,
-            UpdateStatusEffects, UpdateXpStamina, UseItem, Whisper,
+            UpdateStatusEffects, UpdateXpStamina, UseEmote, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -339,6 +339,12 @@ impl GameClient {
                         client.client_message_tx.send(ClientMessage::DriveToggle)?;
                     }
                 }
+            }
+            Some(ClientPackets::Emote) => {
+                let packet = PacketClientEmote::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::UseEmote(packet.motion_id, packet.is_stop))?;
             }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
@@ -1000,6 +1006,20 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerSitToggle { entity_id }))
+                    .await?;
+            }
+            ServerMessage::UseEmote(UseEmote {
+                entity_id,
+                motion_id,
+                is_stop,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUseEmote {
+                        entity_id,
+                        motion_id,
+                        is_stop,
+                    }))
                     .await?;
             }
             // These messages are for World Server
