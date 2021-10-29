@@ -990,9 +990,6 @@ pub fn npc_ai_system(
             if !npc_ai.has_run_created_trigger {
                 if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
                     if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
-                        if ai_source_data.owner.is_some() {
-                            warn!("Running summon created ai");
-                        }
                         npc_ai_run_trigger(
                             &mut ai_world,
                             trigger_on_created,
@@ -1041,9 +1038,6 @@ pub fn npc_ai_system(
                             npc_ai.idle_duration += server_time.delta;
 
                             if npc_ai.idle_duration > ai_program.idle_trigger_interval {
-                                if ai_source_data.owner.is_some() {
-                                    warn!("Running summon idle ai");
-                                }
                                 npc_ai_run_trigger(
                                     &mut ai_world,
                                     trigger_on_idle,
