@@ -79,7 +79,7 @@ impl Random {
     }
 }
 
-fn seed_table(table: &mut [u32; 16 * 2048], mut seed: &mut Random, seed_types: &[SeedType]) {
+fn seed_table(table: &mut [u32; 16 * 2048], seed: &mut Random, seed_types: &[SeedType]) {
     #[allow(clippy::needless_range_loop)]
     for i in 0..16 {
         let seed_next_fn = Random::get_next_fn(seed_types[i]);
@@ -87,7 +87,7 @@ fn seed_table(table: &mut [u32; 16 * 2048], mut seed: &mut Random, seed_types: &
         let mut size = 0usize;
 
         while size < 2048 {
-            let next = seed_next_fn(&mut seed);
+            let next = seed_next_fn(seed);
 
             // Yes this really is supposed to be 0..size
             if !table[0..size].contains(&next) {

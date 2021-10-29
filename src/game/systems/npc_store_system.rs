@@ -111,12 +111,9 @@ fn npc_store_do_transaction(
         total_buy_cost += item_price * buy_quantity;
     }
 
-    if transaction_inventory
+    transaction_inventory
         .try_take_money(Money(total_buy_cost))
-        .is_err()
-    {
-        return Err(NpcStoreTransactionError::NotEnoughMoney);
-    }
+        .map_err(|_| NpcStoreTransactionError::NotEnoughMoney)?;
 
     **inventory = transaction_inventory;
     Ok(updated_inventory_slots)

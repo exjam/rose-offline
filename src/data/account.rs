@@ -82,9 +82,7 @@ impl AccountStorage {
 
     fn save_impl(&self, allow_overwrite: bool) -> Result<(), AccountStorageError> {
         let path = get_account_path(&self.name);
-        if std::fs::create_dir_all(path.parent().unwrap()).is_err() {
-            return Err(AccountStorageError::Failed);
-        }
+        std::fs::create_dir_all(path.parent().unwrap()).map_err(|_| AccountStorageError::Failed)?;
 
         let json = serde_json::to_string_pretty(&self)?;
         let mut file = tempfile::NamedTempFile::new()?;

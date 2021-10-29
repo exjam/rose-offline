@@ -1226,8 +1226,8 @@ pub fn npc_ai_system(
                         });
                     if command_complete {
                         client_entity_leave_zone(
-                            &mut ai_world.commands,
-                            &mut ai_world.client_entity_list,
+                            ai_world.commands,
+                            ai_world.client_entity_list,
                             entity,
                             client_entity,
                             position,

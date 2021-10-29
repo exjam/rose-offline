@@ -102,9 +102,8 @@ impl CharacterStorage {
     fn save_character_impl(&self, allow_overwrite: bool) -> Result<(), CharacterStorageError> {
         let path = get_character_path(&self.info.name);
 
-        if std::fs::create_dir_all(path.parent().unwrap()).is_err() {
-            return Err(CharacterStorageError::IoError);
-        }
+        std::fs::create_dir_all(path.parent().unwrap())
+            .map_err(|_| CharacterStorageError::IoError)?;
 
         let json = serde_json::to_string_pretty(self)?;
         let mut file = tempfile::NamedTempFile::new()?;

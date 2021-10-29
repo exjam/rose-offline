@@ -82,13 +82,15 @@ impl<'a> Connection<'a> {
         buffer.put(packet.data);
         self.packet_codec.encrypt_server(&mut buffer);
 
-        if self.stream.write_all(&buffer).await.is_err() {
-            return Err(ProtocolError::Disconnect);
-        }
+        self.stream
+            .write_all(&buffer)
+            .await
+            .map_err(|_| ProtocolError::Disconnect)?;
 
-        if self.stream.flush().await.is_err() {
-            return Err(ProtocolError::Disconnect);
-        }
+        self.stream
+            .flush()
+            .await
+            .map_err(|_| ProtocolError::Disconnect)?;
 
         Ok(())
     }
