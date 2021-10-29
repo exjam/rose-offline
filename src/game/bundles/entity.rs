@@ -300,7 +300,7 @@ pub fn client_entity_teleport_zone(
     commands
         .entity(entity)
         .insert(Command::with_stop())
-        .insert(NextCommand::with_stop())
+        .insert(NextCommand::default())
         .insert(new_position.clone());
 
     if let Some(game_client) = game_client {

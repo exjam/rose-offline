@@ -701,7 +701,7 @@ fn ai_action_stop(ai_world: &mut AiWorld, ai_parameters: &mut AiParameters) {
     ai_world
         .commands
         .entity(ai_parameters.source.entity)
-        .insert(NextCommand::with_stop());
+        .insert(NextCommand::with_stop(true));
 }
 
 fn ai_action_move_random_distance(
@@ -1032,7 +1032,7 @@ pub fn npc_ai_system(
             npc_ai.pending_damage.clear();
 
             match command.command {
-                CommandData::Stop => {
+                CommandData::Stop(_) => {
                     if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
                         if let Some(trigger_on_idle) = ai_program.trigger_on_idle.as_ref() {
                             npc_ai.idle_duration += server_time.delta;

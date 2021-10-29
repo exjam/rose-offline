@@ -39,7 +39,7 @@ pub fn bot_ai_system(
             let _owner_components = owner_query.get(owner.entity);
 
             match command.command {
-                CommandData::Stop => {
+                CommandData::Stop(_) => {
                     bot_ai.time_since_last_idle_check += server_time.delta;
                     if bot_ai.time_since_last_idle_check < BOT_IDLE_CHECK_DURATION {
                         return;

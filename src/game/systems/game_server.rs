@@ -453,7 +453,7 @@ pub fn game_server_main_system(
                         {
                             entity_commands.insert(NextCommand::with_attack(*target_entity));
                         } else {
-                            entity_commands.insert(NextCommand::with_stop());
+                            entity_commands.insert(NextCommand::with_stop(true));
                         }
                     }
                     ClientMessage::SetHotbarSlot(SetHotbarSlot {
@@ -634,7 +634,7 @@ pub fn game_server_main_system(
                             entity_commands
                                 .insert(NextCommand::with_pickup_dropped_item(*target_entity));
                         } else {
-                            entity_commands.insert(NextCommand::with_stop());
+                            entity_commands.insert(NextCommand::with_stop(true));
                         }
                     }
                     ClientMessage::LogoutRequest(request) => {

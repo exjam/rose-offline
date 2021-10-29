@@ -16,6 +16,11 @@ pub struct CommandMove {
 }
 
 #[derive(Clone)]
+pub struct CommandStop {
+    pub send_message: bool,
+}
+
+#[derive(Clone)]
 pub struct CommandDie {
     pub killer: Option<Entity>,
     pub damage: Option<Damage>,
@@ -54,7 +59,7 @@ pub enum CommandSit {
 #[derive(Clone)]
 pub enum CommandData {
     Die(CommandDie),
-    Stop,
+    Stop(CommandStop),
     Move(CommandMove),
     Attack(CommandAttack),
     PickupDroppedItem(CommandPickupDroppedItem),
@@ -146,9 +151,9 @@ impl NextCommand {
         }
     }
 
-    pub fn with_stop() -> Self {
+    pub fn with_stop(send_message: bool) -> Self {
         Self {
-            command: Some(CommandData::Stop),
+            command: Some(CommandData::Stop(CommandStop { send_message })),
             has_sent_server_message: false,
         }
     }
@@ -283,7 +288,12 @@ impl Command {
     }
 
     pub fn with_stop() -> Self {
-        Self::new(CommandData::Stop, None)
+        Self::new(
+            CommandData::Stop(CommandStop {
+                send_message: false,
+            }),
+            None,
+        )
     }
 
     pub fn with_personal_store() -> Self {

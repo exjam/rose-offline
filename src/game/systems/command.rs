@@ -10,7 +10,7 @@ use crate::{
         components::{
             AbilityValues, AmmoIndex, ClientEntity, ClientEntityType, Command, CommandAttack,
             CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
-            CommandPickupDroppedItem, CommandSit, Destination, DroppedItem, Equipment,
+            CommandPickupDroppedItem, CommandSit, CommandStop, Destination, DroppedItem, Equipment,
             EquipmentIndex, GameClient, HealthPoints, Inventory, ItemSlot, MotionData, MoveMode,
             MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target,
         },
@@ -28,13 +28,13 @@ const CHARACTER_MOVE_TO_DISTANCE: f32 = 1000.0;
 const DROPPED_ITEM_MOVE_TO_DISTANCE: f32 = 150.0;
 const DROPPED_ITEM_PICKUP_DISTANCE: f32 = 200.0;
 
-fn send_command_stop(
+fn command_stop(
     commands: &mut Commands,
     command: &mut Command,
     entity: Entity,
     client_entity: &ClientEntity,
     position: &Position,
-    server_messages: &mut ServerMessages,
+    server_messages: Option<&mut ServerMessages>,
 ) {
     // Remove all components associated with other actions
     commands
@@ -42,15 +42,17 @@ fn send_command_stop(
         .remove::<Destination>()
         .remove::<Target>();
 
-    server_messages.send_entity_message(
-        client_entity,
-        ServerMessage::StopMoveEntity(server::StopMoveEntity {
-            entity_id: client_entity.id,
-            x: position.position.x,
-            y: position.position.y,
-            z: position.position.z as u16,
-        }),
-    );
+    if let Some(server_messages) = server_messages {
+        server_messages.send_entity_message(
+            client_entity,
+            ServerMessage::StopMoveEntity(server::StopMoveEntity {
+                entity_id: client_entity.id,
+                x: position.position.x,
+                y: position.position.y,
+                z: position.position.z as u16,
+            }),
+        );
+    }
 
     *command = Command::with_stop();
 }
@@ -191,7 +193,7 @@ pub fn command_system(
                         panic!("Next command should never be set to die, set current command")
                     }
                     CommandData::Sit(_) => {}
-                    CommandData::Stop => {}
+                    CommandData::Stop(_) => {}
                     CommandData::PersonalStore => {}
                     CommandData::PickupDroppedItem(_) => {}
                     CommandData::Move(CommandMove {
@@ -246,7 +248,7 @@ pub fn command_system(
                                 }),
                             );
                         } else {
-                            next_command.command = Some(CommandData::Stop);
+                            *next_command = NextCommand::with_stop(true);
                         }
                     }
                     CommandData::CastSkill(CommandCastSkill {
@@ -288,7 +290,7 @@ pub fn command_system(
                                 ),
                             );
                         } else {
-                            next_command.command = Some(CommandData::Stop);
+                            *next_command = NextCommand::with_stop(true);
                         }
                     }
                     CommandData::CastSkill(CommandCastSkill {
@@ -374,14 +376,18 @@ pub fn command_system(
             }
 
             match next_command.command.as_mut().unwrap() {
-                CommandData::Stop => {
-                    send_command_stop(
+                &mut CommandData::Stop(CommandStop { send_message }) => {
+                    command_stop(
                         &mut commands,
                         &mut command,
                         entity,
                         client_entity,
                         position,
-                        &mut server_messages,
+                        if send_message {
+                            Some(&mut server_messages)
+                        } else {
+                            None
+                        },
                     );
                     *next_command = NextCommand::default();
                 }
@@ -630,13 +636,13 @@ pub fn command_system(
 
                             if cancel_attack {
                                 // Not enough ammo, cancel attack
-                                send_command_stop(
+                                command_stop(
                                     &mut commands,
                                     &mut command,
                                     entity,
                                     client_entity,
                                     position,
-                                    &mut server_messages,
+                                    Some(&mut server_messages),
                                 );
                                 *next_command = NextCommand::default();
                             } else {
@@ -675,13 +681,13 @@ pub fn command_system(
                             entity_commands.insert(Target::new(target_entity));
                         }
                     } else {
-                        send_command_stop(
+                        command_stop(
                             &mut commands,
                             &mut command,
                             entity,
                             client_entity,
                             position,
-                            &mut server_messages,
+                            Some(&mut server_messages),
                         );
                         *next_command = NextCommand::default();
                     }

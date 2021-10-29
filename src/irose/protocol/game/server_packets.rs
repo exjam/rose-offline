@@ -619,7 +619,7 @@ trait PacketWriteCommand {
 impl PacketWriteCommand for PacketWriter {
     fn write_command_id(&mut self, command: &Command) {
         let command_id = match command.command {
-            CommandData::Stop => 0,
+            CommandData::Stop(_) => 0,
             CommandData::Move(_) => 1,
             CommandData::Attack(_) => 2,
             CommandData::Die(_) => 3,
@@ -636,7 +636,7 @@ impl PacketWriteCommand for PacketWriter {
                 skill_target: Some(CommandCastSkillTarget::Position(_)),
                 ..
             }) => 8,
-            // Run away => 9
+            // TODO: Run away => 9
             CommandData::Sit(_) => 10,
         };
         self.write_u16(command_id);
