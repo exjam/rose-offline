@@ -132,17 +132,29 @@ impl InventoryPage {
         &mut self,
         item: StackableItem,
     ) -> Result<(ItemSlot, &Item), StackableItem> {
-        if let Some(index) = self
+        // First try find an existing item slot we can stack with
+        let mut index = self
             .slots
             .iter()
             .enumerate()
             .find(|(_, slot)| {
                 slot.as_ref()
                     .map(|slot_item| slot_item.can_stack_with(&item).is_ok())
-                    .unwrap_or(true)
+                    .unwrap_or(false)
             })
-            .map(|(index, _)| index)
-        {
+            .map(|(index, _)| index);
+
+        if index.is_none() {
+            // Else, find the first empty slot
+            index = self
+                .slots
+                .iter()
+                .enumerate()
+                .find(|(_, slot)| slot.is_none())
+                .map(|(index, _)| index);
+        }
+
+        if let Some(index) = index {
             if self.slots[index].is_none() {
                 self.slots[index] = Some(Item::Stackable(item));
             } else {
