@@ -3,3 +3,10 @@
 Cargo.lock
 
 .vscode
+
+data.idx
+3DDATA.VFS
+BASIC.VFS
+DATA.VFS
+GROUND.VFS
+MAP.VFS

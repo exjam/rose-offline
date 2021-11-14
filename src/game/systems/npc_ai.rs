@@ -24,9 +24,9 @@ use crate::{
         bundles::client_entity_leave_zone,
         components::{
             AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
-            DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
+            DamageSources, SpawnExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
             MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin,
-            StatusEffects, Target, Team,
+            StatusEffects, Target, Team, OwnedExpireTime,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -36,7 +36,8 @@ use crate::{
 };
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
-const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
+const DROPPED_ITEM_SPAWN_EXPIRE_TIME: Duration = Duration::from_secs(120);
+const DROPPED_ITEM_OWNED_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 
 struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n> {
@@ -1199,8 +1200,11 @@ pub fn npc_ai_system(
                                                     position.zone_id,
                                                 ))
                                                 .insert(Owner::new(killer_entity))
-                                                .insert(ExpireTime::new(
-                                                    server_time.now + DROPPED_ITEM_EXPIRE_TIME,
+                                                .insert(SpawnExpireTime::new(
+                                                    server_time.now + DROPPED_ITEM_SPAWN_EXPIRE_TIME,
+                                                ))
+                                                .insert(OwnedExpireTime::new(
+                                                    server_time.now + DROPPED_ITEM_OWNED_EXPIRE_TIME,
                                                 ))
                                                 .insert(
                                                     client_entity_zone

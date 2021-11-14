@@ -12,7 +12,7 @@ use crate::{
             CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
             CommandPickupDroppedItem, CommandSit, CommandStop, Destination, DroppedItem, Equipment,
             EquipmentIndex, GameClient, HealthPoints, Inventory, ItemSlot, MotionData, MoveMode,
-            MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target,
+            MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target, OwnedExpireTime,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
@@ -113,16 +113,19 @@ fn is_valid_pickup_target<'a>(
         &Position,
         &mut Option<DroppedItem>,
         Option<&Owner>,
+        Option<&OwnedExpireTime>
     )>,
 ) -> Option<(
     &'a ClientEntity,
     &'a Position,
     Mut<'a, Option<DroppedItem>>,
     Option<&'a Owner>,
+    Option<&'a OwnedExpireTime>
 )> {
-    if let Ok((target_client_entity, target_position, target_dropped_item, target_owner)) =
+    if let Ok((target_client_entity, target_position, target_dropped_item, target_owner, target_expire_time)) =
         query.get_mut(target_entity)
     {
+
         // Check distance to target
         let distance = (position.position.xy() - target_position.position.xy()).magnitude();
         if position.zone_id == target_position.zone_id && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
@@ -131,6 +134,7 @@ fn is_valid_pickup_target<'a>(
                 target_position,
                 target_dropped_item,
                 target_owner,
+                target_expire_time
             ));
         }
     }
@@ -162,6 +166,7 @@ pub fn command_system(
         &Position,
         &mut Option<DroppedItem>,
         Option<&Owner>,
+        Option<&OwnedExpireTime>
     )>,
     server_time: Res<ServerTime>,
     mut client_entity_list: ResMut<ClientEntityList>,
@@ -468,13 +473,21 @@ pub fn command_system(
                             target_position,
                             mut target_dropped_item,
                             target_owner,
+                            target_expire_time,
                         )) = is_valid_pickup_target(
                             position,
                             target_entity,
                             &mut pickup_dropped_item_target_query,
                         ) {
-                            let result = if !target_owner
-                                .map_or(true, |owner| owner.entity == entity)
+                            // use log::debug;
+                            // use std::time::Instant;
+                            // debug!("ownder.entity: {:?}", target_owner.map_or("None".to_string(), |owner| owner.entity.id().to_string()));
+                            // debug!("entity: {:?}", entity.id().to_string());
+                            // debug!("server_time.now: {:?}", server_time.now);
+                            // debug!("expire_time.when: {:?}", target_expire_time.map_or(Instant::now(), |expire_time| expire_time.when));
+                            let result =
+                            if !target_owner.map_or(true, |owner| owner.entity == entity) &&
+                                !target_expire_time.map_or(false, |expire_time| server_time.now >= expire_time.when)
                             {
                                 // Not owner
                                 Err(PickupDroppedItemError::NoPermission)

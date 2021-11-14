@@ -3,7 +3,7 @@ use bevy_ecs::prelude::{Query, Res, ResMut};
 use crate::game::{
     components::{
         AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
-        ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, ExpireTime,
+        ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, SpawnExpireTime,
         GameClient, HealthPoints, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
         PersonalStore, Position, StatusEffects, Target, Team,
     },
@@ -39,7 +39,7 @@ pub fn client_entity_visibility_system(
         Option<&Target>,
         Option<&PersonalStore>,
     )>,
-    dropped_item_query: Query<(&Option<DroppedItem>, &Position, &ExpireTime, Option<&Owner>)>,
+    dropped_item_query: Query<(&Option<DroppedItem>, &Position, &SpawnExpireTime, Option<&Owner>)>,
     monsters_query: Query<(
         &Npc,
         &Position,

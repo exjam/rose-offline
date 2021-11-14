@@ -9,7 +9,7 @@ use crate::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
             ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
-            Equipment, ExperiencePoints, ExpireTime, GameClient, HealthPoints, Hotbar, Inventory,
+            Equipment, ExperiencePoints, SpawnExpireTime, GameClient, HealthPoints, Hotbar, Inventory,
             Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
             NpcStandingDirection, ObjectVariables, Owner, PassiveRecoveryTime, Position,
             QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects,
@@ -24,7 +24,7 @@ use crate::{
 pub const EVENT_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const NPC_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const MONSTER_OBJECT_VARIABLES_COUNT: usize = 5;
-pub const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
+pub const DROPPED_ITEM_SPAWN_EXPIRE_TIME: Duration = Duration::from_secs(2 * 60);
 pub const DROP_ITEM_RADIUS: i32 = 200;
 
 #[derive(Bundle)]
@@ -194,8 +194,8 @@ impl MonsterBundle {
 pub struct DroppedItemBundle {
     pub item: Option<DroppedItem>,
     pub position: Position,
-    pub owner: Owner,
-    pub expire_time: ExpireTime,
+    pub owner: Option<Owner>,
+    pub spawn_expire_time: SpawnExpireTime,
 }
 
 impl DroppedItemBundle {
@@ -204,7 +204,7 @@ impl DroppedItemBundle {
         client_entity_list: &mut ClientEntityList,
         item: DroppedItem,
         position: &Position,
-        owner_entity: Entity,
+        owner_entity: Option<Entity>,
         server_time: &ServerTime,
     ) -> Option<Entity> {
         let mut rng = rand::thread_rng();
@@ -219,12 +219,14 @@ impl DroppedItemBundle {
 
         let mut entity_commands = commands.spawn();
         let entity = entity_commands.id();
-
         entity_commands.insert_bundle(DroppedItemBundle {
             item: Some(item),
             position: drop_position.clone(),
-            owner: Owner::new(owner_entity),
-            expire_time: ExpireTime::new(server_time.now + DROPPED_ITEM_EXPIRE_TIME),
+            owner: match owner_entity {
+                Some(ent) => Some(Owner::new(ent)),
+                None => None
+            },
+            spawn_expire_time: SpawnExpireTime::new(server_time.now + DROPPED_ITEM_SPAWN_EXPIRE_TIME),
         });
 
         client_entity_join_zone(

@@ -2,7 +2,7 @@ use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use crate::game::{
     bundles::client_entity_leave_zone,
-    components::{ClientEntity, Command, ExpireTime, Position},
+    components::{ClientEntity, Command, SpawnExpireTime, Position},
     resources::{ClientEntityList, ServerTime},
 };
 
@@ -10,7 +10,7 @@ pub fn expire_time_system(
     mut commands: Commands,
     query: Query<(
         Entity,
-        &ExpireTime,
+        &SpawnExpireTime,
         Option<&Position>,
         Option<&ClientEntity>,
         Option<&Command>,
