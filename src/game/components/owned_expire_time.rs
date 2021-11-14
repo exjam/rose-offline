@@ -1,6 +1,5 @@
 use std::time::Instant;
 
-#[derive(Clone)]
 pub struct OwnedExpireTime {
     pub when: Instant,
 }

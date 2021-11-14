@@ -219,6 +219,7 @@ impl DroppedItemBundle {
 
         let mut entity_commands = commands.spawn();
         let entity = entity_commands.id();
+
         entity_commands.insert_bundle(DroppedItemBundle {
             item: Some(item),
             position: drop_position.clone(),

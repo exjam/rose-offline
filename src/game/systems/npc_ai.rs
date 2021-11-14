@@ -36,7 +36,7 @@ use crate::{
 };
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
-const DROPPED_ITEM_SPAWN_EXPIRE_TIME: Duration = Duration::from_secs(120);
+const DROPPED_ITEM_SPAWN_EXPIRE_TIME: Duration = Duration::from_secs(2 * 60);
 const DROPPED_ITEM_OWNED_EXPIRE_TIME: Duration = Duration::from_secs(60);
 const DROP_ITEM_RADIUS: i32 = 200;
 

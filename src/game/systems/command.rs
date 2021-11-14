@@ -479,12 +479,6 @@ pub fn command_system(
                             target_entity,
                             &mut pickup_dropped_item_target_query,
                         ) {
-                            // use log::debug;
-                            // use std::time::Instant;
-                            // debug!("ownder.entity: {:?}", target_owner.map_or("None".to_string(), |owner| owner.entity.id().to_string()));
-                            // debug!("entity: {:?}", entity.id().to_string());
-                            // debug!("server_time.now: {:?}", server_time.now);
-                            // debug!("expire_time.when: {:?}", target_expire_time.map_or(Instant::now(), |expire_time| expire_time.when));
                             let result =
                             if !target_owner.map_or(true, |owner| owner.entity == entity) &&
                                 !target_expire_time.map_or(false, |expire_time| server_time.now >= expire_time.when)

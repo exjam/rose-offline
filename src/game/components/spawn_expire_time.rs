@@ -1,4 +1,5 @@
 use std::time::Instant;
+
 pub struct SpawnExpireTime {
     pub when: Instant,
 }
