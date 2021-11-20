@@ -106,7 +106,9 @@ pub fn bot_ai_system(
                                         nearby_item_query.get(nearby_entity)
                                     {
                                         // Pick up any valid nearby dropped items
-                                        if dropped_item_owner.map_or(true, |owner| owner.entity == entity) {
+                                        if dropped_item_owner
+                                            .map_or(true, |owner| owner.entity == entity)
+                                        {
                                             let has_space = match dropped_item {
                                                 DroppedItem::Item(item) => inventory
                                                     .has_empty_slot(
