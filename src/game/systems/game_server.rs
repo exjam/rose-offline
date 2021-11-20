@@ -309,11 +309,8 @@ fn equip_from_inventory(
             equipment_index,
             EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring
         ),
-        ItemType::Weapon => matches!(
-            equipment_index,
-            EquipmentIndex::WeaponLeft | EquipmentIndex::WeaponRight
-        ),
-        ItemType::SubWeapon => matches!(equipment_index, EquipmentIndex::WeaponRight),
+        ItemType::Weapon => matches!(equipment_index, EquipmentIndex::WeaponRight),
+        ItemType::SubWeapon => matches!(equipment_index, EquipmentIndex::WeaponLeft),
         _ => false,
     };
     if !correct_equipment_index {
