@@ -23,6 +23,7 @@ mod npc_database;
 mod quest_database;
 mod skill_database;
 mod status_effect_database;
+mod warp_gate_database;
 mod zone_database;
 
 use ability_values::get_ability_value_calculator;
@@ -36,6 +37,7 @@ use num_traits::FromPrimitive;
 use quest_database::get_quest_database;
 use skill_database::get_skill_database;
 use status_effect_database::get_status_effect_database;
+use warp_gate_database::get_warp_gate_database;
 use zone_database::get_zone_database;
 
 pub fn get_game_data() -> GameData {
@@ -75,6 +77,9 @@ pub fn get_game_data() -> GameData {
         skills: skill_database,
         status_effects: Arc::new(
             get_status_effect_database(&vfs_index).expect("Failed to load status effect database"),
+        ),
+        warp_gates: Arc::new(
+            get_warp_gate_database(&vfs_index).expect("Failed to load warp gate database"),
         ),
         zones: zone_database,
     }

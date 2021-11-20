@@ -75,6 +75,7 @@ mod npc_database;
 mod quest_database;
 mod skill_database;
 mod status_effect_database;
+mod warp_gate_database;
 mod world;
 mod zone_database;
 
@@ -107,6 +108,7 @@ pub use status_effect_database::{
     StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
     StatusEffectType,
 };
+pub use warp_gate_database::{WarpGateData, WarpGateDatabase, WarpGateId};
 pub use world::{
     WorldTicks, WORLD_DAYS_PER_MONTH, WORLD_MONTH_PER_YEAR, WORLD_TICKS_PER_DAY,
     WORLD_TICKS_PER_MONTH, WORLD_TICKS_PER_YEAR, WORLD_TICK_DURATION,
