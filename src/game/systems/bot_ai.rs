@@ -27,7 +27,7 @@ pub fn bot_ai_system(
         &Team,
     )>,
     owner_query: Query<(&Position, Option<&Destination>)>,
-    nearby_item_query: Query<(&Option<DroppedItem>, &Owner)>,
+    nearby_item_query: Query<(&Option<DroppedItem>, Option<&Owner>)>,
     nearby_enemy_query: Query<(Option<&Npc>, &Team)>,
     client_entity_list: Res<ClientEntityList>,
     game_data: Res<GameData>,
@@ -105,8 +105,8 @@ pub fn bot_ai_system(
                                     if let Ok((Some(dropped_item), dropped_item_owner)) =
                                         nearby_item_query.get(nearby_entity)
                                     {
-                                        // Find any nearby dropped items that belong to us and that we have space to pick up
-                                        if dropped_item_owner.entity == entity {
+                                        // Pick up any valid nearby dropped items
+                                        if dropped_item_owner.map_or(true, |owner| owner.entity == entity) {
                                             let has_space = match dropped_item {
                                                 DroppedItem::Item(item) => inventory
                                                     .has_empty_slot(

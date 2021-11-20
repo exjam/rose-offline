@@ -194,7 +194,6 @@ impl MonsterBundle {
 pub struct DroppedItemBundle {
     pub item: Option<DroppedItem>,
     pub position: Position,
-    pub owner: Owner,
     pub expire_time: ExpireTime,
 }
 
@@ -204,7 +203,7 @@ impl DroppedItemBundle {
         client_entity_list: &mut ClientEntityList,
         item: DroppedItem,
         position: &Position,
-        owner_entity: Entity,
+        owner_entity: Option<Entity>,
         server_time: &ServerTime,
     ) -> Option<Entity> {
         let mut rng = rand::thread_rng();
@@ -223,9 +222,12 @@ impl DroppedItemBundle {
         entity_commands.insert_bundle(DroppedItemBundle {
             item: Some(item),
             position: drop_position.clone(),
-            owner: Owner::new(owner_entity),
             expire_time: ExpireTime::new(server_time.now + DROPPED_ITEM_EXPIRE_TIME),
         });
+
+        if let Some(owner_entity) = owner_entity {
+            entity_commands.insert(Owner::new(owner_entity));
+        }
 
         client_entity_join_zone(
             commands,
