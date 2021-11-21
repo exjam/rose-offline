@@ -346,6 +346,12 @@ impl GameClient {
                     .client_message_tx
                     .send(ClientMessage::UseEmote(packet.motion_id, packet.is_stop))?;
             }
+            Some(ClientPackets::WarpGateRequest) => {
+                let packet = PacketClientWarpGateRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::WarpGateRequest(packet.warp_gate_id))?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,

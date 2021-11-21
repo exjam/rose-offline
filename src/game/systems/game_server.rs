@@ -903,6 +903,25 @@ pub fn game_server_main_system(
                             }),
                         );
                     }
+                    ClientMessage::WarpGateRequest(warp_gate_id) => {
+                        if let Some(warp_gate) = game_data.warp_gates.get_warp_gate(warp_gate_id) {
+                            if let Some(zone) = game_data.zones.get_zone(warp_gate.target_zone) {
+                                if let Some(event_position) =
+                                    zone.event_positions.get(&warp_gate.target_event_object)
+                                {
+                                    client_entity_teleport_zone(
+                                        &mut commands,
+                                        &mut client_entity_list,
+                                        entity,
+                                        client_entity,
+                                        position,
+                                        Position::new(*event_position, warp_gate.target_zone),
+                                        Some(client),
+                                    );
+                                }
+                            }
+                        }
+                    }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
             }

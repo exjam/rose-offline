@@ -281,6 +281,11 @@ fn load_zone(
         num_sectors_y,
         start_position,
         revive_positions,
+        event_positions: zon_file
+            .event_positions
+            .into_iter()
+            .map(|(name, position)| (name, position.xzy() + objects_offset))
+            .collect(),
         day_cycle: data
             .get_zone_day_cycle_time(id)
             .unwrap_or(WORLD_TICKS_PER_DAY as u32),

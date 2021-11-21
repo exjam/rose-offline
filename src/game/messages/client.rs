@@ -2,7 +2,9 @@ use nalgebra::Point2;
 use tokio::sync::oneshot;
 
 use crate::{
-    data::{character::CharacterStorage, item::Item, MotionId, QuestTriggerHash, WorldTicks},
+    data::{
+        character::CharacterStorage, item::Item, MotionId, QuestTriggerHash, WarpGateId, WorldTicks,
+    },
     game::components::{
         AmmoIndex, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId,
         Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
@@ -305,4 +307,5 @@ pub enum ClientMessage {
     SitToggle,
     DriveToggle,
     UseEmote(MotionId, bool),
+    WarpGateRequest(WarpGateId),
 }

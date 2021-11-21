@@ -52,6 +52,7 @@ pub struct ZoneData {
     pub num_sectors_y: u32,
     pub start_position: Point3<f32>,
     pub revive_positions: Vec<Point3<f32>>,
+    pub event_positions: HashMap<String, Point3<f32>>,
     pub day_cycle: u32,
     pub morning_time: u32,
     pub day_time: u32,

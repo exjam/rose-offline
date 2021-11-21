@@ -8,7 +8,7 @@ use nalgebra::Point2;
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::{item::Item, MotionId},
+    data::{item::Item, MotionId, WarpGateId},
     game::{
         components::{
             AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,
@@ -41,6 +41,7 @@ pub enum ClientPackets {
     DropItemFromInventory = 0x7a4,
     ChangeEquipment = 0x7a5,
     PickupDroppedItem = 0x7a7,
+    WarpGateRequest = 0x7a8,
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
     ChangeAmmo = 0x7ab,
@@ -636,5 +637,24 @@ impl TryFrom<&Packet> for PacketClientEmote {
         let is_stop = reader.read_u16()? != 0;
 
         Ok(PacketClientEmote { motion_id, is_stop })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientWarpGateRequest {
+    pub warp_gate_id: WarpGateId,
+}
+
+impl TryFrom<&Packet> for PacketClientWarpGateRequest {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::WarpGateRequest as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let warp_gate_id = WarpGateId::new(reader.read_u16()?);
+        Ok(PacketClientWarpGateRequest { warp_gate_id })
     }
 }
