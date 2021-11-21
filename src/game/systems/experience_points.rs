@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Entity, EventReader, Query, Res, ResMut};
+use bevy_ecs::prelude::{Entity, EventReader, EventWriter, Query, Res, ResMut};
 
 use crate::game::{
     components::{
@@ -6,7 +6,7 @@ use crate::game::{
         HealthPoints, Level, ManaPoints, SkillList, SkillPoints, Stamina, StatPoints,
         StatusEffects, MAX_STAMINA,
     },
-    events::RewardXpEvent,
+    events::{QuestTriggerEvent, RewardXpEvent},
     messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
     resources::ServerMessages,
     GameData,
@@ -34,6 +34,7 @@ pub fn experience_points_system(
     )>,
     source_entity_query: Query<&ClientEntity>,
     game_data: Res<GameData>,
+    mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut reward_xp_events: EventReader<RewardXpEvent>,
     mut server_messages: ResMut<ServerMessages>,
 ) {
@@ -85,7 +86,13 @@ pub fn experience_points_system(
             }
 
             if level.level != level_before {
-                // TODO: Call level up quest trigger
+                // Call every level up quest trigger
+                for trigger_level in (level_before + 1)..=level.level {
+                    quest_trigger_events.send(QuestTriggerEvent {
+                        trigger_entity: entity,
+                        trigger_hash: format!("levelup_{}", trigger_level).as_str().into(),
+                    });
+                }
 
                 // Update ability values and restore hp / mp
                 if let Ok((
