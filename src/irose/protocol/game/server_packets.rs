@@ -50,6 +50,7 @@ pub enum ServerPackets {
     RunNpcDeathTrigger = 0x731,
     JoinZone = 0x753,
     UseEmote = 0x781,
+    MoveToggle = 0x782,
     LocalChat = 0x783,
     Whisper = 0x784,
     ShoutChat = 0x785,
@@ -87,7 +88,6 @@ pub enum ServerPackets {
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
-    MoveToggle = 0x782,
 }
 
 #[allow(dead_code)]

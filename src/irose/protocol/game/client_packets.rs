@@ -32,6 +32,7 @@ pub enum ClientPackets {
     JoinZone = 0x753,
     ReviveRequest = 0x755,
     Emote = 0x781,
+    MoveToggle = 0x782,
     Chat = 0x783,
     StopMove = 0x796,
     Attack = 0x798,
@@ -50,7 +51,6 @@ pub enum ClientPackets {
     CastSkillTargetPosition = 0x7b4,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
-    MoveToggle = 0x782,
 }
 
 #[derive(Debug)]
