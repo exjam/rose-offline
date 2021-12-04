@@ -17,4 +17,5 @@ pub struct CharacterInfo {
     pub fame_g: u16,
     pub revive_zone_id: ZoneId,
     pub revive_position: Point3<f32>,
+    pub unique_id: u32,
 }

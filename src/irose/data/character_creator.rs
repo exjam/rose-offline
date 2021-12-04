@@ -7,7 +7,7 @@ use crate::{
         formats::StbFile,
         formats::{FileReader, VfsIndex},
         item::{EquipmentItem, Item},
-        ItemReference, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
+        ItemReference, SkillDatabase, SkillId, ZoneDatabase, ZoneId, QuestTriggerHash,
     },
     game::components::{
         BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar, Inventory,
@@ -132,9 +132,13 @@ impl CharacterCreator for CharacterCreatorData {
             .get(gender as usize)
             .ok_or(CharacterCreatorError::InvalidGender)?;
 
+        // TODO: For now we just make a hash of name to use as unique id
+        let unique_id = QuestTriggerHash::from(name.as_str()).hash;
+
         let mut character = CharacterStorage {
             info: CharacterInfo {
                 name,
+                unique_id,
                 gender,
                 birth_stone,
                 job: 0,

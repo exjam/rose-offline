@@ -234,7 +234,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
             }
         }
 
-        writer.write_u32(123); // server wide unique id
+        writer.write_u32(character_info.unique_id);
         writer.write_null_terminated_utf8(&character_info.name);
         writer.into()
     }
