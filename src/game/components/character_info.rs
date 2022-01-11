@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::data::ZoneId;
 
+pub type CharacterUniqueId = u32;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CharacterInfo {
     pub name: String,
@@ -17,5 +19,5 @@ pub struct CharacterInfo {
     pub fame_g: u16,
     pub revive_zone_id: ZoneId,
     pub revive_position: Point3<f32>,
-    pub unique_id: u32,
+    pub unique_id: CharacterUniqueId,
 }

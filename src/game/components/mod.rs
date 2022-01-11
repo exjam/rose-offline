@@ -53,7 +53,7 @@ pub use account::*;
 pub use basic_stats::*;
 pub use bot_ai::{BotAi, BotAiState, BOT_IDLE_CHECK_DURATION};
 pub use character_delete_time::CharacterDeleteTime;
-pub use character_info::*;
+pub use character_info::{CharacterInfo, CharacterUniqueId};
 pub use character_list::CharacterList;
 pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_visibility::ClientEntityVisibility;
