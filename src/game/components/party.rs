@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 
 use crate::game::components::CharacterUniqueId;
 
@@ -9,6 +9,7 @@ pub enum PartyMember {
     Offline(CharacterUniqueId, String),
 }
 
+#[derive(Component)]
 pub struct Party {
     pub owner: Entity,
     pub members: ArrayVec<PartyMember, 5>,

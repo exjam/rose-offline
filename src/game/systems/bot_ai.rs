@@ -4,7 +4,7 @@ use rand::seq::SliceRandom;
 use crate::game::{
     components::{
         BotAi, BotAiState, Command, CommandData, Destination, DroppedItem, Inventory,
-        InventoryPageType, ItemSlot, NextCommand, Npc, Owner, Position, Team,
+        InventoryPageType, ItemDrop, ItemSlot, NextCommand, Npc, Owner, Position, Team,
         BOT_IDLE_CHECK_DURATION,
     },
     events::UseItemEvent,
@@ -27,7 +27,7 @@ pub fn bot_ai_system(
         &Team,
     )>,
     owner_query: Query<(&Position, Option<&Destination>)>,
-    nearby_item_query: Query<(&Option<DroppedItem>, Option<&Owner>)>,
+    nearby_item_query: Query<(&ItemDrop, Option<&Owner>)>,
     nearby_enemy_query: Query<(Option<&Npc>, &Team)>,
     client_entity_list: Res<ClientEntityList>,
     game_data: Res<GameData>,
@@ -102,24 +102,27 @@ pub fn bot_ai_system(
                                         BOT_SEARCH_ENTITY_DISTANCE,
                                     )
                                 {
-                                    if let Ok((Some(dropped_item), dropped_item_owner)) =
+                                    if let Ok((item_drop, item_drop_owner)) =
                                         nearby_item_query.get(nearby_entity)
                                     {
-                                        // Pick up any valid nearby dropped items
-                                        if dropped_item_owner
-                                            .map_or(true, |owner| owner.entity == entity)
-                                        {
-                                            let has_space = match dropped_item {
-                                                DroppedItem::Item(item) => inventory
-                                                    .has_empty_slot(
-                                                        InventoryPageType::from_item_type(
-                                                            item.get_item_type(),
+                                        if let Some(dropped_item) = item_drop.item.as_ref() {
+                                            // Pick up any valid nearby dropped items
+                                            if item_drop_owner
+                                                .map_or(true, |owner| owner.entity == entity)
+                                            {
+                                                let has_space = match dropped_item {
+                                                    DroppedItem::Item(item) => inventory
+                                                        .has_empty_slot(
+                                                            InventoryPageType::from_item_type(
+                                                                item.get_item_type(),
+                                                            ),
                                                         ),
-                                                    ),
-                                                DroppedItem::Money(_) => true,
-                                            };
-                                            if has_space {
-                                                nearby_items.push((nearby_entity, nearby_position));
+                                                    DroppedItem::Money(_) => true,
+                                                };
+                                                if has_space {
+                                                    nearby_items
+                                                        .push((nearby_entity, nearby_position));
+                                                }
                                             }
                                         }
                                     } else if let Ok((nearby_npc, nearby_team)) =
@@ -163,7 +166,7 @@ pub fn bot_ai_system(
                         BotAiState::PickupItem(target_item) => {
                             commands
                                 .entity(entity)
-                                .insert(NextCommand::with_pickup_dropped_item(target_item));
+                                .insert(NextCommand::with_pickup_item_drop(target_item));
                             bot_ai.state = BotAiState::Farm;
                         }
                     }

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 use nalgebra::{Point2, Point3};
 
 use crate::{
@@ -32,7 +32,7 @@ pub struct CommandAttack {
 }
 
 #[derive(Clone)]
-pub struct CommandPickupDroppedItem {
+pub struct CommandPickupItemDrop {
     pub target: Entity,
 }
 
@@ -62,7 +62,7 @@ pub enum CommandData {
     Stop(CommandStop),
     Move(CommandMove),
     Attack(CommandAttack),
-    PickupDroppedItem(CommandPickupDroppedItem),
+    PickupItemDrop(CommandPickupItemDrop),
     PersonalStore,
     CastSkill(CommandCastSkill),
     Sit(CommandSit),
@@ -74,7 +74,7 @@ impl CommandData {
     }
 }
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub struct Command {
     // Current command that is executing
     pub command: CommandData,
@@ -86,6 +86,7 @@ pub struct Command {
     pub required_duration: Option<Duration>,
 }
 
+#[derive(Component)]
 pub struct NextCommand {
     pub command: Option<CommandData>,
     pub has_sent_server_message: bool,
@@ -121,9 +122,9 @@ impl NextCommand {
         }
     }
 
-    pub fn with_pickup_dropped_item(target: Entity) -> Self {
+    pub fn with_pickup_item_drop(target: Entity) -> Self {
         Self {
-            command: Some(CommandData::PickupDroppedItem(CommandPickupDroppedItem {
+            command: Some(CommandData::PickupItemDrop(CommandPickupItemDrop {
                 target,
             })),
             has_sent_server_message: false,
@@ -268,9 +269,9 @@ impl Command {
         )
     }
 
-    pub fn with_pickup_dropped_item(target: Entity, duration: Duration) -> Self {
+    pub fn with_pickup_item_drop(target: Entity, duration: Duration) -> Self {
         Self::new(
-            CommandData::PickupDroppedItem(CommandPickupDroppedItem { target }),
+            CommandData::PickupItemDrop(CommandPickupItemDrop { target }),
             Some(duration),
         )
     }

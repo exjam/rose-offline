@@ -1,9 +1,10 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 
 use crate::data::Damage;
 
+#[derive(Component)]
 pub struct NpcAi {
     pub ai_index: usize,
     pub idle_duration: Duration,

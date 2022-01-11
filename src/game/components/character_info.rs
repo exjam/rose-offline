@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::Component;
 use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 
@@ -5,7 +6,7 @@ use crate::data::ZoneId;
 
 pub type CharacterUniqueId = u32;
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Deserialize, Serialize)]
 pub struct CharacterInfo {
     pub name: String,
     pub gender: u8,

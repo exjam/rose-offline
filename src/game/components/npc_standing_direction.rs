@@ -1,4 +1,6 @@
-#[derive(Clone)]
+use bevy_ecs::prelude::Component;
+
+#[derive(Component, Clone)]
 pub struct NpcStandingDirection {
     pub direction: f32,
 }

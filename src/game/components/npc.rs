@@ -1,6 +1,8 @@
+use bevy_ecs::prelude::Component;
+
 use crate::data::NpcId;
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub struct Npc {
     pub id: NpcId,
     pub quest_index: u16,

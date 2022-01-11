@@ -3,12 +3,12 @@ use bevy_ecs::prelude::{Query, Res, ResMut};
 use crate::game::{
     components::{
         AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
-        ClientEntityVisibility, Command, Destination, DroppedItem, Equipment, ExpireTime,
-        GameClient, HealthPoints, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
+        ClientEntityVisibility, Command, Destination, Equipment, ExpireTime, GameClient,
+        HealthPoints, ItemDrop, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
         PersonalStore, Position, StatusEffects, Target, Team,
     },
     messages::server::{
-        RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityDroppedItem,
+        RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityItemDrop,
         SpawnEntityMonster, SpawnEntityNpc,
     },
     resources::{ClientEntityList, ServerTime},
@@ -39,7 +39,7 @@ pub fn client_entity_visibility_system(
         Option<&Target>,
         Option<&PersonalStore>,
     )>,
-    dropped_item_query: Query<(&Option<DroppedItem>, &Position, &ExpireTime, Option<&Owner>)>,
+    item_drop_query: Query<(&ItemDrop, &Position, &ExpireTime, Option<&Owner>)>,
     monsters_query: Query<(
         &Npc,
         &Position,
@@ -154,35 +154,37 @@ pub fn client_entity_visibility_system(
                                         .ok();
                                 }
                             }
-                            ClientEntityType::DroppedItem => {
+                            ClientEntityType::ItemDrop => {
                                 if let Ok((
-                                    Some(spawn_item),
+                                    spawn_item_drop,
                                     spawn_position,
                                     spawn_expire_time,
                                     spawn_owner,
-                                )) = dropped_item_query.get(*spawn_entity)
+                                )) = item_drop_query.get(*spawn_entity)
                                 {
-                                    let owner_entity_id = spawn_owner
-                                        .and_then(|spawn_owner| {
-                                            entity_id_query.get(spawn_owner.entity).ok()
-                                        })
-                                        .map(|spawn_owner_client_entity| {
-                                            spawn_owner_client_entity.id
-                                        });
+                                    if let Some(spawn_dropped_item) = spawn_item_drop.item.clone() {
+                                        let owner_entity_id = spawn_owner
+                                            .and_then(|spawn_owner| {
+                                                entity_id_query.get(spawn_owner.entity).ok()
+                                            })
+                                            .map(|spawn_owner_client_entity| {
+                                                spawn_owner_client_entity.id
+                                            });
 
-                                    visibility_game_client
-                                        .server_message_tx
-                                        .send(ServerMessage::SpawnEntityDroppedItem(
-                                            SpawnEntityDroppedItem {
-                                                entity_id: spawn_client_entity.id,
-                                                dropped_item: spawn_item.clone(),
-                                                position: spawn_position.clone(),
-                                                remaining_time: spawn_expire_time.when
-                                                    - server_time.now,
-                                                owner_entity_id,
-                                            },
-                                        ))
-                                        .ok();
+                                        visibility_game_client
+                                            .server_message_tx
+                                            .send(ServerMessage::SpawnEntityItemDrop(
+                                                SpawnEntityItemDrop {
+                                                    entity_id: spawn_client_entity.id,
+                                                    dropped_item: spawn_dropped_item,
+                                                    position: spawn_position.clone(),
+                                                    remaining_time: spawn_expire_time.when
+                                                        - server_time.now,
+                                                    owner_entity_id,
+                                                },
+                                            ))
+                                            .ok();
+                                    }
                                 }
                             }
                             ClientEntityType::Monster => {

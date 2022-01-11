@@ -10,7 +10,7 @@ use crate::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
             ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
             Equipment, ExperiencePoints, ExpireTime, GameClient, HealthPoints, Hotbar, Inventory,
-            Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
+            ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
             NpcStandingDirection, ObjectVariables, Owner, PartyMembership, PassiveRecoveryTime,
             Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
             StatusEffects, Team, UnionMembership,
@@ -192,13 +192,13 @@ impl MonsterBundle {
 }
 
 #[derive(Bundle)]
-pub struct DroppedItemBundle {
-    pub item: Option<DroppedItem>,
+pub struct ItemDropBundle {
+    pub drop: ItemDrop,
     pub position: Position,
     pub expire_time: ExpireTime,
 }
 
-impl DroppedItemBundle {
+impl ItemDropBundle {
     pub fn spawn(
         commands: &mut Commands,
         client_entity_list: &mut ClientEntityList,
@@ -220,8 +220,8 @@ impl DroppedItemBundle {
         let mut entity_commands = commands.spawn();
         let entity = entity_commands.id();
 
-        entity_commands.insert_bundle(DroppedItemBundle {
-            item: Some(item),
+        entity_commands.insert_bundle(ItemDropBundle {
+            drop: ItemDrop::with_dropped_item(item),
             position: drop_position.clone(),
             expire_time: ExpireTime::new(server_time.now + DROPPED_ITEM_EXPIRE_TIME),
         });
@@ -234,7 +234,7 @@ impl DroppedItemBundle {
             commands,
             client_entity_list,
             entity,
-            ClientEntityType::DroppedItem,
+            ClientEntityType::ItemDrop,
             &drop_position,
         )
         .expect("Failed to drop item into zone");

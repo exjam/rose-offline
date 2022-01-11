@@ -1,6 +1,7 @@
+use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct HealthPoints {
     pub hp: u32,
 }

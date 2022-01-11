@@ -1,14 +1,18 @@
 use std::{
+    marker::PhantomData,
     num::NonZeroU8,
     ops::{Range, RangeInclusive},
     time::Duration,
 };
 
-use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
+use bevy_ecs::{
+    prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
+    system::SystemParam,
+};
 use chrono::{Datelike, Timelike};
 use log::{trace, warn};
 use nalgebra::{Point3, Vector3};
-use rand::{prelude::ThreadRng, Rng};
+use rand::Rng;
 
 use crate::{
     data::{
@@ -21,12 +25,11 @@ use crate::{
         Damage, NpcId,
     },
     game::{
-        bundles::client_entity_leave_zone,
+        bundles::{client_entity_leave_zone, ItemDropBundle},
         components::{
-            AbilityValues, ClientEntity, ClientEntityType, Command, CommandData, CommandDie,
-            DamageSources, ExpireTime, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-            MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin,
-            StatusEffects, Target, Team,
+            AbilityValues, ClientEntity, Command, CommandData, CommandDie, DamageSources,
+            GameClient, HealthPoints, Level, MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi,
+            ObjectVariables, Owner, Position, SpawnOrigin, StatusEffects, Target, Team,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -36,42 +39,48 @@ use crate::{
 };
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
-const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
-const DROP_ITEM_RADIUS: i32 = 200;
 
-struct AiWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n> {
-    commands: &'a mut Commands<'b>,
-    client_entity_list: &'a mut ClientEntityList,
-    game_data: &'c GameData,
-    server_time: &'c ServerTime,
-    world_time: &'c WorldTime,
-    zone_list: &'c ZoneList,
+#[derive(SystemParam)]
+pub struct AiSystemParameters<'w, 's> {
+    commands: Commands<'w, 's>,
+    client_entity_list: ResMut<'w, ClientEntityList>,
     target_query: Query<
-        'd,
+        'w,
+        's,
         (
-            &'e Level,
-            &'f Team,
-            &'g AbilityValues,
-            &'h StatusEffects,
-            &'i HealthPoints,
+            &'static Level,
+            &'static Team,
+            &'static AbilityValues,
+            &'static StatusEffects,
+            &'static HealthPoints,
         ),
     >,
-    object_variable_query: Query<'j, &'k mut ObjectVariables>,
-    owner_query: Query<'l, (&'m Position, Option<&'n Target>)>,
-    rng: ThreadRng,
+    object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
+    owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
 }
 
-struct AiSourceData<'a> {
+#[derive(SystemParam)]
+pub struct AiSystemResources<'w, 's> {
+    game_data: Res<'w, GameData>,
+    server_time: Res<'w, ServerTime>,
+    world_time: Res<'w, WorldTime>,
+    zone_list: Res<'w, ZoneList>,
+
+    #[system_param(ignore)]
+    _secret: PhantomData<&'s ()>,
+}
+
+struct AiSourceData<'s> {
     entity: Entity,
-    ability_values: &'a AbilityValues,
-    health_points: &'a HealthPoints,
-    level: &'a Level,
+    ability_values: &'s AbilityValues,
+    health_points: &'s HealthPoints,
+    level: &'s Level,
     owner: Option<Entity>,
-    position: &'a Position,
-    spawn_origin: Option<&'a SpawnOrigin>,
-    status_effects: &'a StatusEffects,
+    position: &'s Position,
+    spawn_origin: Option<&'s SpawnOrigin>,
+    status_effects: &'s StatusEffects,
     target: Option<Entity>,
-    team: &'a Team,
+    team: &'s Team,
 }
 
 struct AiAttackerData<'a> {
@@ -85,9 +94,9 @@ struct AiAttackerData<'a> {
 }
 
 #[allow(dead_code)]
-struct AiParameters<'a, 'b> {
-    source: &'a AiSourceData<'b>,
-    attacker: Option<&'a AiAttackerData<'b>>,
+struct AiParameters<'a> {
+    source: &'a AiSourceData<'a>,
+    attacker: Option<&'a AiAttackerData<'a>>,
     find_char: Option<(Entity, Point3<f32>)>,
     near_char: Option<(Entity, Point3<f32>)>,
     damage_received: Option<Damage>,
@@ -111,7 +120,7 @@ fn compare_aip_value(operator: AipOperatorType, value1: i32, value2: i32) -> boo
 }
 
 fn ai_condition_count_nearby_entities(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
     distance: i32,
     is_allied: bool,
@@ -123,7 +132,7 @@ fn ai_condition_count_nearby_entities(
     let mut near_char_distance = None;
     let mut find_count = 0;
 
-    let zone_entities = ai_world
+    let zone_entities = ai_system_parameters
         .client_entity_list
         .get_zone(ai_parameters.source.position.zone_id)
         .ok_or(AiConditionResult::Failed)?;
@@ -138,7 +147,7 @@ fn ai_condition_count_nearby_entities(
 
         // Check level and team requirements
         let meets_requirements =
-            ai_world
+            ai_system_parameters
                 .target_query
                 .get(entity)
                 .map_or(false, |(level, team, ..)| {
@@ -200,7 +209,7 @@ fn ai_condition_damage(
 }
 
 fn ai_condition_distance(
-    ai_world: &AiWorld,
+    ai_system_parameters: &AiSystemParameters,
     ai_parameters: &mut AiParameters,
     origin: AipDistanceOrigin,
     operator: AipOperatorType,
@@ -214,12 +223,12 @@ fn ai_condition_distance(
         AipDistanceOrigin::Owner => ai_parameters
             .source
             .owner
-            .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+            .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
             .map(|(position, _)| position.position.xy()),
         AipDistanceOrigin::Target => ai_parameters
             .source
             .target
-            .and_then(|target_entity| ai_world.owner_query.get(target_entity).ok())
+            .and_then(|target_entity| ai_system_parameters.owner_query.get(target_entity).ok())
             .map(|(position, _)| position.position.xy()),
     }
     .map(|compare_position| {
@@ -244,11 +253,14 @@ fn ai_condition_health_percent(
     compare_aip_value(operator, (100 * current) / max, value)
 }
 
-fn ai_condition_has_no_owner(ai_world: &AiWorld, ai_parameters: &mut AiParameters) -> bool {
+fn ai_condition_has_no_owner(
+    ai_system_parameters: &AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) -> bool {
     if let Some(owner_position) = ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .map(|(position, _)| position.clone())
     {
         owner_position.zone_id == ai_parameters.source.position.zone_id
@@ -293,13 +305,8 @@ fn ai_condition_no_target_and_compare_attacker_ability_value(
     }
 }
 
-fn ai_condition_random(
-    ai_world: &mut AiWorld,
-    operator: AipOperatorType,
-    range: Range<i32>,
-    value: i32,
-) -> bool {
-    compare_aip_value(operator, ai_world.rng.gen_range(range), value)
+fn ai_condition_random(operator: AipOperatorType, range: Range<i32>, value: i32) -> bool {
+    compare_aip_value(operator, rand::thread_rng().gen_range(range), value)
 }
 
 fn ai_condition_source_ability_value(
@@ -321,22 +328,22 @@ fn ai_condition_source_ability_value(
 }
 
 fn ai_condition_select_local_npc(
-    ai_world: &mut AiWorld,
+    ai_system_resources: &AiSystemResources,
     ai_parameters: &mut AiParameters,
     npc_id: AipNpcId,
 ) -> bool {
     let local_npc =
-        NpcId::new(npc_id as u16).and_then(|npc_id| ai_world.zone_list.find_npc(npc_id));
+        NpcId::new(npc_id as u16).and_then(|npc_id| ai_system_resources.zone_list.find_npc(npc_id));
     ai_parameters.selected_local_npc = local_npc;
     local_npc.is_some()
 }
 
 fn ai_condition_month_day_time(
-    ai_world: &mut AiWorld,
+    ai_system_resources: &AiSystemResources,
     month_day: Option<NonZeroU8>,
     day_minutes_range: &RangeInclusive<i32>,
 ) -> bool {
-    let local_time = &ai_world.server_time.local_time;
+    let local_time = &ai_system_resources.server_time.local_time;
 
     if let Some(month_day) = month_day {
         if month_day.get() as u32 != local_time.day() {
@@ -349,11 +356,11 @@ fn ai_condition_month_day_time(
 }
 
 fn ai_condition_week_day_time(
-    ai_world: &mut AiWorld,
+    ai_system_resources: &AiSystemResources,
     week_day: u8,
     day_minutes_range: &RangeInclusive<i32>,
 ) -> bool {
-    let local_time = &ai_world.server_time.local_time;
+    let local_time = &ai_system_resources.server_time.local_time;
 
     if week_day as u32 != local_time.weekday().num_days_from_sunday() {
         return false;
@@ -363,17 +370,20 @@ fn ai_condition_week_day_time(
     day_minutes_range.contains(&local_day_minutes)
 }
 
-fn ai_condition_world_time(ai_world: &mut AiWorld, range: &RangeInclusive<u32>) -> bool {
-    range.contains(&ai_world.world_time.ticks.get_world_time())
+fn ai_condition_world_time(
+    ai_system_resources: &AiSystemResources,
+    range: &RangeInclusive<u32>,
+) -> bool {
+    range.contains(&ai_system_resources.world_time.ticks.get_world_time())
 }
 
 fn ai_condition_zone_time(
-    ai_world: &AiWorld,
+    ai_system_resources: &AiSystemResources,
     ai_parameters: &AiParameters,
     range: &RangeInclusive<u32>,
 ) -> bool {
-    let world_time = ai_world.world_time.ticks.get_world_time();
-    let zone_time = if let Some(zone_data) = ai_world
+    let world_time = ai_system_resources.world_time.ticks.get_world_time();
+    let zone_time = if let Some(zone_data) = ai_system_resources
         .game_data
         .zones
         .get_zone(ai_parameters.source.position.zone_id)
@@ -386,16 +396,16 @@ fn ai_condition_zone_time(
 }
 
 fn ai_condition_is_zone_daytime(
-    ai_world: &AiWorld,
+    ai_system_resources: &AiSystemResources,
     ai_parameters: &AiParameters,
     is_daytime: bool,
 ) -> bool {
-    if let Some(zone_data) = ai_world
+    if let Some(zone_data) = ai_system_resources
         .game_data
         .zones
         .get_zone(ai_parameters.source.position.zone_id)
     {
-        let world_time = ai_world.world_time.ticks.get_world_time();
+        let world_time = ai_system_resources.world_time.ticks.get_world_time();
         let zone_time = world_time % zone_data.day_cycle;
         let zone_day_start = zone_data.day_time / 2;
         let zone_day_end = (zone_data.evening_time + zone_data.night_time) / 2;
@@ -407,7 +417,7 @@ fn ai_condition_is_zone_daytime(
 }
 
 fn ai_condition_variable(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &AiParameters,
     variable_type: AipVariableType,
     variable_id: usize,
@@ -417,10 +427,15 @@ fn ai_condition_variable(
     let variable_value = match variable_type {
         AipVariableType::LocalNpcObject => ai_parameters
             .selected_local_npc
-            .and_then(|object_entity| ai_world.object_variable_query.get_mut(object_entity).ok())
+            .and_then(|object_entity| {
+                ai_system_parameters
+                    .object_variable_query
+                    .get_mut(object_entity)
+                    .ok()
+            })
             .and_then(|object_variables| object_variables.variables.get(variable_id).copied())
             .unwrap_or(0),
-        AipVariableType::Ai => ai_world
+        AipVariableType::Ai => ai_system_parameters
             .object_variable_query
             .get_mut(ai_parameters.source.entity)
             .ok()
@@ -446,7 +461,7 @@ fn ai_condition_variable(
 }
 
 fn ai_condition_server_channel_number(
-    _ai_world: &AiWorld,
+    _ai_system_parameters: &AiSystemParameters,
     channel_range: &RangeInclusive<u16>,
 ) -> bool {
     // TODO: Do we need to have channel numbers?
@@ -454,7 +469,7 @@ fn ai_condition_server_channel_number(
 }
 
 fn ai_condition_has_status_effect(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &AiParameters,
     who: AipHaveStatusTarget,
     status_effect_category: AipHaveStatusType,
@@ -465,7 +480,7 @@ fn ai_condition_has_status_effect(
         _ => ai_parameters
             .source
             .target
-            .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
+            .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
             .map(|(_, _, _, status_effects, _)| status_effects),
     };
 
@@ -514,7 +529,7 @@ fn get_aip_ability_value(
 }
 
 fn ai_condition_target_ability_value(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &AiParameters,
     operator: AipOperatorType,
     aip_ability_type: AipAbilityType,
@@ -523,7 +538,7 @@ fn ai_condition_target_ability_value(
     if let Some((_, _, ability_values, _, health_points)) = ai_parameters
         .source
         .target
-        .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
+        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
     {
         let ability_value = get_aip_ability_value(ability_values, health_points, aip_ability_type);
         compare_aip_value(operator, ability_value, value)
@@ -533,7 +548,7 @@ fn ai_condition_target_ability_value(
 }
 
 fn ai_condition_attacker_and_target_ability_value(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &AiParameters,
     operator: AipOperatorType,
     aip_ability_type: AipAbilityType,
@@ -549,7 +564,7 @@ fn ai_condition_attacker_and_target_ability_value(
     let target_ability_value = ai_parameters
         .source
         .target
-        .and_then(|target_entity| ai_world.target_query.get(target_entity).ok())
+        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
         .map(|(_, _, ability_values, _, health_points)| {
             get_aip_ability_value(ability_values, health_points, aip_ability_type)
         });
@@ -563,17 +578,21 @@ fn ai_condition_attacker_and_target_ability_value(
     }
 }
 
-fn ai_condition_owner_has_target(ai_world: &mut AiWorld, ai_parameters: &AiParameters) -> bool {
+fn ai_condition_owner_has_target(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &AiParameters,
+) -> bool {
     ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .map_or(false, |(_, target)| target.is_some())
 }
 
 fn npc_ai_check_conditions(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
     ai_program_event: &AipEvent,
-    ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
 ) -> bool {
     for condition in ai_program_event.conditions.iter() {
@@ -585,7 +604,7 @@ fn npc_ai_check_conditions(
                 count_operator_type,
                 count,
             }) => ai_condition_count_nearby_entities(
-                ai_world,
+                ai_system_parameters,
                 ai_parameters,
                 distance,
                 is_allied,
@@ -598,9 +617,11 @@ fn npc_ai_check_conditions(
                 ai_condition_damage(ai_parameters, damage_type, operator, value)
             }
             AipCondition::Distance(origin, operator, value) => {
-                ai_condition_distance(ai_world, ai_parameters, origin, operator, value)
+                ai_condition_distance(ai_system_parameters, ai_parameters, origin, operator, value)
             }
-            AipCondition::HasNoOwner => ai_condition_has_no_owner(ai_world, ai_parameters),
+            AipCondition::HasNoOwner => {
+                ai_condition_has_no_owner(ai_system_parameters, ai_parameters)
+            }
             AipCondition::HealthPercent(operator, value) => {
                 ai_condition_health_percent(ai_parameters, operator, value)
             }
@@ -616,32 +637,34 @@ fn npc_ai_check_conditions(
                 )
             }
             AipCondition::Random(operator, ref range, value) => {
-                ai_condition_random(ai_world, operator, range.clone(), value)
+                ai_condition_random(operator, range.clone(), value)
             }
             AipCondition::SelfAbilityValue(operator, ability, value) => {
                 ai_condition_source_ability_value(ai_parameters, operator, ability, value)
             }
             AipCondition::SelectLocalNpc(npc_id) => {
-                ai_condition_select_local_npc(ai_world, ai_parameters, npc_id)
+                ai_condition_select_local_npc(ai_system_resources, ai_parameters, npc_id)
             }
             AipCondition::MonthDay(AipConditionMonthDayTime {
                 month_day,
                 ref day_minutes_range,
-            }) => ai_condition_month_day_time(ai_world, month_day, day_minutes_range),
+            }) => ai_condition_month_day_time(ai_system_resources, month_day, day_minutes_range),
             AipCondition::WeekDay(AipConditionWeekDayTime {
                 week_day,
                 ref day_minutes_range,
-            }) => ai_condition_week_day_time(ai_world, week_day, day_minutes_range),
-            AipCondition::WorldTime(ref range) => ai_condition_world_time(ai_world, range),
+            }) => ai_condition_week_day_time(ai_system_resources, week_day, day_minutes_range),
+            AipCondition::WorldTime(ref range) => {
+                ai_condition_world_time(ai_system_resources, range)
+            }
             AipCondition::ZoneTime(ref range) => {
-                ai_condition_zone_time(ai_world, ai_parameters, range)
+                ai_condition_zone_time(ai_system_resources, ai_parameters, range)
             }
             AipCondition::IsDaytime(is_daytime) => {
-                ai_condition_is_zone_daytime(ai_world, ai_parameters, is_daytime)
+                ai_condition_is_zone_daytime(ai_system_resources, ai_parameters, is_daytime)
             }
             AipCondition::Variable(variable_type, variable_id, operator_type, value) => {
                 ai_condition_variable(
-                    ai_world,
+                    ai_system_parameters,
                     ai_parameters,
                     variable_type,
                     variable_id,
@@ -650,11 +673,11 @@ fn npc_ai_check_conditions(
                 )
             }
             AipCondition::ServerChannelNumber(ref channel_range) => {
-                ai_condition_server_channel_number(ai_world, channel_range)
+                ai_condition_server_channel_number(ai_system_parameters, channel_range)
             }
             AipCondition::HasStatusEffect(who, status_effect_category, have) => {
                 ai_condition_has_status_effect(
-                    ai_world,
+                    ai_system_parameters,
                     ai_parameters,
                     who,
                     status_effect_category,
@@ -663,7 +686,7 @@ fn npc_ai_check_conditions(
             }
             AipCondition::TargetAbilityValue(operator, aip_ability_type, value) => {
                 ai_condition_target_ability_value(
-                    ai_world,
+                    ai_system_parameters,
                     ai_parameters,
                     operator,
                     aip_ability_type,
@@ -672,13 +695,15 @@ fn npc_ai_check_conditions(
             }
             AipCondition::CompareAttackerAndTargetAbilityValue(operator, aip_ability_type) => {
                 ai_condition_attacker_and_target_ability_value(
-                    ai_world,
+                    ai_system_parameters,
                     ai_parameters,
                     operator,
                     aip_ability_type,
                 )
             }
-            AipCondition::OwnerHasTarget => ai_condition_owner_has_target(ai_world, ai_parameters),
+            AipCondition::OwnerHasTarget => {
+                ai_condition_owner_has_target(ai_system_parameters, ai_parameters)
+            }
             /*
             AipCondition::IsAttackerClanMaster => false,
             AipCondition::IsTargetClanMaster => false,
@@ -697,22 +722,22 @@ fn npc_ai_check_conditions(
     true
 }
 
-fn ai_action_stop(ai_world: &mut AiWorld, ai_parameters: &mut AiParameters) {
-    ai_world
+fn ai_action_stop(ai_system_parameters: &mut AiSystemParameters, ai_parameters: &mut AiParameters) {
+    ai_system_parameters
         .commands
         .entity(ai_parameters.source.entity)
         .insert(NextCommand::with_stop(true));
 }
 
 fn ai_action_move_random_distance(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
     move_origin: AipMoveOrigin,
     move_mode: AipMoveMode,
     distance: i32,
 ) {
-    let dx = ai_world.rng.gen_range(-distance..distance);
-    let dy = ai_world.rng.gen_range(-distance..distance);
+    let dx = rand::thread_rng().gen_range(-distance..distance);
+    let dy = rand::thread_rng().gen_range(-distance..distance);
     let move_origin = match move_origin {
         AipMoveOrigin::CurrentPosition => Some(ai_parameters.source.position.position),
         AipMoveOrigin::Spawn => {
@@ -734,18 +759,21 @@ fn ai_action_move_random_distance(
             AipMoveMode::Walk => MoveMode::Walk,
         };
         let destination = move_origin + Vector3::new(dx as f32, dy as f32, 0.0);
-        ai_world
+        ai_system_parameters
             .commands
             .entity(ai_parameters.source.entity)
             .insert(NextCommand::with_move(destination, None, Some(move_mode)));
     }
 }
 
-fn ai_action_move_near_owner(ai_world: &mut AiWorld, ai_parameters: &mut AiParameters) {
+fn ai_action_move_near_owner(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) {
     if let Some(owner_position) = ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .map(|(position, _)| position.clone())
     {
         let distance = (0.2
@@ -753,11 +781,11 @@ fn ai_action_move_near_owner(ai_world: &mut AiWorld, ai_parameters: &mut AiParam
                 &owner_position.position.xy(),
                 &ai_parameters.source.position.position.xy(),
             )) as i32;
-        let dx = ai_world.rng.gen_range(-distance..distance);
-        let dy = ai_world.rng.gen_range(-distance..distance);
+        let dx = rand::thread_rng().gen_range(-distance..distance);
+        let dy = rand::thread_rng().gen_range(-distance..distance);
 
         let destination = owner_position.position + Vector3::new(dx as f32, dy as f32, 0.0);
-        ai_world
+        ai_system_parameters
             .commands
             .entity(ai_parameters.source.entity)
             .insert(NextCommand::with_move(
@@ -769,16 +797,16 @@ fn ai_action_move_near_owner(ai_world: &mut AiWorld, ai_parameters: &mut AiParam
 }
 
 fn npc_ai_do_actions(
+    ai_system_parameters: &mut AiSystemParameters,
     ai_program_event: &AipEvent,
-    ai_world: &mut AiWorld,
     ai_parameters: &mut AiParameters,
 ) {
     for action in ai_program_event.actions.iter() {
         match *action {
-            AipAction::Stop => ai_action_stop(ai_world, ai_parameters),
+            AipAction::Stop => ai_action_stop(ai_system_parameters, ai_parameters),
             AipAction::MoveRandomDistance(move_origin, move_mode, distance) => {
                 ai_action_move_random_distance(
-                    ai_world,
+                    ai_system_parameters,
                     ai_parameters,
                     move_origin,
                     move_mode,
@@ -787,7 +815,7 @@ fn npc_ai_do_actions(
             }
             AipAction::AttackNearChar => {
                 if let Some((near_char, _)) = ai_parameters.near_char {
-                    ai_world
+                    ai_system_parameters
                         .commands
                         .entity(ai_parameters.source.entity)
                         .insert(NextCommand::with_attack(near_char));
@@ -795,7 +823,7 @@ fn npc_ai_do_actions(
             }
             AipAction::AttackFindChar => {
                 if let Some((find_char, _)) = ai_parameters.find_char {
-                    ai_world
+                    ai_system_parameters
                         .commands
                         .entity(ai_parameters.source.entity)
                         .insert(NextCommand::with_attack(find_char));
@@ -803,7 +831,7 @@ fn npc_ai_do_actions(
             }
             AipAction::AttackAttacker => {
                 if let Some(attacker) = ai_parameters.attacker {
-                    ai_world
+                    ai_system_parameters
                         .commands
                         .entity(ai_parameters.source.entity)
                         .insert(NextCommand::with_attack(attacker.entity));
@@ -811,21 +839,25 @@ fn npc_ai_do_actions(
             }
             AipAction::KillSelf => {
                 // TODO: Fix this, this doesn't send death to clients.
-                ai_world
+                ai_system_parameters
                     .commands
                     .entity(ai_parameters.source.entity)
                     .insert(HealthPoints::new(0))
                     .insert(Command::with_die(None, None, None));
             }
-            AipAction::MoveNearOwner => ai_action_move_near_owner(ai_world, ai_parameters),
+            AipAction::MoveNearOwner => {
+                ai_action_move_near_owner(ai_system_parameters, ai_parameters)
+            }
             AipAction::AttackOwnerTarget => {
                 if let Some(owner_target_entity) = ai_parameters
                     .source
                     .owner
-                    .and_then(|owner_entity| ai_world.owner_query.get(owner_entity).ok())
+                    .and_then(|owner_entity| {
+                        ai_system_parameters.owner_query.get(owner_entity).ok()
+                    })
                     .and_then(|(_, target)| target.map(|target| target.entity))
                 {
-                    ai_world
+                    ai_system_parameters
                         .commands
                         .entity(ai_parameters.source.entity)
                         .insert(NextCommand::with_attack(owner_target_entity));
@@ -859,7 +891,8 @@ fn npc_ai_do_actions(
 }
 
 fn npc_ai_run_trigger(
-    ai_world: &mut AiWorld,
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
     ai_trigger: &AipTrigger,
     source: &AiSourceData,
     attacker: Option<AiAttackerData>,
@@ -878,17 +911,22 @@ fn npc_ai_run_trigger(
 
     // Do actions for only the first event with valid conditions
     for ai_program_event in ai_trigger.events.iter() {
-        if npc_ai_check_conditions(ai_program_event, ai_world, &mut ai_parameters) {
-            npc_ai_do_actions(ai_program_event, ai_world, &mut ai_parameters);
+        if npc_ai_check_conditions(
+            ai_system_parameters,
+            ai_system_resources,
+            ai_program_event,
+            &mut ai_parameters,
+        ) {
+            npc_ai_do_actions(ai_system_parameters, ai_program_event, &mut ai_parameters);
             break;
         }
     }
 }
 
-fn get_attacker_data<'a>(
-    attacker_query: &'a Query<'a, (&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
+fn get_attacker_data<'w, 's>(
+    attacker_query: &Query<'w, 's, (&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     entity: Entity,
-) -> Option<AiAttackerData<'a>> {
+) -> Option<AiAttackerData<'w>> {
     if let Ok((
         attacker_position,
         attacker_level,
@@ -897,7 +935,7 @@ fn get_attacker_data<'a>(
         attacker_health_points,
     )) = attacker_query.get(entity)
     {
-        Some(AiAttackerData::<'a> {
+        Some(AiAttackerData::<'w> {
             entity,
             _position: attacker_position,
             _team: attacker_team,
@@ -911,7 +949,8 @@ fn get_attacker_data<'a>(
 }
 
 pub fn npc_ai_system(
-    mut commands: Commands,
+    mut ai_system_parameters: AiSystemParameters,
+    ai_system_resources: AiSystemResources,
     mut npc_query: Query<(
         Entity,
         &Npc,
@@ -929,33 +968,12 @@ pub fn npc_ai_system(
         Option<&Target>,
         Option<&DamageSources>,
     )>,
-    target_query: Query<(&Level, &Team, &AbilityValues, &StatusEffects, &HealthPoints)>,
-    owner_query: Query<(&Position, Option<&Target>)>,
-    object_variable_query: Query<&mut ObjectVariables>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
     killer_query: Query<(&Level, &AbilityValues, Option<&GameClient>)>,
-    mut client_entity_list: ResMut<ClientEntityList>,
-    game_data: Res<GameData>,
-    server_time: Res<ServerTime>,
     world_rates: Res<WorldRates>,
-    world_time: Res<WorldTime>,
-    zone_list: Res<ZoneList>,
     mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
-    let mut ai_world = AiWorld {
-        client_entity_list: &mut client_entity_list,
-        commands: &mut commands,
-        game_data: &game_data,
-        server_time: &server_time,
-        world_time: &world_time,
-        zone_list: &zone_list,
-        target_query,
-        object_variable_query,
-        owner_query,
-        rng: rand::thread_rng(),
-    };
-
     npc_query.for_each_mut(
         |(
             entity,
@@ -988,10 +1006,11 @@ pub fn npc_ai_system(
             };
 
             if !npc_ai.has_run_created_trigger {
-                if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
+                if let Some(ai_program) = ai_system_resources.game_data.ai.get_ai(npc_ai.ai_index) {
                     if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
                         npc_ai_run_trigger(
-                            &mut ai_world,
+                            &mut ai_system_parameters,
+                            &ai_system_resources,
                             trigger_on_created,
                             &ai_source_data,
                             None,
@@ -1004,7 +1023,7 @@ pub fn npc_ai_system(
                 (*npc_ai).has_run_created_trigger = true;
             }
 
-            if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
+            if let Some(ai_program) = ai_system_resources.game_data.ai.get_ai(npc_ai.ai_index) {
                 if let Some(trigger_on_damaged) = ai_program.trigger_on_damaged.as_ref() {
                     let mut rng = rand::thread_rng();
                     for &(attacker_entity, damage) in npc_ai.pending_damage.iter() {
@@ -1018,7 +1037,8 @@ pub fn npc_ai_system(
                             get_attacker_data(&attacker_query, attacker_entity)
                         {
                             npc_ai_run_trigger(
-                                &mut ai_world,
+                                &mut ai_system_parameters,
+                                &ai_system_resources,
                                 trigger_on_damaged,
                                 &ai_source_data,
                                 Some(attacker_data),
@@ -1033,13 +1053,16 @@ pub fn npc_ai_system(
 
             match command.command {
                 CommandData::Stop(_) => {
-                    if let Some(ai_program) = game_data.ai.get_ai(npc_ai.ai_index) {
+                    if let Some(ai_program) =
+                        ai_system_resources.game_data.ai.get_ai(npc_ai.ai_index)
+                    {
                         if let Some(trigger_on_idle) = ai_program.trigger_on_idle.as_ref() {
-                            npc_ai.idle_duration += server_time.delta;
+                            npc_ai.idle_duration += ai_system_resources.server_time.delta;
 
                             if npc_ai.idle_duration > ai_program.idle_trigger_interval {
                                 npc_ai_run_trigger(
-                                    &mut ai_world,
+                                    &mut ai_system_parameters,
+                                    &ai_system_resources,
                                     trigger_on_idle,
                                     &ai_source_data,
                                     None,
@@ -1072,7 +1095,8 @@ pub fn npc_ai_system(
                         }
 
                         // Run on dead AI
-                        if let Some(trigger_on_dead) = game_data
+                        if let Some(trigger_on_dead) = ai_system_resources
+                            .game_data
                             .ai
                             .get_ai(npc_ai.ai_index)
                             .and_then(|ai_program| ai_program.trigger_on_dead.as_ref())
@@ -1082,7 +1106,8 @@ pub fn npc_ai_system(
                             });
 
                             npc_ai_run_trigger(
-                                &mut ai_world,
+                                &mut ai_system_parameters,
+                                &ai_system_resources,
                                 trigger_on_dead,
                                 &ai_source_data,
                                 attacker_data,
@@ -1092,21 +1117,25 @@ pub fn npc_ai_system(
                         }
 
                         if let Some(damage_sources) = damage_sources {
-                            if let Some(npc_data) = game_data.npcs.get_npc(npc.id) {
+                            if let Some(npc_data) =
+                                ai_system_resources.game_data.npcs.get_npc(npc.id)
+                            {
                                 // Reward XP to all attackers
                                 for damage_source in damage_sources.damage_sources.iter() {
-                                    let time_since_damage =
-                                        server_time.now - damage_source.last_damage_time;
+                                    let time_since_damage = ai_system_resources.server_time.now
+                                        - damage_source.last_damage_time;
                                     if time_since_damage > DAMAGE_REWARD_EXPIRE_TIME {
                                         // Damage expired, ignore.
                                         continue;
                                     }
 
                                     if let Ok((damage_source_level, ..)) =
-                                        ai_world.target_query.get(damage_source.entity)
+                                        ai_system_parameters.target_query.get(damage_source.entity)
                                     {
-                                        let reward_xp =
-                                            game_data.ability_value_calculator.calculate_give_xp(
+                                        let reward_xp = ai_system_resources
+                                            .game_data
+                                            .ability_value_calculator
+                                            .calculate_give_xp(
                                                 damage_source_level.level as i32,
                                                 damage_source.total_damage as i32,
                                                 level.level as i32,
@@ -1115,7 +1144,8 @@ pub fn npc_ai_system(
                                                 world_rates.xp_rate,
                                             );
                                         if reward_xp > 0 {
-                                            let stamina = game_data
+                                            let stamina = ai_system_resources
+                                                .game_data
                                                 .ability_value_calculator
                                                 .calculate_give_stamina(
                                                     reward_xp,
@@ -1161,56 +1191,25 @@ pub fn npc_ai_system(
                                         // Drop item owned by killer
                                         let level_difference =
                                             killer_level.level as i32 - level.level as i32;
-                                        if let Some(drop_item) = game_data.drop_table.get_drop(
-                                            world_rates.drop_rate,
-                                            world_rates.drop_money_rate,
-                                            npc.id,
-                                            position.zone_id,
-                                            level_difference,
-                                            killer_ability_values.get_drop_rate(),
-                                            killer_ability_values.get_charm(),
-                                        ) {
-                                            let mut rng = rand::thread_rng();
-                                            let client_entity_zone = ai_world
-                                                .client_entity_list
-                                                .get_zone_mut(position.zone_id)
-                                                .unwrap();
-                                            let drop_position = Point3::new(
-                                                position.position.x
-                                                    + rng.gen_range(
-                                                        -DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS,
-                                                    )
-                                                        as f32,
-                                                position.position.y
-                                                    + rng.gen_range(
-                                                        -DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS,
-                                                    )
-                                                        as f32,
-                                                position.position.z,
+                                        if let Some(drop_item) =
+                                            ai_system_resources.game_data.drop_table.get_drop(
+                                                world_rates.drop_rate,
+                                                world_rates.drop_money_rate,
+                                                npc.id,
+                                                position.zone_id,
+                                                level_difference,
+                                                killer_ability_values.get_drop_rate(),
+                                                killer_ability_values.get_charm(),
+                                            )
+                                        {
+                                            ItemDropBundle::spawn(
+                                                &mut ai_system_parameters.commands,
+                                                &mut ai_system_parameters.client_entity_list,
+                                                drop_item,
+                                                position,
+                                                Some(killer_entity),
+                                                &ai_system_resources.server_time,
                                             );
-                                            let mut drop_entity_commands =
-                                                ai_world.commands.spawn();
-
-                                            let drop_entity = drop_entity_commands.id();
-                                            drop_entity_commands
-                                                .insert(Some(drop_item))
-                                                .insert(Position::new(
-                                                    drop_position,
-                                                    position.zone_id,
-                                                ))
-                                                .insert(Owner::new(killer_entity))
-                                                .insert(ExpireTime::new(
-                                                    server_time.now + DROPPED_ITEM_EXPIRE_TIME,
-                                                ))
-                                                .insert(
-                                                    client_entity_zone
-                                                        .join_zone(
-                                                            ClientEntityType::DroppedItem,
-                                                            drop_entity,
-                                                            drop_position,
-                                                        )
-                                                        .unwrap(),
-                                                );
                                         }
                                     }
                                 }
@@ -1226,13 +1225,13 @@ pub fn npc_ai_system(
                         });
                     if command_complete {
                         client_entity_leave_zone(
-                            ai_world.commands,
-                            ai_world.client_entity_list,
+                            &mut ai_system_parameters.commands,
+                            &mut ai_system_parameters.client_entity_list,
                             entity,
                             client_entity,
                             position,
                         );
-                        ai_world.commands.entity(entity).despawn();
+                        ai_system_parameters.commands.entity(entity).despawn();
                     }
                 }
                 _ => {}

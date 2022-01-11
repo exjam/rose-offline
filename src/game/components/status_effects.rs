@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use bevy_ecs::prelude::Component;
 use enum_map::EnumMap;
 use log::warn;
 
@@ -11,7 +12,7 @@ pub struct ActiveStatusEffect {
     pub expire_time: Instant,
 }
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub struct StatusEffects {
     pub active: EnumMap<StatusEffectType, Option<ActiveStatusEffect>>,
 }

@@ -1,3 +1,5 @@
+use bevy_ecs::prelude::Component;
+
 use crate::{
     data::item::Item,
     game::components::{ItemSlot, Money},
@@ -5,7 +7,7 @@ use crate::{
 
 pub const PERSONAL_STORE_ITEM_SLOTS: usize = 30;
 
-#[derive(Clone)]
+#[derive(Clone, Component)]
 pub struct PersonalStore {
     pub title: String,
     pub skin: i32,

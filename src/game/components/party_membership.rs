@@ -1,6 +1,6 @@
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 
-#[derive(Clone)]
+#[derive(Component, Clone)]
 pub enum PartyMembership {
     None,
     Member(Entity),

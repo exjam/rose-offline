@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 arrayvec = "0.7"
 async-trait = "0.1"
-bevy_ecs = { git = "https://github.com/bevyengine/bevy", rev = "43d99bb583866c1adb4aa88f19b88637df0a7f33" }
+bevy_ecs = { version = "0.6" }
 bitvec = { version = "0.22", features = ["serde"] }
 bytes = "1.1"
 chrono = "0.4"

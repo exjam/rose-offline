@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 
 pub struct DamageSource {
     pub entity: Entity,
@@ -9,7 +9,7 @@ pub struct DamageSource {
     pub last_damage_time: Instant,
 }
 
-#[derive(Default)]
+#[derive(Component, Default)]
 pub struct DamageSources {
     pub max_damage_sources: usize,
     pub damage_sources: Vec<DamageSource>,

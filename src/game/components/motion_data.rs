@@ -1,3 +1,5 @@
+use bevy_ecs::prelude::Component;
+
 use crate::data::MotionFileData;
 
 #[derive(Default)]
@@ -39,6 +41,7 @@ pub struct MotionDataNpc {
     pub etc: Option<MotionFileData>,
 }
 
+#[derive(Component)]
 pub enum MotionData {
     Character(MotionDataCharacter),
     Npc(MotionDataNpc),
@@ -67,7 +70,7 @@ impl MotionData {
         }
     }
 
-    pub fn get_pickup_dropped_item(&self) -> Option<&MotionFileData> {
+    pub fn get_pickup_item_drop(&self) -> Option<&MotionFileData> {
         match self {
             MotionData::Character(character) => character.pickup_dropped_item.as_ref(),
             MotionData::Npc(_) => None,

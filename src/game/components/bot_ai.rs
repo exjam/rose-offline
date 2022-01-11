@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 use rand::Rng;
 
 pub const BOT_IDLE_CHECK_DURATION: Duration = Duration::from_secs(3);
@@ -11,6 +11,7 @@ pub enum BotAiState {
     SnowballFight,
 }
 
+#[derive(Component)]
 pub struct BotAi {
     pub state: BotAiState,
     pub time_since_last_idle_check: Duration,

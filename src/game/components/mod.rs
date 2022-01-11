@@ -10,7 +10,6 @@ mod client_entity_visibility;
 mod command;
 mod damage_sources;
 mod destination;
-mod dropped_item;
 mod equipment;
 mod event_object;
 mod experience_points;
@@ -19,6 +18,7 @@ mod game_client;
 mod health_points;
 mod hotbar;
 mod inventory;
+mod item_drop;
 mod level;
 mod login_client;
 mod mana_points;
@@ -61,11 +61,10 @@ pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_visibility::ClientEntityVisibility;
 pub use command::{
     Command, CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandDie,
-    CommandMove, CommandPickupDroppedItem, CommandSit, CommandStop, NextCommand,
+    CommandMove, CommandPickupItemDrop, CommandSit, CommandStop, NextCommand,
 };
 pub use damage_sources::{DamageSource, DamageSources};
 pub use destination::Destination;
-pub use dropped_item::DroppedItem;
 pub use equipment::*;
 pub use event_object::EventObject;
 pub use experience_points::ExperiencePoints;
@@ -74,6 +73,7 @@ pub use game_client::*;
 pub use health_points::HealthPoints;
 pub use hotbar::{Hotbar, HotbarSlot};
 pub use inventory::*;
+pub use item_drop::{DroppedItem, ItemDrop};
 pub use level::Level;
 pub use login_client::*;
 pub use mana_points::ManaPoints;

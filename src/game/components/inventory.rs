@@ -1,6 +1,10 @@
+use std::{
+    convert::TryFrom,
+    ops::{Add, Sub},
+};
+
+use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
-use std::ops::{Add, Sub};
 
 use crate::{
     data::{
@@ -213,7 +217,7 @@ pub enum ItemSlot {
     Vehicle(VehiclePartIndex),
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Deserialize, Serialize)]
 pub struct Inventory {
     pub money: Money,
     pub equipment: InventoryPage,

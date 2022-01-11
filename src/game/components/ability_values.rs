@@ -1,3 +1,5 @@
+use bevy_ecs::prelude::Component;
+
 use crate::{data::StatusEffectType, game::components::StatusEffects};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -92,7 +94,7 @@ impl From<&StatusEffects> for AbilityValuesAdjust {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct AbilityValues {
     pub damage_category: DamageCategory,
     pub level: i32,

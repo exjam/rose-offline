@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::Component;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
@@ -37,7 +38,7 @@ pub enum AmmoIndex {
     Throw = 2,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Equipment {
     pub equipped_items: [Option<EquipmentItem>; EquipmentIndex::Earring as usize + 1],
     pub equipped_vehicle: [Option<EquipmentItem>; VehiclePartIndex::Arms as usize + 1],

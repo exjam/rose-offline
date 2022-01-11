@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::Component;
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -74,7 +75,7 @@ impl ActiveQuest {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Default, Deserialize, Serialize)]
 pub struct QuestState {
     pub episode_variables: [u16; 5],
     pub job_variables: [u16; 3],

@@ -1,4 +1,7 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut};
+use bevy_ecs::{
+    prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
+    system::SystemParam,
+};
 use clap::{App, Arg};
 use lazy_static::lazy_static;
 use nalgebra::{Point2, Point3};
@@ -33,28 +36,29 @@ use crate::{
     },
 };
 
-pub struct ChatCommandWorld<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l> {
-    commands: &'a mut Commands<'b>,
-    bot_list: &'c mut ResMut<'d, BotList>,
-    client_entity_list: &'e mut ResMut<'f, ClientEntityList>,
-    game_data: &'g Res<'h, GameData>,
-    reward_xp_events: &'i mut EventWriter<'j, RewardXpEvent>,
-    server_messages: &'k mut ResMut<'l, ServerMessages>,
+#[derive(SystemParam)]
+pub struct ChatCommandParams<'w, 's> {
+    commands: Commands<'w, 's>,
+    bot_list: ResMut<'w, BotList>,
+    client_entity_list: ResMut<'w, ClientEntityList>,
+    game_data: Res<'w, GameData>,
+    reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
+    server_messages: ResMut<'w, ServerMessages>,
 }
 
-pub struct ChatCommandUser<'world, 'a> {
+pub struct ChatCommandUser<'w, 's> {
     entity: Entity,
-    ability_values: &'world AbilityValues,
-    client_entity: &'world ClientEntity,
-    game_client: &'world GameClient,
-    level: &'world Level,
-    position: &'world Position,
-    basic_stats: &'a mut Mut<'world, BasicStats>,
-    inventory: &'a mut Mut<'world, Inventory>,
-    skill_points: &'a mut Mut<'world, SkillPoints>,
-    stamina: &'a mut Mut<'world, Stamina>,
-    stat_points: &'a mut Mut<'world, StatPoints>,
-    union_membership: &'a mut Mut<'world, UnionMembership>,
+    ability_values: &'s AbilityValues,
+    client_entity: &'s ClientEntity,
+    game_client: &'s GameClient,
+    level: &'s Level,
+    position: &'s Position,
+    basic_stats: &'s mut Mut<'w, BasicStats>,
+    inventory: &'s mut Mut<'w, Inventory>,
+    skill_points: &'s mut Mut<'w, SkillPoints>,
+    stamina: &'s mut Mut<'w, Stamina>,
+    stat_points: &'s mut Mut<'w, StatPoints>,
+    union_membership: &'s mut Mut<'w, UnionMembership>,
 }
 
 lazy_static! {
@@ -151,7 +155,7 @@ impl From<ParseFloatError> for ChatCommandError {
 }
 
 fn create_bot_entity(
-    chat_command_world: &mut ChatCommandWorld,
+    chat_command_params: &mut ChatCommandParams,
     name: String,
     gender: u8,
     face: u8,
@@ -159,7 +163,7 @@ fn create_bot_entity(
     position: Position,
     owner: Entity,
 ) -> Option<Entity> {
-    let mut bot_data = chat_command_world
+    let mut bot_data = chat_command_params
         .game_data
         .character_creator
         .create(name, gender, 1, face, hair)
@@ -167,7 +171,7 @@ fn create_bot_entity(
 
     let status_effects = StatusEffects::new();
 
-    let ability_values = chat_command_world
+    let ability_values = chat_command_params
         .game_data
         .ability_value_calculator
         .calculate(
@@ -181,14 +185,14 @@ fn create_bot_entity(
 
     let move_speed = MoveSpeed::new(ability_values.get_run_speed() as f32);
 
-    let weapon_motion_type = chat_command_world
+    let weapon_motion_type = chat_command_params
         .game_data
         .items
         .get_equipped_weapon_item_data(&bot_data.equipment, EquipmentIndex::WeaponRight)
         .map(|item_data| item_data.motion_type)
         .unwrap_or(0) as usize;
 
-    let motion_data = chat_command_world
+    let motion_data = chat_command_params
         .game_data
         .motions
         .get_character_action_motions(weapon_motion_type, bot_data.info.gender as usize);
@@ -197,7 +201,7 @@ fn create_bot_entity(
     bot_data.health_points.hp = ability_values.get_max_health() as u32;
     bot_data.mana_points.mp = ability_values.get_max_mana() as u32;
 
-    let entity = chat_command_world
+    let entity = chat_command_params
         .commands
         .spawn()
         .insert(BotAi::new(BotAiState::Farm))
@@ -233,8 +237,8 @@ fn create_bot_entity(
         .id();
 
     client_entity_join_zone(
-        chat_command_world.commands,
-        chat_command_world.client_entity_list,
+        &mut chat_command_params.commands,
+        &mut chat_command_params.client_entity_list,
         entity,
         ClientEntityType::Character,
         &position,
@@ -245,7 +249,7 @@ fn create_bot_entity(
 }
 
 fn create_random_bot_entities(
-    chat_command_world: &mut ChatCommandWorld,
+    chat_command_params: &mut ChatCommandParams,
     num_bots: usize,
     spacing: f32,
     origin: Position,
@@ -266,15 +270,15 @@ fn create_random_bot_entities(
         bot_position.position.y += spawn_radius * angle.sin();
 
         if let Some(bot_entity) = create_bot_entity(
-            chat_command_world,
-            format!("Friend {}", chat_command_world.bot_list.len() as usize),
+            chat_command_params,
+            format!("Friend {}", chat_command_params.bot_list.len() as usize),
             *genders.choose(&mut rng).unwrap() as u8,
             *faces.choose(&mut rng).unwrap() as u8,
             *hair.choose(&mut rng).unwrap() as u8,
             bot_position,
             owner,
         ) {
-            chat_command_world
+            chat_command_params
                 .bot_list
                 .push(BotListEntry::new(bot_entity));
             bot_entities.push(bot_entity);
@@ -285,7 +289,7 @@ fn create_random_bot_entities(
 }
 
 fn handle_chat_command(
-    chat_command_world: &mut ChatCommandWorld,
+    chat_command_params: &mut ChatCommandParams,
     chat_command_user: &mut ChatCommandUser,
     command_text: &str,
 ) -> Result<(), ChatCommandError> {
@@ -298,7 +302,7 @@ fn handle_chat_command(
         .ok_or(ChatCommandError::InvalidCommand)?
     {
         ("where", _) => {
-            let sector = chat_command_world
+            let sector = chat_command_params
                 .client_entity_list
                 .get_zone(chat_command_user.position.zone_id)
                 .map(|client_entity_zone| {
@@ -329,20 +333,20 @@ fn handle_chat_command(
                 (arg_matches.value_of("x"), arg_matches.value_of("y"))
             {
                 (x.parse::<f32>()? * 1000.0, y.parse::<f32>()? * 1000.0)
-            } else if let Some(zone_data) = chat_command_world.game_data.zones.get_zone(zone_id) {
+            } else if let Some(zone_data) = chat_command_params.game_data.zones.get_zone(zone_id) {
                 (zone_data.start_position.x, zone_data.start_position.y)
             } else {
                 (520.0, 520.0)
             };
 
-            if chat_command_world
+            if chat_command_params
                 .client_entity_list
                 .get_zone(zone_id)
                 .is_some()
             {
                 client_entity_teleport_zone(
-                    chat_command_world.commands,
-                    chat_command_world.client_entity_list,
+                    &mut chat_command_params.commands,
+                    &mut chat_command_params.client_entity_list,
                     chat_command_user.entity,
                     chat_command_user.client_entity,
                     chat_command_user.position,
@@ -368,23 +372,25 @@ fn handle_chat_command(
             let mut required_xp = 0;
 
             for level in current_level..target_level {
-                required_xp += chat_command_world
+                required_xp += chat_command_params
                     .game_data
                     .ability_value_calculator
                     .calculate_levelup_require_xp(level);
             }
 
-            chat_command_world.reward_xp_events.send(RewardXpEvent::new(
-                chat_command_user.entity,
-                required_xp,
-                0,
-                None,
-            ));
+            chat_command_params
+                .reward_xp_events
+                .send(RewardXpEvent::new(
+                    chat_command_user.entity,
+                    required_xp,
+                    0,
+                    None,
+                ));
         }
         ("bot", arg_matches) => {
             let num_bots = arg_matches.value_of("n").unwrap().parse::<usize>()?;
             create_random_bot_entities(
-                chat_command_world,
+                chat_command_params,
                 num_bots,
                 15.0,
                 chat_command_user.position.clone(),
@@ -394,7 +400,7 @@ fn handle_chat_command(
         ("snowball_fight", arg_matches) => {
             let num_bots = arg_matches.value_of("n").unwrap().parse::<usize>()?;
             let bot_entities = create_random_bot_entities(
-                chat_command_world,
+                chat_command_params,
                 num_bots,
                 15.0,
                 chat_command_user.position.clone(),
@@ -409,7 +415,7 @@ fn handle_chat_command(
                     )
                     .ok();
 
-                chat_command_world
+                chat_command_params
                     .commands
                     .entity(entity)
                     .insert(inventory)
@@ -420,7 +426,7 @@ fn handle_chat_command(
             let item_type: Option<ItemType> =
                 FromPrimitive::from_i32(arg_matches.value_of("item_type").unwrap().parse::<i32>()?);
             if let Some(item_type) = item_type {
-                let mut all_items: Vec<ItemReference> = chat_command_world
+                let mut all_items: Vec<ItemReference> = chat_command_params
                     .game_data
                     .items
                     .iter_items(item_type)
@@ -430,7 +436,7 @@ fn handle_chat_command(
                 let num_bots =
                     (all_items.len() + PERSONAL_STORE_ITEM_SLOTS - 1) / PERSONAL_STORE_ITEM_SLOTS;
                 let bot_entities = create_random_bot_entities(
-                    chat_command_world,
+                    chat_command_params,
                     num_bots,
                     30.0,
                     chat_command_user.position.clone(),
@@ -452,7 +458,7 @@ fn handle_chat_command(
 
                     index += PERSONAL_STORE_ITEM_SLOTS;
 
-                    chat_command_world
+                    chat_command_params
                         .commands
                         .entity(entity)
                         .insert(store)
@@ -512,11 +518,11 @@ fn handle_chat_command(
         ("speed", arg_matches) => {
             let value = arg_matches.value_of("speed").unwrap().parse::<i32>()?;
 
-            chat_command_world
+            chat_command_params
                 .commands
                 .entity(chat_command_user.entity)
                 .insert(MoveSpeed::new(value as f32));
-            chat_command_world.server_messages.send_entity_message(
+            chat_command_params.server_messages.send_entity_message(
                 chat_command_user.client_entity,
                 ServerMessage::UpdateSpeed(UpdateSpeed {
                     entity_id: chat_command_user.client_entity.id,
@@ -534,7 +540,7 @@ fn handle_chat_command(
 }
 
 pub fn chat_commands_system(
-    mut commands: Commands,
+    mut chat_command_params: ChatCommandParams,
     mut user_query: Query<(
         &AbilityValues,
         &ClientEntity,
@@ -548,22 +554,8 @@ pub fn chat_commands_system(
         &mut StatPoints,
         &mut UnionMembership,
     )>,
-    mut bot_list: ResMut<BotList>,
-    mut client_entity_list: ResMut<ClientEntityList>,
-    game_data: Res<GameData>,
     mut chat_command_events: EventReader<ChatCommandEvent>,
-    mut reward_xp_events: EventWriter<RewardXpEvent>,
-    mut server_messages: ResMut<ServerMessages>,
 ) {
-    let mut chat_command_world = ChatCommandWorld {
-        commands: &mut commands,
-        bot_list: &mut bot_list,
-        client_entity_list: &mut client_entity_list,
-        game_data: &game_data,
-        reward_xp_events: &mut reward_xp_events,
-        server_messages: &mut server_messages,
-    };
-
     for &ChatCommandEvent {
         entity,
         ref command,
@@ -599,7 +591,7 @@ pub fn chat_commands_system(
             };
 
             if handle_chat_command(
-                &mut chat_command_world,
+                &mut chat_command_params,
                 &mut chat_command_user,
                 &command[1..],
             )

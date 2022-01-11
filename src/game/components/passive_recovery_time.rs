@@ -1,5 +1,8 @@
 use std::time::Duration;
 
+use bevy_ecs::prelude::Component;
+
+#[derive(Component)]
 pub struct PassiveRecoveryTime {
     pub time: Duration,
 }

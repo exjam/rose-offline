@@ -11,7 +11,7 @@ use crate::{
     game::{
         bundles::{
             client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
-            CharacterBundle, DroppedItemBundle,
+            CharacterBundle, ItemDropBundle,
         },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
@@ -627,13 +627,13 @@ pub fn game_server_main_system(
                             }
                         }
                     }
-                    ClientMessage::PickupDroppedItem(message) => {
+                    ClientMessage::PickupItemDrop(message) => {
                         if let Some((target_entity, _, _)) = client_entity_list
                             .get_zone(position.zone_id)
                             .and_then(|zone| zone.get_entity(message.target_entity_id))
                         {
                             entity_commands
-                                .insert(NextCommand::with_pickup_dropped_item(*target_entity));
+                                .insert(NextCommand::with_pickup_item_drop(*target_entity));
                         } else {
                             entity_commands.insert(NextCommand::with_stop(true));
                         }
@@ -847,7 +847,7 @@ pub fn game_server_main_system(
                         }
 
                         if money > Money(0) {
-                            DroppedItemBundle::spawn(
+                            ItemDropBundle::spawn(
                                 &mut commands,
                                 &mut client_entity_list,
                                 DroppedItem::Money(money),
@@ -874,7 +874,7 @@ pub fn game_server_main_system(
                             let item = inventory_slot.try_take_quantity(quantity);
 
                             if let Some(item) = item {
-                                DroppedItemBundle::spawn(
+                                ItemDropBundle::spawn(
                                     &mut commands,
                                     &mut client_entity_list,
                                     DroppedItem::Item(item),

@@ -89,7 +89,7 @@ pub fn save_system(
                         ),
                     }
 
-                    (client_entity, Some(position))
+                    (client_entity.cloned(), Some(position.clone()))
                 } else {
                     (None, None)
                 };
@@ -100,8 +100,8 @@ pub fn save_system(
                             &mut commands,
                             &mut client_entity_list,
                             entity,
-                            client_entity,
-                            position,
+                            &client_entity,
+                            &position,
                         );
                     }
 

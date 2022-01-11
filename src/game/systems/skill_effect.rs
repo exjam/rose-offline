@@ -1,8 +1,11 @@
-use bevy_ecs::prelude::{
-    Commands, Entity, EventReader, EventWriter, Local, Mut, Query, Res, ResMut,
+use std::marker::PhantomData;
+
+use bevy_ecs::{
+    prelude::{Commands, Entity, EventReader, EventWriter, Local, Mut, Query, Res, ResMut},
+    system::SystemParam,
 };
 use log::warn;
-use rand::{prelude::ThreadRng, Rng};
+use rand::Rng;
 
 use crate::{
     data::{
@@ -30,12 +33,19 @@ enum SkillCastError {
     NotEnoughUseAbility,
 }
 
-struct SkillWorld<'b, 'c, 'd, 'e, 'f> {
-    game_data: &'b GameData,
-    server_messages: &'c mut ResMut<'d, ServerMessages>,
-    server_time: &'b ServerTime,
-    damage_events: &'e mut EventWriter<'f, DamageEvent>,
-    rng: ThreadRng,
+#[derive(SystemParam)]
+pub struct SkillSystemParameters<'w, 's> {
+    server_messages: ResMut<'w, ServerMessages>,
+    damage_events: EventWriter<'w, 's, DamageEvent>,
+}
+
+#[derive(SystemParam)]
+pub struct SkillSystemResources<'w, 's> {
+    game_data: Res<'w, GameData>,
+    server_time: Res<'w, ServerTime>,
+
+    #[system_param(ignore)]
+    _secret: PhantomData<&'s ()>,
 }
 
 struct SkillCaster<'a> {
@@ -69,30 +79,30 @@ struct SkillTargetData<'a> {
     npc: Option<&'a Npc>,
 }
 
-struct SkillTargetQuery<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n> {
+#[derive(SystemParam)]
+pub struct SkillTargetQuery<'w, 's> {
     query: Query<
-        'a,
+        'w,
+        's,
         (
-            &'b ClientEntity,
-            &'c Position,
-            &'d AbilityValues,
-            &'e mut StatusEffects,
-            &'f Team,
-            &'g HealthPoints,
-            &'h Level,
-            &'i MoveSpeed,
-            Option<&'j CharacterInfo>,
-            Option<&'k Equipment>,
-            Option<&'l BasicStats>,
-            Option<&'m SkillList>,
-            Option<&'n Npc>,
+            &'static ClientEntity,
+            &'static Position,
+            &'static AbilityValues,
+            &'static mut StatusEffects,
+            &'static Team,
+            &'static HealthPoints,
+            &'static Level,
+            &'static MoveSpeed,
+            Option<&'static CharacterInfo>,
+            Option<&'static Equipment>,
+            Option<&'static BasicStats>,
+            Option<&'static SkillList>,
+            Option<&'static Npc>,
         ),
     >,
 }
 
-impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n>
-    SkillTargetQuery<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n>
-{
+impl<'w, 's> SkillTargetQuery<'w, 's> {
     fn get_skill_target_data(&mut self, entity: Entity) -> Option<SkillTargetData> {
         let (
             client_entity,
@@ -130,7 +140,6 @@ impl<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i, 'j, 'k, 'l, 'm, 'n>
 }
 
 fn check_skill_target_filter(
-    _skill_world: &mut SkillWorld,
     skill_caster: &SkillCaster,
     skill_target: &mut SkillTargetData,
     skill_data: &SkillData,
@@ -179,20 +188,23 @@ fn check_skill_target_filter(
 }
 
 fn apply_skill_status_effects_to_entity(
-    skill_world: &mut SkillWorld,
+    skill_system_parameters: &mut SkillSystemParameters,
+    skill_system_resources: &SkillSystemResources,
     skill_caster: &SkillCaster,
     skill_target: &mut SkillTargetData,
     skill_data: &SkillData,
 ) -> Result<(), SkillCastError> {
-    if !check_skill_target_filter(skill_world, skill_caster, skill_target, skill_data) {
+    if !check_skill_target_filter(skill_caster, skill_target, skill_data) {
         return Err(SkillCastError::InvalidTarget);
     }
 
     if skill_data.harm != 0 {
-        skill_world.damage_events.send(DamageEvent::with_tagged(
-            skill_caster.entity,
-            skill_target.entity,
-        ));
+        skill_system_parameters
+            .damage_events
+            .send(DamageEvent::with_tagged(
+                skill_caster.entity,
+                skill_target.entity,
+            ));
     }
 
     for add_ability in skill_data.add_ability.iter() {
@@ -214,7 +226,7 @@ fn apply_skill_status_effects_to_entity(
         .enumerate()
         .filter_map(|(index, id)| id.map(|id| (index, id)))
     {
-        if let Some(status_effect_data) = skill_world
+        if let Some(status_effect_data) = skill_system_resources
             .game_data
             .status_effects
             .get_status_effect(status_effect_id)
@@ -224,7 +236,7 @@ fn apply_skill_status_effects_to_entity(
                     StatusEffectClearedByType::ClearGood => {
                         if skill_data.success_ratio
                             < skill_target.level.level as i32 - skill_caster.level.level as i32
-                                + skill_world.rng.gen_range(1..=100)
+                                + rand::thread_rng().gen_range(1..=100)
                         {
                             continue;
                         }
@@ -237,7 +249,7 @@ fn apply_skill_status_effects_to_entity(
                             / (skill_target.ability_values.get_resistance() as f32 * 0.6
                                 + 5.0
                                 + skill_target.ability_values.get_avoid() as f32)
-                            <= skill_world.rng.gen_range(1..=100) as f32
+                            <= rand::thread_rng().gen_range(1..=100) as f32
                         {
                             continue;
                         }
@@ -266,7 +278,7 @@ fn apply_skill_status_effects_to_entity(
                     None,
                 )
                 .unwrap_or(0);
-                skill_world
+                skill_system_resources
                     .game_data
                     .ability_value_calculator
                     .calculate_skill_adjust_value(
@@ -284,7 +296,7 @@ fn apply_skill_status_effects_to_entity(
             {
                 skill_target.status_effects.apply_status_effect(
                     status_effect_data,
-                    skill_world.server_time.now + skill_data.status_effect_duration,
+                    skill_system_resources.server_time.now + skill_data.status_effect_duration,
                     adjust_value,
                 );
 
@@ -304,7 +316,7 @@ fn apply_skill_status_effects_to_entity(
     }
 
     if effect_success.iter().any(|x| *x) {
-        skill_world.server_messages.send_entity_message(
+        skill_system_parameters.server_messages.send_entity_message(
             skill_target.client_entity,
             ServerMessage::ApplySkillEffect(ApplySkillEffect {
                 entity_id: skill_target.client_entity.id,
@@ -320,7 +332,8 @@ fn apply_skill_status_effects_to_entity(
 }
 
 fn apply_skill_status_effects(
-    skill_world: &mut SkillWorld,
+    skill_system_parameters: &mut SkillSystemParameters,
+    skill_system_resources: &SkillSystemResources,
     client_entity_list: &ClientEntityList,
     skill_caster: &SkillCaster,
     skill_target: &SkillEventTarget,
@@ -352,7 +365,8 @@ fn apply_skill_status_effects(
             if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity)
             {
                 apply_skill_status_effects_to_entity(
-                    skill_world,
+                    skill_system_parameters,
+                    skill_system_resources,
                     skill_caster,
                     &mut skill_target,
                     skill_data,
@@ -365,7 +379,8 @@ fn apply_skill_status_effects(
     } else if let SkillEventTarget::Entity(target_entity) = *skill_target {
         if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity) {
             apply_skill_status_effects_to_entity(
-                skill_world,
+                skill_system_parameters,
+                skill_system_resources,
                 skill_caster,
                 &mut skill_target,
                 skill_data,
@@ -381,17 +396,18 @@ fn apply_skill_status_effects(
 }
 
 fn apply_skill_damage_to_entity(
-    skill_world: &mut SkillWorld,
+    skill_system_parameters: &mut SkillSystemParameters,
+    skill_system_resources: &SkillSystemResources,
     skill_caster: &SkillCaster,
     skill_target: &mut SkillTargetData,
     skill_data: &SkillData,
 ) -> Result<Damage, SkillCastError> {
-    if !check_skill_target_filter(skill_world, skill_caster, skill_target, skill_data) {
+    if !check_skill_target_filter(skill_caster, skill_target, skill_data) {
         return Err(SkillCastError::InvalidTarget);
     }
 
     // TODO: Get hit count from skill action motion
-    let damage = skill_world
+    let damage = skill_system_resources
         .game_data
         .ability_value_calculator
         .calculate_skill_damage(
@@ -402,26 +418,31 @@ fn apply_skill_damage_to_entity(
         );
 
     if matches!(skill_data.skill_type, SkillType::FireBullet) {
-        skill_world.damage_events.send(DamageEvent::with_attack(
-            skill_caster.entity,
-            skill_target.entity,
-            damage,
-        ));
+        skill_system_parameters
+            .damage_events
+            .send(DamageEvent::with_attack(
+                skill_caster.entity,
+                skill_target.entity,
+                damage,
+            ));
     } else {
-        skill_world.damage_events.send(DamageEvent::with_skill(
-            skill_caster.entity,
-            skill_target.entity,
-            damage,
-            skill_data.id,
-            skill_caster.ability_values.get_intelligence(),
-        ));
+        skill_system_parameters
+            .damage_events
+            .send(DamageEvent::with_skill(
+                skill_caster.entity,
+                skill_target.entity,
+                damage,
+                skill_data.id,
+                skill_caster.ability_values.get_intelligence(),
+            ));
     }
 
     Ok(damage)
 }
 
 fn apply_skill_damage(
-    skill_world: &mut SkillWorld,
+    skill_system_parameters: &mut SkillSystemParameters,
+    skill_system_resources: &SkillSystemResources,
     client_entity_list: &ClientEntityList,
     skill_caster: &SkillCaster,
     skill_target: &SkillEventTarget,
@@ -453,7 +474,8 @@ fn apply_skill_damage(
             if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity)
             {
                 apply_skill_damage_to_entity(
-                    skill_world,
+                    skill_system_parameters,
+                    skill_system_resources,
                     skill_caster,
                     &mut skill_target,
                     skill_data,
@@ -466,8 +488,14 @@ fn apply_skill_damage(
     } else if let SkillEventTarget::Entity(target_entity) = *skill_target {
         // Apply directly to entity
         if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity) {
-            apply_skill_damage_to_entity(skill_world, skill_caster, &mut skill_target, skill_data)
-                .ok();
+            apply_skill_damage_to_entity(
+                skill_system_parameters,
+                skill_system_resources,
+                skill_caster,
+                &mut skill_target,
+                skill_data,
+            )
+            .ok();
             Ok(())
         } else {
             Err(SkillCastError::InvalidTarget)
@@ -478,6 +506,10 @@ fn apply_skill_damage(
 }
 
 pub fn skill_effect_system(
+    mut skill_system_parameters: SkillSystemParameters,
+    skill_system_resources: SkillSystemResources,
+    mut skill_target_query: SkillTargetQuery,
+
     mut commands: Commands,
     mut caster_query: Query<(
         &ClientEntity,
@@ -488,40 +520,10 @@ pub fn skill_effect_system(
         Option<&GameClient>,
         Option<&mut Inventory>,
     )>,
-    target_query: Query<(
-        &ClientEntity,
-        &Position,
-        &AbilityValues,
-        &mut StatusEffects,
-        &Team,
-        &HealthPoints,
-        &Level,
-        &MoveSpeed,
-        Option<&CharacterInfo>,
-        Option<&Equipment>,
-        Option<&BasicStats>,
-        Option<&SkillList>,
-        Option<&Npc>,
-    )>,
-    game_data: Res<GameData>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut skill_events: EventReader<SkillEvent>,
-    mut damage_events: EventWriter<DamageEvent>,
     mut pending_skill_events: Local<Vec<SkillEvent>>,
-    mut server_messages: ResMut<ServerMessages>,
-    server_time: Res<ServerTime>,
 ) {
-    let mut skill_world = SkillWorld {
-        damage_events: &mut damage_events,
-        game_data: &game_data,
-        server_messages: &mut server_messages,
-        server_time: &server_time,
-        rng: rand::thread_rng(),
-    };
-    let mut skill_target_query = SkillTargetQuery {
-        query: target_query,
-    };
-
     // Read events into pending_skill_events for executing at specific time
     for skill_event in skill_events.iter() {
         pending_skill_events.push(skill_event.clone());
@@ -530,7 +532,7 @@ pub fn skill_effect_system(
     // TODO: drain_filter pls
     let mut i = 0;
     while i != pending_skill_events.len() {
-        if pending_skill_events[i].when > server_time.now {
+        if pending_skill_events[i].when > skill_system_resources.server_time.now {
             i += 1;
             continue;
         }
@@ -543,7 +545,7 @@ pub fn skill_effect_system(
             ..
         } = pending_skill_events.remove(i);
 
-        let skill_data = skill_world.game_data.skills.get_skill(skill_id);
+        let skill_data = skill_system_resources.game_data.skills.get_skill(skill_id);
         if skill_data.is_none() {
             continue;
         }
@@ -598,7 +600,8 @@ pub fn skill_effect_system(
                     | SkillType::AreaTarget
                     | SkillType::SelfDamage => {
                         match apply_skill_damage(
-                            &mut skill_world,
+                            &mut skill_system_parameters,
+                            &skill_system_resources,
                             &client_entity_list,
                             &skill_caster,
                             &skill_target,
@@ -606,7 +609,8 @@ pub fn skill_effect_system(
                             &mut skill_target_query,
                         ) {
                             Ok(_) => apply_skill_status_effects(
-                                &mut skill_world,
+                                &mut skill_system_parameters,
+                                &skill_system_resources,
                                 &client_entity_list,
                                 &skill_caster,
                                 &skill_target,
@@ -622,7 +626,8 @@ pub fn skill_effect_system(
                     | SkillType::TargetStateDuration
                     | SkillType::SelfBound
                     | SkillType::TargetBound => apply_skill_status_effects(
-                        &mut skill_world,
+                        &mut skill_system_parameters,
+                        &skill_system_resources,
                         &client_entity_list,
                         &skill_caster,
                         &skill_target,
@@ -636,13 +641,15 @@ pub fn skill_effect_system(
                                 skill_target_query.get_skill_target_data(target_entity)
                             {
                                 match apply_skill_damage_to_entity(
-                                    &mut skill_world,
+                                    &mut skill_system_parameters,
+                                    &skill_system_resources,
                                     &skill_caster,
                                     &mut skill_target_data,
                                     skill_data,
                                 ) {
                                     Ok(damage) if damage.amount > 0 => apply_skill_status_effects(
-                                        &mut skill_world,
+                                        &mut skill_system_parameters,
+                                        &skill_system_resources,
                                         &client_entity_list,
                                         &skill_caster,
                                         &skill_target,
@@ -664,7 +671,7 @@ pub fn skill_effect_system(
                             if MonsterBundle::spawn(
                                 &mut commands,
                                 &mut client_entity_list,
-                                skill_world.game_data,
+                                &skill_system_resources.game_data,
                                 npc_id,
                                 skill_caster.position.zone_id,
                                 SpawnOrigin::Summoned(
@@ -733,7 +740,7 @@ pub fn skill_effect_system(
                         }
                     }
 
-                    skill_world.server_messages.send_entity_message(
+                    skill_system_parameters.server_messages.send_entity_message(
                         caster_client_entity,
                         ServerMessage::FinishCastingSkill(caster_client_entity.id, skill_id),
                     )
@@ -747,7 +754,7 @@ pub fn skill_effect_system(
                             .expect("Unexpected error returning unconsumed item to inventory");
                     }
 
-                    skill_world.server_messages.send_entity_message(
+                    skill_system_parameters.server_messages.send_entity_message(
                         caster_client_entity,
                         ServerMessage::CancelCastingSkill(
                             caster_client_entity.id,

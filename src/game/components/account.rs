@@ -1,5 +1,8 @@
+use bevy_ecs::prelude::Component;
+
 use crate::data::account::AccountStorage;
 
+#[derive(Component)]
 pub struct Account {
     pub name: String,
     pub password_md5_sha256: String,

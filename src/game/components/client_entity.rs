@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::Component;
 use nalgebra::Point2;
 
 use crate::data::ZoneId;
@@ -7,13 +8,13 @@ pub enum ClientEntityType {
     Character,
     Monster,
     Npc,
-    DroppedItem,
+    ItemDrop,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ClientEntityId(pub usize);
 
-#[derive(Clone, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct ClientEntity {
     pub id: ClientEntityId,
     pub zone_id: ZoneId,

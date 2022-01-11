@@ -20,8 +20,7 @@ use crate::{
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, NpcStoreTransactionError,
-            PartyMemberInfo, PartyReply, PartyRequest, PickupDroppedItemContent,
-            PickupDroppedItemError,
+            PartyMemberInfo, PartyReply, PartyRequest, PickupItemDropContent, PickupItemDropError,
         },
     },
     irose::protocol::game::common_packets::{
@@ -68,8 +67,8 @@ pub enum ServerPackets {
     UpdateLevel = 0x79e,
     UseItem = 0x7a3,
     UpdateEquipment = 0x7a5,
-    SpawnEntityDroppedItem = 0x7a6,
-    PickupDroppedItemResult = 0x7a7,
+    SpawnEntityItemDrop = 0x7a6,
+    PickupItemDropResult = 0x7a7,
     Teleport = 0x7a8,
     UpdateBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
@@ -628,7 +627,7 @@ impl PacketWriteCommand for PacketWriter {
             CommandData::Move(_) => 1,
             CommandData::Attack(_) => 2,
             CommandData::Die(_) => 3,
-            CommandData::PickupDroppedItem(_) => 4,
+            CommandData::PickupItemDrop(_) => 4,
             CommandData::PersonalStore => 11,
             CommandData::CastSkill(CommandCastSkill {
                 skill_target: None, ..
@@ -648,7 +647,7 @@ impl PacketWriteCommand for PacketWriter {
     }
 }
 
-pub struct PacketServerSpawnEntityDroppedItem<'a> {
+pub struct PacketServerSpawnEntityItemDrop<'a> {
     pub entity_id: ClientEntityId,
     pub dropped_item: &'a DroppedItem,
     pub position: &'a Position,
@@ -656,9 +655,9 @@ pub struct PacketServerSpawnEntityDroppedItem<'a> {
     pub remaining_time: &'a Duration,
 }
 
-impl<'a> From<&'a PacketServerSpawnEntityDroppedItem<'a>> for Packet {
-    fn from(packet: &'a PacketServerSpawnEntityDroppedItem<'a>) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::SpawnEntityDroppedItem as u16);
+impl<'a> From<&'a PacketServerSpawnEntityItemDrop<'a>> for Packet {
+    fn from(packet: &'a PacketServerSpawnEntityItemDrop<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::SpawnEntityItemDrop as u16);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
         match packet.dropped_item {
@@ -1015,31 +1014,31 @@ impl From<&PacketServerUpdateBasicStat> for Packet {
     }
 }
 
-pub struct PacketServerPickupDroppedItemResult {
+pub struct PacketServerPickupItemDropResult {
     pub item_entity_id: ClientEntityId,
-    pub result: Result<PickupDroppedItemContent, PickupDroppedItemError>,
+    pub result: Result<PickupItemDropContent, PickupItemDropError>,
 }
 
-impl From<&PacketServerPickupDroppedItemResult> for Packet {
-    fn from(packet: &PacketServerPickupDroppedItemResult) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::PickupDroppedItemResult as u16);
+impl From<&PacketServerPickupItemDropResult> for Packet {
+    fn from(packet: &PacketServerPickupItemDropResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PickupItemDropResult as u16);
         writer.write_entity_id(packet.item_entity_id);
         match &packet.result {
-            Ok(PickupDroppedItemContent::Item(slot, item)) => {
+            Ok(PickupItemDropContent::Item(slot, item)) => {
                 writer.write_u8(0); // OK
                 writer.write_item_slot_u16(*slot);
                 writer.write_item_full(Some(item));
             }
-            Ok(PickupDroppedItemContent::Money(money)) => {
+            Ok(PickupItemDropContent::Money(money)) => {
                 writer.write_u8(0); // OK
                 writer.write_u16(0); // Slot
                 writer.write_item_full_money(*money);
             }
             Err(error) => {
                 match error {
-                    PickupDroppedItemError::NotExist => writer.write_u8(1),
-                    PickupDroppedItemError::NoPermission => writer.write_u8(2),
-                    PickupDroppedItemError::InventoryFull => writer.write_u8(3),
+                    PickupItemDropError::NotExist => writer.write_u8(1),
+                    PickupItemDropError::NoPermission => writer.write_u8(2),
+                    PickupItemDropError::InventoryFull => writer.write_u8(3),
                 }
                 writer.write_u16(0); // Slot
                 writer.write_item_full(None);

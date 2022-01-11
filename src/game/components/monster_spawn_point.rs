@@ -1,7 +1,9 @@
 use std::time::Duration;
 
 use crate::data::{NpcId, ZoneMonsterSpawnPoint};
+use bevy_ecs::prelude::Component;
 
+#[derive(Component)]
 pub struct MonsterSpawnPoint {
     pub basic_spawns: Vec<(NpcId, usize)>,
     pub tactic_spawns: Vec<(NpcId, usize)>,

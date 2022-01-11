@@ -1,6 +1,7 @@
+use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Deserialize, Serialize)]
 pub struct Level {
     pub level: u32,
 }

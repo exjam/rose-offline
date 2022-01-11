@@ -1,3 +1,4 @@
+use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{SkillData, SkillId, SkillPageType};
@@ -40,7 +41,7 @@ impl SkillPage {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Deserialize, Serialize)]
 pub struct SkillList {
     pub basic: SkillPage,
     pub active: SkillPage,

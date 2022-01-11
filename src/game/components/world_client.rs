@@ -1,9 +1,10 @@
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::prelude::{Component, Entity};
 use crossbeam_channel::Receiver;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::game::messages::{client::ClientMessage, server::ServerMessage};
 
+#[derive(Component)]
 pub struct WorldClient {
     pub client_message_rx: Receiver<ClientMessage>,
     pub server_message_tx: UnboundedSender<ServerMessage>,

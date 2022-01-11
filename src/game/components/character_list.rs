@@ -1,5 +1,8 @@
+use bevy_ecs::prelude::Component;
+
 use crate::data::character::CharacterStorage;
 
+#[derive(Component)]
 pub struct CharacterList {
     pub characters: Vec<CharacterStorage>,
 }

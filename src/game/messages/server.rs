@@ -55,22 +55,22 @@ pub struct MoveEntity {
 }
 
 #[derive(Clone)]
-pub enum PickupDroppedItemError {
+pub enum PickupItemDropError {
     NotExist,
     NoPermission,
     InventoryFull,
 }
 
 #[derive(Clone)]
-pub enum PickupDroppedItemContent {
+pub enum PickupItemDropContent {
     Item(ItemSlot, Item),
     Money(Money),
 }
 
 #[derive(Clone)]
-pub struct PickupDroppedItemResult {
+pub struct PickupItemDropResult {
     pub item_entity_id: ClientEntityId,
-    pub result: Result<PickupDroppedItemContent, PickupDroppedItemError>,
+    pub result: Result<PickupItemDropContent, PickupItemDropError>,
 }
 
 #[derive(Clone)]
@@ -93,7 +93,7 @@ impl RemoveEntities {
 }
 
 #[derive(Clone)]
-pub struct SpawnEntityDroppedItem {
+pub struct SpawnEntityItemDrop {
     pub entity_id: ClientEntityId,
     pub dropped_item: DroppedItem,
     pub position: Position,
@@ -443,10 +443,10 @@ pub enum ServerMessage {
     ShoutChat(ShoutChat),
     AnnounceChat(AnnounceChat),
     MoveEntity(MoveEntity),
-    PickupDroppedItemResult(PickupDroppedItemResult),
+    PickupItemDropResult(PickupItemDropResult),
     RemoveEntities(RemoveEntities),
     SpawnEntityCharacter(Box<SpawnEntityCharacter>),
-    SpawnEntityDroppedItem(SpawnEntityDroppedItem),
+    SpawnEntityItemDrop(SpawnEntityItemDrop),
     SpawnEntityMonster(SpawnEntityMonster),
     SpawnEntityNpc(SpawnEntityNpc),
     StopMoveEntity(StopMoveEntity),

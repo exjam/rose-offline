@@ -1,3 +1,6 @@
+use bevy_ecs::prelude::Component;
+
+#[derive(Component)]
 pub struct ServerInfo {
     pub name: String,
     pub ip: String,

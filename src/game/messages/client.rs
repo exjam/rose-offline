@@ -226,7 +226,7 @@ pub struct ChangeEquipment {
 }
 
 #[derive(Debug)]
-pub struct PickupDroppedItem {
+pub struct PickupItemDrop {
     pub target_entity_id: ClientEntityId,
 }
 
@@ -305,7 +305,7 @@ pub enum ClientMessage {
     ChangeAmmo(AmmoIndex, Option<ItemSlot>),
     ChangeEquipment(ChangeEquipment),
     IncreaseBasicStat(BasicStatType),
-    PickupDroppedItem(PickupDroppedItem),
+    PickupItemDrop(PickupItemDrop),
     LogoutRequest(LogoutRequest),
     ReviveRequest(ReviveRequestType),
     QuestTrigger(QuestTriggerHash),

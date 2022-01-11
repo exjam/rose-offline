@@ -9,18 +9,18 @@ use crate::{
     game::messages::{
         client::{
             Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,
-            LogoutRequest, Move, NpcStoreTransaction, PersonalStoreBuyItem, PickupDroppedItem,
+            LogoutRequest, Move, NpcStoreTransaction, PersonalStoreBuyItem, PickupItemDrop,
             QuestDelete, SetHotbarSlot,
         },
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
             CastSkillTargetPosition, LocalChat, LogoutReply, MoveToggle, OpenPersonalStore,
             PartyMemberLeave, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
-            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
-            PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
-            ServerMessage, ShoutChat, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
-            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed,
-            UpdateStatusEffects, UpdateXpStamina, UseEmote, UseItem, Whisper,
+            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess, PickupItemDropResult,
+            QuestDeleteResult, QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat,
+            SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue,
+            UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects,
+            UpdateXpStamina, UseEmote, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -210,11 +210,11 @@ impl GameClient {
                     .client_message_tx
                     .send(ClientMessage::IncreaseBasicStat(basic_stat_type))?;
             }
-            Some(ClientPackets::PickupDroppedItem) => {
-                let packet = PacketClientPickupDroppedItem::try_from(&packet)?;
+            Some(ClientPackets::PickupItemDrop) => {
+                let packet = PacketClientPickupItemDrop::try_from(&packet)?;
                 client
                     .client_message_tx
-                    .send(ClientMessage::PickupDroppedItem(PickupDroppedItem {
+                    .send(ClientMessage::PickupItemDrop(PickupItemDrop {
                         target_entity_id: packet.target_entity_id,
                     }))?;
             }
@@ -508,7 +508,7 @@ impl GameClient {
                     }))
                     .await?;
             }
-            ServerMessage::SpawnEntityDroppedItem(SpawnEntityDroppedItem {
+            ServerMessage::SpawnEntityItemDrop(SpawnEntityItemDrop {
                 entity_id,
                 ref dropped_item,
                 ref position,
@@ -517,7 +517,7 @@ impl GameClient {
             }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerSpawnEntityDroppedItem {
+                    .write_packet(Packet::from(&PacketServerSpawnEntityItemDrop {
                         entity_id,
                         dropped_item,
                         position,
@@ -742,13 +742,13 @@ impl GameClient {
                     }))
                     .await?;
             }
-            ServerMessage::PickupDroppedItemResult(PickupDroppedItemResult {
+            ServerMessage::PickupItemDropResult(PickupItemDropResult {
                 item_entity_id,
                 result,
             }) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPickupDroppedItemResult {
+                    .write_packet(Packet::from(&PacketServerPickupItemDropResult {
                         item_entity_id,
                         result,
                     }))

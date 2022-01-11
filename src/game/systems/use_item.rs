@@ -1,4 +1,7 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut};
+use bevy_ecs::{
+    prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut},
+    system::SystemParam,
+};
 use log::warn;
 
 use crate::{
@@ -20,29 +23,30 @@ use crate::{
     },
 };
 
-struct UseItemWorld<'a, 'b, 'c, 'd, 'e> {
-    pub commands: &'a mut Commands<'b>,
-    pub game_data: &'c GameData,
-    pub server_messages: &'d mut ResMut<'e, ServerMessages>,
+#[derive(SystemParam)]
+pub struct UseItemSystemParameters<'w, 's> {
+    commands: Commands<'w, 's>,
+    game_data: Res<'w, GameData>,
+    server_messages: ResMut<'w, ServerMessages>,
 }
 
 struct UseItemUser<'a, 'world> {
-    pub entity: Entity,
-    pub ability_values: &'a AbilityValues,
-    pub basic_stats: &'a mut Mut<'world, BasicStats>,
-    pub character_info: &'a CharacterInfo,
-    pub client_entity: &'a ClientEntity,
-    pub experience_points: &'a ExperiencePoints,
-    pub game_client: Option<&'a GameClient>,
-    pub inventory: &'a mut Mut<'world, Inventory>,
-    pub level: &'a Level,
-    pub move_speed: &'a MoveSpeed,
-    pub skill_list: &'a mut Mut<'world, SkillList>,
-    pub skill_points: &'a mut Mut<'world, SkillPoints>,
-    pub stamina: &'a mut Mut<'world, Stamina>,
-    pub stat_points: &'a mut Mut<'world, StatPoints>,
-    pub team_number: &'a Team,
-    pub union_membership: &'a mut Mut<'world, UnionMembership>,
+    entity: Entity,
+    ability_values: &'a AbilityValues,
+    basic_stats: &'a mut Mut<'world, BasicStats>,
+    character_info: &'a CharacterInfo,
+    client_entity: &'a ClientEntity,
+    experience_points: &'a ExperiencePoints,
+    game_client: Option<&'a GameClient>,
+    inventory: &'a mut Mut<'world, Inventory>,
+    level: &'a Level,
+    move_speed: &'a MoveSpeed,
+    skill_list: &'a mut Mut<'world, SkillList>,
+    skill_points: &'a mut Mut<'world, SkillPoints>,
+    stamina: &'a mut Mut<'world, Stamina>,
+    stat_points: &'a mut Mut<'world, StatPoints>,
+    team_number: &'a Team,
+    union_membership: &'a mut Mut<'world, UnionMembership>,
 }
 
 enum UseItemError {
@@ -51,7 +55,7 @@ enum UseItemError {
 }
 
 fn use_inventory_item(
-    use_item_world: &mut UseItemWorld,
+    use_item_system_parameters: &mut UseItemSystemParameters,
     use_item_user: &mut UseItemUser,
     item_slot: ItemSlot,
     target_entity: Option<Entity>,
@@ -66,7 +70,7 @@ fn use_inventory_item(
         return Err(UseItemError::InvalidItem);
     }
 
-    let item_data = use_item_world
+    let item_data = use_item_system_parameters
         .game_data
         .items
         .get_consumable_item(item.get_item_number())
@@ -109,22 +113,28 @@ fn use_inventory_item(
     let (consume_item, message_to_nearby) = match item_data.item_data.class {
         ItemClass::MagicItem => {
             if let Some(skill_id) = item_data.use_skill_id {
-                if let Some(skill_data) = use_item_world.game_data.skills.get_skill(skill_id) {
+                if let Some(skill_data) = use_item_system_parameters
+                    .game_data
+                    .skills
+                    .get_skill(skill_id)
+                {
                     if skill_data.skill_type.is_self_skill() {
-                        use_item_world.commands.entity(use_item_user.entity).insert(
-                            NextCommand::with_cast_skill_target_self(
+                        use_item_system_parameters
+                            .commands
+                            .entity(use_item_user.entity)
+                            .insert(NextCommand::with_cast_skill_target_self(
                                 skill_id,
                                 Some((item_slot, item.clone())),
-                            ),
-                        );
+                            ));
                     } else if skill_data.skill_type.is_target_skill() && target_entity.is_some() {
-                        use_item_world.commands.entity(use_item_user.entity).insert(
-                            NextCommand::with_cast_skill_target_entity(
+                        use_item_system_parameters
+                            .commands
+                            .entity(use_item_user.entity)
+                            .insert(NextCommand::with_cast_skill_target_entity(
                                 skill_id,
                                 target_entity.unwrap(),
                                 Some((item_slot, item.clone())),
-                            ),
-                        );
+                            ));
                     } else if matches!(skill_data.skill_type, SkillType::Warp) {
                         // TODO: Handle warp immediately rather than casting skill
                         warn!("Unimplemented use of Warp item with item {:?}", item);
@@ -138,7 +148,7 @@ fn use_inventory_item(
             if let Some(skill_id) = item_data.learn_skill_id {
                 (
                     skill_list_try_learn_skill(
-                        use_item_world.game_data.skills.as_ref(),
+                        use_item_system_parameters.game_data.skills.as_ref(),
                         skill_id,
                         use_item_user.skill_list,
                         Some(use_item_user.skill_points),
@@ -184,14 +194,16 @@ fn use_inventory_item(
     if consume_item {
         if let Some(game_client) = use_item_user.game_client {
             if message_to_nearby {
-                use_item_world.server_messages.send_entity_message(
-                    use_item_user.client_entity,
-                    ServerMessage::UseItem(UseItem {
-                        entity_id: use_item_user.client_entity.id,
-                        item: item.get_item_reference(),
-                        inventory_slot: item_slot,
-                    }),
-                );
+                use_item_system_parameters
+                    .server_messages
+                    .send_entity_message(
+                        use_item_user.client_entity,
+                        ServerMessage::UseItem(UseItem {
+                            entity_id: use_item_user.client_entity.id,
+                            item: item.get_item_reference(),
+                            inventory_slot: item_slot,
+                        }),
+                    );
             }
 
             match use_item_user.inventory.get_item(item_slot) {
@@ -231,7 +243,7 @@ fn use_inventory_item(
 }
 
 pub fn use_item_system(
-    mut commands: Commands,
+    mut use_item_system_parameters: UseItemSystemParameters,
     mut query: Query<(
         &AbilityValues,
         &CharacterInfo,
@@ -251,16 +263,8 @@ pub fn use_item_system(
         ),
         Option<&GameClient>,
     )>,
-    game_data: Res<GameData>,
     mut use_item_events: EventReader<UseItemEvent>,
-    mut server_messages: ResMut<ServerMessages>,
 ) {
-    let mut use_item_world = UseItemWorld {
-        commands: &mut commands,
-        game_data: &game_data,
-        server_messages: &mut server_messages,
-    };
-
     for &UseItemEvent {
         entity,
         item_slot,
@@ -307,7 +311,7 @@ pub fn use_item_system(
             };
 
             use_inventory_item(
-                &mut use_item_world,
+                &mut use_item_system_parameters,
                 &mut use_item_user,
                 item_slot,
                 target_entity,

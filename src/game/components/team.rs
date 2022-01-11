@@ -1,4 +1,6 @@
-#[derive(Clone, Debug)]
+use bevy_ecs::prelude::Component;
+
+#[derive(Component, Clone, Debug)]
 pub struct Team {
     pub id: u32,
 }

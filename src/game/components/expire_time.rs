@@ -1,5 +1,8 @@
 use std::time::Instant;
 
+use bevy_ecs::prelude::Component;
+
+#[derive(Component)]
 pub struct ExpireTime {
     pub when: Instant,
 }
