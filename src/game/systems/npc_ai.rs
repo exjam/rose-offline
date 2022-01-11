@@ -263,9 +263,10 @@ fn ai_condition_has_no_owner(
         .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .map(|(position, _)| position.clone())
     {
-        owner_position.zone_id == ai_parameters.source.position.zone_id
+        // Our owner must be in the same map
+        owner_position.zone_id != ai_parameters.source.position.zone_id
     } else {
-        false
+        true
     }
 }
 
