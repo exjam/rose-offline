@@ -14,7 +14,7 @@ use crate::{
             AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,
             SkillSlot,
         },
-        messages::client::{NpcStoreBuyItem, ReviveRequestType},
+        messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
     },
     irose::protocol::game::common_packets::{
         decode_ammo_index, decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot,
@@ -51,6 +51,8 @@ pub enum ClientPackets {
     CastSkillTargetPosition = 0x7b4,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
+    PartyRequest = 0x7d0,
+    PartyReply = 0x7d1,
 }
 
 #[derive(Debug)]
@@ -656,5 +658,55 @@ impl TryFrom<&Packet> for PacketClientWarpGateRequest {
         let mut reader = PacketReader::from(packet);
         let warp_gate_id = WarpGateId::new(reader.read_u16()?);
         Ok(PacketClientWarpGateRequest { warp_gate_id })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientPartyRequest {
+    pub request: PartyRequest,
+}
+
+impl TryFrom<&Packet> for PacketClientPartyRequest {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::PartyRequest as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let request = match reader.read_u8()? {
+            0 => PartyRequest::Create(ClientEntityId(reader.read_u16()? as usize)),
+            1 => PartyRequest::Invite(ClientEntityId(reader.read_u16()? as usize)),
+            2 => PartyRequest::Leave,
+            3 => PartyRequest::ChangeOwner(ClientEntityId(reader.read_u16()? as usize)),
+            0x81 => PartyRequest::Kick(reader.read_u32()?),
+            _ => return Err(ProtocolError::InvalidPacket),
+        };
+        Ok(PacketClientPartyRequest { request })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientPartyReply {
+    pub reply: PartyReply,
+}
+
+impl TryFrom<&Packet> for PacketClientPartyReply {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::PartyReply as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let reply = match reader.read_u8()? {
+            1 => PartyReply::Busy(ClientEntityId(reader.read_u16()? as usize)),
+            2 | 3 => PartyReply::Accept(ClientEntityId(reader.read_u16()? as usize)),
+            4 => PartyReply::Reject(ClientEntityId(reader.read_u16()? as usize)),
+            _ => return Err(ProtocolError::InvalidPacket),
+        };
+        Ok(PacketClientPartyReply { reply })
     }
 }

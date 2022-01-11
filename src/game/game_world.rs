@@ -10,8 +10,8 @@ use std::time::{Duration, Instant};
 
 use crate::game::{
     events::{
-        ChatCommandEvent, DamageEvent, NpcStoreEvent, PersonalStoreEvent, QuestTriggerEvent,
-        RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
+        ChatCommandEvent, DamageEvent, NpcStoreEvent, PartyEvent, PersonalStoreEvent,
+        QuestTriggerEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
@@ -23,7 +23,7 @@ use crate::game::{
         client_entity_visibility_system, command_system, control_server_system, damage_system,
         experience_points_system, expire_time_system, game_server_authentication_system,
         game_server_join_system, game_server_main_system, login_server_authentication_system,
-        login_server_system, monster_spawn_system, npc_ai_system, npc_store_system,
+        login_server_system, monster_spawn_system, npc_ai_system, npc_store_system, party_system,
         passive_recovery_system, personal_store_system, quest_system, save_system,
         server_messages_system, skill_effect_system, startup_zones_system, status_effect_system,
         update_position_system, use_item_system, weight_system, world_server_authentication_system,
@@ -71,6 +71,7 @@ impl GameWorld {
         world.insert_resource(Events::<ChatCommandEvent>::default());
         world.insert_resource(Events::<DamageEvent>::default());
         world.insert_resource(Events::<NpcStoreEvent>::default());
+        world.insert_resource(Events::<PartyEvent>::default());
         world.insert_resource(Events::<PersonalStoreEvent>::default());
         world.insert_resource(Events::<QuestTriggerEvent>::default());
         world.insert_resource(Events::<RewardXpEvent>::default());
@@ -125,6 +126,7 @@ impl GameWorld {
             GameStages::PreUpdate,
             SystemStage::parallel()
                 .with_system(command_system.system())
+                .with_system(party_system.system())
                 .with_system(update_position_system.system()),
         );
 

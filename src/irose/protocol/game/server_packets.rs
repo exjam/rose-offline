@@ -20,7 +20,8 @@ use crate::{
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, NpcStoreTransactionError,
-            PickupDroppedItemContent, PickupDroppedItemError,
+            PartyMemberInfo, PartyReply, PartyRequest, PickupDroppedItemContent,
+            PickupDroppedItemError,
         },
     },
     irose::protocol::game::common_packets::{
@@ -88,6 +89,9 @@ pub enum ServerPackets {
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
+    PartyRequest = 0x7d0,
+    PartyReply = 0x7d1,
+    PartyMembers = 0x7d2,
 }
 
 #[allow(dead_code)]
@@ -1573,6 +1577,131 @@ impl From<&PacketServerUseEmote> for Packet {
         writer.write_u16(packet.motion_id.get());
         writer.write_u16(if packet.is_stop { 1 << 15 } else { 0 });
         writer.write_entity_id(packet.entity_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyRequest {
+    pub party_request: PartyRequest,
+}
+
+impl From<&PacketServerPartyRequest> for Packet {
+    fn from(packet: &PacketServerPartyRequest) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyRequest as u16);
+        match packet.party_request {
+            PartyRequest::Create(entity_id) => {
+                writer.write_u8(0);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PartyRequest::Invite(entity_id) => {
+                writer.write_u8(1);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyReply {
+    pub party_reply: PartyReply,
+}
+
+impl From<&PacketServerPartyReply> for Packet {
+    fn from(packet: &PacketServerPartyReply) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
+        match packet.party_reply {
+            PartyReply::AcceptCreate(entity_id) => {
+                writer.write_u8(2);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PartyReply::AcceptInvite(entity_id) => {
+                writer.write_u8(3);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PartyReply::RejectInvite(entity_id) => {
+                writer.write_u8(4);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PartyReply::DeleteParty => {
+                writer.write_u8(5);
+                writer.write_u32(0);
+            }
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyMemberKicked {
+    pub kicked_character_id: u32,
+}
+
+impl From<&PacketServerPartyMemberKicked> for Packet {
+    fn from(packet: &PacketServerPartyMemberKicked) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
+        writer.write_u8(0x80);
+        writer.write_u32(packet.kicked_character_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyMembers<'a> {
+    pub party_members: &'a [PartyMemberInfo],
+}
+
+impl<'a> From<&'a PacketServerPartyMembers<'a>> for Packet {
+    fn from(packet: &'a PacketServerPartyMembers<'a>) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
+        writer.write_u8(0); // TODO: Party rules
+        writer.write_u8(packet.party_members.len() as u8);
+        for party_member in packet.party_members {
+            match party_member {
+                PartyMemberInfo::Online(party_member) => {
+                    writer.write_u32(party_member.character_id);
+                    writer.write_entity_id(party_member.entity_id);
+                    writer.write_u16(party_member.max_health as u16);
+                    writer.write_u16(party_member.health_points.hp as u16);
+                    writer.write_status_effects_flags_u32(&party_member.status_effects);
+                    writer.write_u16(party_member.concentration as u16);
+                    writer.write_u8(party_member.health_recovery as u8);
+                    writer.write_u8(party_member.mana_recovery as u8);
+                    writer.write_u16(party_member.stamina.stamina as u16);
+                    writer.write_null_terminated_utf8(&party_member.name);
+                }
+                PartyMemberInfo::Offline(party_member) => {
+                    writer.write_u32(party_member.character_id);
+                    writer.write_option_entity_id(None);
+                    writer.write_u16(0);
+                    writer.write_u16(0);
+                    writer.write_u32(0);
+                    writer.write_u16(0);
+                    writer.write_u8(0);
+                    writer.write_u8(0);
+                    writer.write_u16(0);
+                    writer.write_null_terminated_utf8(&party_member.name);
+                }
+            }
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyMemberLeave {
+    pub leaver_character_id: u32,
+    pub owner_character_id: u32,
+}
+
+impl From<&PacketServerPartyMemberLeave> for Packet {
+    fn from(packet: &PacketServerPartyMemberLeave) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
+        writer.write_u8(0); // TODO: Party rules ?
+        writer.write_u8(255); // -1
+        writer.write_u32(packet.leaver_character_id);
+        writer.write_u32(packet.owner_character_id);
         writer.into()
     }
 }

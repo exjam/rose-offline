@@ -6,10 +6,10 @@ use crate::{
         character::CharacterStorage, item::Item, MotionId, QuestTriggerHash, WarpGateId, WorldTicks,
     },
     game::components::{
-        AmmoIndex, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, ClientEntityId,
-        Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
-        ItemSlot, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, SkillSlot,
-        Stamina, StatPoints, Team, UnionMembership,
+        AmmoIndex, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
+        CharacterUniqueId, ClientEntityId, Equipment, EquipmentIndex, ExperiencePoints,
+        HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Position,
+        QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
 };
 
@@ -270,6 +270,22 @@ pub struct NpcStoreTransaction {
 }
 
 #[derive(Debug)]
+pub enum PartyRequest {
+    Create(ClientEntityId),
+    Invite(ClientEntityId),
+    Leave,
+    ChangeOwner(ClientEntityId),
+    Kick(CharacterUniqueId),
+}
+
+#[derive(Debug)]
+pub enum PartyReply {
+    Busy(ClientEntityId),
+    Accept(ClientEntityId),
+    Reject(ClientEntityId),
+}
+
+#[derive(Debug)]
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -308,4 +324,6 @@ pub enum ClientMessage {
     DriveToggle,
     UseEmote(MotionId, bool),
     WarpGateRequest(WarpGateId),
+    PartyRequest(PartyRequest),
+    PartyReply(PartyReply),
 }

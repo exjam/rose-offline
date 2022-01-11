@@ -8,10 +8,10 @@ use crate::{
         AbilityType, Damage, ItemReference, MotionId, NpcId, QuestTriggerHash, SkillId, ZoneId,
     },
     game::components::{
-        AmmoIndex, BasicStatType, CharacterInfo, ClientEntityId, Command, Destination, DroppedItem,
-        Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints,
-        Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot,
-        StatPoints, StatusEffects, Team,
+        AmmoIndex, BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
+        Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints,
+        ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection,
+        Position, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
     },
 };
 
@@ -390,6 +390,52 @@ pub struct UseEmote {
 }
 
 #[derive(Clone)]
+pub enum PartyRequest {
+    Create(ClientEntityId),
+    Invite(ClientEntityId),
+}
+
+#[derive(Clone)]
+pub enum PartyReply {
+    AcceptCreate(ClientEntityId),
+    AcceptInvite(ClientEntityId),
+    RejectInvite(ClientEntityId),
+    DeleteParty,
+}
+
+#[derive(Clone)]
+pub struct PartyMemberInfoOnline {
+    pub character_id: CharacterUniqueId,
+    pub name: String,
+    pub entity_id: ClientEntityId,
+    pub health_points: HealthPoints,
+    pub status_effects: StatusEffects,
+    pub max_health: i32,
+    pub concentration: i32,
+    pub health_recovery: i32,
+    pub mana_recovery: i32,
+    pub stamina: Stamina,
+}
+
+#[derive(Clone)]
+pub struct PartyMemberInfoOffline {
+    pub character_id: CharacterUniqueId,
+    pub name: String,
+}
+
+#[derive(Clone)]
+pub enum PartyMemberInfo {
+    Online(PartyMemberInfoOnline),
+    Offline(PartyMemberInfoOffline),
+}
+
+#[derive(Clone)]
+pub struct PartyMemberLeave {
+    pub leaver_character_id: u32,
+    pub owner_character_id: u32,
+}
+
+#[derive(Clone)]
 pub enum ServerMessage {
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
@@ -439,4 +485,9 @@ pub enum ServerMessage {
     MoveToggle(MoveToggle),
     SitToggle(ClientEntityId),
     UseEmote(UseEmote),
+    PartyRequest(PartyRequest),
+    PartyReply(PartyReply),
+    PartyMemberList(Vec<PartyMemberInfo>),
+    PartyMemberLeave(PartyMemberLeave),
+    PartyMemberKicked(CharacterUniqueId),
 }

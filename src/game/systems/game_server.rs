@@ -18,18 +18,20 @@ use crate::{
             ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit,
             DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase, ExperiencePoints,
             GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money,
-            MoveMode, MoveSpeed, NextCommand, PassiveRecoveryTime, Position, QuestState, SkillList,
-            StatPoints, StatusEffects, Team, WorldClient,
+            MoveMode, MoveSpeed, NextCommand, PartyMembership, PassiveRecoveryTime, Position,
+            QuestState, SkillList, StatPoints, StatusEffects, Team, WorldClient,
         },
         events::{
-            ChatCommandEvent, NpcStoreEvent, PersonalStoreEvent, PersonalStoreEventBuyItem,
+            ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
+            PartyEventKick, PartyEventLeave, PersonalStoreEvent, PersonalStoreEventBuyItem,
             PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
         },
         messages::{
             client::{
                 ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-                JoinZoneResponse, LogoutRequest, NpcStoreTransaction, PersonalStoreBuyItem,
-                QuestDelete, ReviveRequestType, SetHotbarSlot, SetHotbarSlotError,
+                JoinZoneResponse, LogoutRequest, NpcStoreTransaction, PartyReply, PartyRequest,
+                PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
+                SetHotbarSlotError,
             },
             server::{self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat},
         },
@@ -134,6 +136,7 @@ pub fn game_server_authentication_system(
                                         move_mode,
                                         move_speed,
                                         next_command: NextCommand::default(),
+                                        party_membership: PartyMembership::default(),
                                         passive_recovery_time: PassiveRecoveryTime::default(),
                                         position: position.clone(),
                                         quest_state: character.quest_state.clone(),
@@ -383,6 +386,7 @@ pub fn game_server_main_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
     mut npc_store_events: EventWriter<NpcStoreEvent>,
+    mut party_events: EventWriter<PartyEvent>,
     mut personal_store_events: EventWriter<PersonalStoreEvent>,
     mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut use_item_events: EventWriter<UseItemEvent>,
@@ -922,6 +926,66 @@ pub fn game_server_main_system(
                             }
                         }
                     }
+                    ClientMessage::PartyRequest(request) => match request {
+                        PartyRequest::Create(invited_entity_id)
+                        | PartyRequest::Invite(invited_entity_id) => {
+                            if let Some(&(invited_entity, _, _)) = client_entity_list
+                                .get_zone(position.zone_id)
+                                .and_then(|zone| zone.get_entity(invited_entity_id))
+                            {
+                                party_events.send(PartyEvent::Invite(PartyEventInvite {
+                                    owner_entity: entity,
+                                    invited_entity,
+                                }));
+                            }
+                        }
+                        PartyRequest::Leave => {
+                            party_events.send(PartyEvent::Leave(PartyEventLeave {
+                                leaver_entity: entity,
+                            }));
+                        }
+                        PartyRequest::ChangeOwner(new_owner_entity_id) => {
+                            if let Some(&(new_owner_entity, _, _)) = client_entity_list
+                                .get_zone(position.zone_id)
+                                .and_then(|zone| zone.get_entity(new_owner_entity_id))
+                            {
+                                party_events.send(PartyEvent::ChangeOwner(PartyEventChangeOwner {
+                                    owner_entity: entity,
+                                    new_owner_entity,
+                                }));
+                            }
+                        }
+                        PartyRequest::Kick(character_id) => {
+                            party_events.send(PartyEvent::Kick(PartyEventKick {
+                                owner_entity: entity,
+                                kick_character_id: character_id,
+                            }));
+                        }
+                    },
+                    ClientMessage::PartyReply(reply) => match reply {
+                        PartyReply::Accept(owner_entity_id) => {
+                            if let Some(&(owner_entity, _, _)) = client_entity_list
+                                .get_zone(position.zone_id)
+                                .and_then(|zone| zone.get_entity(owner_entity_id))
+                            {
+                                party_events.send(PartyEvent::AcceptInvite(PartyEventInvite {
+                                    owner_entity,
+                                    invited_entity: entity,
+                                }));
+                            }
+                        }
+                        PartyReply::Busy(owner_entity_id) | PartyReply::Reject(owner_entity_id) => {
+                            if let Some(&(owner_entity, _, _)) = client_entity_list
+                                .get_zone(position.zone_id)
+                                .and_then(|zone| zone.get_entity(owner_entity_id))
+                            {
+                                party_events.send(PartyEvent::RejectInvite(PartyEventInvite {
+                                    owner_entity,
+                                    invited_entity: entity,
+                                }));
+                            }
+                        }
+                    },
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
             }

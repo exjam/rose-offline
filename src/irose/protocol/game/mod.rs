@@ -15,7 +15,7 @@ use crate::{
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
             CastSkillTargetPosition, LocalChat, LogoutReply, MoveToggle, OpenPersonalStore,
-            PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
+            PartyMemberLeave, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
             PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess,
             PickupDroppedItemResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
             ServerMessage, ShoutChat, SpawnEntityDroppedItem, SpawnEntityMonster, SpawnEntityNpc,
@@ -351,6 +351,18 @@ impl GameClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::WarpGateRequest(packet.warp_gate_id))?;
+            }
+            Some(ClientPackets::PartyRequest) => {
+                let packet = PacketClientPartyRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PartyRequest(packet.request))?;
+            }
+            Some(ClientPackets::PartyReply) => {
+                let packet = PacketClientPartyReply::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PartyReply(packet.reply))?;
             }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
@@ -1025,6 +1037,46 @@ impl GameClient {
                         entity_id,
                         motion_id,
                         is_stop,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PartyRequest(party_request) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyRequest { party_request }))
+                    .await?;
+            }
+            ServerMessage::PartyReply(party_reply) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyReply { party_reply }))
+                    .await?;
+            }
+            ServerMessage::PartyMemberList(party_members) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMembers {
+                        party_members: &party_members,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PartyMemberLeave(PartyMemberLeave {
+                leaver_character_id,
+                owner_character_id,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMemberLeave {
+                        leaver_character_id,
+                        owner_character_id,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PartyMemberKicked(kicked_character_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMemberKicked {
+                        kicked_character_id,
                     }))
                     .await?;
             }

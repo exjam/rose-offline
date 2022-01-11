@@ -7,7 +7,7 @@ use crate::{
         formats::StbFile,
         formats::{FileReader, VfsIndex},
         item::{EquipmentItem, Item},
-        ItemReference, SkillDatabase, SkillId, ZoneDatabase, ZoneId, QuestTriggerHash,
+        ItemReference, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
     },
     game::components::{
         BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar, Inventory,

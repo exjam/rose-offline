@@ -10,7 +10,7 @@ pub enum ClientEntityType {
     DroppedItem,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ClientEntityId(pub usize);
 
 #[derive(Clone, Debug)]

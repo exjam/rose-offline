@@ -22,8 +22,8 @@ use crate::{
         components::{
             AbilityValues, BasicStats, BotAi, BotAiState, ClientEntity, ClientEntityType, Command,
             EquipmentIndex, EquipmentItemDatabase, GameClient, Inventory, Level, Money, MoveMode,
-            MoveSpeed, NextCommand, Owner, PassiveRecoveryTime, PersonalStore, Position,
-            SkillPoints, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+            MoveSpeed, NextCommand, Owner, PartyMembership, PassiveRecoveryTime, PersonalStore,
+            Position, SkillPoints, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
             PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},
@@ -218,6 +218,7 @@ fn create_bot_entity(
             move_mode: MoveMode::Run,
             move_speed,
             next_command: NextCommand::default(),
+            party_membership: PartyMembership::default(),
             passive_recovery_time: PassiveRecoveryTime::default(),
             position: bot_data.position,
             quest_state: bot_data.quest_state,
