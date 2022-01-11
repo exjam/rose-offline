@@ -6,7 +6,9 @@ use crate::game::{
         AbilityValues, CharacterInfo, CharacterUniqueId, ClientEntity, GameClient, HealthPoints,
         Party, PartyMember, PartyMembership, Stamina, StatusEffects,
     },
-    events::{PartyEvent, PartyEventInvite, PartyEventKick, PartyEventLeave, PartyEventChangeOwner},
+    events::{
+        PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
+    },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
         PartyReply, PartyRequest, ServerMessage,
@@ -116,7 +118,7 @@ fn handle_party_accept_invite(
     commands: &mut Commands,
     party_query: &mut Query<&mut Party>,
     party_member_query: &mut Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
-    mut party_member_info_query: &mut Query<(
+    party_member_info_query: &mut Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -197,8 +199,7 @@ fn handle_party_accept_invite(
         }
     }
 
-    let party_member_infos =
-        get_party_membership_info(&party_members, &mut party_member_info_query);
+    let party_member_infos = get_party_membership_info(&party_members, party_member_info_query);
     let (invited_member_info, other_members_info): (Vec<_>, Vec<_>) =
         party_member_infos.into_iter().partition(|member_info| {
             if let PartyMemberInfo::Online(online_party_member) = member_info {

@@ -2,39 +2,39 @@
 name = "rose-offline"
 version = "0.1.0"
 authors = ["James Benton <james.benton2@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arrayvec = "0.7.1"
-async-trait = "0.1.48"
+arrayvec = "0.7"
+async-trait = "0.1"
 bevy_ecs = { git = "https://github.com/bevyengine/bevy", rev = "43d99bb583866c1adb4aa88f19b88637df0a7f33" }
-bitvec = { version = "0.22.3", features = ["serde"] }
-bytes = "1"
+bitvec = { version = "0.22", features = ["serde"] }
+bytes = "1.1"
 chrono = "0.4"
-clap = "3.0.0-beta.2"
-crossbeam-channel = "0.5.0"
-directories = "3.0"
+clap = "3.0"
+crossbeam-channel = "0.5"
+directories = "4.0"
 encoding_rs = "0.8"
-enum-map = "1.1.1"
+enum-map = "2.0"
 hex = "0.4"
-lazy_static = "1.4.0"
-log = "0.4.14"
+lazy_static = "1.4"
+log = "0.4"
 memmap = "0.7"
-modular-bitfield = "0.11.2"
+modular-bitfield = "0.11"
 nalgebra = { version = "0.25", features = ["serde-serialize"] }
 num-derive = "0.3"
 num-traits = "0.2"
-rand = "0.8.3"
-scopeguard = "1.1.0"
-serde = { version = "1.0.125", features = ["derive"] }
-serde_json = "1.0.64"
-simplelog = "0.10.0"
-sha2 = "0.9"
-shellwords = "1.1.0"
-tempfile = "3.2.0"
-tokio = { version = "1.4.0", features = ["full"] }
+rand = "0.8"
+scopeguard = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+simplelog = "0.11"
+sha2 = "0.10"
+shellwords = "1.1"
+tempfile = "3.3"
+tokio = { version = "1.15", features = ["full"] }
 
 [profile.dev.package."*"]
 opt-level = 3
