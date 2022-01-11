@@ -167,11 +167,12 @@ impl ClientEntityZone {
     ) -> Option<ClientEntity> {
         let sector = self.calculate_sector(position.xy());
 
-        // Allocate an entity id
+        // Allocate an entity id, skipping over invalid entity id
         let (free_index, free_slot) = self
             .entities
             .iter_mut()
             .enumerate()
+            .skip(1)
             .find(|(_, slot)| slot.is_none())?;
         let client_entity_id = ClientEntityId(free_index);
         let client_entity = ClientEntity::new(entity_type, client_entity_id, self.zone_id, sector);
