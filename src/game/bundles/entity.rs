@@ -9,11 +9,11 @@ use crate::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
             ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
-            Equipment, ExperiencePoints, ExpireTime, GameClient, HealthPoints, Hotbar, Inventory,
-            ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
-            NpcStandingDirection, ObjectVariables, Owner, PartyMembership, PassiveRecoveryTime,
-            Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
-            StatusEffects, Team, UnionMembership,
+            EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints, Hotbar,
+            Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand,
+            Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime,
+            PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
+            SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
         },
         messages::server::{ServerMessage, Teleport},
         resources::{ClientEntityList, ServerTime},
@@ -24,8 +24,9 @@ use crate::{
 pub const EVENT_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const NPC_OBJECT_VARIABLES_COUNT: usize = 20;
 pub const MONSTER_OBJECT_VARIABLES_COUNT: usize = 5;
-pub const DROPPED_ITEM_EXPIRE_TIME: Duration = Duration::from_secs(60);
-pub const DROP_ITEM_RADIUS: i32 = 200;
+pub const ITEM_DROP_ENTITY_EXPIRE_TIME: Duration = Duration::from_secs(120);
+pub const ITEM_DROP_OWNER_EXPIRE_TIME: Duration = Duration::from_secs(60);
+pub const ITEM_DROP_RADIUS: i32 = 200;
 
 #[derive(Bundle)]
 pub struct NpcBundle {
@@ -195,7 +196,9 @@ impl MonsterBundle {
 pub struct ItemDropBundle {
     pub drop: ItemDrop,
     pub position: Position,
-    pub expire_time: ExpireTime,
+    pub entity_expire_time: EntityExpireTime,
+    // pub owner: Option<Owner>
+    // pub owner_expire_time: Option<OwnerExpireTime>
 }
 
 impl ItemDropBundle {
@@ -210,8 +213,8 @@ impl ItemDropBundle {
         let mut rng = rand::thread_rng();
 
         let drop_point = Point3::new(
-            position.position.x + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
-            position.position.y + rng.gen_range(-DROP_ITEM_RADIUS..=DROP_ITEM_RADIUS) as f32,
+            position.position.x + rng.gen_range(-ITEM_DROP_RADIUS..=ITEM_DROP_RADIUS) as f32,
+            position.position.y + rng.gen_range(-ITEM_DROP_RADIUS..=ITEM_DROP_RADIUS) as f32,
             position.position.z,
         );
 
@@ -223,11 +226,17 @@ impl ItemDropBundle {
         entity_commands.insert_bundle(ItemDropBundle {
             drop: ItemDrop::with_dropped_item(item),
             position: drop_position.clone(),
-            expire_time: ExpireTime::new(server_time.now + DROPPED_ITEM_EXPIRE_TIME),
+            entity_expire_time: EntityExpireTime::new(
+                server_time.now + ITEM_DROP_ENTITY_EXPIRE_TIME,
+            ),
         });
 
         if let Some(owner_entity) = owner_entity {
-            entity_commands.insert(Owner::new(owner_entity));
+            entity_commands
+                .insert(Owner::new(owner_entity))
+                .insert(OwnerExpireTime::new(
+                    server_time.now + ITEM_DROP_OWNER_EXPIRE_TIME,
+                ));
         }
 
         client_entity_join_zone(
