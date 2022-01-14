@@ -40,8 +40,8 @@ use status_effect_database::get_status_effect_database;
 use warp_gate_database::get_warp_gate_database;
 use zone_database::get_zone_database;
 
-pub fn get_game_data() -> GameData {
-    let vfs_index = VfsIndex::load(Path::new("data.idx")).expect("Failed reading data.idx");
+pub fn get_game_data(data_idx_path: &Path) -> GameData {
+    let vfs_index = VfsIndex::load(data_idx_path).expect("Failed reading data.idx");
 
     let item_database =
         Arc::new(get_item_database(&vfs_index).expect("Failed to load item database"));
