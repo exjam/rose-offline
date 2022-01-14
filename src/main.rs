@@ -74,7 +74,7 @@ async fn main() {
     let data_idx_path = Path::new(matches.value_of("data-idx").unwrap());
 
     let started_load = Instant::now();
-    let game_data = irose::get_game_data(&data_idx_path);
+    let game_data = irose::get_game_data(data_idx_path);
     debug!("Time take to read game data {:?}", started_load.elapsed());
 
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
