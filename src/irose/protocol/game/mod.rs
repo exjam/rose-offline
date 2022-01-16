@@ -759,6 +759,9 @@ impl GameClient {
                     .connection
                     .write_packet(Packet::from(&PacketServerLogoutResult { result }))
                     .await?;
+                if result.is_ok() {
+                    return Err(ProtocolError::ServerInitiatedDisconnect);
+                }
             }
             ServerMessage::QuestTriggerResult(QuestTriggerResult {
                 success,
