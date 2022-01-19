@@ -1055,11 +1055,12 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerPartyReply { party_reply }))
                     .await?;
             }
-            ServerMessage::PartyMemberList(party_members) => {
+            ServerMessage::PartyMemberList(party_member_list) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerPartyMembers {
-                        party_members: &party_members,
+                        owner_character_id: party_member_list.owner_character_id,
+                        party_members: &party_member_list.members,
                     }))
                     .await?;
             }

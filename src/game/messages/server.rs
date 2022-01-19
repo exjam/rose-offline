@@ -429,10 +429,25 @@ pub enum PartyMemberInfo {
     Offline(PartyMemberInfoOffline),
 }
 
+impl PartyMemberInfo {
+    pub fn get_character_id(&self) -> CharacterUniqueId {
+        match self {
+            PartyMemberInfo::Online(info) => info.character_id,
+            PartyMemberInfo::Offline(info) => info.character_id,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct PartyMemberList {
+    pub owner_character_id: CharacterUniqueId,
+    pub members: Vec<PartyMemberInfo>,
+}
+
 #[derive(Clone)]
 pub struct PartyMemberLeave {
-    pub leaver_character_id: u32,
-    pub owner_character_id: u32,
+    pub leaver_character_id: CharacterUniqueId,
+    pub owner_character_id: CharacterUniqueId,
 }
 
 #[derive(Clone)]
@@ -487,7 +502,7 @@ pub enum ServerMessage {
     UseEmote(UseEmote),
     PartyRequest(PartyRequest),
     PartyReply(PartyReply),
-    PartyMemberList(Vec<PartyMemberInfo>),
+    PartyMemberList(PartyMemberList),
     PartyMemberLeave(PartyMemberLeave),
     PartyMemberKicked(CharacterUniqueId),
 }

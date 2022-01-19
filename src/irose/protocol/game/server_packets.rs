@@ -11,10 +11,10 @@ use crate::{
     },
     game::{
         components::{
-            AmmoIndex, BasicStatType, BasicStats, CharacterInfo, ClientEntityId, Command,
-            CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
-            Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-            Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
+            AmmoIndex, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId,
+            Command, CommandCastSkill, CommandCastSkillTarget, CommandData, Destination,
+            DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar,
+            HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
             NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints, Stamina,
             StatPoints, StatusEffects, Team, UnionMembership, VehiclePartIndex,
         },
@@ -1649,7 +1649,37 @@ impl From<&PacketServerPartyMemberKicked> for Packet {
 }
 
 pub struct PacketServerPartyMembers<'a> {
+    pub owner_character_id: CharacterUniqueId,
     pub party_members: &'a [PartyMemberInfo],
+}
+
+fn write_party_member(writer: &mut PacketWriter, party_member: &PartyMemberInfo) {
+    match party_member {
+        PartyMemberInfo::Online(party_member) => {
+            writer.write_u32(party_member.character_id);
+            writer.write_entity_id(party_member.entity_id);
+            writer.write_u16(party_member.max_health as u16);
+            writer.write_u16(party_member.health_points.hp as u16);
+            writer.write_status_effects_flags_u32(&party_member.status_effects);
+            writer.write_u16(party_member.concentration as u16);
+            writer.write_u8(party_member.health_recovery as u8);
+            writer.write_u8(party_member.mana_recovery as u8);
+            writer.write_u16(party_member.stamina.stamina as u16);
+            writer.write_null_terminated_utf8(&party_member.name);
+        }
+        PartyMemberInfo::Offline(party_member) => {
+            writer.write_u32(party_member.character_id);
+            writer.write_option_entity_id(None);
+            writer.write_u16(0);
+            writer.write_u16(0);
+            writer.write_u32(0);
+            writer.write_u16(0);
+            writer.write_u8(0);
+            writer.write_u8(0);
+            writer.write_u16(0);
+            writer.write_null_terminated_utf8(&party_member.name);
+        }
+    }
 }
 
 impl<'a> From<&'a PacketServerPartyMembers<'a>> for Packet {
@@ -1657,34 +1687,20 @@ impl<'a> From<&'a PacketServerPartyMembers<'a>> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
         writer.write_u8(0); // TODO: Party rules
         writer.write_u8(packet.party_members.len() as u8);
+
+        // Owner is the first member in packet
         for party_member in packet.party_members {
-            match party_member {
-                PartyMemberInfo::Online(party_member) => {
-                    writer.write_u32(party_member.character_id);
-                    writer.write_entity_id(party_member.entity_id);
-                    writer.write_u16(party_member.max_health as u16);
-                    writer.write_u16(party_member.health_points.hp as u16);
-                    writer.write_status_effects_flags_u32(&party_member.status_effects);
-                    writer.write_u16(party_member.concentration as u16);
-                    writer.write_u8(party_member.health_recovery as u8);
-                    writer.write_u8(party_member.mana_recovery as u8);
-                    writer.write_u16(party_member.stamina.stamina as u16);
-                    writer.write_null_terminated_utf8(&party_member.name);
-                }
-                PartyMemberInfo::Offline(party_member) => {
-                    writer.write_u32(party_member.character_id);
-                    writer.write_option_entity_id(None);
-                    writer.write_u16(0);
-                    writer.write_u16(0);
-                    writer.write_u32(0);
-                    writer.write_u16(0);
-                    writer.write_u8(0);
-                    writer.write_u8(0);
-                    writer.write_u16(0);
-                    writer.write_null_terminated_utf8(&party_member.name);
-                }
+            if party_member.get_character_id() == packet.owner_character_id {
+                write_party_member(&mut writer, party_member);
             }
         }
+
+        for party_member in packet.party_members {
+            if party_member.get_character_id() != packet.owner_character_id {
+                write_party_member(&mut writer, party_member);
+            }
+        }
+
         writer.into()
     }
 }

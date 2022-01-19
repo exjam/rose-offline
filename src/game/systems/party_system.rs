@@ -11,7 +11,7 @@ use crate::game::{
     },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
-        PartyReply, PartyRequest, ServerMessage,
+        PartyMemberList, PartyReply, PartyRequest, ServerMessage,
     },
 };
 
@@ -32,17 +32,22 @@ enum PartyInviteError {
 }
 
 fn handle_party_invite(
-    party_member_query: &mut Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
     owner_entity: Entity,
     invited_entity: Entity,
 ) -> Result<(), PartyInviteError> {
-    let (owner_client_entity, owner_party_membership, _) = party_member_query
+    let (owner_client_entity, _, owner_party_membership, _) = party_member_query
         .get_mut(owner_entity)
         .map_err(|_| PartyInviteError::InvalidEntity)?;
     let is_create_party = matches!(*owner_party_membership, PartyMembership::None);
     let owner_client_entity_id = owner_client_entity.id;
 
-    let (_, invited_party_membership, invited_game_client) = party_member_query
+    let (_, _, invited_party_membership, invited_game_client) = party_member_query
         .get_mut(invited_entity)
         .map_err(|_| PartyInviteError::InvalidEntity)?;
     if !matches!(*invited_party_membership, PartyMembership::None) {
@@ -117,7 +122,12 @@ fn get_party_membership_info(
 fn handle_party_accept_invite(
     commands: &mut Commands,
     party_query: &mut Query<&mut Party>,
-    party_member_query: &mut Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
     party_member_info_query: &mut Query<(
         &AbilityValues,
         &CharacterInfo,
@@ -130,7 +140,7 @@ fn handle_party_accept_invite(
     invited_entity: Entity,
 ) -> Result<(), PartyInviteError> {
     // First ensure invited entity is not already in a party
-    let (invited_client_entity, invited_party_membership, _) = party_member_query
+    let (invited_client_entity, _, invited_party_membership, _) = party_member_query
         .get_mut(invited_entity)
         .map_err(|_| PartyInviteError::InvalidEntity)?;
     if !matches!(*invited_party_membership, PartyMembership::None) {
@@ -138,10 +148,11 @@ fn handle_party_accept_invite(
     }
     let invited_client_entity_id = invited_client_entity.id;
 
-    let (_, mut owner_party_membership, _) = party_member_query
+    let (_, owner_character_info, mut owner_party_membership, _) = party_member_query
         .get_mut(owner_entity)
         .map_err(|_| PartyInviteError::InvalidEntity)?;
     let is_create_party = matches!(*owner_party_membership, PartyMembership::None);
+    let owner_character_id = owner_character_info.unique_id;
 
     let party_members = match *owner_party_membership {
         PartyMembership::None => {
@@ -157,7 +168,7 @@ fn handle_party_accept_invite(
             let party_entity = commands.spawn().insert(party).id();
             *owner_party_membership = PartyMembership::new(party_entity);
 
-            let (_, mut invited_party_membership, _) =
+            let (_, _, mut invited_party_membership, _) =
                 party_member_query.get_mut(invited_entity).unwrap();
             *invited_party_membership = PartyMembership::new(party_entity);
 
@@ -178,7 +189,7 @@ fn handle_party_accept_invite(
             }
             party.members.push(PartyMember::Online(invited_entity));
 
-            let (_, mut invited_party_membership, _) =
+            let (_, _, mut invited_party_membership, _) =
                 party_member_query.get_mut(invited_entity).unwrap();
             *invited_party_membership = PartyMembership::new(party_entity);
 
@@ -188,7 +199,7 @@ fn handle_party_accept_invite(
 
     // Send accept create to owner
     if is_create_party {
-        let (_, _, owner_game_client) = party_member_query.get_mut(owner_entity).unwrap();
+        let (_, _, _, owner_game_client) = party_member_query.get_mut(owner_entity).unwrap();
         if let Some(owner_game_client) = owner_game_client {
             owner_game_client
                 .server_message_tx
@@ -210,18 +221,21 @@ fn handle_party_accept_invite(
         });
 
     // Send list of other members to invited
-    let (_, _, invited_game_client) = party_member_query.get_mut(invited_entity).unwrap();
+    let (_, _, _, invited_game_client) = party_member_query.get_mut(invited_entity).unwrap();
     if let Some(invited_game_client) = invited_game_client {
         invited_game_client
             .server_message_tx
-            .send(ServerMessage::PartyMemberList(other_members_info))
+            .send(ServerMessage::PartyMemberList(PartyMemberList {
+                owner_character_id,
+                members: other_members_info,
+            }))
             .ok();
     }
 
     // Send info about invited to other members
     for party_member in party_members.iter() {
         if let PartyMember::Online(party_member_entity) = party_member {
-            let (member_client_entity, _, member_game_client) =
+            let (member_client_entity, _, _, member_game_client) =
                 party_member_query.get_mut(*party_member_entity).unwrap();
 
             if member_client_entity.id == invited_client_entity_id {
@@ -231,7 +245,10 @@ fn handle_party_accept_invite(
             if let Some(member_game_client) = member_game_client {
                 member_game_client
                     .server_message_tx
-                    .send(ServerMessage::PartyMemberList(invited_member_info.clone()))
+                    .send(ServerMessage::PartyMemberList(PartyMemberList {
+                        owner_character_id,
+                        members: invited_member_info.clone(),
+                    }))
                     .ok();
             }
         }
@@ -241,16 +258,21 @@ fn handle_party_accept_invite(
 }
 
 fn handle_party_reject_invite(
-    party_member_query: &mut Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
     owner_entity: Entity,
     invited_entity: Entity,
 ) -> Result<(), PartyInviteError> {
-    let (invited_client_entity, _, _) = party_member_query
+    let (invited_client_entity, _, _, _) = party_member_query
         .get_mut(invited_entity)
         .map_err(|_| PartyInviteError::InvalidEntity)?;
     let invited_client_entity_id = invited_client_entity.id;
 
-    let (_, _, owner_game_client) = party_member_query
+    let (_, _, _, owner_game_client) = party_member_query
         .get_mut(owner_entity)
         .map_err(|_| PartyInviteError::InvalidEntity)?;
 
@@ -274,7 +296,12 @@ enum PartyLeaveError {
 fn handle_party_leave(
     commands: &mut Commands,
     party_query: &mut Query<&mut Party>,
-    party_member_query: &mut Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
     party_member_info_query: &mut Query<(
         &AbilityValues,
         &CharacterInfo,
@@ -285,7 +312,7 @@ fn handle_party_leave(
     )>,
     leaver_entity: Entity,
 ) -> Result<(), PartyLeaveError> {
-    let (_, mut leaver_party_membership, leaver_game_client) = party_member_query
+    let (_, _, mut leaver_party_membership, leaver_game_client) = party_member_query
         .get_mut(leaver_entity)
         .map_err(|_| PartyLeaveError::InvalidEntity)?;
 
@@ -331,7 +358,7 @@ fn handle_party_leave(
                 // Send delete message to other members and remove them from party
                 for party_member in party.members.iter() {
                     if let PartyMember::Online(party_member_entity) = party_member {
-                        let (_, mut member_party_membership, member_game_client) =
+                        let (_, _, mut member_party_membership, member_game_client) =
                             party_member_query.get_mut(*party_member_entity).unwrap();
                         if let Some(member_game_client) = member_game_client {
                             member_game_client
@@ -360,7 +387,7 @@ fn handle_party_leave(
                 // Send message to other members informing of leaver and new owner
                 for party_member in party.members.iter() {
                     if let PartyMember::Online(party_member_entity) = party_member {
-                        let (_, _, member_game_client) =
+                        let (_, _, _, member_game_client) =
                             party_member_query.get_mut(*party_member_entity).unwrap();
                         if let Some(member_game_client) = member_game_client {
                             member_game_client
@@ -391,7 +418,12 @@ enum PartyKickError {
 fn handle_party_kick(
     commands: &mut Commands,
     party_query: &mut Query<&mut Party>,
-    party_member_query: &mut Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
     party_member_info_query: &mut Query<(
         &AbilityValues,
         &CharacterInfo,
@@ -404,7 +436,7 @@ fn handle_party_kick(
     kick_character_id: CharacterUniqueId,
 ) -> Result<(), PartyKickError> {
     // First ensure owner_entity is actually owner of the party
-    let (_, owner_party_membership, _) = party_member_query
+    let (_, _, owner_party_membership, _) = party_member_query
         .get_mut(owner_entity)
         .map_err(|_| PartyKickError::InvalidEntity)?;
     let party_entity = match *owner_party_membership {
@@ -459,7 +491,7 @@ fn handle_party_kick(
 
     // If the kicked character was online, update party membership
     if let Some(kicked_entity) = kicked_online_entity {
-        let (_, mut kicked_party_membership, kicked_game_client) =
+        let (_, _, mut kicked_party_membership, kicked_game_client) =
             party_member_query.get_mut(kicked_entity).unwrap();
 
         *kicked_party_membership = PartyMembership::None;
@@ -475,7 +507,7 @@ fn handle_party_kick(
     // Send kick message to other party members
     for party_member in party.members.iter() {
         if let PartyMember::Online(party_member_entity) = party_member {
-            let (_, _, member_game_client) =
+            let (_, _, _, member_game_client) =
                 party_member_query.get_mut(*party_member_entity).unwrap();
             if let Some(member_game_client) = member_game_client {
                 member_game_client
@@ -490,7 +522,7 @@ fn handle_party_kick(
     if party.members.len() <= 1 {
         for party_member in party.members.iter() {
             if let PartyMember::Online(party_member_entity) = party_member {
-                let (_, mut member_party_membership, member_game_client) =
+                let (_, _, mut member_party_membership, member_game_client) =
                     party_member_query.get_mut(*party_member_entity).unwrap();
                 if let Some(member_game_client) = member_game_client {
                     member_game_client
@@ -514,7 +546,12 @@ fn handle_party_kick(
 pub fn party_system(
     mut commands: Commands,
     mut party_query: Query<&mut Party>,
-    mut party_member_query: Query<(&ClientEntity, &mut PartyMembership, Option<&GameClient>)>,
+    mut party_member_query: Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
     mut party_member_info_query: Query<(
         &AbilityValues,
         &CharacterInfo,
