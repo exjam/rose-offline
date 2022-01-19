@@ -17,67 +17,85 @@ use crate::{
     },
 };
 
+fn handle_world_connection_request(
+    commands: &mut Commands,
+    login_tokens: &mut LoginTokens,
+    entity: Entity,
+    world_client: &mut WorldClient,
+    token_id: u32,
+    password_md5: &str,
+) -> Result<ConnectionRequestResponse, ConnectionRequestError> {
+    let login_token = login_tokens
+        .get_token_mut(token_id)
+        .ok_or(ConnectionRequestError::InvalidToken)?;
+    if login_token.world_client.is_some() || login_token.game_client.is_some() {
+        return Err(ConnectionRequestError::InvalidToken);
+    }
+
+    let mut account = AccountStorage::try_load(&login_token.username, password_md5).map_err(
+        |error| match error {
+            AccountStorageError::InvalidPassword => ConnectionRequestError::InvalidPassword,
+            _ => ConnectionRequestError::Failed,
+        },
+    )?;
+
+    // Load character list, deleting any characters ready for deletion
+    let mut character_list = CharacterList::new();
+    account.character_names.retain(|name| {
+        CharacterStorage::try_load(name).map_or(false, |character| {
+            if character
+                .delete_time
+                .as_ref()
+                .map(|x| x.get_time_until_delete())
+                .filter(|x| x.as_nanos() == 0)
+                .is_some()
+            {
+                CharacterStorage::delete(&character.info.name).ok();
+                false
+            } else {
+                character_list.characters.push(character);
+                true
+            }
+        })
+    });
+    account.save().ok();
+
+    // Update entity
+    commands
+        .entity(entity)
+        .insert(Account::from(account))
+        .insert(character_list);
+
+    // Update token
+    login_token.world_client = Some(entity);
+    world_client.login_token = login_token.token;
+    world_client.selected_game_server = Some(login_token.selected_game_server);
+
+    Ok(ConnectionRequestResponse {
+        packet_sequence_id: 123,
+    })
+}
+
 pub fn world_server_authentication_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut WorldClient), Without<Account>>,
-    login_tokens: Res<LoginTokens>,
+    mut login_tokens: ResMut<LoginTokens>,
 ) {
     query.for_each_mut(|(entity, mut world_client)| {
         if let Ok(message) = world_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::ConnectionRequest(message) => {
-                    let response = login_tokens
-                        .tokens
-                        .iter()
-                        .find(|t| t.token == message.login_token)
-                        .ok_or(ConnectionRequestError::InvalidToken)
-                        .and_then(|token| {
-                            match AccountStorage::try_load(&token.username, &message.password_md5) {
-                                Ok(mut account) => {
-                                    // Load character list, deleting any characters ready for deletion
-                                    let mut character_list = CharacterList::new();
-                                    account.character_names.retain(|name| {
-                                        CharacterStorage::try_load(name).map_or(
-                                            false,
-                                            |character| {
-                                                if character
-                                                    .delete_time
-                                                    .as_ref()
-                                                    .map(|x| x.get_time_until_delete())
-                                                    .filter(|x| x.as_nanos() == 0)
-                                                    .is_some()
-                                                {
-                                                    CharacterStorage::delete(&character.info.name)
-                                                        .ok();
-                                                    false
-                                                } else {
-                                                    character_list.characters.push(character);
-                                                    true
-                                                }
-                                            },
-                                        )
-                                    });
-
-                                    // Save account in case we have deleted characters
-                                    account.save().ok();
-                                    world_client.login_token = token.token;
-                                    world_client.selected_game_server =
-                                        Some(token.selected_game_server);
-                                    commands
-                                        .entity(entity)
-                                        .insert(Account::from(account))
-                                        .insert(character_list);
-                                    Ok(ConnectionRequestResponse {
-                                        packet_sequence_id: 123,
-                                    })
-                                }
-                                Err(AccountStorageError::InvalidPassword) => {
-                                    Err(ConnectionRequestError::InvalidPassword)
-                                }
-                                Err(_) => Err(ConnectionRequestError::Failed),
-                            }
-                        });
-                    message.response_tx.send(response).ok();
+                    message
+                        .response_tx
+                        .send(handle_world_connection_request(
+                            &mut commands,
+                            login_tokens.as_mut(),
+                            entity,
+                            world_client.as_mut(),
+                            message.login_token,
+                            &message.password_md5,
+                        ))
+                        .ok();
                 }
                 _ => panic!("Received unexpected client message {:?}", message),
             }

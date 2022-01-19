@@ -41,136 +41,148 @@ use crate::{
     },
 };
 
+fn handle_game_connection_request(
+    commands: &mut Commands,
+    game_data: &GameData,
+    login_tokens: &mut LoginTokens,
+    entity: Entity,
+    game_client: &mut GameClient,
+    token_id: u32,
+    password_md5: &str,
+) -> Result<GameConnectionResponse, ConnectionRequestError> {
+    // Verify token
+    let login_token = login_tokens
+        .get_token_mut(token_id)
+        .ok_or(ConnectionRequestError::InvalidToken)?;
+    if login_token.world_client.is_none() || login_token.game_client.is_some() {
+        return Err(ConnectionRequestError::InvalidToken);
+    }
+
+    // Verify account password
+    let _ = AccountStorage::try_load(&login_token.username, password_md5)
+        .map_err(|_| ConnectionRequestError::InvalidPassword)?;
+
+    // Try load character
+    let character = CharacterStorage::try_load(&login_token.selected_character)
+        .map_err(|_| ConnectionRequestError::Failed)?;
+
+    // Update token
+    login_token.game_client = Some(entity);
+    game_client.login_token = login_token.token;
+
+    let status_effects = StatusEffects::new();
+    let ability_values = game_data.ability_value_calculator.calculate(
+        &character.info,
+        &character.level,
+        &character.equipment,
+        &character.basic_stats,
+        &character.skill_list,
+        &status_effects,
+    );
+
+    // If the character was saved as dead, we must respawn them!
+    let (health_points, mana_points, position) = if character.health_points.hp == 0 {
+        (
+            HealthPoints::new(ability_values.get_max_health() as u32),
+            ManaPoints::new(ability_values.get_max_mana() as u32),
+            Position::new(
+                character.info.revive_position,
+                character.info.revive_zone_id,
+            ),
+        )
+    } else {
+        (
+            character.health_points,
+            character.mana_points,
+            character.position.clone(),
+        )
+    };
+
+    let weapon_motion_type = game_data
+        .items
+        .get_equipped_weapon_item_data(&character.equipment, EquipmentIndex::WeaponRight)
+        .map(|item_data| item_data.motion_type)
+        .unwrap_or(0) as usize;
+
+    let motion_data = game_data
+        .motions
+        .get_character_action_motions(weapon_motion_type, character.info.gender as usize);
+
+    let move_mode = MoveMode::Run;
+    let move_speed = MoveSpeed::new(ability_values.get_run_speed());
+
+    commands.entity(entity).insert_bundle(CharacterBundle {
+        ability_values,
+        basic_stats: character.basic_stats.clone(),
+        command: Command::default(),
+        equipment: character.equipment.clone(),
+        experience_points: character.experience_points.clone(),
+        health_points,
+        hotbar: character.hotbar.clone(),
+        info: character.info.clone(),
+        inventory: character.inventory.clone(),
+        level: character.level.clone(),
+        mana_points,
+        motion_data,
+        move_mode,
+        move_speed,
+        next_command: NextCommand::default(),
+        party_membership: PartyMembership::default(),
+        passive_recovery_time: PassiveRecoveryTime::default(),
+        position: position.clone(),
+        quest_state: character.quest_state.clone(),
+        skill_list: character.skill_list.clone(),
+        skill_points: character.skill_points,
+        stamina: character.stamina,
+        stat_points: character.stat_points,
+        status_effects,
+        team: Team::default_character(),
+        union_membership: character.union_membership.clone(),
+    });
+
+    Ok(GameConnectionResponse {
+        packet_sequence_id: 123,
+        character_info: character.info,
+        position,
+        equipment: character.equipment,
+        basic_stats: character.basic_stats,
+        level: character.level,
+        experience_points: character.experience_points,
+        inventory: character.inventory,
+        skill_list: character.skill_list,
+        hotbar: character.hotbar,
+        health_points,
+        mana_points,
+        stat_points: character.stat_points,
+        skill_points: character.skill_points,
+        quest_state: character.quest_state,
+        union_membership: character.union_membership,
+        stamina: character.stamina,
+    })
+}
+
 pub fn game_server_authentication_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
-    login_tokens: Res<LoginTokens>,
+    mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,
 ) {
     query.for_each_mut(|(entity, mut game_client)| {
         if let Ok(message) = game_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::GameConnectionRequest(message) => {
-                    let response = login_tokens
-                        .tokens
-                        .iter()
-                        .find(|t| t.token == message.login_token)
-                        .ok_or(ConnectionRequestError::InvalidToken)
-                        .and_then(|token| {
-                            game_client.login_token = message.login_token;
-                            AccountStorage::try_load(&token.username, &message.password_md5)
-                                .ok()
-                                .ok_or(ConnectionRequestError::InvalidPassword)
-                                .and_then(|_| {
-                                    CharacterStorage::try_load(&token.selected_character)
-                                        .ok()
-                                        .ok_or(ConnectionRequestError::Failed)
-                                })
-                                .map(|character| {
-                                    let status_effects = StatusEffects::new();
-                                    let ability_values =
-                                        game_data.ability_value_calculator.calculate(
-                                            &character.info,
-                                            &character.level,
-                                            &character.equipment,
-                                            &character.basic_stats,
-                                            &character.skill_list,
-                                            &status_effects,
-                                        );
-
-                                    // If the character was saved as dead, we must respawn them!
-                                    let (health_points, mana_points, position) =
-                                        if character.health_points.hp == 0 {
-                                            (
-                                                HealthPoints::new(
-                                                    ability_values.get_max_health() as u32
-                                                ),
-                                                ManaPoints::new(
-                                                    ability_values.get_max_mana() as u32
-                                                ),
-                                                Position::new(
-                                                    character.info.revive_position,
-                                                    character.info.revive_zone_id,
-                                                ),
-                                            )
-                                        } else {
-                                            (
-                                                character.health_points,
-                                                character.mana_points,
-                                                character.position.clone(),
-                                            )
-                                        };
-
-                                    let weapon_motion_type = game_data
-                                        .items
-                                        .get_equipped_weapon_item_data(
-                                            &character.equipment,
-                                            EquipmentIndex::WeaponRight,
-                                        )
-                                        .map(|item_data| item_data.motion_type)
-                                        .unwrap_or(0)
-                                        as usize;
-
-                                    let motion_data =
-                                        game_data.motions.get_character_action_motions(
-                                            weapon_motion_type,
-                                            character.info.gender as usize,
-                                        );
-
-                                    let move_mode = MoveMode::Run;
-                                    let move_speed = MoveSpeed::new(ability_values.get_run_speed());
-
-                                    commands.entity(entity).insert_bundle(CharacterBundle {
-                                        ability_values,
-                                        basic_stats: character.basic_stats.clone(),
-                                        command: Command::default(),
-                                        equipment: character.equipment.clone(),
-                                        experience_points: character.experience_points.clone(),
-                                        health_points,
-                                        hotbar: character.hotbar.clone(),
-                                        info: character.info.clone(),
-                                        inventory: character.inventory.clone(),
-                                        level: character.level.clone(),
-                                        mana_points,
-                                        motion_data,
-                                        move_mode,
-                                        move_speed,
-                                        next_command: NextCommand::default(),
-                                        party_membership: PartyMembership::default(),
-                                        passive_recovery_time: PassiveRecoveryTime::default(),
-                                        position: position.clone(),
-                                        quest_state: character.quest_state.clone(),
-                                        skill_list: character.skill_list.clone(),
-                                        skill_points: character.skill_points,
-                                        stamina: character.stamina,
-                                        stat_points: character.stat_points,
-                                        status_effects,
-                                        team: Team::default_character(),
-                                        union_membership: character.union_membership.clone(),
-                                    });
-
-                                    GameConnectionResponse {
-                                        packet_sequence_id: 123,
-                                        character_info: character.info,
-                                        position,
-                                        equipment: character.equipment,
-                                        basic_stats: character.basic_stats,
-                                        level: character.level,
-                                        experience_points: character.experience_points,
-                                        inventory: character.inventory,
-                                        skill_list: character.skill_list,
-                                        hotbar: character.hotbar,
-                                        health_points,
-                                        mana_points,
-                                        stat_points: character.stat_points,
-                                        skill_points: character.skill_points,
-                                        quest_state: character.quest_state,
-                                        union_membership: character.union_membership,
-                                        stamina: character.stamina,
-                                    }
-                                })
-                        });
-                    message.response_tx.send(response).ok();
+                    message
+                        .response_tx
+                        .send(handle_game_connection_request(
+                            &mut commands,
+                            game_data.as_ref(),
+                            login_tokens.as_mut(),
+                            entity,
+                            game_client.as_mut(),
+                            message.login_token,
+                            &message.password_md5,
+                        ))
+                        .ok();
                 }
                 _ => warn!("Received unexpected client message {:?}", message),
             }

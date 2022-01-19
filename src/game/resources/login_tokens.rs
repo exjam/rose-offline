@@ -6,6 +6,9 @@ pub struct LoginToken {
     pub selected_world_server: Entity,
     pub selected_game_server: Entity,
     pub selected_character: String,
+    pub login_client: Option<Entity>,
+    pub world_client: Option<Entity>,
+    pub game_client: Option<Entity>,
 }
 
 #[derive(Default)]
@@ -21,6 +24,7 @@ impl LoginTokens {
     pub fn generate(
         &mut self,
         username: String,
+        login_client: Entity,
         selected_world_server: Entity,
         selected_game_server: Entity,
     ) -> u32 {
@@ -34,7 +38,18 @@ impl LoginTokens {
             selected_world_server,
             selected_game_server,
             selected_character: String::default(),
+            login_client: Some(login_client),
+            world_client: None,
+            game_client: None,
         });
         token
+    }
+
+    pub fn find_username_token(&self, username: &str) -> Option<&LoginToken> {
+        self.tokens.iter().find(|token| token.username == username)
+    }
+
+    pub fn get_token_mut(&mut self, token_id: u32) -> Option<&mut LoginToken> {
+        self.tokens.iter_mut().find(|token| token.token == token_id)
     }
 }

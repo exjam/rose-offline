@@ -4,12 +4,13 @@ use crate::game::{
     components::{GameClient, LoginClient, ServerInfo, WorldClient},
     events::SaveEvent,
     messages::control::{ClientType, ControlMessage},
-    resources::{ControlChannel, GameServer, ServerList, WorldServer},
+    resources::{ControlChannel, GameServer, LoginTokens, ServerList, WorldServer},
 };
 
 pub fn control_server_system(
     mut commands: Commands,
     channel: Res<ControlChannel>,
+    mut login_tokens: ResMut<LoginTokens>,
     mut server_list: ResMut<ServerList>,
     mut save_events: EventWriter<SaveEvent>,
 ) {
@@ -41,8 +42,45 @@ pub fn control_server_system(
                 client_type,
                 entity,
             } => match client_type {
-                ClientType::Game => save_events.send(SaveEvent::with_character(entity, true)),
-                _ => commands.entity(entity).despawn(),
+                ClientType::Login => {
+                    for login_token in login_tokens.tokens.iter_mut() {
+                        if login_token.login_client == Some(entity) {
+                            login_token.login_client = None;
+                        }
+                    }
+
+                    commands.entity(entity).despawn();
+                }
+                ClientType::World => {
+                    for (index, login_token) in login_tokens.tokens.iter_mut().enumerate() {
+                        if login_token.world_client == Some(entity) {
+                            login_token.world_client = None;
+                        }
+
+                        if login_token.game_client.is_none() && login_token.world_client.is_none() {
+                            login_tokens.tokens.remove(index);
+                            break;
+                        }
+                    }
+
+                    commands.entity(entity).despawn();
+                }
+                ClientType::Game => {
+                    for (index, login_token) in login_tokens.tokens.iter_mut().enumerate() {
+                        if login_token.game_client == Some(entity) {
+                            login_token.game_client = None;
+                        }
+
+                        if login_token.game_client.is_none() && login_token.world_client.is_none() {
+                            login_tokens.tokens.remove(index);
+                            break;
+                        }
+                    }
+
+                    // Let the save system handle despawning the entity
+                    save_events.send(SaveEvent::with_character(entity, true));
+                    commands.entity(entity).remove::<GameClient>();
+                }
             },
             ControlMessage::AddWorldServer {
                 name,

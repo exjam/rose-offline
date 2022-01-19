@@ -16,6 +16,7 @@ use crate::{
 pub fn login_server_authentication_system(
     mut commands: Commands,
     query: Query<(Entity, &LoginClient), Without<Account>>,
+    login_tokens: Res<LoginTokens>,
 ) {
     query.for_each(|(entity, login_client)| {
         if let Ok(message) = login_client.client_message_rx.try_recv() {
@@ -29,7 +30,12 @@ pub fn login_server_authentication_system(
                         .ok();
                 }
                 ClientMessage::LoginRequest(message) => {
-                    let result =
+                    let response = if login_tokens
+                        .find_username_token(&message.username)
+                        .is_some()
+                    {
+                        Err(LoginError::AlreadyLoggedIn)
+                    } else {
                         match AccountStorage::try_load(&message.username, &message.password_md5) {
                             Ok(account) => {
                                 commands.entity(entity).insert(Account::from(account));
@@ -40,8 +46,9 @@ pub fn login_server_authentication_system(
                                 AccountStorageError::InvalidPassword => LoginError::InvalidPassword,
                                 _ => LoginError::Failed,
                             }),
-                        };
-                    message.response_tx.send(result).ok();
+                        }
+                    };
+                    message.response_tx.send(response).ok();
                 }
                 _ => panic!("Received unexpected client message {:?}", message),
             }
@@ -50,11 +57,11 @@ pub fn login_server_authentication_system(
 }
 
 pub fn login_server_system(
-    mut query: Query<(&Account, &mut LoginClient)>,
+    mut query: Query<(Entity, &Account, &mut LoginClient)>,
     mut login_tokens: ResMut<LoginTokens>,
     server_list: Res<ServerList>,
 ) {
-    query.for_each_mut(|(account, mut login_client)| {
+    query.for_each_mut(|(entity, account, mut login_client)| {
         if let Ok(message) = login_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::GetWorldServerList(message) => {
@@ -91,6 +98,7 @@ pub fn login_server_system(
                                 .map(|game_server| {
                                     login_client.login_token = login_tokens.generate(
                                         account.name.clone(),
+                                        entity,
                                         world_server.entity,
                                         game_server.entity,
                                     );

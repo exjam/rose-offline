@@ -78,6 +78,9 @@ impl LoginClient {
                     Err(LoginError::Failed) => Packet::from(
                         &PacketServerLoginReply::with_error_result(LoginResult::Failed),
                     ),
+                    Err(LoginError::AlreadyLoggedIn) => Packet::from(
+                        &PacketServerLoginReply::with_error_result(LoginResult::AlreadyLoggedIn),
+                    ),
                     Err(LoginError::InvalidAccount) => Packet::from(
                         &PacketServerLoginReply::with_error_result(LoginResult::UnknownAccount),
                     ),

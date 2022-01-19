@@ -37,6 +37,7 @@ pub enum LoginError {
     Failed,
     InvalidAccount,
     InvalidPassword,
+    AlreadyLoggedIn,
 }
 
 #[derive(Debug)]
