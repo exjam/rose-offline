@@ -1648,6 +1648,19 @@ impl From<&PacketServerPartyMemberKicked> for Packet {
     }
 }
 
+pub struct PacketServerPartyChangeOwner {
+    pub owner_character_id: u32,
+}
+
+impl From<&PacketServerPartyChangeOwner> for Packet {
+    fn from(packet: &PacketServerPartyChangeOwner) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
+        writer.write_u8(0x08);
+        writer.write_u32(packet.owner_character_id);
+        writer.into()
+    }
+}
+
 pub struct PacketServerPartyMembers<'a> {
     pub owner_character_id: CharacterUniqueId,
     pub party_members: &'a [PartyMemberInfo],

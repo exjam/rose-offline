@@ -1084,6 +1084,14 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::PartyChangeOwner(owner_character_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyChangeOwner {
+                        owner_character_id,
+                    }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

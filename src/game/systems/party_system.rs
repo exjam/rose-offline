@@ -20,7 +20,6 @@ Party event system TODO:
 - Handle member disconnect
 - If leader disconnects, change leader
 - If all players disconnect the party must disband
-- Change party owner
 - Check party level / team requirements?
 */
 
@@ -543,6 +542,72 @@ fn handle_party_kick(
     Ok(())
 }
 
+enum PartyChangeOwnerError {
+    InvalidEntity,
+    NotOwner,
+    NotInParty,
+    InvalidNewOwnerEntity,
+}
+
+fn handle_party_change_owner(
+    party_query: &mut Query<&mut Party>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
+    owner_entity: Entity,
+    new_owner_entity: Entity,
+) -> Result<(), PartyChangeOwnerError> {
+    // Get owner entity's party
+    let (_, _, owner_party_membership, _) = party_member_query
+        .get(owner_entity)
+        .map_err(|_| PartyChangeOwnerError::InvalidEntity)?;
+    let party_entity = match *owner_party_membership {
+        PartyMembership::None => return Err(PartyChangeOwnerError::NotInParty),
+        PartyMembership::Member(party_entity) => party_entity,
+    };
+
+    // Ensure new owner is in the same party
+    let (_, new_owner_character_info, new_owner_party_membership, _) = party_member_query
+        .get(new_owner_entity)
+        .map_err(|_| PartyChangeOwnerError::InvalidEntity)?;
+    let new_owner_party_entity = match *new_owner_party_membership {
+        PartyMembership::None => return Err(PartyChangeOwnerError::InvalidNewOwnerEntity),
+        PartyMembership::Member(new_owner_party_entity) => new_owner_party_entity,
+    };
+    let new_owner_character_id = new_owner_character_info.unique_id;
+    if new_owner_party_entity != party_entity {
+        return Err(PartyChangeOwnerError::InvalidNewOwnerEntity);
+    }
+
+    let mut party = party_query
+        .get_mut(party_entity)
+        .expect("PartyMembership pointing to invalid party entity");
+
+    if party.owner != owner_entity {
+        return Err(PartyChangeOwnerError::NotOwner);
+    }
+    party.owner = new_owner_entity;
+
+    // Inform party members of new owner
+    for party_member in party.members.iter() {
+        if let PartyMember::Online(party_member_entity) = party_member {
+            let (_, _, _, member_game_client) =
+                party_member_query.get_mut(*party_member_entity).unwrap();
+            if let Some(member_game_client) = member_game_client {
+                member_game_client
+                    .server_message_tx
+                    .send(ServerMessage::PartyChangeOwner(new_owner_character_id))
+                    .ok();
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn party_system(
     mut commands: Commands,
     mut party_query: Query<&mut Party>,
@@ -616,10 +681,16 @@ pub fn party_system(
                 .ok();
             }
             PartyEvent::ChangeOwner(PartyEventChangeOwner {
-                owner_entity: _owner_entity,
-                new_owner_entity: _new_owner_entity,
+                owner_entity,
+                new_owner_entity,
             }) => {
-                warn!("Unimplemented PartyEvent::ChangeOwner.");
+                handle_party_change_owner(
+                    &mut party_query,
+                    &mut party_member_query,
+                    owner_entity,
+                    new_owner_entity,
+                )
+                .ok();
             }
         }
     }
