@@ -18,13 +18,15 @@ use crate::{
             ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit,
             DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase, ExperiencePoints,
             GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money,
-            MoveMode, MoveSpeed, NextCommand, PartyMembership, PassiveRecoveryTime, Position,
-            QuestState, SkillList, StatPoints, StatusEffects, Team, WorldClient,
+            MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership,
+            PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints, StatusEffects, Team,
+            WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
-            PartyEventKick, PartyEventLeave, PersonalStoreEvent, PersonalStoreEventBuyItem,
-            PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
+            PartyEventKick, PartyEventLeave, PartyMemberReconnect, PersonalStoreEvent,
+            PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent,
+            UseItemEvent,
         },
         messages::{
             client::{
@@ -45,6 +47,8 @@ fn handle_game_connection_request(
     commands: &mut Commands,
     game_data: &GameData,
     login_tokens: &mut LoginTokens,
+    party_query: &mut Query<(Entity, &mut Party)>,
+    party_events: &mut EventWriter<PartyEvent>,
     entity: Entity,
     game_client: &mut GameClient,
     token_id: u32,
@@ -98,6 +102,29 @@ fn handle_game_connection_request(
         )
     };
 
+    // See if we are in a party as an offline member
+    let mut party_membership = PartyMembership::default();
+    for (party_entity, mut party) in party_query.iter_mut() {
+        for party_member in party.members.iter_mut() {
+            if let PartyMember::Offline(party_member_character_id, party_member_name) = party_member
+            {
+                if *party_member_character_id == character.info.unique_id
+                    && party_member_name == &character.info.name
+                {
+                    *party_member = PartyMember::Online(entity);
+                    party_membership = PartyMembership::new(party_entity);
+                    party_events.send(PartyEvent::MemberReconnect(PartyMemberReconnect {
+                        party_entity,
+                        reconnect_entity: entity,
+                        character_id: character.info.unique_id,
+                        name: character.info.name.clone(),
+                    }));
+                    break;
+                }
+            }
+        }
+    }
+
     let weapon_motion_type = game_data
         .items
         .get_equipped_weapon_item_data(&character.equipment, EquipmentIndex::WeaponRight)
@@ -127,7 +154,7 @@ fn handle_game_connection_request(
         move_mode,
         move_speed,
         next_command: NextCommand::default(),
-        party_membership: PartyMembership::default(),
+        party_membership,
         passive_recovery_time: PassiveRecoveryTime::default(),
         position: position.clone(),
         quest_state: character.quest_state.clone(),
@@ -164,8 +191,10 @@ fn handle_game_connection_request(
 pub fn game_server_authentication_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
+    mut party_query: Query<(Entity, &mut Party)>,
     mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,
+    mut party_events: EventWriter<PartyEvent>,
 ) {
     query.for_each_mut(|(entity, mut game_client)| {
         if let Ok(message) = game_client.client_message_rx.try_recv() {
@@ -177,6 +206,8 @@ pub fn game_server_authentication_system(
                             &mut commands,
                             game_data.as_ref(),
                             login_tokens.as_mut(),
+                            &mut party_query,
+                            &mut party_events,
                             entity,
                             game_client.as_mut(),
                             message.login_token,

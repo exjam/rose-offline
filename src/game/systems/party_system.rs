@@ -7,7 +7,7 @@ use crate::game::{
     },
     events::{
         PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-        PartyMemberDisconnect,
+        PartyMemberDisconnect, PartyMemberReconnect,
     },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
@@ -618,7 +618,7 @@ fn handle_party_member_disconnect(
     party_entity: Entity,
     disconnect_entity: Entity,
     character_id: CharacterUniqueId,
-    name: &str,
+    name: String,
 ) -> Result<(), PartyMemberDisconnectError> {
     let mut party = party_query
         .get_mut(party_entity)
@@ -628,7 +628,7 @@ fn handle_party_member_disconnect(
     for party_member in party.members.iter_mut() {
         if let PartyMember::Online(member_entity) = party_member {
             if *member_entity == disconnect_entity {
-                *party_member = PartyMember::Offline(character_id, name.to_string());
+                *party_member = PartyMember::Offline(character_id, name);
                 break;
             }
         }
@@ -670,6 +670,71 @@ fn handle_party_member_disconnect(
     Ok(())
 }
 
+enum PartyMemberReconnectError {
+    InvalidParty,
+}
+
+fn handle_party_member_reconnect(
+    party_query: &mut Query<&mut Party>,
+    party_member_info_query: &mut Query<(
+        &AbilityValues,
+        &CharacterInfo,
+        &ClientEntity,
+        &HealthPoints,
+        &StatusEffects,
+        &Stamina,
+    )>,
+    game_client_query: &mut Query<&GameClient>,
+    party_entity: Entity,
+    reconnect_entity: Entity,
+    character_id: CharacterUniqueId,
+    name: String,
+) -> Result<(), PartyMemberDisconnectError> {
+    let mut party = party_query
+        .get_mut(party_entity)
+        .map_err(|_| PartyMemberDisconnectError::InvalidParty)?;
+
+    // Send member list to reconnected member
+    if let Ok(game_client) = game_client_query.get(reconnect_entity) {
+        let (_, owner_character_info, _, _, _, _) =
+            party_member_info_query.get(party.owner).unwrap();
+        let owner_character_id = owner_character_info.unique_id;
+
+        let party_member_infos = get_party_membership_info(&party.members, party_member_info_query);
+        let other_members_info = party_member_infos
+            .into_iter()
+            .filter(|member_info| {
+                if let PartyMemberInfo::Offline(party_member_offline) = member_info {
+                    party_member_offline.character_id != character_id
+                        && party_member_offline.name != name
+                } else {
+                    true
+                }
+            })
+            .collect();
+
+        game_client
+            .server_message_tx
+            .send(ServerMessage::PartyMemberList(PartyMemberList {
+                owner_character_id,
+                members: other_members_info,
+            }))
+            .ok();
+    }
+
+    // Set the member to online
+    for party_member in party.members.iter_mut() {
+        if let PartyMember::Offline(party_member_character_id, party_member_name) = party_member {
+            if *party_member_character_id == character_id && party_member_name == &name {
+                *party_member = PartyMember::Online(reconnect_entity);
+                break;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 pub fn party_system(
     mut commands: Commands,
     mut party_query: Query<&mut Party>,
@@ -687,30 +752,50 @@ pub fn party_system(
         &StatusEffects,
         &Stamina,
     )>,
+    mut game_client_query: Query<&GameClient>,
     mut party_events: EventReader<PartyEvent>,
 ) {
     // Collect party events into a Vec so we can iterate disconnects separately
     let party_events: Vec<PartyEvent> = party_events.iter().cloned().collect();
 
-    // First handle member disconnects
+    // First handle member disconnects / reconnects
     for event in party_events.iter() {
-        if let PartyEvent::MemberDisconnect(PartyMemberDisconnect {
-            party_entity,
-            disconnect_entity,
-            character_id,
-            name,
-        }) = event
-        {
-            handle_party_member_disconnect(
-                &mut commands,
-                &mut party_query,
-                &mut party_member_query,
-                *party_entity,
-                *disconnect_entity,
-                *character_id,
+        match event {
+            PartyEvent::MemberDisconnect(PartyMemberDisconnect {
+                party_entity,
+                disconnect_entity,
+                character_id,
                 name,
-            )
-            .ok();
+            }) => {
+                handle_party_member_disconnect(
+                    &mut commands,
+                    &mut party_query,
+                    &mut party_member_query,
+                    *party_entity,
+                    *disconnect_entity,
+                    *character_id,
+                    name.clone(),
+                )
+                .ok();
+            }
+            PartyEvent::MemberReconnect(PartyMemberReconnect {
+                party_entity,
+                reconnect_entity,
+                character_id,
+                name,
+            }) => {
+                handle_party_member_reconnect(
+                    &mut party_query,
+                    &mut party_member_info_query,
+                    &mut game_client_query,
+                    *party_entity,
+                    *reconnect_entity,
+                    *character_id,
+                    name.clone(),
+                )
+                .ok();
+            }
+            _ => {}
         }
     }
 
@@ -781,6 +866,7 @@ pub fn party_system(
                 .ok();
             }
             PartyEvent::MemberDisconnect(_) => {}
+            PartyEvent::MemberReconnect(_) => {}
         }
     }
 }

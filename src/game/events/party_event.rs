@@ -3,6 +3,14 @@ use bevy_ecs::prelude::Entity;
 use crate::game::components::CharacterUniqueId;
 
 #[derive(Clone)]
+pub struct PartyMemberReconnect {
+    pub party_entity: Entity,
+    pub reconnect_entity: Entity,
+    pub character_id: CharacterUniqueId,
+    pub name: String,
+}
+
+#[derive(Clone)]
 pub struct PartyMemberDisconnect {
     pub party_entity: Entity,
     pub disconnect_entity: Entity,
@@ -35,6 +43,7 @@ pub struct PartyEventKick {
 
 #[derive(Clone)]
 pub enum PartyEvent {
+    MemberReconnect(PartyMemberReconnect),
     MemberDisconnect(PartyMemberDisconnect),
     Invite(PartyEventInvite),
     AcceptInvite(PartyEventInvite),
