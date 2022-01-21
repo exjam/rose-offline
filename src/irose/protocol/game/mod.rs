@@ -1092,6 +1092,14 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::PartyMemberDisconnect(character_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMemberDisconnect {
+                        character_id,
+                    }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

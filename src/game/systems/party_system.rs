@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::{Commands, Entity, EventReader, Query};
-use log::warn;
 
 use crate::game::{
     components::{
@@ -8,6 +7,7 @@ use crate::game::{
     },
     events::{
         PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
+        PartyMemberDisconnect,
     },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
@@ -17,11 +17,61 @@ use crate::game::{
 
 /*
 Party event system TODO:
-- Handle member disconnect
-- If leader disconnects, change leader
-- If all players disconnect the party must disband
 - Check party level / team requirements?
+- When player reconnects, re-add them to party
 */
+fn send_message_to_members(
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
+    party: &Party,
+    message: ServerMessage,
+) {
+    for party_member in party.members.iter() {
+        if let PartyMember::Online(party_member_entity) = party_member {
+            let (_, _, _, member_game_client) =
+                party_member_query.get_mut(*party_member_entity).unwrap();
+            if let Some(member_game_client) = member_game_client {
+                member_game_client
+                    .server_message_tx
+                    .send(message.clone())
+                    .ok();
+            }
+        }
+    }
+}
+
+fn delete_party(
+    commands: &mut Commands,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
+    party_entity: Entity,
+    party: &mut Party,
+) {
+    for party_member in party.members.iter() {
+        if let PartyMember::Online(party_member_entity) = party_member {
+            let (_, _, mut member_party_membership, member_game_client) =
+                party_member_query.get_mut(*party_member_entity).unwrap();
+            if let Some(member_game_client) = member_game_client {
+                member_game_client
+                    .server_message_tx
+                    .send(ServerMessage::PartyReply(PartyReply::DeleteParty))
+                    .ok();
+            }
+
+            *member_party_membership = PartyMembership::None;
+        }
+    }
+    party.members.clear();
+    commands.entity(party_entity).despawn();
+}
 
 enum PartyInviteError {
     AlreadyHasParty,
@@ -354,25 +404,7 @@ fn handle_party_leave(
             }
 
             if party.members.len() <= 1 {
-                // Send delete message to other members and remove them from party
-                for party_member in party.members.iter() {
-                    if let PartyMember::Online(party_member_entity) = party_member {
-                        let (_, _, mut member_party_membership, member_game_client) =
-                            party_member_query.get_mut(*party_member_entity).unwrap();
-                        if let Some(member_game_client) = member_game_client {
-                            member_game_client
-                                .server_message_tx
-                                .send(ServerMessage::PartyReply(PartyReply::DeleteParty))
-                                .ok();
-                        }
-
-                        *member_party_membership = PartyMembership::None;
-                    }
-                }
-                party.members.clear();
-
-                // Delete the party
-                commands.entity(party_entity).despawn();
+                delete_party(commands, party_member_query, party_entity, &mut party);
             } else {
                 // Get leaver character id and owner character id for leave message
                 let (_, leaver_character_info, _, _, _, _) =
@@ -384,21 +416,14 @@ fn handle_party_leave(
                 let owner_character_id = owner_character_info.unique_id;
 
                 // Send message to other members informing of leaver and new owner
-                for party_member in party.members.iter() {
-                    if let PartyMember::Online(party_member_entity) = party_member {
-                        let (_, _, _, member_game_client) =
-                            party_member_query.get_mut(*party_member_entity).unwrap();
-                        if let Some(member_game_client) = member_game_client {
-                            member_game_client
-                                .server_message_tx
-                                .send(ServerMessage::PartyMemberLeave(PartyMemberLeave {
-                                    leaver_character_id,
-                                    owner_character_id,
-                                }))
-                                .ok();
-                        }
-                    }
-                }
+                send_message_to_members(
+                    party_member_query,
+                    party.as_ref(),
+                    ServerMessage::PartyMemberLeave(PartyMemberLeave {
+                        leaver_character_id,
+                        owner_character_id,
+                    }),
+                );
             }
         }
         PartyMembership::None => return Err(PartyLeaveError::NotInParty),
@@ -503,40 +528,16 @@ fn handle_party_kick(
         }
     }
 
-    // Send kick message to other party members
-    for party_member in party.members.iter() {
-        if let PartyMember::Online(party_member_entity) = party_member {
-            let (_, _, _, member_game_client) =
-                party_member_query.get_mut(*party_member_entity).unwrap();
-            if let Some(member_game_client) = member_game_client {
-                member_game_client
-                    .server_message_tx
-                    .send(ServerMessage::PartyMemberKicked(kick_character_id))
-                    .ok();
-            }
-        }
-    }
+    // Send kick message to other party member
+    send_message_to_members(
+        party_member_query,
+        party.as_ref(),
+        ServerMessage::PartyMemberKicked(kick_character_id),
+    );
 
     // If party is down to 1 member, delete the party
     if party.members.len() <= 1 {
-        for party_member in party.members.iter() {
-            if let PartyMember::Online(party_member_entity) = party_member {
-                let (_, _, mut member_party_membership, member_game_client) =
-                    party_member_query.get_mut(*party_member_entity).unwrap();
-                if let Some(member_game_client) = member_game_client {
-                    member_game_client
-                        .server_message_tx
-                        .send(ServerMessage::PartyReply(PartyReply::DeleteParty))
-                        .ok();
-                }
-
-                *member_party_membership = PartyMembership::None;
-            }
-        }
-        party.members.clear();
-
-        // Delete the party
-        commands.entity(party_entity).despawn();
+        delete_party(commands, party_member_query, party_entity, &mut party);
     }
 
     Ok(())
@@ -592,18 +593,79 @@ fn handle_party_change_owner(
     party.owner = new_owner_entity;
 
     // Inform party members of new owner
-    for party_member in party.members.iter() {
-        if let PartyMember::Online(party_member_entity) = party_member {
-            let (_, _, _, member_game_client) =
-                party_member_query.get_mut(*party_member_entity).unwrap();
-            if let Some(member_game_client) = member_game_client {
-                member_game_client
-                    .server_message_tx
-                    .send(ServerMessage::PartyChangeOwner(new_owner_character_id))
-                    .ok();
+    send_message_to_members(
+        party_member_query,
+        party.as_ref(),
+        ServerMessage::PartyChangeOwner(new_owner_character_id),
+    );
+
+    Ok(())
+}
+
+enum PartyMemberDisconnectError {
+    InvalidParty,
+}
+
+fn handle_party_member_disconnect(
+    commands: &mut Commands,
+    party_query: &mut Query<&mut Party>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
+    party_entity: Entity,
+    disconnect_entity: Entity,
+    character_id: CharacterUniqueId,
+    name: &str,
+) -> Result<(), PartyMemberDisconnectError> {
+    let mut party = party_query
+        .get_mut(party_entity)
+        .map_err(|_| PartyMemberDisconnectError::InvalidParty)?;
+
+    // Set the member to offline
+    for party_member in party.members.iter_mut() {
+        if let PartyMember::Online(member_entity) = party_member {
+            if *member_entity == disconnect_entity {
+                *party_member = PartyMember::Offline(character_id, name.to_string());
+                break;
             }
         }
     }
+
+    // If leader disconnects, change leader to first online member, or disband party if all offline
+    if party.owner == disconnect_entity {
+        let new_owner = party.members.iter().find_map(|party_member| {
+            if let PartyMember::Online(entity) = party_member {
+                Some(*entity)
+            } else {
+                None
+            }
+        });
+
+        if let Some((_, new_owner_character_info, _, _)) =
+            new_owner.and_then(|new_owner| party_member_query.get(new_owner).ok())
+        {
+            party.owner = new_owner.unwrap();
+            send_message_to_members(
+                party_member_query,
+                party.as_ref(),
+                ServerMessage::PartyChangeOwner(new_owner_character_info.unique_id),
+            );
+        } else {
+            // No other online players, delete party
+            delete_party(commands, party_member_query, party_entity, &mut party);
+            return Ok(());
+        }
+    }
+
+    // Send disconnect message to all online members
+    send_message_to_members(
+        party_member_query,
+        party.as_ref(),
+        ServerMessage::PartyMemberDisconnect(character_id),
+    );
 
     Ok(())
 }
@@ -627,6 +689,32 @@ pub fn party_system(
     )>,
     mut party_events: EventReader<PartyEvent>,
 ) {
+    // Collect party events into a Vec so we can iterate disconnects separately
+    let party_events: Vec<PartyEvent> = party_events.iter().cloned().collect();
+
+    // First handle member disconnects
+    for event in party_events.iter() {
+        if let PartyEvent::MemberDisconnect(PartyMemberDisconnect {
+            party_entity,
+            disconnect_entity,
+            character_id,
+            name,
+        }) = event
+        {
+            handle_party_member_disconnect(
+                &mut commands,
+                &mut party_query,
+                &mut party_member_query,
+                *party_entity,
+                *disconnect_entity,
+                *character_id,
+                name,
+            )
+            .ok();
+        }
+    }
+
+    // Then handle remaining party events
     for event in party_events.iter() {
         match *event {
             PartyEvent::Invite(PartyEventInvite {
@@ -692,6 +780,7 @@ pub fn party_system(
                 )
                 .ok();
             }
+            PartyEvent::MemberDisconnect(_) => {}
         }
     }
 }

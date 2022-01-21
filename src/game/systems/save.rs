@@ -1,4 +1,7 @@
-use bevy_ecs::prelude::{Commands, EventReader, Query, ResMut};
+use bevy_ecs::{
+    event::EventWriter,
+    prelude::{Commands, EventReader, Query, ResMut},
+};
 use log::{error, info};
 
 use crate::{
@@ -7,10 +10,10 @@ use crate::{
         bundles::client_entity_leave_zone,
         components::{
             BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, HealthPoints,
-            Hotbar, Inventory, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints,
-            Stamina, StatPoints, UnionMembership,
+            Hotbar, Inventory, Level, ManaPoints, PartyMembership, Position, QuestState, SkillList,
+            SkillPoints, Stamina, StatPoints, UnionMembership,
         },
-        events::{SaveEvent, SaveEventCharacter},
+        events::{PartyEvent, PartyMemberDisconnect, SaveEvent, SaveEventCharacter},
         resources::ClientEntityList,
     },
 };
@@ -32,10 +35,11 @@ pub fn save_system(
         &ManaPoints,
         &SkillPoints,
         &StatPoints,
-        (&QuestState, &UnionMembership, &Stamina),
+        (&QuestState, &UnionMembership, &Stamina, &PartyMembership),
     )>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut save_events: EventReader<SaveEvent>,
+    mut party_events: EventWriter<PartyEvent>,
 ) {
     for pending_save in save_events.iter() {
         match *pending_save {
@@ -43,7 +47,7 @@ pub fn save_system(
                 entity,
                 remove_after_save,
             }) => {
-                let (client_entity, position) = if let Ok((
+                if let Ok((
                     client_entity,
                     character_info,
                     basic_stats,
@@ -58,7 +62,7 @@ pub fn save_system(
                     mana_points,
                     skill_points,
                     stat_points,
-                    (quest_state, union_membership, stamina),
+                    (quest_state, union_membership, stamina, party_membership),
                 )) = query.get(entity)
                 {
                     let storage = CharacterStorage {
@@ -89,22 +93,31 @@ pub fn save_system(
                         ),
                     }
 
-                    (client_entity.cloned(), Some(position.clone()))
-                } else {
-                    (None, None)
-                };
+                    if remove_after_save {
+                        if let Some(client_entity) = client_entity {
+                            client_entity_leave_zone(
+                                &mut commands,
+                                &mut client_entity_list,
+                                entity,
+                                client_entity,
+                                position,
+                            );
+                        }
+
+                        if let PartyMembership::Member(party_entity) = party_membership {
+                            party_events.send(PartyEvent::MemberDisconnect(
+                                PartyMemberDisconnect {
+                                    party_entity: *party_entity,
+                                    disconnect_entity: entity,
+                                    character_id: character_info.unique_id,
+                                    name: character_info.name.clone(),
+                                },
+                            ));
+                        }
+                    }
+                }
 
                 if remove_after_save {
-                    if let (Some(client_entity), Some(position)) = (client_entity, position) {
-                        client_entity_leave_zone(
-                            &mut commands,
-                            &mut client_entity_list,
-                            entity,
-                            &client_entity,
-                            &position,
-                        );
-                    }
-
                     commands.entity(entity).despawn();
                 }
             }
