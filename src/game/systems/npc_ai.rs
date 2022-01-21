@@ -27,9 +27,10 @@ use crate::{
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle},
         components::{
-            AbilityValues, ClientEntity, Command, CommandData, CommandDie, DamageSources,
-            GameClient, HealthPoints, Level, MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi,
-            ObjectVariables, Owner, Position, SpawnOrigin, StatusEffects, Target, Team,
+            AbilityValues, ClientEntity, ClientEntitySector, Command, CommandData, CommandDie,
+            DamageSources, GameClient, HealthPoints, Level, MonsterSpawnPoint, MoveMode,
+            NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin, StatusEffects,
+            Target, Team,
         },
         events::RewardXpEvent,
         messages::server::ServerMessage,
@@ -957,6 +958,7 @@ pub fn npc_ai_system(
         &Npc,
         &mut NpcAi,
         &ClientEntity,
+        &ClientEntitySector,
         &Command,
         &Position,
         &Level,
@@ -964,10 +966,12 @@ pub fn npc_ai_system(
         &HealthPoints,
         &AbilityValues,
         &StatusEffects,
-        Option<&Owner>,
-        Option<&SpawnOrigin>,
-        Option<&Target>,
-        Option<&DamageSources>,
+        (
+            Option<&Owner>,
+            Option<&SpawnOrigin>,
+            Option<&Target>,
+            Option<&DamageSources>,
+        ),
     )>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
@@ -981,6 +985,7 @@ pub fn npc_ai_system(
             npc,
             mut npc_ai,
             client_entity,
+            client_entity_sector,
             command,
             position,
             level,
@@ -988,10 +993,7 @@ pub fn npc_ai_system(
             health_points,
             ability_values,
             status_effects,
-            owner,
-            spawn_origin,
-            target,
-            damage_sources,
+            (owner, spawn_origin, target, damage_sources),
         )| {
             let ai_source_data = AiSourceData {
                 entity,
@@ -1230,6 +1232,7 @@ pub fn npc_ai_system(
                             &mut ai_system_parameters.client_entity_list,
                             entity,
                             client_entity,
+                            client_entity_sector,
                             position,
                         );
                         ai_system_parameters.commands.entity(entity).despawn();

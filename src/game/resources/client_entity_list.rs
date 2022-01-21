@@ -6,7 +6,7 @@ use nalgebra::{Point2, Point3, Vector2};
 
 use crate::{
     data::{ZoneData, ZoneDatabase, ZoneId},
-    game::components::{ClientEntity, ClientEntityId, ClientEntityType},
+    game::components::{ClientEntity, ClientEntityId, ClientEntitySector, ClientEntityType},
 };
 
 const MAX_CLIENT_ENTITY_ID: usize = 4096;
@@ -164,7 +164,7 @@ impl ClientEntityZone {
         entity_type: ClientEntityType,
         entity: Entity,
         position: Point3<f32>,
-    ) -> Option<ClientEntity> {
+    ) -> Option<(ClientEntity, ClientEntitySector)> {
         let sector = self.calculate_sector(position.xy());
 
         // Allocate an entity id, skipping over invalid entity id
@@ -175,7 +175,8 @@ impl ClientEntityZone {
             .skip(1)
             .find(|(_, slot)| slot.is_none())?;
         let client_entity_id = ClientEntityId(free_index);
-        let client_entity = ClientEntity::new(entity_type, client_entity_id, self.zone_id, sector);
+        let client_entity = ClientEntity::new(entity_type, client_entity_id, self.zone_id);
+        let client_entity_sector = ClientEntitySector::new(sector);
 
         // Join zone
         *free_slot = Some((entity, client_entity.clone(), position));
@@ -183,10 +184,15 @@ impl ClientEntityZone {
         // Join sector
         self.join_sector(sector, client_entity_id);
 
-        Some(client_entity)
+        Some((client_entity, client_entity_sector))
     }
 
-    pub fn leave_zone(&mut self, entity: Entity, client_entity: &ClientEntity) {
+    pub fn leave_zone(
+        &mut self,
+        entity: Entity,
+        client_entity: &ClientEntity,
+        client_entity_sector: &ClientEntitySector,
+    ) {
         // Validate entity list
         assert_eq!(
             self.entities[client_entity.id.0].as_ref().map(|x| &x.0),
@@ -194,7 +200,7 @@ impl ClientEntityZone {
         );
 
         // Leave sector
-        self.leave_sector(client_entity.sector, client_entity.id);
+        self.leave_sector(client_entity_sector.sector, client_entity.id);
 
         // Set as leaving zone
         self.leaving_entities.push(client_entity.id);
@@ -203,7 +209,8 @@ impl ClientEntityZone {
     pub fn update_position(
         &mut self,
         entity: Entity,
-        client_entity: &mut ClientEntity,
+        client_entity: &ClientEntity,
+        client_entity_sector: &mut ClientEntitySector,
         position: Point3<f32>,
     ) {
         // Validate entity list
@@ -213,13 +220,13 @@ impl ClientEntityZone {
         );
 
         // Update sector
-        let midpoint = self.calculate_sector_midpoint(client_entity.sector);
+        let midpoint = self.calculate_sector_midpoint(client_entity_sector.sector);
         if (midpoint - position.xy()).magnitude_squared() > self.sector_leave_distance_squared {
-            let previous_sector = client_entity.sector;
+            let previous_sector = client_entity_sector.sector;
             let new_sector = self.calculate_sector(position.xy());
             self.leave_sector(previous_sector, client_entity.id);
             self.join_sector(new_sector, client_entity.id);
-            client_entity.sector = new_sector;
+            client_entity_sector.sector = new_sector;
         }
 
         // Update the entity data storage

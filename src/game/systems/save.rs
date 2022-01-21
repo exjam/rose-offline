@@ -9,9 +9,9 @@ use crate::{
     game::{
         bundles::client_entity_leave_zone,
         components::{
-            BasicStats, CharacterInfo, ClientEntity, Equipment, ExperiencePoints, HealthPoints,
-            Hotbar, Inventory, Level, ManaPoints, PartyMembership, Position, QuestState, SkillList,
-            SkillPoints, Stamina, StatPoints, UnionMembership,
+            BasicStats, CharacterInfo, ClientEntity, ClientEntitySector, Equipment,
+            ExperiencePoints, HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership,
+            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
         },
         events::{PartyEvent, PartyMemberDisconnect, SaveEvent, SaveEventCharacter},
         resources::ClientEntityList,
@@ -22,6 +22,7 @@ pub fn save_system(
     mut commands: Commands,
     query: Query<(
         Option<&ClientEntity>,
+        Option<&ClientEntitySector>,
         &CharacterInfo,
         &BasicStats,
         &Inventory,
@@ -34,8 +35,13 @@ pub fn save_system(
         &HealthPoints,
         &ManaPoints,
         &SkillPoints,
-        &StatPoints,
-        (&QuestState, &UnionMembership, &Stamina, &PartyMembership),
+        (
+            &StatPoints,
+            &QuestState,
+            &UnionMembership,
+            &Stamina,
+            &PartyMembership,
+        ),
     )>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut save_events: EventReader<SaveEvent>,
@@ -49,6 +55,7 @@ pub fn save_system(
             }) => {
                 if let Ok((
                     client_entity,
+                    client_entity_sector,
                     character_info,
                     basic_stats,
                     inventory,
@@ -61,8 +68,7 @@ pub fn save_system(
                     health_points,
                     mana_points,
                     skill_points,
-                    stat_points,
-                    (quest_state, union_membership, stamina, party_membership),
+                    (stat_points, quest_state, union_membership, stamina, party_membership),
                 )) = query.get(entity)
                 {
                     let storage = CharacterStorage {
@@ -94,12 +100,15 @@ pub fn save_system(
                     }
 
                     if remove_after_save {
-                        if let Some(client_entity) = client_entity {
+                        if let (Some(client_entity), Some(client_entity_sector)) =
+                            (client_entity, client_entity_sector)
+                        {
                             client_entity_leave_zone(
                                 &mut commands,
                                 &mut client_entity_list,
                                 entity,
                                 client_entity,
+                                client_entity_sector,
                                 position,
                             );
                         }

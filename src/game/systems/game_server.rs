@@ -15,12 +15,12 @@ use crate::{
         },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
-            ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit,
-            DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase, ExperiencePoints,
-            GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money,
-            MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership,
-            PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints, StatusEffects, Team,
-            WorldClient,
+            ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
+            CommandSit, DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase,
+            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
+            ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
+            PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints,
+            StatusEffects, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
@@ -424,6 +424,7 @@ pub fn game_server_main_system(
         Entity,
         &GameClient,
         &ClientEntity,
+        &ClientEntitySector,
         &Position,
         &mut BasicStats,
         &mut StatPoints,
@@ -434,8 +435,7 @@ pub fn game_server_main_system(
         &Command,
         &CharacterInfo,
         &SkillList,
-        &mut QuestState,
-        &mut MoveMode,
+        (&mut QuestState, &mut MoveMode),
     )>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
@@ -454,6 +454,7 @@ pub fn game_server_main_system(
             entity,
             client,
             client_entity,
+            client_entity_sector,
             position,
             mut basic_stats,
             mut stat_points,
@@ -464,8 +465,7 @@ pub fn game_server_main_system(
             command,
             character_info,
             skill_list,
-            mut quest_state,
-            mut move_mode,
+            (mut quest_state, mut move_mode),
         )| {
             let mut entity_commands = commands.entity(entity);
 
@@ -716,6 +716,7 @@ pub fn game_server_main_system(
                             &mut client_entity_list,
                             entity,
                             client_entity,
+                            client_entity_sector,
                             position,
                         );
                     }
@@ -753,6 +754,7 @@ pub fn game_server_main_system(
                                 &mut client_entity_list,
                                 entity,
                                 client_entity,
+                                client_entity_sector,
                                 position,
                                 new_position,
                                 Some(client),
@@ -973,6 +975,7 @@ pub fn game_server_main_system(
                                         &mut client_entity_list,
                                         entity,
                                         client_entity,
+                                        client_entity_sector,
                                         position,
                                         Position::new(*event_position, warp_gate.target_zone),
                                         Some(client),

@@ -8,10 +8,10 @@ use crate::{
     game::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
-            ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
-            EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints, Hotbar,
-            Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand,
-            Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime,
+            ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, DamageSources,
+            DroppedItem, EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints,
+            Hotbar, Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed,
+            NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime,
             PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
             SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
         },
@@ -268,12 +268,15 @@ pub fn client_entity_join_zone(
     let zone = client_entity_list
         .get_zone_mut(position.zone_id)
         .ok_or(ClientEntityJoinZoneError::InvalidZone)?;
-    let client_entity = zone
+    let (client_entity, client_entity_sector) = zone
         .join_zone(client_entity_type, entity, position.position)
         .ok_or(ClientEntityJoinZoneError::OutOfEntityId)?;
 
     let client_entity_id = client_entity.id;
-    commands.entity(entity).insert(client_entity);
+    commands
+        .entity(entity)
+        .insert(client_entity)
+        .insert(client_entity_sector);
     Ok(client_entity_id)
 }
 
@@ -282,14 +285,16 @@ pub fn client_entity_leave_zone(
     client_entity_list: &mut ClientEntityList,
     entity: Entity,
     client_entity: &ClientEntity,
+    client_entity_sector: &ClientEntitySector,
     position: &Position,
 ) {
     if let Some(client_entity_zone) = client_entity_list.get_zone_mut(position.zone_id) {
-        client_entity_zone.leave_zone(entity, client_entity);
+        client_entity_zone.leave_zone(entity, client_entity, client_entity_sector);
     }
     commands
         .entity(entity)
         .remove::<ClientEntity>()
+        .remove::<ClientEntitySector>()
         .remove::<ClientEntityVisibility>();
 }
 
@@ -298,6 +303,7 @@ pub fn client_entity_teleport_zone(
     client_entity_list: &mut ClientEntityList,
     entity: Entity,
     client_entity: &ClientEntity,
+    client_entity_sector: &ClientEntitySector,
     previous_position: &Position,
     new_position: Position,
     game_client: Option<&GameClient>,
@@ -307,6 +313,7 @@ pub fn client_entity_teleport_zone(
         client_entity_list,
         entity,
         client_entity,
+        client_entity_sector,
         previous_position,
     );
     commands

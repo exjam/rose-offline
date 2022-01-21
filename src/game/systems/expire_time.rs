@@ -2,7 +2,10 @@ use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use crate::game::{
     bundles::client_entity_leave_zone,
-    components::{ClientEntity, Command, EntityExpireTime, Owner, OwnerExpireTime, Position},
+    components::{
+        ClientEntity, ClientEntitySector, Command, EntityExpireTime, Owner, OwnerExpireTime,
+        Position,
+    },
     resources::{ClientEntityList, ServerTime},
 };
 
@@ -13,6 +16,7 @@ pub fn expire_time_system(
         &EntityExpireTime,
         Option<&Position>,
         Option<&ClientEntity>,
+        Option<&ClientEntitySector>,
         Option<&Command>,
     )>,
     owner_expire_time_query: Query<(Entity, &OwnerExpireTime)>,
@@ -20,19 +24,22 @@ pub fn expire_time_system(
     server_time: Res<ServerTime>,
 ) {
     entity_expire_time_query.for_each(
-        |(entity, entity_expire_time, position, client_entity, command)| {
+        |(entity, entity_expire_time, position, client_entity, client_entity_sector, command)| {
             if server_time.now >= entity_expire_time.when {
                 if command.is_some() {
                     commands
                         .entity(entity)
                         .insert(Command::with_die(None, None, None));
                 } else {
-                    if let (Some(position), Some(client_entity)) = (position, client_entity) {
+                    if let (Some(position), Some(client_entity), Some(client_entity_sector)) =
+                        (position, client_entity, client_entity_sector)
+                    {
                         client_entity_leave_zone(
                             &mut commands,
                             &mut client_entity_list,
                             entity,
                             client_entity,
+                            client_entity_sector,
                             position,
                         );
                     }

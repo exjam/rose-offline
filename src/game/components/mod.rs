@@ -6,6 +6,7 @@ mod character_delete_time;
 mod character_info;
 mod character_list;
 mod client_entity;
+mod client_entity_sector;
 mod client_entity_visibility;
 mod command;
 mod damage_sources;
@@ -59,6 +60,7 @@ pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::{CharacterInfo, CharacterUniqueId};
 pub use character_list::CharacterList;
 pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
+pub use client_entity_sector::ClientEntitySector;
 pub use client_entity_visibility::ClientEntityVisibility;
 pub use command::{
     Command, CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandDie,

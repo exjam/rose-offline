@@ -2,10 +2,10 @@ use bevy_ecs::prelude::{Query, Res, ResMut};
 
 use crate::game::{
     components::{
-        AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntityType,
-        ClientEntityVisibility, Command, Destination, EntityExpireTime, Equipment, GameClient,
-        HealthPoints, ItemDrop, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner,
-        PersonalStore, Position, StatusEffects, Target, Team,
+        AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntitySector,
+        ClientEntityType, ClientEntityVisibility, Command, Destination, EntityExpireTime,
+        Equipment, GameClient, HealthPoints, ItemDrop, Level, MoveMode, MoveSpeed, Npc,
+        NpcStandingDirection, Owner, PersonalStore, Position, StatusEffects, Target, Team,
     },
     messages::server::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityItemDrop,
@@ -19,6 +19,7 @@ pub fn client_entity_visibility_system(
         &mut ClientEntityVisibility,
         &GameClient,
         &ClientEntity,
+        &ClientEntitySector,
         &Position,
     )>,
     entity_id_query: Query<&ClientEntity>,
@@ -72,13 +73,14 @@ pub fn client_entity_visibility_system(
             mut visibility,
             visibility_game_client,
             visibility_client_entity,
+            visibility_client_entity_sector,
             visibility_position,
         )| {
             if let Some(client_entity_zone) =
                 client_entity_list.get_zone(visibility_position.zone_id)
             {
-                let sector_visible_entities =
-                    client_entity_zone.get_sector_visible_entities(visibility_client_entity.sector);
+                let sector_visible_entities = client_entity_zone
+                    .get_sector_visible_entities(visibility_client_entity_sector.sector);
 
                 let mut visibility_difference = visibility.entities ^ *sector_visible_entities;
 

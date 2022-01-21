@@ -18,21 +18,14 @@ pub struct ClientEntityId(pub usize);
 pub struct ClientEntity {
     pub id: ClientEntityId,
     pub zone_id: ZoneId,
-    pub sector: Point2<u32>,
     pub entity_type: ClientEntityType,
 }
 
 impl ClientEntity {
-    pub fn new(
-        entity_type: ClientEntityType,
-        id: ClientEntityId,
-        zone_id: ZoneId,
-        sector: Point2<u32>,
-    ) -> Self {
+    pub fn new(entity_type: ClientEntityType, id: ClientEntityId, zone_id: ZoneId) -> Self {
         Self {
             id,
             zone_id,
-            sector,
             entity_type,
         }
     }

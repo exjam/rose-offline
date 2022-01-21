@@ -8,8 +8,8 @@ use crate::{
     game::{
         bundles::client_entity_leave_zone,
         components::{
-            AbilityValues, AmmoIndex, ClientEntity, ClientEntityType, Command, CommandAttack,
-            CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
+            AbilityValues, AmmoIndex, ClientEntity, ClientEntitySector, ClientEntityType, Command,
+            CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
             CommandPickupItemDrop, CommandSit, CommandStop, Destination, DroppedItem, Equipment,
             EquipmentIndex, GameClient, HealthPoints, Inventory, ItemDrop, ItemSlot, MotionData,
             MoveMode, MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target,
@@ -107,21 +107,34 @@ fn is_valid_skill_target<'a>(
 fn is_valid_pickup_target<'a>(
     position: &Position,
     target_entity: Entity,
-    query: &'a mut Query<(&ClientEntity, &Position, &mut ItemDrop, Option<&Owner>)>,
+    query: &'a mut Query<(
+        &ClientEntity,
+        &ClientEntitySector,
+        &Position,
+        &mut ItemDrop,
+        Option<&Owner>,
+    )>,
 ) -> Option<(
     &'a ClientEntity,
+    &'a ClientEntitySector,
     &'a Position,
     Mut<'a, ItemDrop>,
     Option<&'a Owner>,
 )> {
-    if let Ok((target_client_entity, target_position, target_item_drop, target_owner)) =
-        query.get_mut(target_entity)
+    if let Ok((
+        target_client_entity,
+        target_client_entity_sector,
+        target_position,
+        target_item_drop,
+        target_owner,
+    )) = query.get_mut(target_entity)
     {
         // Check distance to target
         let distance = (position.position.xy() - target_position.position.xy()).magnitude();
         if position.zone_id == target_position.zone_id && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
             return Some((
                 target_client_entity,
+                target_client_entity_sector,
                 target_position,
                 target_item_drop,
                 target_owner,
@@ -153,6 +166,7 @@ pub fn command_system(
     attack_target_query: Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
     mut pickup_item_drop_target_query: Query<(
         &ClientEntity,
+        &ClientEntitySector,
         &Position,
         &mut ItemDrop,
         Option<&Owner>,
@@ -457,6 +471,7 @@ pub fn command_system(
                     if let Some(mut inventory) = inventory {
                         if let Some((
                             target_client_entity,
+                            target_client_entity_sector,
                             target_position,
                             mut target_item_drop,
                             target_owner,
@@ -504,6 +519,7 @@ pub fn command_system(
                                     &mut client_entity_list,
                                     target_entity,
                                     target_client_entity,
+                                    target_client_entity_sector,
                                     target_position,
                                 );
                                 commands.entity(target_entity).despawn();

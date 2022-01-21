@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use crate::game::{
-    components::{ClientEntity, Destination, MoveSpeed, Position},
+    components::{ClientEntity, ClientEntitySector, Destination, MoveSpeed, Position},
     resources::{ClientEntityList, ServerTime},
 };
 
@@ -9,7 +9,8 @@ pub fn update_position_system(
     mut commands: Commands,
     mut query: Query<(
         Entity,
-        Option<&mut ClientEntity>,
+        Option<&ClientEntity>,
+        Option<&mut ClientEntitySector>,
         &MoveSpeed,
         &mut Position,
         &Destination,
@@ -18,7 +19,7 @@ pub fn update_position_system(
     server_time: Res<ServerTime>,
 ) {
     query.for_each_mut(
-        |(entity, client_entity, move_speed, mut position, destination)| {
+        |(entity, client_entity, client_entity_sector, move_speed, mut position, destination)| {
             let direction = destination.position.xy() - position.position.xy();
             let distance_squared = direction.magnitude_squared();
 
@@ -37,9 +38,16 @@ pub fn update_position_system(
                 }
             }
 
-            if let Some(mut client_entity) = client_entity {
+            if let (Some(client_entity), Some(mut client_entity_sector)) =
+                (client_entity, client_entity_sector)
+            {
                 if let Some(zone) = client_entity_list.get_zone_mut(position.zone_id) {
-                    zone.update_position(entity, &mut client_entity, position.position)
+                    zone.update_position(
+                        entity,
+                        client_entity,
+                        &mut client_entity_sector,
+                        position.position,
+                    )
                 }
             }
         },
