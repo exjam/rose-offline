@@ -1084,11 +1084,11 @@ impl GameClient {
                     }))
                     .await?;
             }
-            ServerMessage::PartyChangeOwner(owner_character_id) => {
+            ServerMessage::PartyChangeOwner(client_entity_id) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerPartyChangeOwner {
-                        owner_character_id,
+                        client_entity_id,
                     }))
                     .await?;
             }

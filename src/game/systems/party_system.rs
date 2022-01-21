@@ -571,14 +571,14 @@ fn handle_party_change_owner(
     };
 
     // Ensure new owner is in the same party
-    let (_, new_owner_character_info, new_owner_party_membership, _) = party_member_query
+    let (new_owner_client_entity, _, new_owner_party_membership, _) = party_member_query
         .get(new_owner_entity)
         .map_err(|_| PartyChangeOwnerError::InvalidEntity)?;
     let new_owner_party_entity = match *new_owner_party_membership {
         PartyMembership::None => return Err(PartyChangeOwnerError::InvalidNewOwnerEntity),
         PartyMembership::Member(new_owner_party_entity) => new_owner_party_entity,
     };
-    let new_owner_character_id = new_owner_character_info.unique_id;
+    let new_owner_client_entity_id = new_owner_client_entity.id;
     if new_owner_party_entity != party_entity {
         return Err(PartyChangeOwnerError::InvalidNewOwnerEntity);
     }
@@ -596,7 +596,7 @@ fn handle_party_change_owner(
     send_message_to_members(
         party_member_query,
         party.as_ref(),
-        ServerMessage::PartyChangeOwner(new_owner_character_id),
+        ServerMessage::PartyChangeOwner(new_owner_client_entity_id),
     );
 
     Ok(())
@@ -644,14 +644,14 @@ fn handle_party_member_disconnect(
             }
         });
 
-        if let Some((_, new_owner_character_info, _, _)) =
+        if let Some((new_owner_client_entity, _, _, _)) =
             new_owner.and_then(|new_owner| party_member_query.get(new_owner).ok())
         {
             party.owner = new_owner.unwrap();
             send_message_to_members(
                 party_member_query,
                 party.as_ref(),
-                ServerMessage::PartyChangeOwner(new_owner_character_info.unique_id),
+                ServerMessage::PartyChangeOwner(new_owner_client_entity.id),
             );
         } else {
             // No other online players, delete party

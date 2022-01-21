@@ -506,5 +506,5 @@ pub enum ServerMessage {
     PartyMemberLeave(PartyMemberLeave),
     PartyMemberDisconnect(CharacterUniqueId),
     PartyMemberKicked(CharacterUniqueId),
-    PartyChangeOwner(CharacterUniqueId),
+    PartyChangeOwner(ClientEntityId),
 }
