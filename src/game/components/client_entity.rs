@@ -1,5 +1,4 @@
 use bevy_ecs::prelude::Component;
-use nalgebra::Point2;
 
 use crate::data::ZoneId;
 

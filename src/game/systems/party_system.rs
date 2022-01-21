@@ -1,4 +1,7 @@
-use bevy_ecs::prelude::{Commands, Entity, EventReader, Query};
+use bevy_ecs::{
+    prelude::{Changed, Commands, Entity, EventReader, Or, Query, QueryState},
+    system::QuerySet,
+};
 
 use crate::game::{
     components::{
@@ -7,7 +10,7 @@ use crate::game::{
     },
     events::{
         PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-        PartyEventMemberUpdateInfo, PartyMemberDisconnect, PartyMemberReconnect,
+        PartyMemberDisconnect, PartyMemberReconnect,
     },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
@@ -21,12 +24,7 @@ Party event system TODO:
 */
 
 fn send_message_to_members(
-    party_member_query: &mut Query<(
-        &ClientEntity,
-        &CharacterInfo,
-        &mut PartyMembership,
-        Option<&GameClient>,
-    )>,
+    game_client_query: &Query<&GameClient>,
     party_members: &[PartyMember],
     message: ServerMessage,
     except_entity: Option<Entity>,
@@ -39,13 +37,8 @@ fn send_message_to_members(
                 }
             }
 
-            let (_, _, _, member_game_client) =
-                party_member_query.get_mut(*party_member_entity).unwrap();
-            if let Some(member_game_client) = member_game_client {
-                member_game_client
-                    .server_message_tx
-                    .send(message.clone())
-                    .ok();
+            if let Ok(game_client) = game_client_query.get(*party_member_entity) {
+                game_client.server_message_tx.send(message.clone()).ok();
             }
         }
     }
@@ -127,7 +120,7 @@ fn handle_party_invite(
 }
 
 fn get_online_party_member_info(
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -138,7 +131,7 @@ fn get_online_party_member_info(
     entity: Entity,
 ) -> Option<PartyMemberInfoOnline> {
     let (ability_values, character_info, client_entity, health_points, status_effects, stamina) =
-        party_member_info_query.get_mut(entity).ok()?;
+        party_member_info_query.get(entity).ok()?;
 
     Some(PartyMemberInfoOnline {
         character_id: character_info.unique_id,
@@ -156,7 +149,7 @@ fn get_online_party_member_info(
 
 fn get_party_membership_info(
     party_members: &[PartyMember],
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -195,7 +188,7 @@ fn handle_party_accept_invite(
         &mut PartyMembership,
         Option<&GameClient>,
     )>,
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -203,6 +196,7 @@ fn handle_party_accept_invite(
         &StatusEffects,
         &Stamina,
     )>,
+    game_client_query: &Query<&GameClient>,
     owner_entity: Entity,
     invited_entity: Entity,
 ) -> Result<(), PartyInviteError> {
@@ -301,7 +295,7 @@ fn handle_party_accept_invite(
 
     // Send info about invited to other members
     send_message_to_members(
-        party_member_query,
+        game_client_query,
         &party_members,
         ServerMessage::PartyMemberList(PartyMemberList {
             owner_character_id,
@@ -358,7 +352,7 @@ fn handle_party_leave(
         &mut PartyMembership,
         Option<&GameClient>,
     )>,
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -366,6 +360,7 @@ fn handle_party_leave(
         &StatusEffects,
         &Stamina,
     )>,
+    game_client_query: &Query<&GameClient>,
     leaver_entity: Entity,
 ) -> Result<(), PartyLeaveError> {
     let (_, _, mut leaver_party_membership, leaver_game_client) = party_member_query
@@ -424,7 +419,7 @@ fn handle_party_leave(
 
                 // Send message to other members informing of leaver and new owner
                 send_message_to_members(
-                    party_member_query,
+                    game_client_query,
                     &party.members,
                     ServerMessage::PartyMemberLeave(PartyMemberLeave {
                         leaver_character_id,
@@ -456,7 +451,7 @@ fn handle_party_kick(
         &mut PartyMembership,
         Option<&GameClient>,
     )>,
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -464,6 +459,7 @@ fn handle_party_kick(
         &StatusEffects,
         &Stamina,
     )>,
+    game_client_query: &Query<&GameClient>,
     owner_entity: Entity,
     kick_character_id: CharacterUniqueId,
 ) -> Result<(), PartyKickError> {
@@ -487,7 +483,7 @@ fn handle_party_kick(
 
     // Ensure we are not kicking ourself
     let (_, owner_character_info, _, _, _, _) = party_member_info_query
-        .get_mut(owner_entity)
+        .get(owner_entity)
         .map_err(|_| PartyKickError::InvalidEntity)?;
     if owner_character_info.unique_id == kick_character_id {
         return Err(PartyKickError::InvalidKickCharacter);
@@ -498,7 +494,7 @@ fn handle_party_kick(
     let mut kicked_offline = false;
     party.members.retain(|party_member| match *party_member {
         PartyMember::Online(party_member_entity) => party_member_info_query
-            .get_mut(party_member_entity)
+            .get(party_member_entity)
             .map_or(true, |(_, party_member_character_info, _, _, _, _)| {
                 if party_member_character_info.unique_id == kick_character_id {
                     kicked_online_entity = Some(party_member_entity);
@@ -538,7 +534,7 @@ fn handle_party_kick(
 
     // Send kick message to other party member
     send_message_to_members(
-        party_member_query,
+        game_client_query,
         &party.members,
         ServerMessage::PartyMemberKicked(kick_character_id),
         None,
@@ -567,6 +563,7 @@ fn handle_party_change_owner(
         &mut PartyMembership,
         Option<&GameClient>,
     )>,
+    game_client_query: &Query<&GameClient>,
     owner_entity: Entity,
     new_owner_entity: Entity,
 ) -> Result<(), PartyChangeOwnerError> {
@@ -603,7 +600,7 @@ fn handle_party_change_owner(
 
     // Inform party members of new owner
     send_message_to_members(
-        party_member_query,
+        game_client_query,
         &party.members,
         ServerMessage::PartyChangeOwner(new_owner_client_entity_id),
         None,
@@ -625,6 +622,7 @@ fn handle_party_member_disconnect(
         &mut PartyMembership,
         Option<&GameClient>,
     )>,
+    game_client_query: &Query<&GameClient>,
     party_entity: Entity,
     disconnect_entity: Entity,
     character_id: CharacterUniqueId,
@@ -659,7 +657,7 @@ fn handle_party_member_disconnect(
         {
             party.owner = new_owner.unwrap();
             send_message_to_members(
-                party_member_query,
+                game_client_query,
                 &party.members,
                 ServerMessage::PartyChangeOwner(new_owner_client_entity.id),
                 None,
@@ -673,7 +671,7 @@ fn handle_party_member_disconnect(
 
     // Send disconnect message to all online members
     send_message_to_members(
-        party_member_query,
+        game_client_query,
         &party.members,
         ServerMessage::PartyMemberDisconnect(character_id),
         None,
@@ -688,7 +686,7 @@ enum PartyMemberReconnectError {
 
 fn handle_party_member_reconnect(
     party_query: &mut Query<&mut Party>,
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -696,7 +694,7 @@ fn handle_party_member_reconnect(
         &StatusEffects,
         &Stamina,
     )>,
-    game_client_query: &mut Query<&GameClient>,
+    game_client_query: &Query<&GameClient>,
     party_entity: Entity,
     reconnect_entity: Entity,
     character_id: CharacterUniqueId,
@@ -752,13 +750,7 @@ enum PartyMemberUpdateInfoError {
 
 fn handle_party_member_update_info(
     party_query: &mut Query<&mut Party>,
-    party_member_query: &mut Query<(
-        &ClientEntity,
-        &CharacterInfo,
-        &mut PartyMembership,
-        Option<&GameClient>,
-    )>,
-    party_member_info_query: &mut Query<(
+    party_member_info_query: &Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -766,6 +758,7 @@ fn handle_party_member_update_info(
         &StatusEffects,
         &Stamina,
     )>,
+    game_client_query: &Query<&GameClient>,
     party_entity: Entity,
     member_entity: Entity,
 ) -> Result<(), PartyMemberUpdateInfoError> {
@@ -776,7 +769,7 @@ fn handle_party_member_update_info(
     if let Some(member_info) = get_online_party_member_info(party_member_info_query, member_entity)
     {
         send_message_to_members(
-            party_member_query,
+            game_client_query,
             &party.members,
             ServerMessage::PartyMemberUpdateInfo(member_info),
             Some(member_entity),
@@ -789,13 +782,23 @@ fn handle_party_member_update_info(
 pub fn party_system(
     mut commands: Commands,
     mut party_query: Query<&mut Party>,
-    mut party_member_query: Query<(
-        &ClientEntity,
-        &CharacterInfo,
-        &mut PartyMembership,
-        Option<&GameClient>,
+    mut party_member_query_set: QuerySet<(
+        QueryState<(
+            &ClientEntity,
+            &CharacterInfo,
+            &mut PartyMembership,
+            Option<&GameClient>,
+        )>,
+        QueryState<
+            (Entity, &PartyMembership),
+            Or<(
+                Changed<AbilityValues>,
+                Changed<ClientEntity>,
+                Changed<StatusEffects>,
+            )>,
+        >,
     )>,
-    mut party_member_info_query: Query<(
+    party_member_info_query: Query<(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
@@ -803,13 +806,14 @@ pub fn party_system(
         &StatusEffects,
         &Stamina,
     )>,
-    mut game_client_query: Query<&GameClient>,
+    game_client_query: Query<&GameClient>,
     mut party_events: EventReader<PartyEvent>,
 ) {
     // Collect party events into a Vec so we can iterate disconnects separately
     let party_events: Vec<PartyEvent> = party_events.iter().cloned().collect();
 
     // First handle member disconnects / reconnects
+    let mut party_member_query = party_member_query_set.q0();
     for event in party_events.iter() {
         match event {
             PartyEvent::MemberDisconnect(PartyMemberDisconnect {
@@ -822,6 +826,7 @@ pub fn party_system(
                     &mut commands,
                     &mut party_query,
                     &mut party_member_query,
+                    &game_client_query,
                     *party_entity,
                     *disconnect_entity,
                     *character_id,
@@ -837,8 +842,8 @@ pub fn party_system(
             }) => {
                 handle_party_member_reconnect(
                     &mut party_query,
-                    &mut party_member_info_query,
-                    &mut game_client_query,
+                    &party_member_info_query,
+                    &game_client_query,
                     *party_entity,
                     *reconnect_entity,
                     *character_id,
@@ -867,7 +872,8 @@ pub fn party_system(
                     &mut commands,
                     &mut party_query,
                     &mut party_member_query,
-                    &mut party_member_info_query,
+                    &party_member_info_query,
+                    &game_client_query,
                     owner_entity,
                     invited_entity,
                 )
@@ -885,7 +891,8 @@ pub fn party_system(
                     &mut commands,
                     &mut party_query,
                     &mut party_member_query,
-                    &mut party_member_info_query,
+                    &party_member_info_query,
+                    &game_client_query,
                     leaver_entity,
                 )
                 .ok();
@@ -898,7 +905,8 @@ pub fn party_system(
                     &mut commands,
                     &mut party_query,
                     &mut party_member_query,
-                    &mut party_member_info_query,
+                    &party_member_info_query,
+                    &game_client_query,
                     owner_entity,
                     kick_character_id,
                 )
@@ -911,26 +919,28 @@ pub fn party_system(
                 handle_party_change_owner(
                     &mut party_query,
                     &mut party_member_query,
+                    &game_client_query,
                     owner_entity,
                     new_owner_entity,
                 )
                 .ok();
             }
-            PartyEvent::MemberUpdateInfo(PartyEventMemberUpdateInfo {
-                party_entity,
-                member_entity,
-            }) => {
-                handle_party_member_update_info(
-                    &mut party_query,
-                    &mut party_member_query,
-                    &mut party_member_info_query,
-                    party_entity,
-                    member_entity,
-                )
-                .ok();
-            }
             PartyEvent::MemberDisconnect(_) => {}
             PartyEvent::MemberReconnect(_) => {}
+        }
+    }
+
+    let party_member_info_changed_query = party_member_query_set.q1();
+    for (member_entity, party_membership) in party_member_info_changed_query.iter() {
+        if let PartyMembership::Member(party_entity) = party_membership {
+            handle_party_member_update_info(
+                &mut party_query,
+                &party_member_info_query,
+                &game_client_query,
+                *party_entity,
+                member_entity,
+            )
+            .ok();
         }
     }
 }
