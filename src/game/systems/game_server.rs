@@ -24,9 +24,9 @@ use crate::{
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
-            PartyEventKick, PartyEventLeave, PartyMemberReconnect, PersonalStoreEvent,
-            PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent,
-            UseItemEvent,
+            PartyEventKick, PartyEventLeave, PartyEventMemberUpdateInfo, PartyMemberReconnect,
+            PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
+            QuestTriggerEvent, UseItemEvent,
         },
         messages::{
             client::{
@@ -232,12 +232,14 @@ pub fn game_server_join_system(
             &Team,
             &HealthPoints,
             &ManaPoints,
+            &PartyMembership,
             &Position,
         ),
         Without<ClientEntity>,
     >,
     mut client_entity_list: ResMut<ClientEntityList>,
     world_time: Res<WorldTime>,
+    mut party_events: EventWriter<PartyEvent>,
 ) {
     query.for_each(
         |(
@@ -248,6 +250,7 @@ pub fn game_server_join_system(
             team,
             health_points,
             mana_points,
+            party_membership,
             position,
         )| {
             if let Ok(message) = game_client.client_message_rx.try_recv() {
@@ -264,6 +267,15 @@ pub fn game_server_join_system(
                                 .entity(entity)
                                 .insert(ClientEntityVisibility::new())
                                 .insert(PassiveRecoveryTime::default());
+
+                            if let &PartyMembership::Member(party_entity) = party_membership {
+                                party_events.send(PartyEvent::MemberUpdateInfo(
+                                    PartyEventMemberUpdateInfo {
+                                        party_entity,
+                                        member_entity: entity,
+                                    },
+                                ));
+                            }
 
                             message
                                 .response_tx

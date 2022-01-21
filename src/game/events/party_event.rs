@@ -19,6 +19,12 @@ pub struct PartyMemberDisconnect {
 }
 
 #[derive(Clone)]
+pub struct PartyEventMemberUpdateInfo {
+    pub party_entity: Entity,
+    pub member_entity: Entity,
+}
+
+#[derive(Clone)]
 pub struct PartyEventInvite {
     pub owner_entity: Entity,
     pub invited_entity: Entity,
@@ -45,6 +51,7 @@ pub struct PartyEventKick {
 pub enum PartyEvent {
     MemberReconnect(PartyMemberReconnect),
     MemberDisconnect(PartyMemberDisconnect),
+    MemberUpdateInfo(PartyEventMemberUpdateInfo),
     Invite(PartyEventInvite),
     AcceptInvite(PartyEventInvite),
     RejectInvite(PartyEventInvite),

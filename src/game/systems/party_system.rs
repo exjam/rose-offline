@@ -7,7 +7,7 @@ use crate::game::{
     },
     events::{
         PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-        PartyMemberDisconnect, PartyMemberReconnect,
+        PartyEventMemberUpdateInfo, PartyMemberDisconnect, PartyMemberReconnect,
     },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
@@ -18,8 +18,8 @@ use crate::game::{
 /*
 Party event system TODO:
 - Check party level / team requirements?
-- When player reconnects, re-add them to party
 */
+
 fn send_message_to_members(
     party_member_query: &mut Query<(
         &ClientEntity,
@@ -27,11 +27,18 @@ fn send_message_to_members(
         &mut PartyMembership,
         Option<&GameClient>,
     )>,
-    party: &Party,
+    party_members: &[PartyMember],
     message: ServerMessage,
+    except_entity: Option<Entity>,
 ) {
-    for party_member in party.members.iter() {
+    for party_member in party_members.iter() {
         if let PartyMember::Online(party_member_entity) = party_member {
+            if let Some(except_entity) = except_entity {
+                if *party_member_entity == except_entity {
+                    continue;
+                }
+            }
+
             let (_, _, _, member_game_client) =
                 party_member_query.get_mut(*party_member_entity).unwrap();
             if let Some(member_game_client) = member_game_client {
@@ -119,6 +126,34 @@ fn handle_party_invite(
     Ok(())
 }
 
+fn get_online_party_member_info(
+    party_member_info_query: &mut Query<(
+        &AbilityValues,
+        &CharacterInfo,
+        &ClientEntity,
+        &HealthPoints,
+        &StatusEffects,
+        &Stamina,
+    )>,
+    entity: Entity,
+) -> Option<PartyMemberInfoOnline> {
+    let (ability_values, character_info, client_entity, health_points, status_effects, stamina) =
+        party_member_info_query.get_mut(entity).ok()?;
+
+    Some(PartyMemberInfoOnline {
+        character_id: character_info.unique_id,
+        name: character_info.name.clone(),
+        entity_id: client_entity.id,
+        health_points: *health_points,
+        status_effects: status_effects.clone(),
+        max_health: ability_values.get_max_health(),
+        concentration: ability_values.get_concentration(),
+        health_recovery: ability_values.get_additional_health_recovery(), // TODO: ??
+        mana_recovery: ability_values.get_additional_mana_recovery(),     // TODO: ??
+        stamina: *stamina,
+    })
+}
+
 fn get_party_membership_info(
     party_members: &[PartyMember],
     party_member_info_query: &mut Query<(
@@ -134,27 +169,10 @@ fn get_party_membership_info(
     for party_member in party_members.iter() {
         match party_member {
             &PartyMember::Online(party_member_entity) => {
-                if let Ok((
-                    ability_values,
-                    character_info,
-                    client_entity,
-                    health_points,
-                    status_effects,
-                    stamina,
-                )) = party_member_info_query.get_mut(party_member_entity)
+                if let Some(online_party_member_info) =
+                    get_online_party_member_info(party_member_info_query, party_member_entity)
                 {
-                    info.push(PartyMemberInfo::Online(PartyMemberInfoOnline {
-                        character_id: character_info.unique_id,
-                        name: character_info.name.clone(),
-                        entity_id: client_entity.id,
-                        health_points: *health_points,
-                        status_effects: status_effects.clone(),
-                        max_health: ability_values.get_max_health(),
-                        concentration: ability_values.get_concentration(),
-                        health_recovery: ability_values.get_additional_health_recovery(), // TODO: ??
-                        mana_recovery: ability_values.get_additional_mana_recovery(), // TODO: ??
-                        stamina: *stamina,
-                    }));
+                    info.push(PartyMemberInfo::Online(online_party_member_info));
                 }
             }
             PartyMember::Offline(character_id, name) => {
@@ -282,26 +300,15 @@ fn handle_party_accept_invite(
     }
 
     // Send info about invited to other members
-    for party_member in party_members.iter() {
-        if let PartyMember::Online(party_member_entity) = party_member {
-            let (member_client_entity, _, _, member_game_client) =
-                party_member_query.get_mut(*party_member_entity).unwrap();
-
-            if member_client_entity.id == invited_client_entity_id {
-                continue;
-            }
-
-            if let Some(member_game_client) = member_game_client {
-                member_game_client
-                    .server_message_tx
-                    .send(ServerMessage::PartyMemberList(PartyMemberList {
-                        owner_character_id,
-                        members: invited_member_info.clone(),
-                    }))
-                    .ok();
-            }
-        }
-    }
+    send_message_to_members(
+        party_member_query,
+        &party_members,
+        ServerMessage::PartyMemberList(PartyMemberList {
+            owner_character_id,
+            members: invited_member_info,
+        }),
+        Some(invited_entity),
+    );
 
     Ok(())
 }
@@ -418,11 +425,12 @@ fn handle_party_leave(
                 // Send message to other members informing of leaver and new owner
                 send_message_to_members(
                     party_member_query,
-                    party.as_ref(),
+                    &party.members,
                     ServerMessage::PartyMemberLeave(PartyMemberLeave {
                         leaver_character_id,
                         owner_character_id,
                     }),
+                    None,
                 );
             }
         }
@@ -531,8 +539,9 @@ fn handle_party_kick(
     // Send kick message to other party member
     send_message_to_members(
         party_member_query,
-        party.as_ref(),
+        &party.members,
         ServerMessage::PartyMemberKicked(kick_character_id),
+        None,
     );
 
     // If party is down to 1 member, delete the party
@@ -595,8 +604,9 @@ fn handle_party_change_owner(
     // Inform party members of new owner
     send_message_to_members(
         party_member_query,
-        party.as_ref(),
+        &party.members,
         ServerMessage::PartyChangeOwner(new_owner_client_entity_id),
+        None,
     );
 
     Ok(())
@@ -650,8 +660,9 @@ fn handle_party_member_disconnect(
             party.owner = new_owner.unwrap();
             send_message_to_members(
                 party_member_query,
-                party.as_ref(),
+                &party.members,
                 ServerMessage::PartyChangeOwner(new_owner_client_entity.id),
+                None,
             );
         } else {
             // No other online players, delete party
@@ -663,8 +674,9 @@ fn handle_party_member_disconnect(
     // Send disconnect message to all online members
     send_message_to_members(
         party_member_query,
-        party.as_ref(),
+        &party.members,
         ServerMessage::PartyMemberDisconnect(character_id),
+        None,
     );
 
     Ok(())
@@ -730,6 +742,45 @@ fn handle_party_member_reconnect(
                 break;
             }
         }
+    }
+
+    Ok(())
+}
+enum PartyMemberUpdateInfoError {
+    InvalidParty,
+}
+
+fn handle_party_member_update_info(
+    party_query: &mut Query<&mut Party>,
+    party_member_query: &mut Query<(
+        &ClientEntity,
+        &CharacterInfo,
+        &mut PartyMembership,
+        Option<&GameClient>,
+    )>,
+    party_member_info_query: &mut Query<(
+        &AbilityValues,
+        &CharacterInfo,
+        &ClientEntity,
+        &HealthPoints,
+        &StatusEffects,
+        &Stamina,
+    )>,
+    party_entity: Entity,
+    member_entity: Entity,
+) -> Result<(), PartyMemberUpdateInfoError> {
+    let party = party_query
+        .get(party_entity)
+        .map_err(|_| PartyMemberUpdateInfoError::InvalidParty)?;
+
+    if let Some(member_info) = get_online_party_member_info(party_member_info_query, member_entity)
+    {
+        send_message_to_members(
+            party_member_query,
+            &party.members,
+            ServerMessage::PartyMemberUpdateInfo(member_info),
+            Some(member_entity),
+        );
     }
 
     Ok(())
@@ -862,6 +913,19 @@ pub fn party_system(
                     &mut party_member_query,
                     owner_entity,
                     new_owner_entity,
+                )
+                .ok();
+            }
+            PartyEvent::MemberUpdateInfo(PartyEventMemberUpdateInfo {
+                party_entity,
+                member_entity,
+            }) => {
+                handle_party_member_update_info(
+                    &mut party_query,
+                    &mut party_member_query,
+                    &mut party_member_info_query,
+                    party_entity,
+                    member_entity,
                 )
                 .ok();
             }

@@ -20,7 +20,8 @@ use crate::{
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, NpcStoreTransactionError,
-            PartyMemberInfo, PartyReply, PartyRequest, PickupItemDropContent, PickupItemDropError,
+            PartyMemberInfo, PartyMemberInfoOnline, PartyReply, PartyRequest,
+            PickupItemDropContent, PickupItemDropError,
         },
     },
     irose::protocol::game::common_packets::{
@@ -91,6 +92,7 @@ pub enum ServerPackets {
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
     PartyMembers = 0x7d2,
+    PartyMemberUpdateInfo = 0x7d5,
 }
 
 #[allow(dead_code)]
@@ -1680,20 +1682,22 @@ pub struct PacketServerPartyMembers<'a> {
     pub party_members: &'a [PartyMemberInfo],
 }
 
+fn write_online_party_member(writer: &mut PacketWriter, party_member: &PartyMemberInfoOnline) {
+    writer.write_u32(party_member.character_id);
+    writer.write_entity_id(party_member.entity_id);
+    writer.write_u16(party_member.max_health as u16);
+    writer.write_u16(party_member.health_points.hp as u16);
+    writer.write_status_effects_flags_u32(&party_member.status_effects);
+    writer.write_u16(party_member.concentration as u16);
+    writer.write_u8(party_member.health_recovery as u8);
+    writer.write_u8(party_member.mana_recovery as u8);
+    writer.write_u16(party_member.stamina.stamina as u16);
+    writer.write_null_terminated_utf8(&party_member.name);
+}
+
 fn write_party_member(writer: &mut PacketWriter, party_member: &PartyMemberInfo) {
     match party_member {
-        PartyMemberInfo::Online(party_member) => {
-            writer.write_u32(party_member.character_id);
-            writer.write_entity_id(party_member.entity_id);
-            writer.write_u16(party_member.max_health as u16);
-            writer.write_u16(party_member.health_points.hp as u16);
-            writer.write_status_effects_flags_u32(&party_member.status_effects);
-            writer.write_u16(party_member.concentration as u16);
-            writer.write_u8(party_member.health_recovery as u8);
-            writer.write_u8(party_member.mana_recovery as u8);
-            writer.write_u16(party_member.stamina.stamina as u16);
-            writer.write_null_terminated_utf8(&party_member.name);
-        }
+        PartyMemberInfo::Online(party_member) => write_online_party_member(writer, party_member),
         PartyMemberInfo::Offline(party_member) => {
             writer.write_u32(party_member.character_id);
             writer.write_option_entity_id(None);
@@ -1728,6 +1732,18 @@ impl<'a> From<&'a PacketServerPartyMembers<'a>> for Packet {
             }
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyMemberUpdateInfo {
+    pub member_info: PartyMemberInfoOnline,
+}
+
+impl From<&PacketServerPartyMemberUpdateInfo> for Packet {
+    fn from(packet: &PacketServerPartyMemberUpdateInfo) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyMemberUpdateInfo as u16);
+        write_online_party_member(&mut writer, &packet.member_info);
         writer.into()
     }
 }
