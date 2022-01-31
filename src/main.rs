@@ -17,11 +17,11 @@ use clap::{App, Arg};
 use log::debug;
 use simplelog::*;
 use tokio::net::TcpListener;
+use tokio::runtime::Builder;
 
 use crate::protocol::server::{GameServer, LoginServer, WorldServer};
 
-#[tokio::main]
-async fn main() {
+async fn async_main() {
     TermLogger::init(
         LevelFilter::Debug,
         Config::default(),
@@ -124,4 +124,16 @@ async fn main() {
     });
 
     login_server.run().await;
+}
+
+fn main() {
+    let rt = Builder::new_multi_thread()
+        .worker_threads(4)
+        .enable_all()
+        .build()
+        .unwrap();
+
+    rt.block_on(async {
+        async_main().await;
+    });
 }
