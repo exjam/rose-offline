@@ -115,8 +115,8 @@ pub fn experience_points_system(
                         status_effects,
                     );
 
-                    health_points.hp = ability_values.get_max_health() as u32;
-                    mana_points.mp = ability_values.get_max_mana() as u32;
+                    health_points.hp = ability_values.get_max_health();
+                    mana_points.mp = ability_values.get_max_mana();
                 }
 
                 // Send level up packet

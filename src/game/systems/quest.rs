@@ -1335,14 +1335,13 @@ fn quest_reward_set_health_mana_percent(
     mana_percent: i32,
 ) -> bool {
     if let Some(health_points) = quest_parameters.source.health_points.as_mut() {
-        health_points.hp = ((quest_parameters.source.ability_values.get_max_health()
-            * health_percent)
-            / 100) as u32;
+        health_points.hp =
+            (quest_parameters.source.ability_values.get_max_health() * health_percent) / 100;
     }
 
     if let Some(mana_points) = quest_parameters.source.mana_points.as_mut() {
         mana_points.mp =
-            ((quest_parameters.source.ability_values.get_max_mana() * mana_percent) / 100) as u32;
+            (quest_parameters.source.ability_values.get_max_mana() * mana_percent) / 100;
     }
 
     true

@@ -50,14 +50,12 @@ pub fn passive_recovery_system(
                     .ability_value_calculator
                     .calculate_passive_recover_mp(ability_values, recovery_state);
 
-                health_points.hp = u32::min(
-                    health_points.hp + recover_hp as u32,
-                    ability_values.get_max_health() as u32,
+                health_points.hp = i32::min(
+                    health_points.hp + recover_hp,
+                    ability_values.get_max_health(),
                 );
-                mana_points.mp = u32::min(
-                    mana_points.mp + recover_mp as u32,
-                    ability_values.get_max_mana() as u32,
-                );
+                mana_points.mp =
+                    i32::min(mana_points.mp + recover_mp, ability_values.get_max_mana());
             }
         },
     );

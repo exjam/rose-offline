@@ -87,8 +87,8 @@ fn handle_game_connection_request(
     // If the character was saved as dead, we must respawn them!
     let (health_points, mana_points, position) = if character.health_points.hp == 0 {
         (
-            HealthPoints::new(ability_values.get_max_health() as u32),
-            ManaPoints::new(ability_values.get_max_mana() as u32),
+            HealthPoints::new(ability_values.get_max_health()),
+            ManaPoints::new(ability_values.get_max_mana()),
             Position::new(
                 character.info.revive_position,
                 character.info.revive_zone_id,
@@ -735,8 +735,8 @@ pub fn game_server_main_system(
                             };
 
                             entity_commands
-                                .insert(HealthPoints::new(ability_values.get_max_health() as u32))
-                                .insert(ManaPoints::new(ability_values.get_max_mana() as u32));
+                                .insert(HealthPoints::new(ability_values.get_max_health()))
+                                .insert(ManaPoints::new(ability_values.get_max_mana()));
                             client_entity_teleport_zone(
                                 &mut commands,
                                 &mut client_entity_list,

@@ -84,14 +84,14 @@ pub fn ability_values_system(
     query_set.q2().for_each_mut(
         |(ability_values, move_mode, mut move_speed, mut health_points, mana_points)| {
             // Limit hp to max health
-            let max_hp = ability_values.get_max_health() as u32;
+            let max_hp = ability_values.get_max_health();
             if health_points.hp > max_hp {
                 health_points.hp = max_hp;
             }
 
             // Limit mp to max mana
             if let Some(mut mana_points) = mana_points {
-                let max_mp = ability_values.get_max_mana() as u32;
+                let max_mp = ability_values.get_max_mana();
                 if mana_points.mp > max_mp {
                     mana_points.mp = max_mp;
                 }

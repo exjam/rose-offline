@@ -698,7 +698,7 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_move_mode_u8(packet.move_mode);
-        writer.write_u32(packet.health.hp);
+        writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
@@ -734,7 +734,7 @@ impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_move_mode_u8(packet.move_mode);
-        writer.write_u32(packet.health.hp);
+        writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
@@ -773,7 +773,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_command_id(packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_move_mode_u8(packet.move_mode);
-        writer.write_u32(packet.health.hp);
+        writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u8(packet.character_info.gender);
@@ -1502,11 +1502,11 @@ impl<'a> From<&'a PacketServerUpdateStatusEffects<'a>> for Packet {
         writer.write_status_effects_flags_u32(packet.status_effects);
 
         if let Some(updated_hp) = packet.updated_hp {
-            writer.write_u32(updated_hp.hp);
+            writer.write_i32(updated_hp.hp);
         }
 
         if let Some(updated_mp) = packet.updated_mp {
-            writer.write_u32(updated_mp.mp);
+            writer.write_i32(updated_mp.mp);
         }
 
         writer.into()

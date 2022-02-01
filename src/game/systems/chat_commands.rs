@@ -199,8 +199,8 @@ fn create_bot_entity(
         .get_character_action_motions(weapon_motion_type, bot_data.info.gender as usize);
 
     bot_data.position = position.clone();
-    bot_data.health_points.hp = ability_values.get_max_health() as u32;
-    bot_data.mana_points.mp = ability_values.get_max_mana() as u32;
+    bot_data.health_points.hp = ability_values.get_max_health();
+    bot_data.mana_points.mp = ability_values.get_max_mana();
 
     let entity = chat_command_params
         .commands

@@ -127,7 +127,7 @@ impl MonsterBundle {
         let damage_sources = Some(ability_values.get_max_damage_sources())
             .filter(|max_damage_sources| *max_damage_sources > 0)
             .map(DamageSources::new);
-        let health_points = HealthPoints::new(ability_values.get_max_health() as u32);
+        let health_points = HealthPoints::new(ability_values.get_max_health());
         let level = Level::new(ability_values.get_level() as u32);
         let move_mode = MoveMode::Walk;
         let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);

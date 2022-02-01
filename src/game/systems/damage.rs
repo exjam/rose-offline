@@ -79,7 +79,7 @@ pub fn damage_system(
                 continue;
             }
 
-            health_points.hp = health_points.hp.saturating_sub(damage.amount as u32);
+            health_points.hp = i32::max(health_points.hp - damage.amount as i32, 0);
 
             if !matches!(damage_event, DamageEvent::Tagged(_)) {
                 if let Some(attacker_entity_id) = attacker_entity_id {

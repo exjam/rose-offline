@@ -63,8 +63,8 @@ pub fn status_effect_system(
             ability_values.adjust = (&*status_effects).into();
 
             // Immediately adjust hp / mp for the update packet
-            let max_hp = ability_values.get_max_health() as u32;
-            let max_mp = ability_values.get_max_health() as u32;
+            let max_hp = ability_values.get_max_health();
+            let max_mp = ability_values.get_max_mana();
 
             if health_points.hp > max_hp {
                 health_points.hp = max_hp;
