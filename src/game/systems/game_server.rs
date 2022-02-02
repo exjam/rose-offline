@@ -20,7 +20,7 @@ use crate::{
             ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
             ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
             PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints,
-            StatusEffects, Team, WorldClient,
+            StatusEffects, StatusEffectsRegen, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
@@ -75,6 +75,8 @@ fn handle_game_connection_request(
     game_client.login_token = login_token.token;
 
     let status_effects = StatusEffects::new();
+    let status_effects_regen = StatusEffectsRegen::new();
+
     let ability_values = game_data.ability_value_calculator.calculate(
         &character.info,
         &character.level,
@@ -163,6 +165,7 @@ fn handle_game_connection_request(
         stamina: character.stamina,
         stat_points: character.stat_points,
         status_effects,
+        status_effects_regen,
         team: Team::default_character(),
         union_membership: character.union_membership.clone(),
     });

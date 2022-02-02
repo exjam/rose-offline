@@ -13,7 +13,8 @@ use crate::{
             Hotbar, Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed,
             NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime,
             PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
-            SpawnOrigin, Stamina, StatPoints, StatusEffects, Team, UnionMembership,
+            SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
+            UnionMembership,
         },
         messages::server::{ServerMessage, Teleport},
         resources::{ClientEntityList, ServerTime},
@@ -44,6 +45,7 @@ pub struct NpcBundle {
     pub position: Position,
     pub standing_direction: NpcStandingDirection,
     pub status_effects: StatusEffects,
+    pub status_effects_regen: StatusEffectsRegen,
     pub team: Team,
 }
 
@@ -73,6 +75,7 @@ pub struct CharacterBundle {
     pub stamina: Stamina,
     pub stat_points: StatPoints,
     pub status_effects: StatusEffects,
+    pub status_effects_regen: StatusEffectsRegen,
     pub team: Team,
     pub union_membership: UnionMembership,
 }
@@ -94,6 +97,7 @@ pub struct MonsterBundle {
     pub position: Position,
     pub spawn_origin: SpawnOrigin,
     pub status_effects: StatusEffects,
+    pub status_effects_regen: StatusEffectsRegen,
     pub team: Team,
 }
 
@@ -116,6 +120,7 @@ impl MonsterBundle {
             .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
         let status_effects = StatusEffects::new();
+        let status_effects_regen = StatusEffectsRegen::new();
 
         let ability_values = game_data.ability_value_calculator.calculate_npc(
             npc_id,
@@ -163,6 +168,7 @@ impl MonsterBundle {
             object_variables: ObjectVariables::new(MONSTER_OBJECT_VARIABLES_COUNT),
             position: position.clone(),
             status_effects,
+            status_effects_regen,
             spawn_origin,
             team,
         });

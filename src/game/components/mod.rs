@@ -102,7 +102,9 @@ pub use skill_points::SkillPoints;
 pub use spawn_origin::SpawnOrigin;
 pub use stamina::{Stamina, MAX_STAMINA};
 pub use stat_points::StatPoints;
-pub use status_effects::StatusEffects;
+pub use status_effects::{
+    ActiveStatusEffect, ActiveStatusEffectRegen, StatusEffects, StatusEffectsRegen,
+};
 pub use target::Target;
 pub use team::Team;
 pub use union_membership::UnionMembership;

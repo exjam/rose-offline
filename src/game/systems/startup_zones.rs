@@ -9,7 +9,7 @@ use crate::game::{
     components::{
         ClientEntityType, Command, EventObject, HealthPoints, Level, MonsterSpawnPoint, MoveMode,
         MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Position,
-        StatusEffects, Team,
+        StatusEffects, StatusEffectsRegen, Team,
     },
     resources::{ClientEntityList, GameData, ZoneList},
 };
@@ -76,6 +76,7 @@ pub fn startup_zones_system(
         for npc in zone_data.npcs.iter() {
             let npc_data = game_data.npcs.get_npc(npc.npc_id);
             let status_effects = StatusEffects::new();
+            let status_effects_regen = StatusEffectsRegen::new();
             let ability_values = game_data.ability_value_calculator.calculate_npc(
                 npc.npc_id,
                 &status_effects,
@@ -107,7 +108,7 @@ pub fn startup_zones_system(
             let position = Position::new(npc.position, zone_id);
             let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
             let level = Level::new(ability_values.get_level() as u32);
-            let health_points = HealthPoints::new(ability_values.get_max_health() as u32);
+            let health_points = HealthPoints::new(ability_values.get_max_health());
 
             let mut entity_commands = commands.spawn_bundle(NpcBundle {
                 ability_values,
@@ -123,6 +124,7 @@ pub fn startup_zones_system(
                 position: position.clone(),
                 standing_direction: NpcStandingDirection::new(npc.direction),
                 status_effects,
+                status_effects_regen,
                 team: Team::default_npc(),
             });
             if let Some(npc_ai) = npc_ai {

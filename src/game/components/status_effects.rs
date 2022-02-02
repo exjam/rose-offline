@@ -1,13 +1,14 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use bevy_ecs::prelude::Component;
 use enum_map::EnumMap;
 use log::warn;
 
-use crate::data::{StatusEffectData, StatusEffectType};
+use crate::data::{StatusEffectData, StatusEffectId, StatusEffectType};
 
 #[derive(Clone)]
 pub struct ActiveStatusEffect {
+    pub id: StatusEffectId,
     pub value: i32,
     pub expire_time: Instant,
 }
@@ -15,6 +16,29 @@ pub struct ActiveStatusEffect {
 #[derive(Component, Clone)]
 pub struct StatusEffects {
     pub active: EnumMap<StatusEffectType, Option<ActiveStatusEffect>>,
+}
+
+#[derive(Clone)]
+pub struct ActiveStatusEffectRegen {
+    pub total_value: i32,
+    pub value_per_second: i32,
+    pub applied_value: i32,
+    pub applied_duration: Duration,
+}
+
+// This is stored in a separate component as it must change every tick, and we want
+// Changed<StatusEffects> to only be triggerd when effects have been added / removed
+#[derive(Component, Clone)]
+pub struct StatusEffectsRegen {
+    pub regens: EnumMap<StatusEffectType, Option<ActiveStatusEffectRegen>>,
+}
+
+impl StatusEffectsRegen {
+    pub fn new() -> Self {
+        Self {
+            regens: Default::default(),
+        }
+    }
 }
 
 impl StatusEffects {
@@ -27,7 +51,7 @@ impl StatusEffects {
     pub fn can_apply(&self, status_effect_data: &StatusEffectData, value: i32) -> bool {
         match &self.active[status_effect_data.status_effect_type] {
             Some(status_effect) => {
-                !status_effect_data.can_be_reapplied || value > status_effect.value
+                status_effect_data.can_be_reapplied && value > status_effect.value
             }
             None => true,
         }
@@ -53,9 +77,41 @@ impl StatusEffects {
                 false
             }
             _ => {
-                self.active[status_effect_type] = Some(ActiveStatusEffect { value, expire_time });
+                self.active[status_effect_type] = Some(ActiveStatusEffect {
+                    id: status_effect_data.id,
+                    value,
+                    expire_time,
+                });
                 true
             }
+        }
+    }
+
+    pub fn apply_potion(
+        &mut self,
+        status_effects_regen: &mut StatusEffectsRegen,
+        status_effect_data: &StatusEffectData,
+        expire_time: Instant,
+        total_value: i32,
+        value_per_second: i32,
+    ) -> bool {
+        let status_effect_type = status_effect_data.status_effect_type;
+        match status_effect_type {
+            StatusEffectType::IncreaseHp | StatusEffectType::IncreaseMp => {
+                self.apply_status_effect(
+                    status_effect_data,
+                    expire_time,
+                    status_effect_data.id.get() as i32,
+                );
+                status_effects_regen.regens[status_effect_type] = Some(ActiveStatusEffectRegen {
+                    total_value,
+                    value_per_second,
+                    applied_value: 0,
+                    applied_duration: Duration::from_secs(0),
+                });
+                true
+            }
+            _ => false,
         }
     }
 

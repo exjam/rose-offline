@@ -27,7 +27,7 @@ use crate::{
             ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase, GameClient,
             Inventory, Level, Money, MoveMode, MoveSpeed, NextCommand, Owner, PartyMembership,
             PassiveRecoveryTime, PersonalStore, Position, SkillPoints, Stamina, StatPoints,
-            StatusEffects, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+            StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},
         messages::server::{ServerMessage, UpdateSpeed, Whisper},
@@ -171,6 +171,7 @@ fn create_bot_entity(
         .ok()?;
 
     let status_effects = StatusEffects::new();
+    let status_effects_regen = StatusEffectsRegen::new();
 
     let ability_values = chat_command_params
         .game_data
@@ -232,6 +233,7 @@ fn create_bot_entity(
             stamina: bot_data.stamina,
             stat_points: bot_data.stat_points,
             status_effects,
+            status_effects_regen,
             team: Team::default_character(),
             union_membership: bot_data.union_membership,
         })
