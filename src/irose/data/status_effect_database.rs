@@ -80,6 +80,7 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
             .get_cleared_by_type(row)
             .unwrap_or(StatusEffectClearedByType::ClearGood),
         apply_status_effects: data.get_apply_status_effects(row),
+        apply_per_second_value: data.get_apply_status_effect_value(row)[0].unwrap_or(0),
     })
 }
 
@@ -98,5 +99,8 @@ pub fn get_status_effect_database(vfs: &VfsIndex) -> Option<StatusEffectDatabase
     }
 
     debug!("Loaded {} status effects", status_effects.len());
-    Some(StatusEffectDatabase::new(status_effects))
+    Some(StatusEffectDatabase::new(
+        status_effects,
+        StatusEffectId::new(43).unwrap(),
+    ))
 }

@@ -31,12 +31,14 @@ pub struct ActiveStatusEffectRegen {
 #[derive(Component, Clone)]
 pub struct StatusEffectsRegen {
     pub regens: EnumMap<StatusEffectType, Option<ActiveStatusEffectRegen>>,
+    pub per_second_tick_counter: Duration,
 }
 
 impl StatusEffectsRegen {
     pub fn new() -> Self {
         Self {
             regens: Default::default(),
+            per_second_tick_counter: Duration::from_secs(0),
         }
     }
 }
@@ -85,6 +87,18 @@ impl StatusEffects {
                 true
             }
         }
+    }
+
+    pub fn apply_summon_decrease_life_status_effect(
+        &mut self,
+        status_effect_data: &StatusEffectData,
+    ) -> bool {
+        self.active[status_effect_data.status_effect_type] = Some(ActiveStatusEffect {
+            id: status_effect_data.id,
+            value: 0,
+            expire_time: Instant::now() + Duration::from_secs(10000000),
+        });
+        true
     }
 
     pub fn apply_potion(

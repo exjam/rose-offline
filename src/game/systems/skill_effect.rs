@@ -670,7 +670,7 @@ pub fn skill_effect_system(
                     }
                     SkillType::SummonPet => {
                         if let Some(npc_id) = skill_data.summon_npc_id {
-                            if MonsterBundle::spawn(
+                            if let Some(entity) = MonsterBundle::spawn(
                                 &mut commands,
                                 &mut client_entity_list,
                                 &skill_system_resources.game_data,
@@ -684,11 +684,21 @@ pub fn skill_effect_system(
                                 skill_caster.team.clone(),
                                 Some((skill_caster.entity, skill_caster.level)),
                                 Some(skill_data.level as i32),
-                            )
-                            .is_some()
-                            {
+                            ) {
+                                // Apply status effect to decrease summon's life over time
+                                if let Some(status_effect_data) = skill_system_resources
+                                    .game_data
+                                    .status_effects
+                                    .get_decrease_summon_life_status_effect()
+                                {
+                                    let mut status_effects = StatusEffects::new();
+                                    status_effects.apply_summon_decrease_life_status_effect(
+                                        status_effect_data,
+                                    );
+                                    commands.entity(entity).insert(status_effects);
+                                }
+
                                 // TODO: Increase summon count point thing
-                                // TODO: Apply status effect to decrease life over time
                                 Ok(())
                             } else {
                                 Err(SkillCastError::InvalidSkill)

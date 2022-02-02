@@ -109,18 +109,30 @@ pub struct StatusEffectData {
     pub can_be_reapplied: bool,
     pub cleared_by_type: StatusEffectClearedByType,
     pub apply_status_effects: ArrayVec<(StatusEffectId, i32), 2>,
+    pub apply_per_second_value: i32,
 }
 
 pub struct StatusEffectDatabase {
     status_effects: HashMap<u16, StatusEffectData>,
+    decrease_summon_life_status_effect_id: StatusEffectId,
 }
 
 impl StatusEffectDatabase {
-    pub fn new(status_effects: HashMap<u16, StatusEffectData>) -> Self {
-        Self { status_effects }
+    pub fn new(
+        status_effects: HashMap<u16, StatusEffectData>,
+        decrease_summon_life_status_effect_id: StatusEffectId,
+    ) -> Self {
+        Self {
+            status_effects,
+            decrease_summon_life_status_effect_id,
+        }
     }
 
     pub fn get_status_effect(&self, id: StatusEffectId) -> Option<&StatusEffectData> {
         self.status_effects.get(&(id.get() as u16))
+    }
+
+    pub fn get_decrease_summon_life_status_effect(&self) -> Option<&StatusEffectData> {
+        self.get_status_effect(self.decrease_summon_life_status_effect_id)
     }
 }
