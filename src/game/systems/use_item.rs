@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut},
     system::SystemParam,
@@ -14,11 +16,11 @@ use crate::{
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ExperiencePoints, GameClient,
             Inventory, ItemSlot, Level, MoveSpeed, NextCommand, SkillList, SkillPoints, Stamina,
-            StatPoints, Team, UnionMembership,
+            StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
         },
         events::UseItemEvent,
-        messages::server::{ServerMessage, UseItem},
-        resources::ServerMessages,
+        messages::server::{ServerMessage, UseInventoryItem, UseItem},
+        resources::{ServerMessages, ServerTime},
         GameData,
     },
 };
@@ -28,6 +30,7 @@ pub struct UseItemSystemParameters<'w, 's> {
     commands: Commands<'w, 's>,
     game_data: Res<'w, GameData>,
     server_messages: ResMut<'w, ServerMessages>,
+    server_time: Res<'w, ServerTime>,
 }
 
 struct UseItemUser<'a, 'world> {
@@ -45,6 +48,8 @@ struct UseItemUser<'a, 'world> {
     skill_points: &'a mut Mut<'world, SkillPoints>,
     stamina: &'a mut Mut<'world, Stamina>,
     stat_points: &'a mut Mut<'world, StatPoints>,
+    status_effects: &'a mut Mut<'world, StatusEffects>,
+    status_effects_regen: &'a mut Mut<'world, StatusEffectsRegen>,
     team_number: &'a Team,
     union_membership: &'a mut Mut<'world, UnionMembership>,
 }
@@ -169,11 +174,43 @@ fn use_inventory_item(
             (false, false)
         }
         _ => {
-            if let Some(_apply_status_effect_id) = item_data.apply_status_effect_id {
-                // TODO: Implement status effects
-            }
-
-            if let Some((add_ability_type, add_ability_value)) = item_data.add_ability {
+            if let Some((base_status_effect_id, total_potion_value)) = item_data.apply_status_effect
+            {
+                if let Some(base_status_effect) = use_item_system_parameters
+                    .game_data
+                    .status_effects
+                    .get_status_effect(base_status_effect_id)
+                {
+                    for (status_effect_data, &potion_value_per_second) in base_status_effect
+                        .apply_status_effects
+                        .iter()
+                        .filter_map(|(id, value)| {
+                            use_item_system_parameters
+                                .game_data
+                                .status_effects
+                                .get_status_effect(*id)
+                                .map(|data| (data, value))
+                        })
+                    {
+                        if use_item_user
+                            .status_effects
+                            .can_apply(status_effect_data, status_effect_data.id.get() as i32)
+                        {
+                            use_item_user.status_effects.apply_potion(
+                                use_item_user.status_effects_regen,
+                                status_effect_data,
+                                use_item_system_parameters.server_time.now
+                                    + Duration::from_micros(
+                                        total_potion_value as u64 * 1000000
+                                            / potion_value_per_second as u64,
+                                    ),
+                                total_potion_value,
+                                potion_value_per_second,
+                            );
+                        }
+                    }
+                }
+            } else if let Some((add_ability_type, add_ability_value)) = item_data.add_ability {
                 ability_values_add_value(
                     add_ability_type,
                     add_ability_value,
@@ -256,6 +293,8 @@ pub fn use_item_system(
             &mut SkillPoints,
             &mut Stamina,
             &mut StatPoints,
+            &mut StatusEffects,
+            &mut StatusEffectsRegen,
             &mut UnionMembership,
         ),
         Option<&GameClient>,
@@ -283,6 +322,8 @@ pub fn use_item_system(
                 mut skill_points,
                 mut stamina,
                 mut stat_points,
+                mut status_effects,
+                mut status_effects_regen,
                 mut union_membership,
             ),
             game_client,
@@ -302,6 +343,8 @@ pub fn use_item_system(
                 skill_points: &mut skill_points,
                 stamina: &mut stamina,
                 stat_points: &mut stat_points,
+                status_effects: &mut status_effects,
+                status_effects_regen: &mut status_effects_regen,
                 team_number,
                 union_membership: &mut union_membership,
                 game_client,

@@ -157,7 +157,18 @@ impl StbItem {
     stb_column! { 21, get_consumeable_use_script_index, usize }
     stb_column! { 22, get_consumeable_use_effect_index, usize }
     stb_column! { 23, get_consumeable_use_sound_index, usize }
-    stb_column! { 24, get_consumeable_apply_status_effect_id, StatusEffectId }
+
+    pub fn get_consumeable_apply_status_effect(&self, id: usize) -> Option<(StatusEffectId, i32)> {
+        let status_effect_id: Option<StatusEffectId> = self
+            .0
+            .try_get_int(id, 24)
+            .and_then(|x| u16::try_from(x).ok())
+            .and_then(StatusEffectId::new);
+        let status_effect_value = self.0.try_get_int(id, 20).unwrap_or(0);
+
+        status_effect_id.map(|status_effect_id| (status_effect_id, status_effect_value))
+    }
+
     stb_column! { 25, get_consumeable_cooldown_type_id, usize }
     stb_column! { 26, get_consumeable_cooldown_duration_seconds, u32 }
 
@@ -290,7 +301,7 @@ fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Con
         add_ability: data.get_consumeable_add_ability(id),
         learn_skill_id: data.get_consumeable_learn_skill_id(id),
         use_skill_id: data.get_consumeable_use_skill_id(id),
-        apply_status_effect_id: data.get_consumeable_apply_status_effect_id(id),
+        apply_status_effect: data.get_consumeable_apply_status_effect(id),
         cooldown_type_id: data.get_consumeable_cooldown_type_id(id).unwrap_or(0),
         cooldown_duration: Duration::from_secs(
             data.get_consumeable_cooldown_duration_seconds(id)
