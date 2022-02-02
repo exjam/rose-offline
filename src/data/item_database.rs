@@ -45,6 +45,7 @@ impl ItemReference {
     }
 }
 
+#[derive(Debug)]
 pub struct BaseItemData {
     pub name: String,
     pub class: ItemClass,
@@ -70,41 +71,50 @@ pub struct BaseItemData {
     pub resistance: u32,
 }
 
+#[derive(Debug)]
 pub struct FaceItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct HeadItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct BodyItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct HandsItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct BackItemData {
     pub item_data: BaseItemData,
     pub move_speed: u32,
 }
 
+#[derive(Debug)]
 pub struct FeetItemData {
     pub item_data: BaseItemData,
     pub move_speed: u32,
 }
 
+#[derive(Debug)]
 pub struct JewelleryItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct GemItemData {
     pub item_data: BaseItemData,
     pub gem_add_ability: ArrayVec<(AbilityType, i32), 2>,
 }
 
+#[derive(Debug)]
 pub struct WeaponItemData {
     pub item_data: BaseItemData,
     pub attack_range: i32,
@@ -114,10 +124,12 @@ pub struct WeaponItemData {
     pub is_magic_damage: bool,
 }
 
+#[derive(Debug)]
 pub struct SubWeaponItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct ConsumableItemData {
     pub item_data: BaseItemData,
     pub store_skin: i32,
@@ -131,18 +143,23 @@ pub struct ConsumableItemData {
     pub cooldown_duration: Duration,
 }
 
+#[derive(Debug)]
 pub struct MaterialItemData {
     pub item_data: BaseItemData,
 }
+
+#[derive(Debug)]
 
 pub struct QuestItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct VehicleItemData {
     pub item_data: BaseItemData,
 }
 
+#[derive(Debug)]
 pub struct ItemGradeData {
     pub attack: i32,
     pub hit: i32,
@@ -153,6 +170,7 @@ pub struct ItemGradeData {
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub enum ItemData<'a> {
     Face(&'a FaceItemData),
     Head(&'a HeadItemData),
