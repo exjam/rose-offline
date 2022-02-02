@@ -318,6 +318,12 @@ pub struct PersonalStoreItemList {
 pub struct UseItem {
     pub entity_id: ClientEntityId,
     pub item: ItemReference,
+}
+
+#[derive(Clone)]
+pub struct UseInventoryItem {
+    pub entity_id: ClientEntityId,
+    pub item: ItemReference,
     pub inventory_slot: ItemSlot,
 }
 
@@ -489,6 +495,7 @@ pub enum ServerMessage {
     PersonalStoreItemList(PersonalStoreItemList),
     PersonalStoreTransactionResult(PersonalStoreTransactionResult),
     UseItem(UseItem),
+    UseInventoryItem(UseInventoryItem),
     CastSkillSelf(CastSkillSelf),
     CastSkillTargetEntity(CastSkillTargetEntity),
     CastSkillTargetPosition(CastSkillTargetPosition),

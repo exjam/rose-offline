@@ -20,7 +20,9 @@ use crate::{
             SpawnOrigin, StatusEffects, Team,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
-        messages::server::{ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseItem},
+        messages::server::{
+            ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseInventoryItem,
+        },
         resources::{ClientEntityList, ServerMessages, ServerTime},
         GameData,
     },
@@ -729,7 +731,7 @@ pub fn skill_effect_system(
                                     // When there is still remaining quantity we send UseItem packet
                                     caster_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::UseItem(UseItem {
+                                        .send(ServerMessage::UseInventoryItem(UseInventoryItem {
                                             entity_id: skill_caster.client_entity.id,
                                             item: item.get_item_reference(),
                                             inventory_slot: item_slot,

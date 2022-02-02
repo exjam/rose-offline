@@ -1279,7 +1279,7 @@ impl From<&PacketServerPersonalStoreTransactionResult> for Packet {
 pub struct PacketServerUseItem {
     pub entity_id: ClientEntityId,
     pub item: ItemReference,
-    pub inventory_slot: ItemSlot,
+    pub inventory_slot: Option<ItemSlot>,
 }
 
 impl From<&PacketServerUseItem> for Packet {
@@ -1287,7 +1287,9 @@ impl From<&PacketServerUseItem> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::UseItem as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.item.item_number as u16);
-        writer.write_item_slot_u8(packet.inventory_slot);
+        if let Some(inventory_slot) = packet.inventory_slot {
+            writer.write_item_slot_u8(inventory_slot);
+        }
         writer.into()
     }
 }

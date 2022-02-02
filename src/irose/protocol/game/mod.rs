@@ -20,7 +20,7 @@ use crate::{
             QuestDeleteResult, QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat,
             SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue,
             UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects,
-            UpdateXpStamina, UseEmote, UseItem, Whisper,
+            UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -895,7 +895,17 @@ impl GameClient {
                 PersonalStoreTransactionResult::NoMoreNeed(_) => todo!(),
                 PersonalStoreTransactionResult::SoldToStore(_) => todo!(),
             },
-            ServerMessage::UseItem(UseItem {
+            ServerMessage::UseItem(UseItem { entity_id, item }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUseItem {
+                        entity_id,
+                        item,
+                        inventory_slot: None,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UseInventoryItem(UseInventoryItem {
                 entity_id,
                 item,
                 inventory_slot,
@@ -905,7 +915,7 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerUseItem {
                         entity_id,
                         item,
-                        inventory_slot,
+                        inventory_slot: Some(inventory_slot),
                     }))
                     .await?;
             }

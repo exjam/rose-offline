@@ -201,7 +201,6 @@ fn use_inventory_item(
                         ServerMessage::UseItem(UseItem {
                             entity_id: use_item_user.client_entity.id,
                             item: item.get_item_reference(),
-                            inventory_slot: item_slot,
                         }),
                     );
             }
@@ -218,17 +217,15 @@ fn use_inventory_item(
                         .ok();
                 }
                 Some(item) => {
-                    // When there is still remaining quantity we send UseItem packet
-                    if !message_to_nearby {
-                        game_client
-                            .server_message_tx
-                            .send(ServerMessage::UseItem(UseItem {
-                                entity_id: use_item_user.client_entity.id,
-                                item: item.get_item_reference(),
-                                inventory_slot: item_slot,
-                            }))
-                            .ok();
-                    }
+                    // When there is still remaining quantity we send UseInventoryItem packet
+                    game_client
+                        .server_message_tx
+                        .send(ServerMessage::UseInventoryItem(UseInventoryItem {
+                            entity_id: use_item_user.client_entity.id,
+                            item: item.get_item_reference(),
+                            inventory_slot: item_slot,
+                        }))
+                        .ok();
                 }
             }
         }
