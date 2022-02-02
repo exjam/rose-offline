@@ -4,7 +4,7 @@ use arrayvec::ArrayVec;
 use enum_map::Enum;
 use num_derive::FromPrimitive;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct StatusEffectId(NonZeroU16);
 
 id_wrapper_impl!(StatusEffectId, NonZeroU16, u16);
@@ -89,7 +89,7 @@ impl StatusEffectType {
     }
 }
 
-#[derive(FromPrimitive)]
+#[derive(Debug, FromPrimitive)]
 pub enum StatusEffectClearedByType {
     // This status effect is cleared by ClearGood
     ClearGood = 0,
@@ -101,6 +101,7 @@ pub enum StatusEffectClearedByType {
     ClearNone = 2,
 }
 
+#[derive(Debug)]
 pub struct StatusEffectData {
     pub id: StatusEffectId,
     pub name: String,
