@@ -40,7 +40,7 @@ impl StbStatus {
     stb_column! { 3, get_cleared_by_type, StatusEffectClearedByType }
     stb_column! { 4, get_apply_arg, i32 }
     stb_column! { (5..=8).step_by(2), get_apply_status_effect_id, [Option<StatusEffectId>; 2] }
-    stb_column! { (5..=8).step_by(2), get_apply_status_effect_value, [Option<i32>; 2] }
+    stb_column! { (5..=8).skip(1).step_by(2), get_apply_status_effect_value, [Option<i32>; 2] }
 
     pub fn get_apply_status_effects(&self, id: usize) -> ArrayVec<(StatusEffectId, i32), 2> {
         self.get_apply_status_effect_id(id)
