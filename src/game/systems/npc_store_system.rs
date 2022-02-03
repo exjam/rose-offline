@@ -44,7 +44,7 @@ fn npc_store_do_transaction(
 
     if npc_data.store_union_number.is_some() {
         warn!("Unimplemented union NPC store");
-        // if npc_data.store_union_number != union_membership.current_union {
+        // TODO: if npc_data.store_union_number != union_membership.current_union { ... etc
         return Err(NpcStoreTransactionError::NotSameUnion);
     }
 
@@ -55,14 +55,43 @@ fn npc_store_do_transaction(
         return Err(NpcStoreTransactionError::NpcTooFarAway);
     }
 
-    if !sell_items.is_empty() {
-        warn!("Unimplemented selling items to NPC store");
-    }
-
     let mut total_buy_cost = 0i64;
+    let mut total_sell_value = 0i64;
     let mut transaction_inventory = inventory.clone();
     let mut updated_inventory_slots = HashSet::new();
 
+    // First process sell items
+    for &(sell_item_slot, sell_item_quantity) in sell_items {
+        let sell_item_quantity = usize::min(
+            sell_item_quantity,
+            transaction_inventory
+                .get_item(sell_item_slot)
+                .map(|item| item.get_quantity() as usize)
+                .unwrap_or(0),
+        );
+
+        let sell_item = transaction_inventory
+            .try_take_quantity(sell_item_slot, sell_item_quantity as u32)
+            .ok_or(NpcStoreTransactionError::NpcNotFound)?;
+
+        let item_price = game_data
+            .ability_value_calculator
+            .calculate_npc_store_item_sell_price(
+                &game_data.items,
+                &sell_item,
+                ability_values.get_npc_store_sell_rate(),
+                world_rates.world_price_rate,
+                world_rates.item_price_rate,
+                world_rates.town_price_rate,
+            )
+            .ok_or(NpcStoreTransactionError::NpcNotFound)? as i64;
+
+        log::trace!(target: "npc_store", "Sell item {:?}, price: {}", sell_item.get_item_reference(), item_price);
+        updated_inventory_slots.insert(sell_item_slot);
+        total_sell_value += item_price * sell_item.get_quantity() as i64;
+    }
+
+    // Process buy items
     for buy_item in buy_items {
         let store_tab_id = npc_data
             .store_tabs
@@ -80,19 +109,16 @@ fn npc_store_do_transaction(
             .get(&(buy_item.item_index as u16))
             .ok_or(NpcStoreTransactionError::NpcNotFound)?;
 
-        let item_data = game_data
-            .items
-            .get_base_item(store_item_reference)
-            .ok_or(NpcStoreTransactionError::NpcNotFound)?;
-
         let item_price = game_data
             .ability_value_calculator
             .calculate_npc_store_item_buy_price(
+                &game_data.items,
                 store_item_reference,
-                item_data,
                 ability_values.get_npc_store_buy_rate(),
-                world_rates.prices_rate,
-            ) as i64;
+                world_rates.item_price_rate,
+                world_rates.town_price_rate,
+            )
+            .ok_or(NpcStoreTransactionError::NpcNotFound)? as i64;
 
         let buy_quantity = if store_item_reference.item_type.is_stackable() {
             buy_item.quantity
@@ -107,9 +133,14 @@ fn npc_store_do_transaction(
             .try_add_item(item)
             .map_err(|_| NpcStoreTransactionError::NpcNotFound)?;
 
+        log::trace!(target: "npc_store", "Buy item {:?}, price: {}", store_item_reference, item_price);
         updated_inventory_slots.insert(inventory_slot);
         total_buy_cost += item_price * buy_quantity;
     }
+
+    transaction_inventory
+        .try_add_money(Money(total_sell_value))
+        .map_err(|_| NpcStoreTransactionError::NotEnoughMoney)?;
 
     transaction_inventory
         .try_take_money(Money(total_buy_cost))
@@ -162,7 +193,6 @@ pub fn npc_store_system(
                             .ok();
                     }
                 }
-                Err(NpcStoreTransactionError::InvalidTransactionEntity) => {}
                 Err(error) => {
                     if let Some(game_client) = game_client {
                         game_client

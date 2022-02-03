@@ -496,7 +496,7 @@ impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
         writer.write_u16(100); // world price rate
         writer.write_u8(100); // town rate
         for _ in 0..11 {
-            writer.write_u8(100); // item rate
+            writer.write_u8(50); // item rate
         }
         writer.write_u32(0); // global flags (0x1 = pvp allowed)
 
@@ -1562,7 +1562,6 @@ impl From<&PacketServerNpcStoreTransactionError> for Packet {
             NpcStoreTransactionError::NotEnoughMoney => 4,
             NpcStoreTransactionError::NotSameUnion => 5,
             NpcStoreTransactionError::NotEnoughUnionPoints => 6,
-            _ => panic!("Unexpected PacketServerNpcStoreTransactionError"),
         };
 
         writer.write_u8(error);

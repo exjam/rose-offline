@@ -5,10 +5,9 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        item::{ItemClass, ItemType, ItemWeaponType},
-        AbilityType, AbilityValueCalculator, BaseItemData, Damage, ItemDatabase, ItemReference,
-        NpcDatabase, NpcId, PassiveRecoveryState, SkillAddAbility, SkillData, SkillDatabase,
-        SkillId,
+        item::{Item, ItemClass, ItemType, ItemWeaponType},
+        AbilityType, AbilityValueCalculator, Damage, ItemDatabase, ItemReference, NpcDatabase,
+        NpcId, PassiveRecoveryState, SkillAddAbility, SkillData, SkillDatabase, SkillId,
     },
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
@@ -699,11 +698,14 @@ impl AbilityValueCalculator for AbilityValuesData {
 
     fn calculate_npc_store_item_buy_price(
         &self,
+        item_database: &ItemDatabase,
         item: ItemReference,
-        item_data: &BaseItemData,
         buy_skill_value: i32,
-        world_prices_rate: i32,
-    ) -> i32 {
+        item_rate: i32,
+        town_rate: i32,
+    ) -> Option<i32> {
+        let item_data = item_database.get_base_item(item)?;
+
         match item.item_type {
             ItemType::Face
             | ItemType::Head
@@ -713,25 +715,119 @@ impl AbilityValueCalculator for AbilityValuesData {
             | ItemType::Back
             | ItemType::Weapon
             | ItemType::SubWeapon
-            | ItemType::Vehicle => {
+            | ItemType::Vehicle => Some(
                 (item_data.base_price as f32
                     * (item_data.quality as f32 + 50.0)
                     * (1.0 - buy_skill_value as f32 * 0.01)
                     / 100.0
-                    + 0.5) as i32
+                    + 0.5) as i32,
+            ),
+            ItemType::Consumable
+            | ItemType::Material
+            | ItemType::Jewellery
+            | ItemType::Gem
+            | ItemType::Quest => {
+                let item_rate = if matches!(
+                    item_data.class,
+                    ItemClass::Medicine
+                        | ItemClass::Food
+                        | ItemClass::Metal
+                        | ItemClass::OtherworldlyMetal
+                        | ItemClass::StoneMaterial
+                        | ItemClass::WoodenMaterial
+                        | ItemClass::Leather
+                        | ItemClass::Cloth
+                        | ItemClass::RefiningMaterial
+                        | ItemClass::Chemicals
+                ) {
+                    item_rate
+                } else {
+                    town_rate
+                };
+
+                Some(
+                    (item_data.base_price as f32
+                        * (1.0 + (item_rate as f32 - 50.0) * item_data.price_rate as f32 / 1000.0)
+                        * (1.0 - buy_skill_value as f32 * 0.01)
+                        + 0.5) as i32,
+                )
+            }
+            _ => None,
+        }
+    }
+
+    fn calculate_npc_store_item_sell_price(
+        &self,
+        item_database: &ItemDatabase,
+        item: &Item,
+        sell_skill_value: i32,
+        world_rate: i32,
+        item_rate: i32,
+        town_rate: i32,
+    ) -> Option<i32> {
+        let item_data = item_database.get_base_item(item.get_item_reference())?;
+        match item.get_item_type() {
+            ItemType::Face
+            | ItemType::Head
+            | ItemType::Body
+            | ItemType::Hands
+            | ItemType::Feet
+            | ItemType::Back
+            | ItemType::Weapon
+            | ItemType::SubWeapon
+            | ItemType::Vehicle => {
+                let item = item.as_equipment().unwrap();
+                let gem_base_price = if item.is_appraised {
+                    item_database
+                        .get_base_item(ItemReference::new(ItemType::Gem, item.gem as usize))
+                        .map(|gem_item_data| gem_item_data.base_price)
+                        .unwrap_or(0)
+                } else {
+                    0
+                } as f32;
+                Some(
+                    ((item_data.base_price as f32
+                        * (40.0 + item.grade as f32)
+                        * (200.0 + item.durability as f32)
+                        * (200.0 - world_rate as f32)
+                        * (1.0 + sell_skill_value as f32 * 0.01)
+                        * ((4000.0 + item.life as f32) / 14000.0)
+                        / 1000000.0)
+                        + gem_base_price * 0.2) as i32,
+                )
             }
             ItemType::Consumable
             | ItemType::Material
             | ItemType::Jewellery
             | ItemType::Gem
             | ItemType::Quest => {
-                (item_data.base_price as f32
-                    * 1000.0
-                    * (1.0 + buy_skill_value as f32 * 0.01)
-                    * (200.0 - world_prices_rate as f32)
-                    / 180000.0) as i32
+                let item_rate = if matches!(
+                    item_data.class,
+                    ItemClass::Medicine
+                        | ItemClass::Food
+                        | ItemClass::Metal
+                        | ItemClass::OtherworldlyMetal
+                        | ItemClass::StoneMaterial
+                        | ItemClass::WoodenMaterial
+                        | ItemClass::Leather
+                        | ItemClass::Cloth
+                        | ItemClass::RefiningMaterial
+                        | ItemClass::Chemicals
+                ) {
+                    item_rate
+                } else {
+                    town_rate
+                };
+
+                Some(
+                    (item_data.base_price as f32
+                        * (1000.0 + (item_rate as f32 - 50.0) * item_data.price_rate as f32)
+                        * (1.0 + sell_skill_value as f32 * 0.01)
+                        * (200.0 - world_rate as f32)
+                        / 180000.0) as i32,
+                )
             }
-            _ => 0,
+            _ => None,
         }
     }
 

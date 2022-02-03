@@ -389,7 +389,6 @@ pub enum CancelCastingSkillReason {
 #[allow(dead_code)]
 #[derive(Clone)]
 pub enum NpcStoreTransactionError {
-    InvalidTransactionEntity,
     PriceDifference,
     NpcNotFound,
     NpcTooFarAway,
