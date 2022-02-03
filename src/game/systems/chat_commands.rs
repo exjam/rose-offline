@@ -19,15 +19,16 @@ use crate::{
     },
     game::{
         bundles::{
-            ability_values_add_value, client_entity_join_zone, client_entity_teleport_zone,
-            CharacterBundle,
+            ability_values_add_value, ability_values_set_value, client_entity_join_zone,
+            client_entity_teleport_zone, CharacterBundle,
         },
         components::{
-            AbilityValues, BasicStats, BotAi, BotAiState, ClientEntity, ClientEntitySector,
-            ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase, GameClient,
-            Inventory, Level, Money, MoveMode, MoveSpeed, NextCommand, Owner, PartyMembership,
-            PassiveRecoveryTime, PersonalStore, Position, SkillPoints, Stamina, StatPoints,
-            StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+            AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
+            ClientEntitySector, ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase,
+            GameClient, Inventory, Level, Money, MoveMode, MoveSpeed, NextCommand, Owner,
+            PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillPoints, Stamina,
+            StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+            PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},
         messages::server::{ServerMessage, UpdateSpeed, Whisper},
@@ -55,6 +56,7 @@ pub struct ChatCommandUser<'w, 's> {
     level: &'s Level,
     position: &'s Position,
     basic_stats: &'s mut Mut<'w, BasicStats>,
+    character_info: &'s mut Mut<'w, CharacterInfo>,
     inventory: &'s mut Mut<'w, Inventory>,
     skill_points: &'s mut Mut<'w, SkillPoints>,
     stamina: &'s mut Mut<'w, Stamina>,
@@ -83,6 +85,11 @@ lazy_static! {
                     .arg(Arg::new("ability_type").required(true))
                     .arg(Arg::new("value").required(true)),
             )
+            .subcommand(
+                App::new("set")
+                    .arg(Arg::new("ability_type").required(true))
+                    .arg(Arg::new("value").required(true)),
+            )
             .subcommand(App::new("speed").arg(Arg::new("speed").required(true)))
     };
 }
@@ -103,6 +110,10 @@ fn send_chat_commands_help(client: &GameClient) {
     for subcommand in CHAT_COMMANDS.get_subcommands() {
         let mut help_string = String::from(subcommand.get_name());
         for arg in subcommand.get_arguments() {
+            if arg.get_name() == "help" || arg.get_name() == "version" {
+                continue;
+            }
+
             help_string.push(' ');
             if !arg.is_set(clap::ArgSettings::Required) {
                 help_string.push('[');
@@ -519,6 +530,54 @@ fn handle_chat_command(
                 );
             }
         }
+        ("set", arg_matches) => {
+            let ability_type_str = arg_matches.value_of("ability_type").unwrap();
+            let value = arg_matches.value_of("value").unwrap().parse::<i32>()?;
+            let ability_type = match ability_type_str {
+                "gender" => AbilityType::Gender,
+                "face" => AbilityType::Face,
+                "hair" => AbilityType::Hair,
+                "class" => AbilityType::Class,
+                "strength" => AbilityType::Strength,
+                "dexterity" => AbilityType::Dexterity,
+                "intelligence" => AbilityType::Intelligence,
+                "concentration" => AbilityType::Concentration,
+                "charm" => AbilityType::Charm,
+                "sense" => AbilityType::Sense,
+                "health" => AbilityType::Health,
+                "mana" => AbilityType::Mana,
+                "experience" => AbilityType::Experience,
+                "level" => AbilityType::Level,
+                "pvp_flag" => AbilityType::PvpFlag,
+                "team_number" => AbilityType::TeamNumber,
+                "union" => AbilityType::Union,
+                "union_point1" => AbilityType::UnionPoint1,
+                "union_point2" => AbilityType::UnionPoint2,
+                "union_point3" => AbilityType::UnionPoint3,
+                "union_point4" => AbilityType::UnionPoint4,
+                "union_point5" => AbilityType::UnionPoint5,
+                "union_point6" => AbilityType::UnionPoint6,
+                "union_point7" => AbilityType::UnionPoint7,
+                "union_point8" => AbilityType::UnionPoint8,
+                "union_point9" => AbilityType::UnionPoint9,
+                "union_point10" => AbilityType::UnionPoint10,
+                _ => return Err(ChatCommandError::InvalidArguments),
+            };
+
+            if ability_values_set_value(
+                ability_type,
+                value,
+                Some(chat_command_user.basic_stats),
+                Some(chat_command_user.character_info),
+                Some(chat_command_user.union_membership),
+                Some(chat_command_user.game_client),
+            ) {
+                send_multiline_whisper(
+                    chat_command_user.game_client,
+                    &format!("Success: /set {} {}", ability_type_str, value),
+                );
+            }
+        }
         ("speed", arg_matches) => {
             let value = arg_matches.value_of("speed").unwrap().parse::<i32>()?;
 
@@ -553,6 +612,7 @@ pub fn chat_commands_system(
         &Level,
         &Position,
         &mut BasicStats,
+        &mut CharacterInfo,
         &mut Inventory,
         &mut SkillPoints,
         &mut Stamina,
@@ -574,6 +634,7 @@ pub fn chat_commands_system(
             level,
             position,
             mut basic_stats,
+            mut character_info,
             mut inventory,
             mut skill_points,
             mut stamina,
@@ -590,6 +651,7 @@ pub fn chat_commands_system(
                 level,
                 position,
                 basic_stats: &mut basic_stats,
+                character_info: &mut character_info,
                 inventory: &mut inventory,
                 skill_points: &mut skill_points,
                 stamina: &mut stamina,
