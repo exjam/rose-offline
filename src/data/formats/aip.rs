@@ -545,7 +545,7 @@ impl AipFile {
                             conditions.push(AipCondition::Distance(
                                 AipDistanceOrigin::Owner,
                                 opcode,
-                                distance,
+                                distance * 100,
                             ));
                         }
                         20 => {
