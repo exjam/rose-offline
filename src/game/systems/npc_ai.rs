@@ -778,20 +778,17 @@ fn ai_action_move_near_owner(
         .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .map(|(position, _)| position.clone())
     {
-        let distance = (0.2
-            * nalgebra::distance(
-                &owner_position.position.xy(),
-                &ai_parameters.source.position.position.xy(),
-            )) as i32;
-        let dx = rand::thread_rng().gen_range(-distance..distance);
-        let dy = rand::thread_rng().gen_range(-distance..distance);
+        // Move 80% of the way towards owner
+        let delta = owner_position.position.xy() - ai_parameters.source.position.position.xy();
+        let distance = 0.8 * delta.magnitude();
+        let direction = delta.normalize();
+        let destination = ai_parameters.source.position.position.xy() + direction * distance;
 
-        let destination = owner_position.position + Vector3::new(dx as f32, dy as f32, 0.0);
         ai_system_parameters
             .commands
             .entity(ai_parameters.source.entity)
             .insert(NextCommand::with_move(
-                destination,
+                Point3::new(destination.x, destination.y, 0.0),
                 None,
                 Some(MoveMode::Run),
             ));
