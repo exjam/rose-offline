@@ -732,6 +732,42 @@ fn ai_action_stop(ai_system_parameters: &mut AiSystemParameters, ai_parameters: 
         .insert(NextCommand::with_stop(true));
 }
 
+fn ai_action_attack_attacker(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) {
+    if let Some(attacker) = ai_parameters.attacker {
+        ai_system_parameters
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(NextCommand::with_attack(attacker.entity));
+    }
+}
+
+fn ai_action_attack_find_char(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) {
+    if let Some((find_char, _)) = ai_parameters.find_char {
+        ai_system_parameters
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(NextCommand::with_attack(find_char));
+    }
+}
+
+fn ai_action_attack_near_char(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) {
+    if let Some((near_char, _)) = ai_parameters.near_char {
+        ai_system_parameters
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(NextCommand::with_attack(near_char));
+    }
+}
+
 fn ai_action_move_random_distance(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -856,29 +892,12 @@ fn npc_ai_do_actions(
                 )
             }
             AipAction::AttackNearChar => {
-                if let Some((near_char, _)) = ai_parameters.near_char {
-                    ai_system_parameters
-                        .commands
-                        .entity(ai_parameters.source.entity)
-                        .insert(NextCommand::with_attack(near_char));
-                }
+                ai_action_attack_near_char(ai_system_parameters, ai_parameters)
             }
             AipAction::AttackFindChar => {
-                if let Some((find_char, _)) = ai_parameters.find_char {
-                    ai_system_parameters
-                        .commands
-                        .entity(ai_parameters.source.entity)
-                        .insert(NextCommand::with_attack(find_char));
-                }
+                ai_action_attack_find_char(ai_system_parameters, ai_parameters)
             }
             AipAction::AttackAttacker => {
-                if let Some(attacker) = ai_parameters.attacker {
-                    ai_system_parameters
-                        .commands
-                        .entity(ai_parameters.source.entity)
-                        .insert(NextCommand::with_attack(attacker.entity));
-                }
-            }
                 ai_action_attack_attacker(ai_system_parameters, ai_parameters)
             }
             AipAction::KillSelf => ai_action_kill_self(ai_system_parameters, ai_parameters),
