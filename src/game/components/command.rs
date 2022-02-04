@@ -100,6 +100,13 @@ impl NextCommand {
         }
     }
 
+    pub fn with_command_skip_server_message(command: CommandData) -> Self {
+        Self {
+            command: Some(command),
+            has_sent_server_message: true,
+        }
+    }
+
     pub fn with_move(
         destination: Point3<f32>,
         target: Option<Entity>,

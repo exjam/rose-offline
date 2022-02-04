@@ -4,7 +4,10 @@ use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
 use crate::{
-    data::item::{Item, ItemClass, StackableSlotBehaviour},
+    data::{
+        item::{Item, ItemClass, StackableSlotBehaviour},
+        SkillActionMode,
+    },
     game::{
         bundles::client_entity_leave_zone,
         components::{
@@ -787,6 +790,36 @@ pub fn command_system(
                                 use_item.clone(),
                             ));
 
+                            // Update next command
+                            match skill_data.action_mode {
+                                SkillActionMode::Stop => *next_command = NextCommand::default(),
+                                SkillActionMode::Attack => {
+                                    *next_command =
+                                        target_entity.map_or_else(NextCommand::default, |target| {
+                                            NextCommand::with_command_skip_server_message(
+                                                CommandData::Attack(CommandAttack { target }),
+                                            )
+                                        })
+                                }
+                                SkillActionMode::Restore => match command.command {
+                                    CommandData::Stop(_)
+                                    | CommandData::Move(_)
+                                    | CommandData::Attack(_) => {
+                                        *next_command =
+                                            NextCommand::with_command_skip_server_message(
+                                                command.command.clone(),
+                                            )
+                                    }
+                                    CommandData::Die(_)
+                                    | CommandData::PickupItemDrop(_)
+                                    | CommandData::PersonalStore
+                                    | CommandData::Sit(_)
+                                    | CommandData::CastSkill(_) => {
+                                        *next_command = NextCommand::default()
+                                    }
+                                },
+                            }
+
                             // Set current command to cast skill
                             *command = Command::with_cast_skill(
                                 skill_id,
@@ -795,12 +828,11 @@ pub fn command_system(
                                 action_duration,
                             );
 
-                            // TODO: Next comand should be set based on skill_data.action_mode
-                            *next_command = NextCommand::default();
-
                             // Remove our destination component, as we have reached it!
                             entity_commands.remove::<Destination>();
                         } else {
+                            // TODO: By changing command to move here we affect SkillActionMode::Restore
+
                             // Not in range, set current command to move
                             let target_position = target_position.unwrap();
                             *command = Command::with_move(
