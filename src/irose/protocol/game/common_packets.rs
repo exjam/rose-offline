@@ -461,9 +461,9 @@ pub trait PacketWriteSkillSlot {
 fn skill_slot_from_index(index: usize) -> Result<SkillSlot, ProtocolError> {
     match index {
         0..=29 => Ok(SkillSlot(SkillPageType::Basic, index)),
-        30..=59 => Ok(SkillSlot(SkillPageType::Active, index)),
-        60..=89 => Ok(SkillSlot(SkillPageType::Passive, index)),
-        90..=119 => Ok(SkillSlot(SkillPageType::Clan, index)),
+        30..=59 => Ok(SkillSlot(SkillPageType::Active, index - 30)),
+        60..=89 => Ok(SkillSlot(SkillPageType::Passive, index - 60)),
+        90..=119 => Ok(SkillSlot(SkillPageType::Clan, index - 90)),
         _ => Err(ProtocolError::InvalidPacket),
     }
 }
