@@ -46,6 +46,7 @@ pub enum ClientPackets {
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
     ChangeAmmo = 0x7ab,
+    LevelUpSkill = 0x7b1,
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
@@ -424,6 +425,27 @@ impl TryFrom<&Packet> for PacketClientUseItem {
             item_slot,
             target_entity_id,
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientLevelUpSkill {
+    pub skill_slot: SkillSlot,
+}
+
+impl TryFrom<&Packet> for PacketClientLevelUpSkill {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::LevelUpSkill as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let skill_slot = reader.read_skill_slot_u8()?;
+        let _next_skill_idx = reader.read_u16()?;
+
+        Ok(PacketClientLevelUpSkill { skill_slot })
     }
 }
 

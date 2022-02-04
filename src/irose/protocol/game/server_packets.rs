@@ -15,13 +15,13 @@ use crate::{
             Command, CommandCastSkill, CommandCastSkillTarget, CommandData, Destination,
             DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar,
             HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
-            NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints, Stamina,
-            StatPoints, StatusEffects, Team, UnionMembership, VehiclePartIndex,
+            NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints,
+            SkillSlot, Stamina, StatPoints, StatusEffects, Team, UnionMembership, VehiclePartIndex,
         },
         messages::server::{
-            CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, NpcStoreTransactionError,
-            PartyMemberInfo, PartyMemberInfoOnline, PartyReply, PartyRequest,
-            PickupItemDropContent, PickupItemDropError,
+            CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, LevelUpSkillError,
+            NpcStoreTransactionError, PartyMemberInfo, PartyMemberInfoOnline, PartyReply,
+            PartyRequest, PickupItemDropContent, PickupItemDropError,
         },
     },
     irose::protocol::game::common_packets::{
@@ -75,6 +75,7 @@ pub enum ServerPackets {
     SetHotbarSlot = 0x7aa,
     UpdateAmmo = 0x7ab,
     LearnSkillResult = 0x7b0,
+    LevelUpSkillResult = 0x7b1,
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
@@ -1155,6 +1156,38 @@ impl From<&PacketServerLearnSkillResult> for Packet {
                 writer.write_u16(0);
             }
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerLevelUpSkillResult {
+    pub result: Result<(SkillSlot, SkillId), LevelUpSkillError>,
+    pub updated_skill_points: SkillPoints,
+}
+
+impl From<&PacketServerLevelUpSkillResult> for Packet {
+    fn from(packet: &PacketServerLevelUpSkillResult) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::LevelUpSkillResult as u16);
+        match packet.result {
+            Ok((skill_slot, skill_id)) => {
+                writer.write_u8(0); // Success
+                writer.write_skill_slot_u8(skill_slot);
+                writer.write_u16(skill_id.get() as u16);
+            }
+            Err(error) => {
+                match error {
+                    LevelUpSkillError::Failed => writer.write_u8(1),
+                    LevelUpSkillError::SkillPointRequirement => writer.write_u8(2),
+                    LevelUpSkillError::AbilityRequirement => writer.write_u8(3),
+                    LevelUpSkillError::JobRequirement => writer.write_u8(4),
+                    LevelUpSkillError::SkillRequirement => writer.write_u8(5),
+                    LevelUpSkillError::MoneyRequirement => writer.write_u8(6),
+                }
+                writer.write_u8(0); // Slot
+                writer.write_u16(0); // Index
+            }
+        }
+        writer.write_u16(packet.updated_skill_points.points as u16);
         writer.into()
     }
 }

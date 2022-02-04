@@ -269,6 +269,23 @@ pub struct LearnSkillSuccess {
     pub updated_skill_points: SkillPoints,
 }
 
+#[allow(dead_code)]
+#[derive(Copy, Clone, Debug)]
+pub enum LevelUpSkillError {
+    Failed,
+    SkillPointRequirement,
+    AbilityRequirement,
+    JobRequirement,
+    SkillRequirement,
+    MoneyRequirement,
+}
+
+#[derive(Clone)]
+pub struct LevelUpSkillResult {
+    pub result: Result<(SkillSlot, SkillId), LevelUpSkillError>,
+    pub updated_skill_points: SkillPoints,
+}
+
 #[derive(Clone)]
 pub struct OpenPersonalStore {
     pub entity_id: ClientEntityId,
@@ -490,6 +507,7 @@ pub enum ServerMessage {
     QuestTriggerResult(QuestTriggerResult),
     QuestDeleteResult(QuestDeleteResult),
     LearnSkillResult(Result<LearnSkillSuccess, LearnSkillError>),
+    LevelUpSkillResult(LevelUpSkillResult),
     RunNpcDeathTrigger(NpcId),
     OpenPersonalStore(OpenPersonalStore),
     PersonalStoreItemList(PersonalStoreItemList),

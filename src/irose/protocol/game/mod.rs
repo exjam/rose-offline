@@ -14,13 +14,14 @@ use crate::{
         },
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
-            CastSkillTargetPosition, LocalChat, LogoutReply, MoveToggle, OpenPersonalStore,
-            PartyMemberLeave, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
-            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess, PickupItemDropResult,
-            QuestDeleteResult, QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat,
-            SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue,
-            UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects,
-            UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
+            CastSkillTargetPosition, LevelUpSkillResult, LocalChat, LogoutReply, MoveToggle,
+            OpenPersonalStore, PartyMemberLeave, PersonalStoreTransactionCancelled,
+            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
+            PersonalStoreTransactionSuccess, PickupItemDropResult, QuestDeleteResult,
+            QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop,
+            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
+            UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects, UpdateXpStamina,
+            UseEmote, UseInventoryItem, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -291,6 +292,12 @@ impl GameClient {
                     packet.item_slot,
                     packet.target_entity_id,
                 ))?;
+            }
+            Some(ClientPackets::LevelUpSkill) => {
+                let packet = PacketClientLevelUpSkill::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::LevelUpSkill(packet.skill_slot))?;
             }
             Some(ClientPackets::CastSkillSelf) => {
                 let packet = PacketClientCastSkillSelf::try_from(&packet)?;
@@ -802,6 +809,18 @@ impl GameClient {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerLearnSkillResult { result }))
+                    .await?;
+            }
+            ServerMessage::LevelUpSkillResult(LevelUpSkillResult {
+                result,
+                updated_skill_points,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerLevelUpSkillResult {
+                        result,
+                        updated_skill_points,
+                    }))
                     .await?;
             }
             ServerMessage::RunNpcDeathTrigger(npc_id) => {

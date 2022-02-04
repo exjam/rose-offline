@@ -316,6 +316,7 @@ pub enum ClientMessage {
     DropItem(ItemSlot, usize),
     DropMoney(usize),
     UseItem(ItemSlot, Option<ClientEntityId>),
+    LevelUpSkill(SkillSlot),
     CastSkillSelf(SkillSlot),
     CastSkillTargetEntity(SkillSlot, ClientEntityId),
     CastSkillTargetPosition(SkillSlot, Point2<f32>),

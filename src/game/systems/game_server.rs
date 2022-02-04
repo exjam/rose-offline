@@ -11,7 +11,7 @@ use crate::{
     game::{
         bundles::{
             client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
-            CharacterBundle, ItemDropBundle,
+            skill_list_try_level_up_skill, CharacterBundle, ItemDropBundle,
         },
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
@@ -19,8 +19,8 @@ use crate::{
             CommandSit, DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase,
             ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
             ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
-            PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, StatPoints,
-            StatusEffects, StatusEffectsRegen, Team, WorldClient,
+            PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
+            StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
@@ -417,16 +417,20 @@ pub fn game_server_main_system(
         &ClientEntity,
         &ClientEntitySector,
         &Position,
-        &mut BasicStats,
-        &mut StatPoints,
-        &mut Hotbar,
-        &mut Equipment,
-        &mut Inventory,
         &AbilityValues,
         &Command,
         &CharacterInfo,
-        &SkillList,
-        (&mut QuestState, &mut MoveMode),
+        (
+            &mut BasicStats,
+            &mut StatPoints,
+            &mut SkillPoints,
+            &mut SkillList,
+            &mut Hotbar,
+            &mut Equipment,
+            &mut Inventory,
+            &mut QuestState,
+            &mut MoveMode,
+        ),
     )>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
@@ -447,16 +451,20 @@ pub fn game_server_main_system(
             client_entity,
             client_entity_sector,
             position,
-            mut basic_stats,
-            mut stat_points,
-            mut hotbar,
-            mut equipment,
-            mut inventory,
             ability_values,
             command,
             character_info,
-            skill_list,
-            (mut quest_state, mut move_mode),
+            (
+                mut basic_stats,
+                mut stat_points,
+                mut skill_points,
+                mut skill_list,
+                mut hotbar,
+                mut equipment,
+                mut inventory,
+                mut quest_state,
+                mut move_mode,
+            ),
         )| {
             let mut entity_commands = commands.entity(entity);
 
@@ -817,6 +825,16 @@ pub fn game_server_main_system(
                             .map(|(target_entity, _, _)| *target_entity);
 
                         use_item_events.send(UseItemEvent::new(entity, item_slot, target_entity));
+                    }
+                    ClientMessage::LevelUpSkill(skill_slot) => {
+                        skill_list_try_level_up_skill(
+                            &game_data.skills,
+                            skill_slot,
+                            &mut skill_list,
+                            Some(&mut skill_points),
+                            Some(client),
+                        )
+                        .ok();
                     }
                     ClientMessage::CastSkillSelf(skill_slot) => {
                         if let Some(skill) = skill_list.get_skill(skill_slot) {
