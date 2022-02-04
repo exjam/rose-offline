@@ -32,7 +32,7 @@ use crate::{
             NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin, StatusEffects,
             Target, Team,
         },
-        events::RewardXpEvent,
+        events::{DamageEvent, RewardXpEvent},
         messages::server::ServerMessage,
         resources::{ClientEntityList, ServerTime, WorldRates, WorldTime, ZoneList},
         GameData,
@@ -58,6 +58,7 @@ pub struct AiSystemParameters<'w, 's> {
     >,
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
+    damage_events: EventWriter<'w, 's, DamageEvent>,
 }
 
 #[derive(SystemParam)]
@@ -795,6 +796,23 @@ fn ai_action_move_near_owner(
     }
 }
 
+fn ai_action_kill_self(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) {
+    ai_system_parameters
+        .damage_events
+        .send(DamageEvent::with_attack(
+            ai_parameters.source.entity,
+            ai_parameters.source.entity,
+            Damage {
+                amount: ai_parameters.source.health_points.hp as u32 + 1,
+                is_critical: false,
+                apply_hit_stun: false,
+            },
+        ));
+}
+
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
     ai_program_event: &AipEvent,
@@ -836,14 +854,9 @@ fn npc_ai_do_actions(
                         .insert(NextCommand::with_attack(attacker.entity));
                 }
             }
-            AipAction::KillSelf => {
-                // TODO: Fix this, this doesn't send death to clients.
-                ai_system_parameters
-                    .commands
-                    .entity(ai_parameters.source.entity)
-                    .insert(HealthPoints::new(0))
-                    .insert(Command::with_die(None, None, None));
+                ai_action_attack_attacker(ai_system_parameters, ai_parameters)
             }
+            AipAction::KillSelf => ai_action_kill_self(ai_system_parameters, ai_parameters),
             AipAction::MoveNearOwner => {
                 ai_action_move_near_owner(ai_system_parameters, ai_parameters)
             }
