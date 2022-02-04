@@ -796,6 +796,31 @@ fn ai_action_move_near_owner(
     }
 }
 
+fn ai_action_attack_owner_target(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+) {
+    if let Some(owner_target_entity) = ai_parameters
+        .source
+        .owner
+        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
+        .and_then(|(_, target)| target.map(|target| target.entity))
+    {
+        if let Ok((_, target_team, _, _, _)) =
+            ai_system_parameters.target_query.get(owner_target_entity)
+        {
+            if target_team.id != Team::DEFAULT_NPC_TEAM_ID
+                && target_team.id != ai_parameters.source.team.id
+            {
+                ai_system_parameters
+                    .commands
+                    .entity(ai_parameters.source.entity)
+                    .insert(NextCommand::with_attack(owner_target_entity));
+            }
+        }
+    }
+}
+
 fn ai_action_kill_self(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -861,19 +886,7 @@ fn npc_ai_do_actions(
                 ai_action_move_near_owner(ai_system_parameters, ai_parameters)
             }
             AipAction::AttackOwnerTarget => {
-                if let Some(owner_target_entity) = ai_parameters
-                    .source
-                    .owner
-                    .and_then(|owner_entity| {
-                        ai_system_parameters.owner_query.get(owner_entity).ok()
-                    })
-                    .and_then(|(_, target)| target.map(|target| target.entity))
-                {
-                    ai_system_parameters
-                        .commands
-                        .entity(ai_parameters.source.entity)
-                        .insert(NextCommand::with_attack(owner_target_entity));
-                }
+                ai_action_attack_owner_target(ai_system_parameters, ai_parameters)
             }
             /*
             AipAction::Emote(_) => {}
