@@ -723,10 +723,16 @@ pub fn command_system(
                             None => (None, None),
                         };
 
+                        let cast_range = if skill_data.cast_range > 0 {
+                            skill_data.cast_range as f32
+                        } else {
+                            ability_values.get_attack_range() as f32
+                        };
+
                         let in_distance = target_position
                             .map(|target_position| {
                                 (target_position.xy() - position.position.xy()).magnitude()
-                                    < skill_data.cast_range as f32
+                                    < cast_range as f32
                             })
                             .unwrap_or(true);
                         if in_distance {
