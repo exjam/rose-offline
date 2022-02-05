@@ -19,7 +19,10 @@ use simplelog::*;
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
 
-use crate::protocol::server::{GameServer, LoginServer, WorldServer};
+use crate::{
+    game::GameConfig,
+    protocol::server::{GameServer, LoginServer, WorldServer},
+};
 
 async fn async_main() {
     TermLogger::init(
@@ -82,9 +85,14 @@ async fn async_main() {
     let game_data = irose::get_game_data(data_idx_path);
     debug!("Time take to read game data {:?}", started_load.elapsed());
 
+    let game_config = GameConfig {
+        enable_npc_spawns: true,
+        enable_monster_spawns: true,
+    };
+
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
     std::thread::spawn(move || {
-        game::GameWorld::new(game_control_rx).run(game_data);
+        game::GameWorld::new(game_control_rx).run(game_config, game_data);
     });
 
     let mut login_server = LoginServer::new(

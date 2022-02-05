@@ -15,7 +15,7 @@ use crate::game::{
     },
     messages::control::ControlMessage,
     resources::{
-        BotList, ClientEntityList, ControlChannel, GameData, LoginTokens, ServerList,
+        BotList, ClientEntityList, ControlChannel, GameConfig, GameData, LoginTokens, ServerList,
         ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
     },
     systems::{
@@ -55,18 +55,19 @@ impl GameWorld {
         }
     }
 
-    pub fn run(&mut self, game_data: GameData) {
+    pub fn run(&mut self, game_config: GameConfig, game_data: GameData) {
         let mut world = World::new();
         world.insert_resource(BotList::new());
         world.insert_resource(ClientEntityList::new(&game_data.zones));
         world.insert_resource(ControlChannel::new(self.control_rx.clone()));
-        world.insert_resource(game_data);
         world.insert_resource(LoginTokens::new());
         world.insert_resource(ServerList::new());
         world.insert_resource(ServerMessages::new());
         world.insert_resource(WorldRates::new());
         world.insert_resource(WorldTime::new());
         world.insert_resource(ZoneList::new());
+        world.insert_resource(game_config);
+        world.insert_resource(game_data);
 
         world.insert_resource(Events::<ChatCommandEvent>::default());
         world.insert_resource(Events::<DamageEvent>::default());
