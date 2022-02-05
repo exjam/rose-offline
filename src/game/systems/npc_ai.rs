@@ -928,7 +928,7 @@ fn npc_ai_do_actions(
             AipAction::GiveItemToOwner(_, _) => {}
             */
             _ => {
-                trace!("Unimplemented AI action: {:?}", action);
+                trace!(target: "npc_ai", "Unimplemented AI action: {:?}", action);
             }
         }
     }

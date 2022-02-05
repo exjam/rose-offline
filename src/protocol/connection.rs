@@ -63,7 +63,7 @@ impl<'a> Connection<'a> {
                 // Packets can contain random amount of padding at end
                 self.buffer.advance(read_length - size);
 
-                trace!("RECV [{:03X}] {:02x?}", command, &data[..]);
+                trace!(target: "packets", "RECV [{:03X}] {:02x?}", command, &data[..]);
                 return Ok(Packet { command, data });
             } else {
                 return Err(ProtocolError::InvalidPacket);
@@ -72,7 +72,7 @@ impl<'a> Connection<'a> {
     }
 
     pub async fn write_packet(&mut self, packet: Packet) -> Result<(), ProtocolError> {
-        trace!("SEND [{:03X}] {:02x?}", packet.command, &packet.data[..]);
+        trace!(target: "packets", "SEND [{:03X}] {:02x?}", packet.command, &packet.data[..]);
 
         let size = packet.data.len() + 6;
         let mut buffer = BytesMut::with_capacity(size);
