@@ -10,7 +10,6 @@ use bevy_ecs::{
     system::SystemParam,
 };
 use chrono::{Datelike, Timelike};
-use log::{trace, warn};
 use nalgebra::{Point3, Vector3};
 use rand::Rng;
 
@@ -445,14 +444,14 @@ fn ai_condition_variable(
             .and_then(|object_variables| object_variables.variables.get(variable_id).copied())
             .unwrap_or(0),
         AipVariableType::World => {
-            warn!(
+            log::warn!(target: "npc_ai",
                 "Unimplemented ai_condition_variable with variable type {:?}",
                 variable_type
             );
             0
         }
         AipVariableType::Economy => {
-            warn!(
+            log::warn!(target: "npc_ai",
                 "Unimplemented ai_condition_variable with variable type {:?}",
                 variable_type
             );
@@ -712,10 +711,11 @@ fn npc_ai_check_conditions(
             AipCondition::IsTargetClanMaster => false,
             */
             _ => {
-                warn!("Unimplemented AI condition: {:?}", condition);
+                log::trace!(target: "npc_ai", "  - Unimplemented AI condition: {:?}", condition);
                 false
             }
         };
+        log::trace!(target: "npc_ai", "  - AI condition: {:?} = {}", condition, result);
 
         if !result {
             return false;
@@ -880,6 +880,7 @@ fn npc_ai_do_actions(
     ai_parameters: &mut AiParameters,
 ) {
     for action in ai_program_event.actions.iter() {
+        log::trace!(target: "npc_ai", "  - AI action: {:?}", action);
         match *action {
             AipAction::Stop => ai_action_stop(ai_system_parameters, ai_parameters),
             AipAction::MoveRandomDistance(move_origin, move_mode, distance) => {
@@ -928,7 +929,7 @@ fn npc_ai_do_actions(
             AipAction::GiveItemToOwner(_, _) => {}
             */
             _ => {
-                trace!(target: "npc_ai", "Unimplemented AI action: {:?}", action);
+                log::trace!(target: "npc_ai", "Unimplemented AI action: {:?}", action);
             }
         }
     }
@@ -954,7 +955,9 @@ fn npc_ai_run_trigger(
     };
 
     // Do actions for only the first event with valid conditions
-    for ai_program_event in ai_trigger.events.iter() {
+    log::trace!(target: "npc_ai", "Running AI trigger");
+    for (index, ai_program_event) in ai_trigger.events.iter().enumerate() {
+        log::trace!(target: "npc_ai", " - Event {}", index);
         if npc_ai_check_conditions(
             ai_system_parameters,
             ai_system_resources,
