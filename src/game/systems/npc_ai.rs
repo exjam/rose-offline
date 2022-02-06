@@ -19,11 +19,11 @@ use crate::{
             AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition,
             AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
             AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
-            AipHaveStatusType, AipMotionId, AipMoveMode, AipMoveOrigin, AipNearbyAlly, AipNpcId,
-            AipOperatorType, AipSkillId, AipSkillTarget, AipSpawnNpcOrigin, AipTrigger,
-            AipVariableType,
+            AipHaveStatusType, AipMonsterSpawnState, AipMotionId, AipMoveMode, AipMoveOrigin,
+            AipNearbyAlly, AipNpcId, AipOperatorType, AipSkillId, AipSkillTarget,
+            AipSpawnNpcOrigin, AipTrigger, AipVariableType, AipZoneId,
         },
-        Damage, MotionId, NpcId, SkillId,
+        Damage, MotionId, NpcId, SkillId, ZoneId,
     },
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
@@ -66,6 +66,7 @@ pub struct AiSystemParameters<'w, 's> {
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
+    zone_list: ResMut<'w, ZoneList>,
 }
 
 #[derive(SystemParam)]
@@ -73,7 +74,6 @@ pub struct AiSystemResources<'w, 's> {
     game_data: Res<'w, GameData>,
     server_time: Res<'w, ServerTime>,
     world_time: Res<'w, WorldTime>,
-    zone_list: Res<'w, ZoneList>,
 
     #[system_param(ignore)]
     _secret: PhantomData<&'s ()>,
@@ -340,12 +340,12 @@ fn ai_condition_source_ability_value(
 }
 
 fn ai_condition_select_local_npc(
-    ai_system_resources: &AiSystemResources,
+    ai_system_parameters: &AiSystemParameters,
     ai_parameters: &mut AiParameters,
     npc_id: AipNpcId,
 ) -> bool {
-    let local_npc =
-        NpcId::new(npc_id as u16).and_then(|npc_id| ai_system_resources.zone_list.find_npc(npc_id));
+    let local_npc = NpcId::new(npc_id as u16)
+        .and_then(|npc_id| ai_system_parameters.zone_list.find_npc(npc_id));
     ai_parameters.selected_local_npc = local_npc;
     local_npc.is_some()
 }
@@ -655,7 +655,7 @@ fn npc_ai_check_conditions(
                 ai_condition_source_ability_value(ai_parameters, operator, ability, value)
             }
             AipCondition::SelectLocalNpc(npc_id) => {
-                ai_condition_select_local_npc(ai_system_resources, ai_parameters, npc_id)
+                ai_condition_select_local_npc(ai_system_parameters, ai_parameters, npc_id)
             }
             AipCondition::MonthDay(AipConditionMonthDayTime {
                 month_day,
@@ -1149,6 +1149,29 @@ fn ai_action_use_skill(
     }
 }
 
+fn ai_action_set_monster_spawn_state(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    zone_id: Option<AipZoneId>,
+    state: AipMonsterSpawnState,
+) {
+    let zone_id = zone_id
+        .and_then(|zone_id| ZoneId::new(zone_id as u16))
+        .unwrap_or(ai_parameters.source.position.zone_id);
+
+    let enabled = match state {
+        AipMonsterSpawnState::Disabled => false,
+        AipMonsterSpawnState::Enabled => true,
+        AipMonsterSpawnState::Toggle => !ai_system_parameters
+            .zone_list
+            .get_monster_spawns_enabled(zone_id),
+    };
+
+    ai_system_parameters
+        .zone_list
+        .set_monster_spawns_enabled(zone_id, enabled);
+}
+
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
@@ -1227,6 +1250,9 @@ fn npc_ai_do_actions(
                 skill_id,
                 motion_id,
             ),
+            AipAction::SetMonsterSpawnState(zone, state) => {
+                ai_action_set_monster_spawn_state(ai_system_parameters, ai_parameters, zone, state)
+            }
             /*
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
@@ -1237,7 +1263,6 @@ fn npc_ai_do_actions(
             AipAction::Message(_, _) => {}
             AipAction::DoQuestTrigger(_) => {}
             AipAction::SetPvpFlag(_, _) => {}
-            AipAction::SetMonsterSpawnState(_, _) => {}
             AipAction::GiveItemToOwner(_, _) => {}
             */
             _ => {
