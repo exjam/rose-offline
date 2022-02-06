@@ -20,12 +20,12 @@ use crate::{
             AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
             AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
             AipHaveStatusType, AipMotionId, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType,
-            AipSkillId, AipSkillTarget, AipTrigger, AipVariableType,
+            AipSkillId, AipSkillTarget, AipSpawnNpcOrigin, AipTrigger, AipVariableType,
         },
         Damage, MotionId, NpcId, SkillId,
     },
     game::{
-        bundles::{client_entity_leave_zone, ItemDropBundle},
+        bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
         components::{
             AbilityValues, ClientEntity, ClientEntitySector, Command, CommandData, CommandDie,
             DamageSources, GameClient, HealthPoints, Level, MonsterSpawnPoint, MoveMode,
@@ -88,7 +88,7 @@ struct AiSourceData<'s> {
 
 struct AiAttackerData<'a> {
     entity: Entity,
-    _position: &'a Position,
+    position: &'a Position,
     _team: &'a Team,
     ability_values: &'a AbilityValues,
     health_points: &'a HealthPoints,
@@ -967,6 +967,60 @@ fn ai_action_kill_self(
         ));
 }
 
+fn ai_action_spawn_npc(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
+    ai_parameters: &mut AiParameters,
+    npc_id: AipNpcId,
+    distance: AipDistance,
+    origin: AipSpawnNpcOrigin,
+    is_owner: bool,
+) {
+    let spawn_position = match origin {
+        AipSpawnNpcOrigin::CurrentPosition => Some(ai_parameters.source.position.position),
+        AipSpawnNpcOrigin::AttackerPosition => ai_parameters
+            .attacker
+            .map(|attacker| attacker.position.position),
+        AipSpawnNpcOrigin::TargetPosition => {
+            ai_parameters.source.target.and_then(|target_entity| {
+                ai_system_parameters
+                    .target_query
+                    .get(target_entity)
+                    .map(|(_, _, _, _, _, position)| position.position)
+                    .ok()
+            })
+        }
+    };
+
+    let npc_id = NpcId::new(npc_id as u16);
+    if npc_id.is_none() {
+        return;
+    }
+
+    if let Some(spawn_position) = spawn_position {
+        // TODO: If ai_parameters.is_dead { spawn after 3 seconds }
+        if let Some(spawn_entity) = MonsterBundle::spawn(
+            &mut ai_system_parameters.commands,
+            &mut ai_system_parameters.client_entity_list,
+            &ai_system_resources.game_data,
+            npc_id.unwrap(),
+            ai_parameters.source.position.zone_id,
+            SpawnOrigin::Summoned(ai_parameters.source.entity, spawn_position),
+            distance,
+            ai_parameters.source.team.clone(),
+            None,
+            None,
+        ) {
+            if is_owner {
+                ai_system_parameters
+                    .commands
+                    .entity(spawn_entity)
+                    .insert(Owner::new(ai_parameters.source.entity));
+            }
+        }
+    }
+}
+
 fn ai_action_use_skill(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -1005,6 +1059,7 @@ fn ai_action_use_skill(
 
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
     ai_program_event: &AipEvent,
     ai_parameters: &mut AiParameters,
 ) {
@@ -1026,6 +1081,9 @@ fn npc_ai_do_actions(
                     move_mode,
                     distance,
                 )
+            }
+            AipAction::MoveNearOwner => {
+                ai_action_move_near_owner(ai_system_parameters, ai_parameters)
             }
             AipAction::AttackNearChar => {
                 ai_action_attack_near_char(ai_system_parameters, ai_parameters)
@@ -1049,9 +1107,15 @@ fn npc_ai_do_actions(
                 )
             }
             AipAction::KillSelf => ai_action_kill_self(ai_system_parameters, ai_parameters),
-            AipAction::MoveNearOwner => {
-                ai_action_move_near_owner(ai_system_parameters, ai_parameters)
-            }
+            AipAction::SpawnNpc(npc_id, distance, origin, is_owner) => ai_action_spawn_npc(
+                ai_system_parameters,
+                ai_system_resources,
+                ai_parameters,
+                npc_id,
+                distance,
+                origin,
+                is_owner,
+            ),
             AipAction::UseSkill(target, skill_id, motion_id) => ai_action_use_skill(
                 ai_system_parameters,
                 ai_parameters,
@@ -1064,7 +1128,6 @@ fn npc_ai_do_actions(
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
             AipAction::TransformNpc(_) => {}
-            AipAction::SpawnNpc(_, _, _, _) => {}
             AipAction::NearbyAlliesAttackTarget(_, _, _) => {}
             AipAction::NearbyAlliesSameNpcAttackTarget(_) => {}
             AipAction::RunAway(_) => {}
@@ -1112,7 +1175,12 @@ fn npc_ai_run_trigger(
             ai_program_event,
             &mut ai_parameters,
         ) {
-            npc_ai_do_actions(ai_system_parameters, ai_program_event, &mut ai_parameters);
+            npc_ai_do_actions(
+                ai_system_parameters,
+                ai_system_resources,
+                ai_program_event,
+                &mut ai_parameters,
+            );
             break;
         }
     }
@@ -1132,7 +1200,7 @@ fn get_attacker_data<'w, 's>(
     {
         Some(AiAttackerData::<'w> {
             entity,
-            _position: attacker_position,
+            position: attacker_position,
             _team: attacker_team,
             ability_values: attacker_ability_values,
             health_points: attacker_health_points,
