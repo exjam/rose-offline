@@ -16,11 +16,11 @@ use rand::Rng;
 use crate::{
     data::{
         formats::{
-            AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities,
-            AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistanceOrigin,
-            AipEvent, AipHaveStatusTarget, AipHaveStatusType, AipMotionId, AipMoveMode,
-            AipMoveOrigin, AipNpcId, AipOperatorType, AipSkillId, AipSkillTarget, AipTrigger,
-            AipVariableType,
+            AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition,
+            AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
+            AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
+            AipHaveStatusType, AipMotionId, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType,
+            AipSkillId, AipSkillTarget, AipTrigger, AipVariableType,
         },
         Damage, MotionId, NpcId, SkillId,
     },
@@ -858,6 +858,68 @@ fn ai_action_attack_owner_target(
     }
 }
 
+fn ai_action_attack_nearby_entity_by_stat(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    distance: AipDistance,
+    ability_type: AipAbilityType,
+    stat_choice: AipAttackNearbyStat,
+) {
+    let zone_entities = ai_system_parameters
+        .client_entity_list
+        .get_zone(ai_parameters.source.position.zone_id);
+    if zone_entities.is_none() {
+        return;
+    }
+
+    let mut min_entity = None;
+    let mut max_entity = None;
+
+    for (entity, _) in zone_entities
+        .unwrap()
+        .iter_entities_within_distance(ai_parameters.source.position.position.xy(), distance as f32)
+    {
+        if entity == ai_parameters.source.entity {
+            continue;
+        }
+
+        if let Ok((level, team, ability_values, _, health_points)) =
+            ai_system_parameters.target_query.get(entity)
+        {
+            if team.id != Team::DEFAULT_NPC_TEAM_ID && team.id != ai_parameters.source.team.id {
+                let value = match ability_type {
+                    AipAbilityType::Level => level.level as i32,
+                    AipAbilityType::Attack => ability_values.get_attack_power(),
+                    AipAbilityType::Defence => ability_values.get_defence(),
+                    AipAbilityType::Resistance => ability_values.get_resistance(),
+                    AipAbilityType::HealthPoints => health_points.hp,
+                    AipAbilityType::Charm => ability_values.get_charm(),
+                };
+
+                if min_entity.map_or(true, |(_, min_value)| value < min_value) {
+                    min_entity = Some((entity, value));
+                }
+
+                if max_entity.map_or(true, |(_, max_value)| value > max_value) {
+                    max_entity = Some((entity, value));
+                }
+            }
+        }
+    }
+
+    let target_entity = match stat_choice {
+        AipAttackNearbyStat::Lowest => min_entity.map(|(entity, _)| entity),
+        AipAttackNearbyStat::Highest => max_entity.map(|(entity, _)| entity),
+    };
+
+    if let Some(target_entity) = target_entity {
+        ai_system_parameters
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(NextCommand::with_attack(target_entity));
+    }
+}
+
 fn ai_action_kill_self(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -938,12 +1000,21 @@ fn npc_ai_do_actions(
             AipAction::AttackAttacker => {
                 ai_action_attack_attacker(ai_system_parameters, ai_parameters)
             }
+            AipAction::AttackOwnerTarget => {
+                ai_action_attack_owner_target(ai_system_parameters, ai_parameters)
+            }
+            AipAction::AttackNearbyEntityByStat(distance, ability_type, stat_choice) => {
+                ai_action_attack_nearby_entity_by_stat(
+                    ai_system_parameters,
+                    ai_parameters,
+                    distance,
+                    ability_type,
+                    stat_choice,
+                )
+            }
             AipAction::KillSelf => ai_action_kill_self(ai_system_parameters, ai_parameters),
             AipAction::MoveNearOwner => {
                 ai_action_move_near_owner(ai_system_parameters, ai_parameters)
-            }
-            AipAction::AttackOwnerTarget => {
-                ai_action_attack_owner_target(ai_system_parameters, ai_parameters)
             }
             AipAction::UseSkill(target, skill_id, motion_id) => ai_action_use_skill(
                 ai_system_parameters,
@@ -955,7 +1026,6 @@ fn npc_ai_do_actions(
             /*
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
-            AipAction::AttackNearbyEntityByStat(_, _, _) => {}
             AipAction::SpecialAttack => {}
             AipAction::MoveDistanceFromTarget(_, _) => {}
             AipAction::TransformNpc(_) => {}
