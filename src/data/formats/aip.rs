@@ -215,7 +215,7 @@ pub enum AipAction {
     MoveRandomDistance(AipMoveOrigin, AipMoveMode, AipDistance),
     AttackNearbyEntityByStat(AipDistance, AipAbilityType, AipAttackNearbyStat),
     SpecialAttack,
-    MoveDistanceFromTarget(AipMoveMode, AipDistance),
+    MoveAwayFromTarget(AipMoveMode, AipDistance),
     TransformNpc(AipNpcId),
     SpawnNpc(AipNpcId, AipDistance, AipSpawnNpcOrigin, AipIsSpawnOwner),
     NearbyAlliesAttackTarget(usize, AipDistance, Option<AipNpcId>),
@@ -758,8 +758,7 @@ impl AipFile {
                             };
                             reader.skip(3); // padding
 
-                            actions
-                                .push(AipAction::MoveDistanceFromTarget(move_mode, distance * 100));
+                            actions.push(AipAction::MoveAwayFromTarget(move_mode, distance * 100));
                         }
                         10 => {
                             let npc_id = reader.read_u16()? as i32;

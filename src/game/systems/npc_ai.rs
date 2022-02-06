@@ -54,6 +54,7 @@ pub struct AiSystemParameters<'w, 's> {
             &'static AbilityValues,
             &'static StatusEffects,
             &'static HealthPoints,
+            &'static Position,
         ),
     >,
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
@@ -484,7 +485,7 @@ fn ai_condition_has_status_effect(
             .source
             .target
             .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
-            .map(|(_, _, _, status_effects, _)| status_effects),
+            .map(|(_, _, _, status_effects, _, _)| status_effects),
     };
 
     if let Some(status_effects) = status_effects {
@@ -538,7 +539,7 @@ fn ai_condition_target_ability_value(
     aip_ability_type: AipAbilityType,
     value: i32,
 ) -> bool {
-    if let Some((_, _, ability_values, _, health_points)) = ai_parameters
+    if let Some((_, _, ability_values, _, health_points, _)) = ai_parameters
         .source
         .target
         .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
@@ -568,7 +569,7 @@ fn ai_condition_attacker_and_target_ability_value(
         .source
         .target
         .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
-        .map(|(_, _, ability_values, _, health_points)| {
+        .map(|(_, _, ability_values, _, health_points, _)| {
             get_aip_ability_value(ability_values, health_points, aip_ability_type)
         });
 
@@ -769,6 +770,35 @@ fn ai_action_attack_near_char(
     }
 }
 
+fn ai_action_move_away_from_target(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    move_mode: AipMoveMode,
+    distance: i32,
+) {
+    let move_mode = match move_mode {
+        AipMoveMode::Run => MoveMode::Run,
+        AipMoveMode::Walk => MoveMode::Walk,
+    };
+
+    if let Some(target_entity) = ai_parameters.source.target {
+        if let Ok((_, _, _, _, _, target_position)) =
+            ai_system_parameters.target_query.get(target_entity)
+        {
+            let source_position = ai_parameters.source.position.position;
+            let direction_away_from_target =
+                (source_position.xy() - target_position.position.xy()).normalize();
+            let move_vector = distance as f32 * direction_away_from_target;
+            let destination = source_position + Vector3::new(move_vector.x, move_vector.y, 0.0);
+
+            ai_system_parameters
+                .commands
+                .entity(ai_parameters.source.entity)
+                .insert(NextCommand::with_move(destination, None, Some(move_mode)));
+        }
+    }
+}
+
 fn ai_action_move_random_distance(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -843,7 +873,7 @@ fn ai_action_attack_owner_target(
         .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .and_then(|(_, target)| target.map(|target| target.entity))
     {
-        if let Ok((_, target_team, _, _, _)) =
+        if let Ok((_, target_team, _, _, _, _)) =
             ai_system_parameters.target_query.get(owner_target_entity)
         {
             if target_team.id != Team::DEFAULT_NPC_TEAM_ID
@@ -883,7 +913,7 @@ fn ai_action_attack_nearby_entity_by_stat(
             continue;
         }
 
-        if let Ok((level, team, ability_values, _, health_points)) =
+        if let Ok((level, team, ability_values, _, health_points, _)) =
             ai_system_parameters.target_query.get(entity)
         {
             if team.id != Team::DEFAULT_NPC_TEAM_ID && team.id != ai_parameters.source.team.id {
@@ -982,6 +1012,12 @@ fn npc_ai_do_actions(
         log::trace!(target: "npc_ai", "  - AI action: {:?}", action);
         match *action {
             AipAction::Stop => ai_action_stop(ai_system_parameters, ai_parameters),
+            AipAction::MoveAwayFromTarget(move_mode, distance) => ai_action_move_away_from_target(
+                ai_system_parameters,
+                ai_parameters,
+                move_mode,
+                distance,
+            ),
             AipAction::MoveRandomDistance(move_origin, move_mode, distance) => {
                 ai_action_move_random_distance(
                     ai_system_parameters,
@@ -1027,7 +1063,6 @@ fn npc_ai_do_actions(
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
-            AipAction::MoveDistanceFromTarget(_, _) => {}
             AipAction::TransformNpc(_) => {}
             AipAction::SpawnNpc(_, _, _, _) => {}
             AipAction::NearbyAlliesAttackTarget(_, _, _) => {}
