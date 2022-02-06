@@ -1397,7 +1397,7 @@ fn calculate_passive_skill_ability_values<'a>(
 
     for &skill_id in passive_skills {
         if let Some(skill_data) = skill_database.get_skill(skill_id) {
-            for add_ability in &skill_data.add_ability {
+            for add_ability in skill_data.add_ability.iter().filter_map(|x| x.as_ref()) {
                 if add_ability.rate != 0 {
                     result.add_ability_rate(add_ability.ability_type, add_ability.rate);
                 } else {

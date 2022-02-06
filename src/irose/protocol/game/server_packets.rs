@@ -1330,7 +1330,7 @@ impl From<&PacketServerUseItem> for Packet {
 pub struct PacketServerCastSkillSelf {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
-    pub npc_motion_id: Option<usize>,
+    pub cast_motion_id: Option<MotionId>,
 }
 
 impl From<&PacketServerCastSkillSelf> for Packet {
@@ -1338,8 +1338,8 @@ impl From<&PacketServerCastSkillSelf> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::CastSkillSelf as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.skill_id.get() as u16);
-        if let Some(npc_motion_id) = packet.npc_motion_id {
-            writer.write_u8(npc_motion_id as u8);
+        if let Some(cast_motion_id) = packet.cast_motion_id {
+            writer.write_u8(cast_motion_id.get() as u8);
         }
         writer.into()
     }
@@ -1351,7 +1351,7 @@ pub struct PacketServerCastSkillTargetEntity {
     pub target_entity_id: ClientEntityId,
     pub target_distance: f32,
     pub target_position: Point2<f32>,
-    pub npc_motion_id: Option<usize>,
+    pub cast_motion_id: Option<MotionId>,
 }
 
 impl From<&PacketServerCastSkillTargetEntity> for Packet {
@@ -1363,8 +1363,8 @@ impl From<&PacketServerCastSkillTargetEntity> for Packet {
         writer.write_u16(packet.target_distance as u16);
         writer.write_f32(packet.target_position.x);
         writer.write_f32(packet.target_position.y);
-        if let Some(npc_motion_id) = packet.npc_motion_id {
-            writer.write_u8(npc_motion_id as u8);
+        if let Some(cast_motion_id) = packet.cast_motion_id {
+            writer.write_u8(cast_motion_id.get() as u8);
         }
         writer.into()
     }
@@ -1374,7 +1374,7 @@ pub struct PacketServerCastSkillTargetPosition {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
     pub target_position: Point2<f32>,
-    pub npc_motion_id: Option<usize>,
+    pub cast_motion_id: Option<MotionId>,
 }
 
 impl From<&PacketServerCastSkillTargetPosition> for Packet {
@@ -1384,8 +1384,8 @@ impl From<&PacketServerCastSkillTargetPosition> for Packet {
         writer.write_u16(packet.skill_id.get() as u16);
         writer.write_f32(packet.target_position.x);
         writer.write_f32(packet.target_position.y);
-        if let Some(npc_motion_id) = packet.npc_motion_id {
-            writer.write_u8(npc_motion_id as u8);
+        if let Some(cast_motion_id) = packet.cast_motion_id {
+            writer.write_u8(cast_motion_id.get() as u8);
         }
         writer.into()
     }

@@ -138,7 +138,7 @@ pub struct SkillData {
     pub action_mode: SkillActionMode,
     pub action_motion_id: Option<MotionId>,
     pub action_motion_speed: f32,
-    pub add_ability: ArrayVec<SkillAddAbility, 2>,
+    pub add_ability: [Option<SkillAddAbility>; 2],
     pub cast_range: u32,
     pub casting_motion_id: Option<MotionId>,
     pub casting_motion_speed: f32,

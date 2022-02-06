@@ -114,29 +114,24 @@ impl StbSkill {
     stb_column! { 23, get_warp_zone_ypos, i32 }
 
     stb_column! { (21..=26).step_by(3), get_add_ability_type, [Option<AbilityType>; 2] }
-    stb_column! { (22..=26).step_by(3), get_add_ability_rate, [Option<i32>; 2] }
-    stb_column! { (23..=26).step_by(3), get_add_ability_value, [Option<i32>; 2] }
+    stb_column! { (22..=26).step_by(3), get_add_ability_value, [i32; 2] }
+    stb_column! { (23..=26).step_by(3), get_add_ability_rate, [i32; 2] }
 
-    pub fn get_add_ability(&self, id: usize) -> ArrayVec<SkillAddAbility, 2> {
-        self.get_add_ability_type(id)
-            .iter()
-            .zip(
-                self.get_add_ability_rate(id)
-                    .iter()
-                    .zip(self.get_add_ability_value(id).iter()),
-            )
-            .map(
-                |(ability_type, (rate, value))| match (ability_type, rate, value) {
-                    (&Some(ability_type), &Some(rate), &Some(value)) => Some(SkillAddAbility {
-                        ability_type,
-                        rate,
-                        value,
-                    }),
-                    _ => None,
-                },
-            )
-            .flatten()
-            .collect()
+    pub fn get_add_ability(&self, id: usize) -> [Option<SkillAddAbility>; 2] {
+        let mut result: [Option<SkillAddAbility>; 2] = Default::default();
+        let ability_types = self.get_add_ability_type(id);
+        let ability_values = self.get_add_ability_value(id);
+        let ability_rates = self.get_add_ability_rate(id);
+
+        for (index, skill_add_ability) in result.iter_mut().enumerate() {
+            *skill_add_ability = ability_types[index].map(|ability_type| SkillAddAbility {
+                ability_type,
+                rate: ability_rates[index],
+                value: ability_values[index],
+            });
+        }
+
+        result
     }
 
     stb_column! { 27, get_cooldown_group, SkillCooldownGroup }

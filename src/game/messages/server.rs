@@ -348,7 +348,7 @@ pub struct UseInventoryItem {
 pub struct CastSkillSelf {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
-    pub npc_motion_id: Option<usize>,
+    pub cast_motion_id: Option<MotionId>,
 }
 
 #[derive(Clone)]
@@ -358,7 +358,7 @@ pub struct CastSkillTargetEntity {
     pub target_entity_id: ClientEntityId,
     pub target_distance: f32,
     pub target_position: Point2<f32>,
-    pub npc_motion_id: Option<usize>,
+    pub cast_motion_id: Option<MotionId>,
 }
 
 #[derive(Clone)]
@@ -366,7 +366,7 @@ pub struct CastSkillTargetPosition {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
     pub target_position: Point2<f32>,
-    pub npc_motion_id: Option<usize>,
+    pub cast_motion_id: Option<MotionId>,
 }
 
 #[derive(Clone)]

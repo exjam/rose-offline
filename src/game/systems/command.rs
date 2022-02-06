@@ -265,6 +265,7 @@ pub fn command_system(
                     CommandData::CastSkill(CommandCastSkill {
                         skill_id,
                         skill_target: None,
+                        cast_motion_id,
                         ..
                     }) => {
                         server_messages.send_entity_message(
@@ -272,13 +273,14 @@ pub fn command_system(
                             ServerMessage::CastSkillSelf(server::CastSkillSelf {
                                 entity_id: client_entity.id,
                                 skill_id: *skill_id,
-                                npc_motion_id: None, // TODO: CastSkillSelf npc_motion_id
+                                cast_motion_id: *cast_motion_id,
                             }),
                         );
                     }
                     CommandData::CastSkill(CommandCastSkill {
                         skill_id,
                         skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
+                        cast_motion_id,
                         ..
                     }) => {
                         if let Some((target_client_entity, target_position, ..)) =
@@ -296,7 +298,7 @@ pub fn command_system(
                                         target_entity_id: target_client_entity.id,
                                         target_distance: distance,
                                         target_position: target_position.position.xy(),
-                                        npc_motion_id: None, // TODO: CastSkillTargetEntity npc_motion_id
+                                        cast_motion_id: *cast_motion_id,
                                     },
                                 ),
                             );
@@ -307,6 +309,7 @@ pub fn command_system(
                     CommandData::CastSkill(CommandCastSkill {
                         skill_id,
                         skill_target: Some(CommandCastSkillTarget::Position(target_position)),
+                        cast_motion_id,
                         ..
                     }) => {
                         server_messages.send_entity_message(
@@ -316,7 +319,7 @@ pub fn command_system(
                                     entity_id: client_entity.id,
                                     skill_id: *skill_id,
                                     target_position: *target_position,
-                                    npc_motion_id: None, // TODO: CastSkillTargetPosition npc_motion_id
+                                    cast_motion_id: *cast_motion_id,
                                 },
                             ),
                         );
@@ -704,6 +707,8 @@ pub fn command_system(
                     skill_id,
                     skill_target,
                     ref use_item,
+                    cast_motion_id,
+                    action_motion_id,
                 }) => {
                     if let Some(skill_data) = game_data.skills.get_skill(skill_id) {
                         let mut entity_commands = commands.entity(entity);
@@ -739,8 +744,8 @@ pub fn command_system(
                             })
                             .unwrap_or(true);
                         if in_distance {
-                            let casting_duration = skill_data
-                                .casting_motion_id
+                            let casting_duration = cast_motion_id
+                                .or(skill_data.casting_motion_id)
                                 .and_then(|motion_id| {
                                     if let Some(npc) = npc {
                                         game_data.npcs.get_npc_motion(npc.id, motion_id)
@@ -752,8 +757,8 @@ pub fn command_system(
                                 .unwrap_or_else(|| Duration::from_secs(0))
                                 .mul_f32(skill_data.casting_motion_speed);
 
-                            let action_duration = skill_data
-                                .action_motion_id
+                            let action_duration = action_motion_id
+                                .or(skill_data.action_motion_id)
                                 .and_then(|motion_id| {
                                     if let Some(npc) = npc {
                                         game_data.npcs.get_npc_motion(npc.id, motion_id)

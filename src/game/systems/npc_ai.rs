@@ -18,10 +18,11 @@ use crate::{
         formats::{
             AipAbilityType, AipAction, AipCondition, AipConditionFindNearbyEntities,
             AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistanceOrigin,
-            AipEvent, AipHaveStatusTarget, AipHaveStatusType, AipMoveMode, AipMoveOrigin, AipNpcId,
-            AipOperatorType, AipTrigger, AipVariableType,
+            AipEvent, AipHaveStatusTarget, AipHaveStatusType, AipMotionId, AipMoveMode,
+            AipMoveOrigin, AipNpcId, AipOperatorType, AipSkillId, AipSkillTarget, AipTrigger,
+            AipVariableType,
         },
-        Damage, NpcId,
+        Damage, MotionId, NpcId, SkillId,
     },
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle},
@@ -874,6 +875,42 @@ fn ai_action_kill_self(
         ));
 }
 
+fn ai_action_use_skill(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    target: AipSkillTarget,
+    skill_id: AipSkillId,
+    motion_id: AipMotionId,
+) {
+    let target_entity = match target {
+        AipSkillTarget::FindChar => ai_parameters.find_char.map(|(entity, _)| entity),
+        AipSkillTarget::Target => ai_parameters.source.target,
+        AipSkillTarget::This => Some(ai_parameters.source.entity),
+        AipSkillTarget::NearChar => ai_parameters.near_char.map(|(entity, _)| entity),
+    };
+    let skill_id = SkillId::new(skill_id as u16);
+    let cast_motion_id = MotionId::new(motion_id as u16);
+    let action_motion_id = MotionId::new(motion_id as u16 + 1);
+
+    if let (Some(skill_id), Some(target_entity)) = (skill_id, target_entity) {
+        let next_command = if target_entity != ai_parameters.source.entity {
+            NextCommand::with_npc_cast_skill_target(
+                skill_id,
+                target_entity,
+                cast_motion_id,
+                action_motion_id,
+            )
+        } else {
+            NextCommand::with_npc_cast_skill_self(skill_id, cast_motion_id, action_motion_id)
+        };
+
+        ai_system_parameters
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(next_command);
+    }
+}
+
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
     ai_program_event: &AipEvent,
@@ -908,6 +945,13 @@ fn npc_ai_do_actions(
             AipAction::AttackOwnerTarget => {
                 ai_action_attack_owner_target(ai_system_parameters, ai_parameters)
             }
+            AipAction::UseSkill(target, skill_id, motion_id) => ai_action_use_skill(
+                ai_system_parameters,
+                ai_parameters,
+                target,
+                skill_id,
+                motion_id,
+            ),
             /*
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
@@ -920,7 +964,6 @@ fn npc_ai_do_actions(
             AipAction::NearbyAlliesSameNpcAttackTarget(_) => {}
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
-            AipAction::UseSkill(_, _, _) => {}
             AipAction::SetVariable(_, _, _, _) => {}
             AipAction::Message(_, _) => {}
             AipAction::DoQuestTrigger(_) => {}

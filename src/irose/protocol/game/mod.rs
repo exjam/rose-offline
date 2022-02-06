@@ -941,14 +941,14 @@ impl GameClient {
             ServerMessage::CastSkillSelf(CastSkillSelf {
                 entity_id,
                 skill_id,
-                npc_motion_id,
+                cast_motion_id,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerCastSkillSelf {
                         entity_id,
                         skill_id,
-                        npc_motion_id,
+                        cast_motion_id,
                     }))
                     .await?;
             }
@@ -958,7 +958,7 @@ impl GameClient {
                 target_entity_id,
                 target_distance,
                 target_position,
-                npc_motion_id,
+                cast_motion_id,
             }) => {
                 client
                     .connection
@@ -968,7 +968,7 @@ impl GameClient {
                         target_entity_id,
                         target_distance,
                         target_position,
-                        npc_motion_id,
+                        cast_motion_id,
                     }))
                     .await?;
             }
@@ -976,7 +976,7 @@ impl GameClient {
                 entity_id,
                 skill_id,
                 target_position,
-                npc_motion_id,
+                cast_motion_id,
             }) => {
                 client
                     .connection
@@ -984,7 +984,7 @@ impl GameClient {
                         entity_id,
                         skill_id,
                         target_position,
-                        npc_motion_id,
+                        cast_motion_id,
                     }))
                     .await?;
             }

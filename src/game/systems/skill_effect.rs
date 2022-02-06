@@ -16,8 +16,8 @@ use crate::{
         bundles::{ability_values_get_value, MonsterBundle},
         components::{
             AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
-            GameClient, HealthPoints, Inventory, Level, MoveSpeed, Npc, Position, SkillList,
-            SpawnOrigin, StatusEffects, Team,
+            GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, Npc, Position,
+            SkillList, SpawnOrigin, StatusEffects, Team,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
@@ -67,7 +67,8 @@ struct SkillTargetData<'a> {
     ability_values: &'a AbilityValues,
     status_effects: Mut<'a, StatusEffects>,
     team: &'a Team,
-    health_points: &'a HealthPoints,
+    health_points: Mut<'a, HealthPoints>,
+    mana_points: Option<Mut<'a, ManaPoints>>,
     level: &'a Level,
     move_speed: &'a MoveSpeed,
 
@@ -92,7 +93,8 @@ pub struct SkillTargetQuery<'w, 's> {
             &'static AbilityValues,
             &'static mut StatusEffects,
             &'static Team,
-            &'static HealthPoints,
+            &'static mut HealthPoints,
+            Option<&'static mut ManaPoints>,
             &'static Level,
             &'static MoveSpeed,
             Option<&'static CharacterInfo>,
@@ -113,6 +115,7 @@ impl<'w, 's> SkillTargetQuery<'w, 's> {
             status_effects,
             team,
             health_points,
+            mana_points,
             level,
             move_speed,
             character_info,
@@ -130,6 +133,7 @@ impl<'w, 's> SkillTargetQuery<'w, 's> {
             status_effects,
             team,
             health_points,
+            mana_points,
             level,
             move_speed,
             character_info,
@@ -209,111 +213,146 @@ fn apply_skill_status_effects_to_entity(
             ));
     }
 
-    for add_ability in skill_data.add_ability.iter() {
+    let mut effect_success = [false, false];
+    for (effect_index, status_effect_data) in skill_data
+        .status_effects
+        .iter()
+        .enumerate()
+        .filter_map(|(index, id)| {
+            id.and_then(|id| {
+                skill_system_resources
+                    .game_data
+                    .status_effects
+                    .get_status_effect(id)
+            })
+            .map(|id| (index, id))
+        })
+    {
+        if skill_data.success_ratio > 0 {
+            match status_effect_data.cleared_by_type {
+                StatusEffectClearedByType::ClearGood => {
+                    if skill_data.success_ratio
+                        < skill_target.level.level as i32 - skill_caster.level.level as i32
+                            + rand::thread_rng().gen_range(1..=100)
+                    {
+                        continue;
+                    }
+                }
+                _ => {
+                    if skill_data.success_ratio as f32
+                        * (skill_caster.level.level as i32 * 2
+                            + skill_caster.ability_values.get_intelligence()
+                            + 20) as f32
+                        / (skill_target.ability_values.get_resistance() as f32 * 0.6
+                            + 5.0
+                            + skill_target.ability_values.get_avoid() as f32)
+                        <= rand::thread_rng().gen_range(1..=100) as f32
+                    {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        let adjust_value = if matches!(
+            status_effect_data.status_effect_type,
+            StatusEffectType::AdditionalDamageRate
+        ) {
+            skill_data.power as i32
+        } else if let Some(skill_add_ability) = skill_data.add_ability[effect_index].as_ref() {
+            let ability_value = ability_values_get_value(
+                skill_add_ability.ability_type,
+                skill_target.ability_values,
+                skill_target.level,
+                skill_target.move_speed,
+                skill_target.team,
+                skill_target.character_info,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+            .unwrap_or(0);
+
+            skill_system_resources
+                .game_data
+                .ability_value_calculator
+                .calculate_skill_adjust_value(
+                    skill_add_ability,
+                    skill_caster.ability_values.get_intelligence(),
+                    ability_value,
+                )
+        } else {
+            0
+        };
+
+        if skill_target
+            .status_effects
+            .can_apply(status_effect_data, adjust_value)
+        {
+            skill_target.status_effects.apply_status_effect(
+                status_effect_data,
+                skill_system_resources.server_time.now + skill_data.status_effect_duration,
+                adjust_value,
+            );
+
+            match status_effect_data.status_effect_type {
+                StatusEffectType::Fainting | StatusEffectType::Sleep => {
+                    // TODO: Set current + next command to stop
+                }
+                StatusEffectType::Taunt => {
+                    // TODO: Set current + next command to attack spell cast entity
+                }
+                _ => {}
+            }
+
+            effect_success[effect_index] = true;
+        }
+    }
+
+    for (effect_index, add_ability) in
+        skill_data
+            .add_ability
+            .iter()
+            .enumerate()
+            .filter_map(|(index, add_ability)| {
+                add_ability.as_ref().map(|add_ability| (index, add_ability))
+            })
+    {
         match add_ability.ability_type {
-            AbilityType::Stamina | AbilityType::Money | AbilityType::Health | AbilityType::Mana => {
+            AbilityType::Health => {
+                skill_target.health_points.hp = i32::min(
+                    skill_target.ability_values.get_max_health(),
+                    skill_target.health_points.hp
+                        + skill_system_resources
+                            .game_data
+                            .ability_value_calculator
+                            .calculate_skill_adjust_value(
+                                add_ability,
+                                skill_caster.ability_values.get_intelligence(),
+                                skill_target.health_points.hp,
+                            ),
+                );
+                effect_success[effect_index] = true;
+            }
+            AbilityType::Mana => {
+                if let Some(target_mana_points) = skill_target.mana_points.as_mut() {
+                    target_mana_points.mp = i32::min(
+                        skill_target.ability_values.get_max_mana(),
+                        target_mana_points.mp + add_ability.value,
+                    );
+                }
+                effect_success[effect_index] = true;
+            }
+            AbilityType::Stamina | AbilityType::Money => {
                 warn!(
                     "Unimplemented skill status effect add ability_type {:?}, value {}",
                     add_ability.ability_type, add_ability.value
                 )
             }
             _ => {}
-        }
-    }
-
-    let mut effect_success = [false, false];
-    for (effect_index, status_effect_id) in skill_data
-        .status_effects
-        .iter()
-        .enumerate()
-        .filter_map(|(index, id)| id.map(|id| (index, id)))
-    {
-        if let Some(status_effect_data) = skill_system_resources
-            .game_data
-            .status_effects
-            .get_status_effect(status_effect_id)
-        {
-            if skill_data.success_ratio > 0 {
-                match status_effect_data.cleared_by_type {
-                    StatusEffectClearedByType::ClearGood => {
-                        if skill_data.success_ratio
-                            < skill_target.level.level as i32 - skill_caster.level.level as i32
-                                + rand::thread_rng().gen_range(1..=100)
-                        {
-                            continue;
-                        }
-                    }
-                    _ => {
-                        if skill_data.success_ratio as f32
-                            * (skill_caster.level.level as i32 * 2
-                                + skill_caster.ability_values.get_intelligence()
-                                + 20) as f32
-                            / (skill_target.ability_values.get_resistance() as f32 * 0.6
-                                + 5.0
-                                + skill_target.ability_values.get_avoid() as f32)
-                            <= rand::thread_rng().gen_range(1..=100) as f32
-                        {
-                            continue;
-                        }
-                    }
-                }
-            }
-
-            let adjust_value = if matches!(
-                status_effect_data.status_effect_type,
-                StatusEffectType::AdditionalDamageRate
-            ) {
-                skill_data.power as i32
-            } else if let Some(skill_add_ability) = skill_data.add_ability.get(effect_index) {
-                let ability_value = ability_values_get_value(
-                    skill_add_ability.ability_type,
-                    skill_target.ability_values,
-                    skill_target.level,
-                    skill_target.move_speed,
-                    skill_target.team,
-                    skill_target.character_info,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                )
-                .unwrap_or(0);
-                skill_system_resources
-                    .game_data
-                    .ability_value_calculator
-                    .calculate_skill_adjust_value(
-                        skill_add_ability,
-                        skill_caster.ability_values.get_intelligence(),
-                        ability_value,
-                    )
-            } else {
-                0
-            };
-
-            if skill_target
-                .status_effects
-                .can_apply(status_effect_data, adjust_value)
-            {
-                skill_target.status_effects.apply_status_effect(
-                    status_effect_data,
-                    skill_system_resources.server_time.now + skill_data.status_effect_duration,
-                    adjust_value,
-                );
-
-                match status_effect_data.status_effect_type {
-                    StatusEffectType::Fainting | StatusEffectType::Sleep => {
-                        // TODO: Set current + next command to stop
-                    }
-                    StatusEffectType::Taunt => {
-                        // TODO: Set current + next command to attack spell cast entity
-                    }
-                    _ => {}
-                }
-
-                effect_success[effect_index] = true;
-            }
         }
     }
 

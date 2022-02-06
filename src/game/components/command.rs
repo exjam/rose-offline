@@ -4,7 +4,7 @@ use bevy_ecs::prelude::{Component, Entity};
 use nalgebra::{Point2, Point3};
 
 use crate::{
-    data::{item::Item, Damage, SkillId},
+    data::{item::Item, Damage, MotionId, SkillId},
     game::components::{ItemSlot, MoveMode},
 };
 
@@ -47,6 +47,8 @@ pub struct CommandCastSkill {
     pub skill_id: SkillId,
     pub skill_target: Option<CommandCastSkillTarget>,
     pub use_item: Option<(ItemSlot, Item)>,
+    pub cast_motion_id: Option<MotionId>,
+    pub action_motion_id: Option<MotionId>,
 }
 
 #[derive(Copy, Clone)]
@@ -182,6 +184,8 @@ impl NextCommand {
                 skill_id,
                 skill_target: None,
                 use_item,
+                cast_motion_id: None,
+                action_motion_id: None,
             })),
             has_sent_server_message: false,
         }
@@ -197,6 +201,8 @@ impl NextCommand {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                 use_item,
+                cast_motion_id: None,
+                action_motion_id: None,
             })),
             has_sent_server_message: false,
         }
@@ -208,6 +214,43 @@ impl NextCommand {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Position(position)),
                 use_item: None,
+                cast_motion_id: None,
+                action_motion_id: None,
+            })),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_npc_cast_skill_target(
+        skill_id: SkillId,
+        target_entity: Entity,
+        cast_motion_id: MotionId,
+        action_motion_id: MotionId,
+    ) -> Self {
+        Self {
+            command: Some(CommandData::CastSkill(CommandCastSkill {
+                skill_id,
+                skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
+                use_item: None,
+                cast_motion_id: Some(cast_motion_id),
+                action_motion_id: Some(action_motion_id),
+            })),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_npc_cast_skill_self(
+        skill_id: SkillId,
+        cast_motion_id: MotionId,
+        action_motion_id: MotionId,
+    ) -> Self {
+        Self {
+            command: Some(CommandData::CastSkill(CommandCastSkill {
+                skill_id,
+                skill_target: None,
+                use_item: None,
+                cast_motion_id: Some(cast_motion_id),
+                action_motion_id: Some(action_motion_id),
             })),
             has_sent_server_message: false,
         }
@@ -322,6 +365,8 @@ impl Command {
                 skill_id,
                 skill_target,
                 use_item: None,
+                cast_motion_id: None,
+                action_motion_id: None,
             }),
             Some(casting_duration + action_duration),
         )

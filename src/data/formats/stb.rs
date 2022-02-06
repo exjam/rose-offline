@@ -242,4 +242,21 @@ macro_rules! stb_column {
             result
         }
     };
+    (
+        $range:expr, $name:ident, [$value_type:ty; $len:literal]
+    ) => {
+        pub fn $name(&self, row: usize) -> [$value_type; $len] {
+            let mut result: [$value_type; $len] = Default::default();
+
+            for (i, column) in ($range).enumerate() {
+                result[i] = self
+                    .0
+                    .try_get(row, column)
+                    .and_then(|x| x.parse::<$value_type>().ok())
+                    .unwrap_or(0);
+            }
+
+            result
+        }
+    };
 }
