@@ -19,8 +19,9 @@ use crate::{
             AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition,
             AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
             AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
-            AipHaveStatusType, AipMotionId, AipMoveMode, AipMoveOrigin, AipNpcId, AipOperatorType,
-            AipSkillId, AipSkillTarget, AipSpawnNpcOrigin, AipTrigger, AipVariableType,
+            AipHaveStatusType, AipMotionId, AipMoveMode, AipMoveOrigin, AipNearbyAlly, AipNpcId,
+            AipOperatorType, AipSkillId, AipSkillTarget, AipSpawnNpcOrigin, AipTrigger,
+            AipVariableType,
         },
         Damage, MotionId, NpcId, SkillId,
     },
@@ -55,6 +56,8 @@ pub struct AiSystemParameters<'w, 's> {
             &'static StatusEffects,
             &'static HealthPoints,
             &'static Position,
+            Option<&'static Target>,
+            Option<&'static Npc>,
         ),
     >,
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
@@ -75,6 +78,7 @@ pub struct AiSystemResources<'w, 's> {
 
 struct AiSourceData<'s> {
     entity: Entity,
+    npc: &'s Npc,
     ability_values: &'s AbilityValues,
     health_points: &'s HealthPoints,
     level: &'s Level,
@@ -485,7 +489,7 @@ fn ai_condition_has_status_effect(
             .source
             .target
             .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
-            .map(|(_, _, _, status_effects, _, _)| status_effects),
+            .map(|(_, _, _, status_effects, _, _, _, _)| status_effects),
     };
 
     if let Some(status_effects) = status_effects {
@@ -539,7 +543,7 @@ fn ai_condition_target_ability_value(
     aip_ability_type: AipAbilityType,
     value: i32,
 ) -> bool {
-    if let Some((_, _, ability_values, _, health_points, _)) = ai_parameters
+    if let Some((_, _, ability_values, _, health_points, _, _, _)) = ai_parameters
         .source
         .target
         .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
@@ -569,7 +573,7 @@ fn ai_condition_attacker_and_target_ability_value(
         .source
         .target
         .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
-        .map(|(_, _, ability_values, _, health_points, _)| {
+        .map(|(_, _, ability_values, _, health_points, _, _, _)| {
             get_aip_ability_value(ability_values, health_points, aip_ability_type)
         });
 
@@ -782,7 +786,7 @@ fn ai_action_move_away_from_target(
     };
 
     if let Some(target_entity) = ai_parameters.source.target {
-        if let Ok((_, _, _, _, _, target_position)) =
+        if let Ok((_, _, _, _, _, target_position, _, _)) =
             ai_system_parameters.target_query.get(target_entity)
         {
             let source_position = ai_parameters.source.position.position;
@@ -873,7 +877,7 @@ fn ai_action_attack_owner_target(
         .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
         .and_then(|(_, target)| target.map(|target| target.entity))
     {
-        if let Ok((_, target_team, _, _, _, _)) =
+        if let Ok((_, target_team, _, _, _, _, _, _)) =
             ai_system_parameters.target_query.get(owner_target_entity)
         {
             if target_team.id != Team::DEFAULT_NPC_TEAM_ID
@@ -913,7 +917,7 @@ fn ai_action_attack_nearby_entity_by_stat(
             continue;
         }
 
-        if let Ok((level, team, ability_values, _, health_points, _)) =
+        if let Ok((level, team, ability_values, _, health_points, _, _, _)) =
             ai_system_parameters.target_query.get(entity)
         {
             if team.id != Team::DEFAULT_NPC_TEAM_ID && team.id != ai_parameters.source.team.id {
@@ -967,6 +971,72 @@ fn ai_action_kill_self(
         ));
 }
 
+fn ai_action_nearby_allies_attack_target(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    distance: AipDistance,
+    nearby_ally_type: AipNearbyAlly,
+    limit: Option<usize>,
+) {
+    let target_entity = ai_parameters.source.target;
+    if target_entity.is_none() {
+        return;
+    }
+    let target_entity = target_entity.unwrap();
+
+    let zone_entities = ai_system_parameters
+        .client_entity_list
+        .get_zone(ai_parameters.source.position.zone_id);
+    if zone_entities.is_none() {
+        return;
+    }
+
+    let mut num_attackers = 0;
+
+    for (nearby_entity, _) in zone_entities
+        .unwrap()
+        .iter_entities_within_distance(ai_parameters.source.position.position.xy(), distance as f32)
+    {
+        if nearby_entity == ai_parameters.source.entity {
+            continue;
+        }
+
+        if let Ok((_, nearby_team, _, _, _, _, nearby_target, nearby_npc)) =
+            ai_system_parameters.target_query.get(nearby_entity)
+        {
+            if nearby_target.is_some()
+                || nearby_team.id != ai_parameters.source.team.id
+                || nearby_npc.is_none()
+            {
+                continue;
+            }
+
+            let nearby_npc = nearby_npc.unwrap();
+            let valid = match nearby_ally_type {
+                AipNearbyAlly::Ally => true,
+                AipNearbyAlly::WithNpcId(npc_id) => nearby_npc.id.get() == npc_id as u16,
+                AipNearbyAlly::WithSameNpcId => nearby_npc.id == ai_parameters.source.npc.id,
+            };
+            if !valid {
+                continue;
+            }
+
+            ai_system_parameters
+                .commands
+                .entity(nearby_entity)
+                .insert(NextCommand::with_attack(target_entity));
+
+            num_attackers += 1;
+        }
+
+        if let Some(limit) = limit {
+            if num_attackers == limit {
+                break;
+            }
+        }
+    }
+}
+
 fn ai_action_spawn_npc(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
@@ -986,7 +1056,7 @@ fn ai_action_spawn_npc(
                 ai_system_parameters
                     .target_query
                     .get(target_entity)
-                    .map(|(_, _, _, _, _, position)| position.position)
+                    .map(|(_, _, _, _, _, position, _, _)| position.position)
                     .ok()
             })
         }
@@ -1107,6 +1177,15 @@ fn npc_ai_do_actions(
                 )
             }
             AipAction::KillSelf => ai_action_kill_self(ai_system_parameters, ai_parameters),
+            AipAction::NearbyAlliesAttackTarget(distance, nearby_ally_type, limit) => {
+                ai_action_nearby_allies_attack_target(
+                    ai_system_parameters,
+                    ai_parameters,
+                    distance,
+                    nearby_ally_type,
+                    limit,
+                )
+            }
             AipAction::SpawnNpc(npc_id, distance, origin, is_owner) => ai_action_spawn_npc(
                 ai_system_parameters,
                 ai_system_resources,
@@ -1128,8 +1207,6 @@ fn npc_ai_do_actions(
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
             AipAction::TransformNpc(_) => {}
-            AipAction::NearbyAlliesAttackTarget(_, _, _) => {}
-            AipAction::NearbyAlliesSameNpcAttackTarget(_) => {}
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
             AipAction::SetVariable(_, _, _, _) => {}
@@ -1258,6 +1335,7 @@ pub fn npc_ai_system(
         )| {
             let ai_source_data = AiSourceData {
                 entity,
+                npc,
                 ability_values,
                 health_points,
                 level,

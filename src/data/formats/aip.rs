@@ -173,6 +173,13 @@ pub enum AipDistanceOrigin {
     Target,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum AipNearbyAlly {
+    Ally,
+    WithNpcId(AipNpcId),
+    WithSameNpcId,
+}
+
 pub type AipDistance = i32;
 pub type AipNpcId = i32;
 pub type AipSkillId = i32;
@@ -218,10 +225,9 @@ pub enum AipAction {
     MoveAwayFromTarget(AipMoveMode, AipDistance),
     TransformNpc(AipNpcId),
     SpawnNpc(AipNpcId, AipDistance, AipSpawnNpcOrigin, AipIsSpawnOwner),
-    NearbyAlliesAttackTarget(usize, AipDistance, Option<AipNpcId>),
+    NearbyAlliesAttackTarget(AipDistance, AipNearbyAlly, Option<usize>),
     AttackNearChar,
     AttackFindChar,
-    NearbyAlliesSameNpcAttackTarget(AipDistance), // Nearby allies with same npc id attack target
     AttackAttacker,
     RunAway(AipDistance),
     DropRandomItem(Vec<ItemReference>),
@@ -780,14 +786,21 @@ impl AipFile {
                         12 => {
                             let distance = reader.read_i32()?;
                             let count = reader.read_i32()? as usize;
-                            actions
-                                .push(AipAction::NearbyAlliesAttackTarget(count, distance, None));
+                            actions.push(AipAction::NearbyAlliesAttackTarget(
+                                distance,
+                                AipNearbyAlly::Ally,
+                                Some(count),
+                            ));
                         }
                         13 => actions.push(AipAction::AttackNearChar),
                         14 => actions.push(AipAction::AttackFindChar),
                         15 => {
                             let distance = reader.read_i32()?;
-                            actions.push(AipAction::NearbyAlliesSameNpcAttackTarget(distance));
+                            actions.push(AipAction::NearbyAlliesAttackTarget(
+                                distance,
+                                AipNearbyAlly::WithSameNpcId,
+                                None,
+                            ));
                         }
                         16 => actions.push(AipAction::AttackAttacker),
                         17 => {
@@ -812,9 +825,9 @@ impl AipFile {
                             let distance = reader.read_i32()?;
 
                             actions.push(AipAction::NearbyAlliesAttackTarget(
-                                count,
                                 distance,
-                                Some(npc_id),
+                                AipNearbyAlly::WithNpcId(npc_id),
+                                Some(count),
                             ));
                         }
                         20 => actions.push(AipAction::AttackNearChar),
