@@ -35,7 +35,9 @@ use crate::{
         },
         events::{DamageEvent, RewardXpEvent},
         messages::server::ServerMessage,
-        resources::{ClientEntityList, ServerTime, WorldRates, WorldTime, ZoneList},
+        resources::{
+            ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
+        },
         GameData,
     },
 };
@@ -46,6 +48,7 @@ const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 pub struct AiSystemParameters<'w, 's> {
     commands: Commands<'w, 's>,
     client_entity_list: ResMut<'w, ClientEntityList>,
+    server_messages: ResMut<'w, ServerMessages>,
     target_query: Query<
         'w,
         's,
@@ -79,6 +82,7 @@ pub struct AiSystemResources<'w, 's> {
 struct AiSourceData<'s> {
     entity: Entity,
     npc: &'s Npc,
+    client_entity: &'s ClientEntity,
     ability_values: &'s AbilityValues,
     health_points: &'s HealthPoints,
     level: &'s Level,
@@ -1091,6 +1095,24 @@ fn ai_action_spawn_npc(
     }
 }
 
+fn ai_action_transform_npc(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    npc_id: AipNpcId,
+) {
+    if let Some(npc_id) = NpcId::new(npc_id as u16) {
+        ai_system_parameters
+            .commands
+            .entity(ai_parameters.source.entity)
+            .insert(Npc::new(npc_id, 0));
+
+        ai_system_parameters.server_messages.send_entity_message(
+            ai_parameters.source.client_entity,
+            ServerMessage::ChangeNpcId(ai_parameters.source.client_entity.id, npc_id),
+        );
+    }
+}
+
 fn ai_action_use_skill(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -1195,6 +1217,9 @@ fn npc_ai_do_actions(
                 origin,
                 is_owner,
             ),
+            AipAction::TransformNpc(npc_id) => {
+                ai_action_transform_npc(ai_system_parameters, ai_parameters, npc_id)
+            }
             AipAction::UseSkill(target, skill_id, motion_id) => ai_action_use_skill(
                 ai_system_parameters,
                 ai_parameters,
@@ -1206,7 +1231,6 @@ fn npc_ai_do_actions(
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
-            AipAction::TransformNpc(_) => {}
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
             AipAction::SetVariable(_, _, _, _) => {}
@@ -1336,6 +1360,7 @@ pub fn npc_ai_system(
             let ai_source_data = AiSourceData {
                 entity,
                 npc,
+                client_entity,
                 ability_values,
                 health_points,
                 level,

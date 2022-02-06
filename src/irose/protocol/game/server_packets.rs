@@ -50,6 +50,7 @@ pub enum ServerPackets {
     QuestResult = 0x730,
     RunNpcDeathTrigger = 0x731,
     JoinZone = 0x753,
+    ChangeNpcId = 0x774,
     UseEmote = 0x781,
     MoveToggle = 0x782,
     LocalChat = 0x783,
@@ -1794,6 +1795,20 @@ impl From<&PacketServerPartyMemberLeave> for Packet {
         writer.write_u8(255); // -1
         writer.write_u32(packet.leaver_character_id);
         writer.write_u32(packet.owner_character_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerChangeNpcId {
+    pub client_entity_id: ClientEntityId,
+    pub npc_id: NpcId,
+}
+
+impl From<&PacketServerChangeNpcId> for Packet {
+    fn from(packet: &PacketServerChangeNpcId) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ChangeNpcId as u16);
+        writer.write_entity_id(packet.client_entity_id);
+        writer.write_u16(packet.npc_id.get() as u16);
         writer.into()
     }
 }

@@ -1137,6 +1137,15 @@ impl GameClient {
                     }))
                     .await?;
             }
+            ServerMessage::ChangeNpcId(client_entity_id, npc_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerChangeNpcId {
+                        client_entity_id,
+                        npc_id,
+                    }))
+                    .await?;
+            }
             // These messages are for World Server
             ServerMessage::ReturnToCharacterSelect => {
                 panic!("Received unexpected server message for game server")

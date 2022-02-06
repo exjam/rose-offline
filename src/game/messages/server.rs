@@ -532,4 +532,5 @@ pub enum ServerMessage {
     PartyMemberKicked(CharacterUniqueId),
     PartyMemberUpdateInfo(PartyMemberInfoOnline),
     PartyChangeOwner(ClientEntityId),
+    ChangeNpcId(ClientEntityId, NpcId),
 }
