@@ -59,6 +59,12 @@ pub enum CommandSit {
 }
 
 #[derive(Clone)]
+pub struct CommandEmote {
+    pub motion_id: MotionId,
+    pub is_stop: bool,
+}
+
+#[derive(Clone)]
 pub enum CommandData {
     Die(CommandDie),
     Stop(CommandStop),
@@ -68,6 +74,7 @@ pub enum CommandData {
     PersonalStore,
     CastSkill(CommandCastSkill),
     Sit(CommandSit),
+    Emote(CommandEmote),
 }
 
 impl CommandData {
@@ -127,6 +134,13 @@ impl NextCommand {
     pub fn with_attack(target: Entity) -> Self {
         Self {
             command: Some(CommandData::Attack(CommandAttack { target })),
+            has_sent_server_message: false,
+        }
+    }
+
+    pub fn with_emote(motion_id: MotionId, is_stop: bool) -> Self {
+        Self {
+            command: Some(CommandData::Emote(CommandEmote { motion_id, is_stop })),
             has_sent_server_message: false,
         }
     }
@@ -336,6 +350,13 @@ impl Command {
 
     pub fn with_standing(duration: Duration) -> Self {
         Self::new(CommandData::Sit(CommandSit::Standing), Some(duration))
+    }
+
+    pub fn with_emote(motion_id: MotionId, is_stop: bool, duration: Duration) -> Self {
+        Self::new(
+            CommandData::Emote(CommandEmote { motion_id, is_stop }),
+            Some(duration),
+        )
     }
 
     pub fn with_stop() -> Self {

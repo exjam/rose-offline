@@ -960,18 +960,7 @@ pub fn game_server_main_system(
                         }
                     }
                     ClientMessage::UseEmote(motion_id, is_stop) => {
-                        if is_stop {
-                            entity_commands.insert(NextCommand::with_stop(false));
-                        }
-
-                        server_messages.send_entity_message(
-                            client_entity,
-                            ServerMessage::UseEmote(server::UseEmote {
-                                entity_id: client_entity.id,
-                                motion_id,
-                                is_stop,
-                            }),
-                        );
+                        entity_commands.insert(NextCommand::with_emote(motion_id, is_stop));
                     }
                     ClientMessage::WarpGateRequest(warp_gate_id) => {
                         if let Some(warp_gate) = game_data.warp_gates.get_warp_gate(warp_gate_id) {

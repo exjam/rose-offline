@@ -12,10 +12,11 @@ use crate::{
         bundles::client_entity_leave_zone,
         components::{
             AbilityValues, AmmoIndex, ClientEntity, ClientEntitySector, ClientEntityType, Command,
-            CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandMove,
-            CommandPickupItemDrop, CommandSit, CommandStop, Destination, DroppedItem, Equipment,
-            EquipmentIndex, GameClient, HealthPoints, Inventory, ItemDrop, ItemSlot, MotionData,
-            MoveMode, MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target,
+            CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandEmote,
+            CommandMove, CommandPickupItemDrop, CommandSit, CommandStop, Destination, DroppedItem,
+            Equipment, EquipmentIndex, GameClient, HealthPoints, Inventory, ItemDrop, ItemSlot,
+            MotionData, MoveMode, MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position,
+            Target,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{
@@ -207,6 +208,7 @@ pub fn command_system(
                     CommandData::Stop(_) => {}
                     CommandData::PersonalStore => {}
                     CommandData::PickupItemDrop(_) => {}
+                    CommandData::Emote(_) => {}
                     CommandData::Move(CommandMove {
                         destination,
                         target,
@@ -339,6 +341,14 @@ pub fn command_system(
                         .required_duration
                         .map(|duration| duration.div_f32(attack_speed))
                 }
+                CommandData::Emote(_) => {
+                    // Any command can interrupt an emote
+                    if next_command.command.is_some() {
+                        None
+                    } else {
+                        command.required_duration
+                    }
+                }
                 _ => command.required_duration,
             };
 
@@ -346,6 +356,7 @@ pub fn command_system(
                 || true,
                 |required_duration| command.duration >= required_duration,
             );
+
             if !command_motion_completed {
                 // Current command still in animation
                 return;
@@ -816,6 +827,7 @@ pub fn command_system(
                                             )
                                     }
                                     CommandData::Die(_)
+                                    | CommandData::Emote(_)
                                     | CommandData::PickupItemDrop(_)
                                     | CommandData::PersonalStore
                                     | CommandData::Sit(_)
@@ -894,7 +906,31 @@ pub fn command_system(
                     // The transition from Sitting to Sit happens above
                     *next_command = NextCommand::default();
                 }
-                _ => {}
+                CommandData::Emote(CommandEmote { motion_id, is_stop }) => {
+                    let motion_data = if let Some(npc) = npc {
+                        game_data.npcs.get_npc_motion(npc.id, *motion_id)
+                    } else {
+                        game_data.motions.find_first_character_motion(*motion_id)
+                    };
+
+                    // We wait to send emote message until now as client applies it immediately
+                    server_messages.send_entity_message(
+                        client_entity,
+                        ServerMessage::UseEmote(server::UseEmote {
+                            entity_id: client_entity.id,
+                            motion_id: *motion_id,
+                            is_stop: *is_stop,
+                        }),
+                    );
+
+                    let duration = motion_data
+                        .map(|motion_data| motion_data.duration)
+                        .unwrap_or_else(|| Duration::from_secs(0));
+
+                    *command = Command::with_emote(*motion_id, *is_stop, duration);
+                    *next_command = NextCommand::default();
+                }
+                CommandData::Die(_) => {}
             }
         },
     );

@@ -627,7 +627,7 @@ trait PacketWriteCommand {
 impl PacketWriteCommand for PacketWriter {
     fn write_command_id(&mut self, command: &Command) {
         let command_id = match command.command {
-            CommandData::Stop(_) => 0,
+            CommandData::Stop(_) | CommandData::Emote(_) => 0,
             CommandData::Move(_) => 1,
             CommandData::Attack(_) => 2,
             CommandData::Die(_) => 3,
