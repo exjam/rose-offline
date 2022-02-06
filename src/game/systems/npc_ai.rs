@@ -20,8 +20,8 @@ use crate::{
             AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
             AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
             AipHaveStatusType, AipMonsterSpawnState, AipMotionId, AipMoveMode, AipMoveOrigin,
-            AipNearbyAlly, AipNpcId, AipOperatorType, AipSkillId, AipSkillTarget,
-            AipSpawnNpcOrigin, AipTrigger, AipVariableType, AipZoneId,
+            AipNearbyAlly, AipNpcId, AipOperatorType, AipResultOperator, AipSkillId,
+            AipSkillTarget, AipSpawnNpcOrigin, AipTrigger, AipVariableType, AipZoneId,
         },
         Damage, MotionId, NpcId, SkillId, ZoneId,
     },
@@ -454,14 +454,14 @@ fn ai_condition_variable(
             .and_then(|object_variables| object_variables.variables.get(variable_id).copied())
             .unwrap_or(0),
         AipVariableType::World => {
-            log::warn!(target: "npc_ai",
+            log::warn!(target: "npc_ai_unimplemented",
                 "Unimplemented ai_condition_variable with variable type {:?}",
                 variable_type
             );
             0
         }
         AipVariableType::Economy => {
-            log::warn!(target: "npc_ai",
+            log::warn!(target: "npc_ai_unimplemented",
                 "Unimplemented ai_condition_variable with variable type {:?}",
                 variable_type
             );
@@ -721,7 +721,7 @@ fn npc_ai_check_conditions(
             AipCondition::IsTargetClanMaster => false,
             */
             _ => {
-                log::trace!(target: "npc_ai", "  - Unimplemented AI condition: {:?}", condition);
+                log::trace!(target: "npc_ai_unimplemented", "  - Unimplemented AI condition: {:?}", condition);
                 false
             }
         };
@@ -1172,6 +1172,64 @@ fn ai_action_set_monster_spawn_state(
         .set_monster_spawns_enabled(zone_id, enabled);
 }
 
+fn ai_action_set_variable(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    variable_type: AipVariableType,
+    variable_id: usize,
+    operator: AipResultOperator,
+    value: i32,
+) {
+    match variable_type {
+        AipVariableType::LocalNpcObject => ai_parameters
+            .selected_local_npc
+            .and_then(|object_entity| {
+                ai_system_parameters
+                    .object_variable_query
+                    .get_mut(object_entity)
+                    .ok()
+            })
+            .map(|mut object_variables| {
+                object_variables
+                    .variables
+                    .get_mut(variable_id)
+                    .map(|variable| match operator {
+                        AipResultOperator::Set => *variable = value,
+                        AipResultOperator::Add => *variable = i32::min(*variable + value, 500),
+                        AipResultOperator::Subtract => *variable = i32::max(*variable - value, 0),
+                    })
+            }),
+        AipVariableType::Ai => ai_system_parameters
+            .object_variable_query
+            .get_mut(ai_parameters.source.entity)
+            .ok()
+            .map(|mut object_variables| {
+                object_variables
+                    .variables
+                    .get_mut(variable_id)
+                    .map(|variable| match operator {
+                        AipResultOperator::Set => *variable = value,
+                        AipResultOperator::Add => *variable += value,
+                        AipResultOperator::Subtract => *variable -= value,
+                    })
+            }),
+        AipVariableType::World => {
+            log::warn!(target: "npc_ai_unimplemented",
+                "Unimplemented ai_action_set_variable with variable type {:?}",
+                variable_type
+            );
+            None
+        }
+        AipVariableType::Economy => {
+            log::warn!(target: "npc_ai_unimplemented",
+                "Unimplemented ai_action_set_variable with variable type {:?}",
+                variable_type
+            );
+            None
+        }
+    };
+}
+
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
@@ -1253,20 +1311,29 @@ fn npc_ai_do_actions(
             AipAction::SetMonsterSpawnState(zone, state) => {
                 ai_action_set_monster_spawn_state(ai_system_parameters, ai_parameters, zone, state)
             }
+            AipAction::SetVariable(variable_type, variable_id, operator, value) => {
+                ai_action_set_variable(
+                    ai_system_parameters,
+                    ai_parameters,
+                    variable_type,
+                    variable_id,
+                    operator,
+                    value,
+                )
+            }
             /*
             AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
-            AipAction::SetVariable(_, _, _, _) => {}
             AipAction::Message(_, _) => {}
             AipAction::DoQuestTrigger(_) => {}
             AipAction::SetPvpFlag(_, _) => {}
             AipAction::GiveItemToOwner(_, _) => {}
             */
             _ => {
-                log::trace!(target: "npc_ai", "Unimplemented AI action: {:?}", action);
+                log::trace!(target: "npc_ai_unimplemented", "Unimplemented AI action: {:?}", action);
             }
         }
     }
