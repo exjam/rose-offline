@@ -918,7 +918,7 @@ pub fn game_server_main_system(
                                 &mut client_entity_list,
                                 DroppedItem::Money(money),
                                 position,
-                                Some(entity),
+                                None,
                                 &server_time,
                             );
 
@@ -945,7 +945,7 @@ pub fn game_server_main_system(
                                     &mut client_entity_list,
                                     DroppedItem::Item(item),
                                     position,
-                                    Some(entity),
+                                    None,
                                     &server_time,
                                 );
 
