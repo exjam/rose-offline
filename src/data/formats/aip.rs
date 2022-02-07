@@ -217,7 +217,7 @@ pub enum AipCondition {
 #[derive(Debug)]
 pub enum AipAction {
     Stop,
-    Emote(u8),
+    Emote(AipMotionId),
     Say(usize),
     MoveRandomDistance(AipMoveOrigin, AipMoveMode, AipDistance),
     AttackNearbyEntityByStat(AipDistance, AipAbilityType, AipAttackNearbyStat),
@@ -684,9 +684,9 @@ impl AipFile {
                             actions.push(AipAction::Stop);
                         }
                         2 => {
-                            let emote = reader.read_u8()?;
+                            let motion_id = reader.read_u8()? as AipMotionId;
                             reader.skip(3); // padding
-                            actions.push(AipAction::Emote(emote));
+                            actions.push(AipAction::Emote(motion_id));
                         }
                         3 => {
                             let string_id = reader.read_u32()? as usize;

@@ -1113,6 +1113,19 @@ fn ai_action_transform_npc(
     }
 }
 
+fn ai_action_use_emote(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    motion_id: AipMotionId,
+) {
+    let motion_id = MotionId::new(motion_id as u16);
+
+    ai_system_parameters
+        .commands
+        .entity(ai_parameters.source.entity)
+        .insert(NextCommand::with_emote(motion_id, true));
+}
+
 fn ai_action_use_skill(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -1301,6 +1314,9 @@ fn npc_ai_do_actions(
             AipAction::TransformNpc(npc_id) => {
                 ai_action_transform_npc(ai_system_parameters, ai_parameters, npc_id)
             }
+            AipAction::Emote(motion_id) => {
+                ai_action_use_emote(ai_system_parameters, ai_parameters, motion_id)
+            }
             AipAction::UseSkill(target, skill_id, motion_id) => ai_action_use_skill(
                 ai_system_parameters,
                 ai_parameters,
@@ -1322,7 +1338,6 @@ fn npc_ai_do_actions(
                 )
             }
             /*
-            AipAction::Emote(_) => {}
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
             AipAction::RunAway(_) => {}
