@@ -19,8 +19,8 @@ use crate::{
             AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition,
             AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
             AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
-            AipHaveStatusType, AipMonsterSpawnState, AipMotionId, AipMoveMode, AipMoveOrigin,
-            AipNearbyAlly, AipNpcId, AipOperatorType, AipResultOperator, AipSkillId,
+            AipHaveStatusType, AipMessageType, AipMonsterSpawnState, AipMotionId, AipMoveMode,
+            AipMoveOrigin, AipNearbyAlly, AipNpcId, AipOperatorType, AipResultOperator, AipSkillId,
             AipSkillTarget, AipSpawnNpcOrigin, AipTrigger, AipVariableType, AipZoneId,
         },
         Damage, MotionId, NpcId, SkillId, ZoneId,
@@ -34,7 +34,7 @@ use crate::{
             Target, Team,
         },
         events::{DamageEvent, RewardXpEvent},
-        messages::server::ServerMessage,
+        messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
         resources::{
             ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
         },
@@ -1242,6 +1242,57 @@ fn ai_action_set_variable(
         }
     };
 }
+fn ai_action_message(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
+    ai_parameters: &mut AiParameters,
+    message_type: AipMessageType,
+    string_id: usize,
+) {
+    let npc_name = ai_system_resources
+        .game_data
+        .npcs
+        .get_npc(ai_parameters.source.npc.id)
+        .map(|npc_data| npc_data.name.clone());
+
+    if let Some(message) = ai_system_resources
+        .game_data
+        .ai
+        .get_ai_string(string_id)
+    {
+        match message_type {
+            AipMessageType::Say => ai_system_parameters.server_messages.send_entity_message(
+                ai_parameters.source.client_entity,
+                ServerMessage::LocalChat(LocalChat {
+                    entity_id: ai_parameters.source.client_entity.id,
+                    text: message.to_string(),
+                }),
+            ),
+            AipMessageType::Shout => {
+                if let Some(npc_name) = npc_name {
+                    ai_system_parameters.server_messages.send_entity_message(
+                        ai_parameters.source.client_entity,
+                        ServerMessage::ShoutChat(ShoutChat {
+                            name: npc_name,
+                            text: message.to_string(),
+                        }),
+                    )
+                }
+            }
+            AipMessageType::Announce => {
+                if let Some(npc_name) = npc_name {
+                    ai_system_parameters.server_messages.send_entity_message(
+                        ai_parameters.source.client_entity,
+                        ServerMessage::AnnounceChat(AnnounceChat {
+                            name: Some(npc_name),
+                            text: message.to_string(),
+                        }),
+                    )
+                }
+            }
+        }
+    }
+}
 
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
@@ -1337,12 +1388,18 @@ fn npc_ai_do_actions(
                     value,
                 )
             }
+            AipAction::Message(message_type, string_id) => ai_action_message(
+                ai_system_parameters,
+                ai_system_resources,
+                ai_parameters,
+                message_type,
+                string_id,
+            ),
             /*
             AipAction::Say(_) => {}
             AipAction::SpecialAttack => {}
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
-            AipAction::Message(_, _) => {}
             AipAction::DoQuestTrigger(_) => {}
             AipAction::SetPvpFlag(_, _) => {}
             AipAction::GiveItemToOwner(_, _) => {}
