@@ -1576,7 +1576,7 @@ pub fn npc_ai_system(
     )>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
     attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
-    killer_query: Query<(&Level, &AbilityValues, Option<&GameClient>)>,
+    killer_query: Query<(&Level, &AbilityValues, Option<&Owner>, Option<&GameClient>)>,
     world_rates: Res<WorldRates>,
     mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
@@ -1735,14 +1735,33 @@ pub fn npc_ai_system(
                                         continue;
                                     }
 
-                                    if let Ok((damage_source_level, ..)) =
-                                        ai_system_parameters.target_query.get(damage_source.entity)
+                                    if let Ok((damage_source_level, _, damage_source_owner, _)) =
+                                        killer_query.get(damage_source.entity)
                                     {
+                                        // If the damage source has an owner then the owner gets the reward
+                                        let (reward_xp_entity, reward_xp_entity_level) =
+                                            damage_source_owner
+                                                .and_then(|damage_source_owner| {
+                                                    killer_query
+                                                        .get(damage_source_owner.entity)
+                                                        .map(|(damage_source_owner_level, ..)| {
+                                                            (
+                                                                damage_source_owner.entity,
+                                                                damage_source_owner_level.level,
+                                                            )
+                                                        })
+                                                        .ok()
+                                                })
+                                                .unwrap_or((
+                                                    damage_source.entity,
+                                                    damage_source_level.level,
+                                                ));
+
                                         let reward_xp = ai_system_resources
                                             .game_data
                                             .ability_value_calculator
                                             .calculate_give_xp(
-                                                damage_source_level.level as i32,
+                                                reward_xp_entity_level as i32,
                                                 damage_source.total_damage as i32,
                                                 level.level as i32,
                                                 ability_values.get_max_health(),
@@ -1760,7 +1779,7 @@ pub fn npc_ai_system(
                                                 );
 
                                             reward_xp_events.send(RewardXpEvent::new(
-                                                damage_source.entity,
+                                                reward_xp_entity,
                                                 reward_xp as u64,
                                                 stamina as u32,
                                                 Some(entity),
@@ -1774,9 +1793,28 @@ pub fn npc_ai_system(
                                     if let Ok((
                                         killer_level,
                                         killer_ability_values,
+                                        killer_owner,
                                         killer_game_client,
                                     )) = killer_query.get(killer_entity)
                                     {
+                                        // If the killer has an owner then the owner gets the reward
+                                        let (
+                                            killer_level,
+                                            killer_ability_values,
+                                            killer_game_client,
+                                        ) = killer_owner
+                                            .and_then(|killer_owner| {
+                                                killer_query
+                                                    .get(killer_owner.entity)
+                                                    .ok()
+                                                    .map(|(a, b, _c, d)| (a, b, d))
+                                            })
+                                            .unwrap_or((
+                                                killer_level,
+                                                killer_ability_values,
+                                                killer_game_client,
+                                            ));
+
                                         // Inform client to execute npc dead event
                                         if !npc_data.death_quest_trigger_name.is_empty() {
                                             if let Some(killer_game_client) = killer_game_client {
