@@ -1427,7 +1427,6 @@ fn npc_ai_do_actions(
             AipAction::Say(_) => {}        // This is client side only
             AipAction::SpecialAttack => {} // This is not actually used, probably an old removed feature
             /*
-            AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
             AipAction::SetPvpFlag(_, _) => {}
             AipAction::GiveItemToOwner(_, _) => {}

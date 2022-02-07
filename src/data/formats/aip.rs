@@ -805,7 +805,11 @@ impl AipFile {
                         16 => actions.push(AipAction::AttackAttacker),
                         17 => {
                             let distance = reader.read_i32()?;
-                            actions.push(AipAction::RunAway(distance));
+                            actions.push(AipAction::MoveRandomDistance(
+                                AipMoveOrigin::Spawn,
+                                AipMoveMode::Run,
+                                distance,
+                            ));
                         }
                         18 => {
                             let mut items = Vec::new();
