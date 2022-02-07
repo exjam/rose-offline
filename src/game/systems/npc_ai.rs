@@ -724,7 +724,7 @@ fn npc_ai_check_conditions(
             AipCondition::IsTargetClanMaster => false,
             */
             _ => {
-                log::trace!(target: "npc_ai_unimplemented", "  - Unimplemented AI condition: {:?}", condition);
+                log::warn!(target: "npc_ai_unimplemented", "  - Unimplemented AI condition: {:?}", condition);
                 false
             }
         };
@@ -1480,7 +1480,7 @@ fn npc_ai_do_actions(
             AipAction::SetPvpFlag(_, _) => {}
             */
             _ => {
-                log::trace!(target: "npc_ai_unimplemented", "Unimplemented AI action: {:?}", action);
+                log::warn!(target: "npc_ai_unimplemented", "Unimplemented AI action: {:?}", action);
             }
         }
     }
