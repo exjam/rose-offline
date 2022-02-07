@@ -1395,9 +1395,9 @@ fn npc_ai_do_actions(
                 message_type,
                 string_id,
             ),
+            AipAction::Say(_) => {}        // This is client side only
+            AipAction::SpecialAttack => {} // This is not actually used, probably an old removed feature
             /*
-            AipAction::Say(_) => {}
-            AipAction::SpecialAttack => {}
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
             AipAction::DoQuestTrigger(_) => {}
