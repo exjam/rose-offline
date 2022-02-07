@@ -36,7 +36,7 @@ use crate::{
             Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, Team,
             UnionMembership,
         },
-        events::{QuestTriggerEvent, RewardXpEvent},
+        events::{QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
         messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
         resources::{
             ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
@@ -51,6 +51,7 @@ pub struct QuestSystemParameters<'w, 's> {
     client_entity_list: ResMut<'w, ClientEntityList>,
     server_messages: ResMut<'w, ServerMessages>,
     zone_list: ResMut<'w, ZoneList>,
+    reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
     reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
     object_variables_query: Query<'w, 's, (&'static mut ObjectVariables, &'static Position)>,
 }
@@ -780,6 +781,7 @@ fn quest_reward_calculated_experience_points(
 }
 
 fn quest_reward_calculated_item(
+    quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
     _reward_target: QsdRewardTarget,
@@ -854,22 +856,13 @@ fn quest_reward_calculated_item(
     };
 
     if let Some(item) = item {
-        if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
-            match inventory.try_add_item(item) {
-                Ok((slot, item)) => {
-                    if let Some(game_client) = quest_parameters.source.game_client {
-                        game_client
-                            .server_message_tx
-                            .send(ServerMessage::RewardItems(vec![(slot, Some(item.clone()))]))
-                            .ok();
-                    }
-                }
-                Err(item) => {
-                    // TODO: Drop item to ground
-                    warn!("Unimplemented drop unclaimed quest item {:?}", item);
-                }
-            }
-        }
+        quest_system_parameters
+            .reward_item_events
+            .send(RewardItemEvent::new(
+                quest_parameters.source.entity,
+                item,
+                true,
+            ));
     }
 
     true
@@ -1010,6 +1003,7 @@ fn quest_reward_quest_action(
 }
 
 fn quest_reward_add_item(
+    quest_system_parameters: &mut QuestSystemParameters,
     quest_parameters: &mut QuestParameters,
     item_reference: ItemReference,
     quantity: usize,
@@ -1031,25 +1025,14 @@ fn quest_reward_add_item(
     } else {
         // Add to inventory
         if let Some(item) = Item::new(&item_reference, quantity as u32) {
-            if let Some(inventory) = quest_parameters.source.inventory.as_mut() {
-                match inventory.try_add_item(item) {
-                    Ok((slot, item)) => {
-                        if let Some(game_client) = quest_parameters.source.game_client {
-                            game_client
-                                .server_message_tx
-                                .send(ServerMessage::RewardItems(vec![(slot, Some(item.clone()))]))
-                                .ok();
-                        }
-
-                        return true;
-                    }
-                    Err(item) => {
-                        // TODO: Drop item to ground
-                        warn!("Unimplemented drop unclaimed quest item {:?}", item);
-                        return true;
-                    }
-                }
-            }
+            quest_system_parameters
+                .reward_item_events
+                .send(RewardItemEvent::new(
+                    quest_parameters.source.entity,
+                    item,
+                    true,
+                ));
+            return true;
         }
     }
 
@@ -1582,7 +1565,7 @@ fn quest_trigger_apply_rewards(
                 true
             }
             QsdReward::AddItem(_reward_target, item, quantity) => {
-                quest_reward_add_item(quest_parameters, item, quantity)
+                quest_reward_add_item(quest_system_parameters, quest_parameters, item, quantity)
             }
             QsdReward::RemoveItem(_reward_target, item, quantity) => {
                 quest_reward_remove_item(quest_parameters, item, quantity)
@@ -1624,6 +1607,7 @@ fn quest_trigger_apply_rewards(
                     gem,
                 },
             ) => quest_reward_calculated_item(
+                quest_system_parameters,
                 quest_system_resources,
                 quest_parameters,
                 reward_target,

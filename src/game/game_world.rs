@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use crate::game::{
     events::{
         ChatCommandEvent, DamageEvent, NpcStoreEvent, PartyEvent, PersonalStoreEvent,
-        QuestTriggerEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
+        QuestTriggerEvent, RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
@@ -24,10 +24,10 @@ use crate::game::{
         experience_points_system, expire_time_system, game_server_authentication_system,
         game_server_join_system, game_server_main_system, login_server_authentication_system,
         login_server_system, monster_spawn_system, npc_ai_system, npc_store_system, party_system,
-        passive_recovery_system, personal_store_system, quest_system, save_system,
-        server_messages_system, skill_effect_system, startup_zones_system, status_effect_system,
-        update_position_system, use_item_system, weight_system, world_server_authentication_system,
-        world_server_system, world_time_system,
+        passive_recovery_system, personal_store_system, quest_system, reward_item_system,
+        save_system, server_messages_system, skill_effect_system, startup_zones_system,
+        status_effect_system, update_position_system, use_item_system, weight_system,
+        world_server_authentication_system, world_server_system, world_time_system,
     },
 };
 
@@ -75,6 +75,7 @@ impl GameWorld {
         world.insert_resource(Events::<PartyEvent>::default());
         world.insert_resource(Events::<PersonalStoreEvent>::default());
         world.insert_resource(Events::<QuestTriggerEvent>::default());
+        world.insert_resource(Events::<RewardItemEvent>::default());
         world.insert_resource(Events::<RewardXpEvent>::default());
         world.insert_resource(Events::<SaveEvent>::default());
         world.insert_resource(Events::<SkillEvent>::default());
@@ -93,8 +94,11 @@ impl GameWorld {
             SystemStage::parallel()
                 .with_system(Events::<ChatCommandEvent>::update_system)
                 .with_system(Events::<DamageEvent>::update_system)
+                .with_system(Events::<NpcStoreEvent>::update_system)
+                .with_system(Events::<PartyEvent>::update_system)
                 .with_system(Events::<PersonalStoreEvent>::update_system)
                 .with_system(Events::<QuestTriggerEvent>::update_system)
+                .with_system(Events::<RewardItemEvent>::update_system)
                 .with_system(Events::<RewardXpEvent>::update_system)
                 .with_system(Events::<SaveEvent>::update_system)
                 .with_system(Events::<SkillEvent>::update_system)
@@ -140,7 +144,8 @@ impl GameWorld {
                 .with_system(npc_store_system.system())
                 .with_system(damage_system.system())
                 .with_system(quest_system.system())
-                .with_system(use_item_system.system()),
+                .with_system(use_item_system.system())
+                .with_system(reward_item_system.system()),
         );
 
         schedule.add_stage_after(
