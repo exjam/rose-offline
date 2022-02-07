@@ -11,7 +11,7 @@ use bevy_ecs::{
 };
 use chrono::{Datelike, Timelike};
 use nalgebra::{Point3, Vector3};
-use rand::Rng;
+use rand::{prelude::SliceRandom, Rng};
 
 use crate::{
     data::{
@@ -23,17 +23,18 @@ use crate::{
             AipMoveOrigin, AipNearbyAlly, AipNpcId, AipOperatorType, AipResultOperator, AipSkillId,
             AipSkillTarget, AipSpawnNpcOrigin, AipTrigger, AipVariableType, AipZoneId,
         },
-        Damage, MotionId, NpcId, SkillId, ZoneId,
+        item::Item,
+        Damage, ItemReference, MotionId, NpcId, SkillId, ZoneId,
     },
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
         components::{
             AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command,
-            CommandData, CommandDie, DamageSources, GameClient, HealthPoints, Level,
+            CommandData, CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints, Level,
             MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position,
             SpawnOrigin, StatusEffects, Target, Team,
         },
-        events::{DamageEvent, QuestTriggerEvent, RewardXpEvent},
+        events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
         messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
         resources::{
             ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
@@ -67,6 +68,7 @@ pub struct AiSystemParameters<'w, 's> {
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
     quest_trigger_events: EventWriter<'w, 's, QuestTriggerEvent>,
+    reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
     zone_list: ResMut<'w, ZoneList>,
 }
 
@@ -1320,6 +1322,45 @@ fn ai_action_message(
     }
 }
 
+fn ai_action_drop_random_item(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
+    ai_parameters: &mut AiParameters,
+    item_list: &[Option<ItemReference>],
+) {
+    if let Some(item) = item_list
+        .choose(&mut rand::thread_rng())
+        .unwrap()
+        .and_then(|item_reference| Item::new(&item_reference, 1))
+    {
+        ItemDropBundle::spawn(
+            &mut ai_system_parameters.commands,
+            &mut ai_system_parameters.client_entity_list,
+            DroppedItem::Item(item),
+            ai_parameters.source.position,
+            None,
+            &ai_system_resources.server_time,
+        );
+    }
+}
+
+fn ai_action_give_item_to_owner(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    item_reference: ItemReference,
+    quantity: usize,
+) {
+    if let Some(item) = Item::new(&item_reference, quantity as u32) {
+        ai_system_parameters
+            .reward_item_events
+            .send(RewardItemEvent::new(
+                ai_parameters.source.entity,
+                item,
+                true,
+            ));
+    }
+}
+
 fn npc_ai_do_actions(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
@@ -1426,10 +1467,17 @@ fn npc_ai_do_actions(
             ),
             AipAction::Say(_) => {}        // This is client side only
             AipAction::SpecialAttack => {} // This is not actually used, probably an old removed feature
+            AipAction::DropRandomItem(ref item_list) => ai_action_drop_random_item(
+                ai_system_parameters,
+                ai_system_resources,
+                ai_parameters,
+                item_list,
+            ),
+            AipAction::GiveItemToOwner(item, quantity) => {
+                ai_action_give_item_to_owner(ai_system_parameters, ai_parameters, item, quantity)
+            }
             /*
-            AipAction::DropRandomItem(_) => {
             AipAction::SetPvpFlag(_, _) => {}
-            AipAction::GiveItemToOwner(_, _) => {}
             */
             _ => {
                 log::trace!(target: "npc_ai_unimplemented", "Unimplemented AI action: {:?}", action);

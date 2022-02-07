@@ -230,7 +230,7 @@ pub enum AipAction {
     AttackFindChar,
     AttackAttacker,
     RunAway(AipDistance),
-    DropRandomItem(Vec<ItemReference>),
+    DropRandomItem(Vec<Option<ItemReference>>),
     KillSelf,
     UseSkill(AipSkillTarget, AipSkillId, AipMotionId),
     SetVariable(AipVariableType, usize, AipResultOperator, i32),
@@ -815,9 +815,7 @@ impl AipFile {
                             let mut items = Vec::new();
                             for _ in 0..5 {
                                 let value = reader.read_u16()? as u32;
-                                if let Ok(item) = ItemReference::from_base1000(value) {
-                                    items.push(item);
-                                }
+                                items.push(ItemReference::from_base1000(value).ok());
                             }
                             reader.skip(2); // padding
 
