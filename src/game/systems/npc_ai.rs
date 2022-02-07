@@ -28,12 +28,12 @@ use crate::{
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
         components::{
-            AbilityValues, ClientEntity, ClientEntitySector, Command, CommandData, CommandDie,
-            DamageSources, GameClient, HealthPoints, Level, MonsterSpawnPoint, MoveMode,
-            NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin, StatusEffects,
-            Target, Team,
+            AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command,
+            CommandData, CommandDie, DamageSources, GameClient, HealthPoints, Level,
+            MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position,
+            SpawnOrigin, StatusEffects, Target, Team,
         },
-        events::{DamageEvent, RewardXpEvent},
+        events::{DamageEvent, QuestTriggerEvent, RewardXpEvent},
         messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
         resources::{
             ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
@@ -66,6 +66,7 @@ pub struct AiSystemParameters<'w, 's> {
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
+    quest_trigger_events: EventWriter<'w, 's, QuestTriggerEvent>,
     zone_list: ResMut<'w, ZoneList>,
 }
 
@@ -958,6 +959,35 @@ fn ai_action_attack_nearby_entity_by_stat(
     }
 }
 
+fn ai_action_quest_trigger(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &mut AiParameters,
+    trigger_name: &str,
+) {
+    let trigger_hash = trigger_name.into();
+
+    if matches!(
+        ai_parameters.source.client_entity.entity_type,
+        ClientEntityType::Monster
+    ) {
+        if let Some(entity) = ai_parameters.selected_local_npc {
+            ai_system_parameters
+                .quest_trigger_events
+                .send(QuestTriggerEvent {
+                    trigger_entity: entity,
+                    trigger_hash,
+                });
+        }
+    } else {
+        ai_system_parameters
+            .quest_trigger_events
+            .send(QuestTriggerEvent {
+                trigger_entity: ai_parameters.source.entity,
+                trigger_hash,
+            });
+    }
+}
+
 fn ai_action_kill_self(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
@@ -1255,11 +1285,7 @@ fn ai_action_message(
         .get_npc(ai_parameters.source.npc.id)
         .map(|npc_data| npc_data.name.clone());
 
-    if let Some(message) = ai_system_resources
-        .game_data
-        .ai
-        .get_ai_string(string_id)
-    {
+    if let Some(message) = ai_system_resources.game_data.ai.get_ai_string(string_id) {
         match message_type {
             AipMessageType::Say => ai_system_parameters.server_messages.send_entity_message(
                 ai_parameters.source.client_entity,
@@ -1343,6 +1369,9 @@ fn npc_ai_do_actions(
                     stat_choice,
                 )
             }
+            AipAction::DoQuestTrigger(ref trigger_name) => {
+                ai_action_quest_trigger(ai_system_parameters, ai_parameters, trigger_name)
+            }
             AipAction::KillSelf => ai_action_kill_self(ai_system_parameters, ai_parameters),
             AipAction::NearbyAlliesAttackTarget(distance, nearby_ally_type, limit) => {
                 ai_action_nearby_allies_attack_target(
@@ -1400,7 +1429,6 @@ fn npc_ai_do_actions(
             /*
             AipAction::RunAway(_) => {}
             AipAction::DropRandomItem(_) => {
-            AipAction::DoQuestTrigger(_) => {}
             AipAction::SetPvpFlag(_, _) => {}
             AipAction::GiveItemToOwner(_, _) => {}
             */
