@@ -13,6 +13,7 @@ pub enum PartyMember {
 pub struct Party {
     pub owner: Entity,
     pub members: ArrayVec<PartyMember, 5>,
+    pub level: i32,
 }
 
 impl Party {
@@ -21,6 +22,10 @@ impl Party {
         for member in party_members {
             members.push(member.clone());
         }
-        Self { owner, members }
+        Self {
+            owner,
+            members,
+            level: 1,
+        }
     }
 }

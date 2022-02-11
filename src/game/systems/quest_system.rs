@@ -12,14 +12,15 @@ use rand::Rng;
 use crate::{
     data::{
         formats::qsd::{
-            QsdCondition, QsdConditionMonthDayTime, QsdConditionObjectVariable,
-            QsdConditionOperator, QsdConditionQuestItem, QsdConditionSelectEventObject,
-            QsdConditionWeekDayTime, QsdDistance, QsdEventId, QsdNpcId, QsdObjectType, QsdReward,
-            QsdRewardCalculatedItem, QsdRewardMonsterSpawnState, QsdRewardNpcMessageType,
-            QsdRewardObjectVariable, QsdRewardOperator, QsdRewardQuestAction,
-            QsdRewardSetTeamNumberSource, QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation,
-            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId,
-            QsdVariableType, QsdZoneId,
+            QsdCondition, QsdConditionCheckParty, QsdConditionMonthDayTime,
+            QsdConditionObjectVariable, QsdConditionOperator, QsdConditionQuestItem,
+            QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdDistance, QsdEventId,
+            QsdNpcId, QsdObjectType, QsdReward, QsdRewardCalculatedItem,
+            QsdRewardMonsterSpawnState, QsdRewardNpcMessageType, QsdRewardObjectVariable,
+            QsdRewardOperator, QsdRewardQuestAction, QsdRewardSetTeamNumberSource,
+            QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation, QsdRewardTarget,
+            QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId, QsdVariableType,
+            QsdZoneId,
         },
         item::{EquipmentItem, Item},
         AbilityType, ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
@@ -33,8 +34,8 @@ use crate::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity,
             ClientEntitySector, Equipment, EquipmentIndex, ExperiencePoints, GameClient,
             HealthPoints, Inventory, Level, ManaPoints, Money, MoveSpeed, Npc, ObjectVariables,
-            Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, Team,
-            UnionMembership,
+            Party, PartyMembership, Position, QuestState, SkillList, SkillPoints, SpawnOrigin,
+            Stamina, StatPoints, Team, UnionMembership,
         },
         events::{QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
         messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
@@ -54,6 +55,7 @@ pub struct QuestSystemParameters<'w, 's> {
     reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
     reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
     object_variables_query: Query<'w, 's, (&'static mut ObjectVariables, &'static Position)>,
+    party_query: Query<'w, 's, &'static Party>,
 }
 
 #[derive(SystemParam)]
@@ -83,6 +85,7 @@ struct QuestSourceEntity<'world, 'a> {
     mana_points: Option<&'a mut Mut<'world, ManaPoints>>,
     move_speed: &'a MoveSpeed,
     npc: Option<&'a Npc>,
+    party_membership: Option<&'a PartyMembership>,
     position: &'a Position,
     quest_state: Option<&'a mut Mut<'world, QuestState>>,
     skill_list: Option<&'a mut Mut<'world, SkillList>>,
@@ -580,6 +583,40 @@ fn quest_condition_compare_npc_object_variables(
     quest_condition_operator(operator, value1, value2)
 }
 
+fn quest_condition_check_party(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    is_leader: bool,
+    level_operator: QsdConditionOperator,
+    level: i32,
+) -> bool {
+    if let Some(&PartyMembership::Member(party_entity)) = quest_parameters.source.party_membership {
+        if let Ok(party) = quest_system_parameters.party_query.get(party_entity) {
+            if is_leader && party.owner != quest_parameters.source.entity {
+                return false;
+            }
+
+            return quest_condition_operator(level_operator, party.level, level);
+        }
+    }
+
+    false
+}
+
+fn quest_condition_check_party_member_count(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    range: &RangeInclusive<usize>,
+) -> bool {
+    if let Some(&PartyMembership::Member(party_entity)) = quest_parameters.source.party_membership {
+        if let Ok(party) = quest_system_parameters.party_query.get(party_entity) {
+            return range.contains(&party.members.len());
+        }
+    }
+
+    false
+}
+
 fn quest_trigger_check_conditions(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
@@ -690,6 +727,22 @@ fn quest_trigger_check_conditions(
                     npc_variable2,
                 )
             }
+            QsdCondition::Party(QsdConditionCheckParty {
+                is_leader,
+                level_operator,
+                level,
+            }) => quest_condition_check_party(
+                quest_system_parameters,
+                quest_parameters,
+                is_leader,
+                level_operator,
+                level,
+            ),
+            QsdCondition::PartyMemberCount(ref range) => quest_condition_check_party_member_count(
+                quest_system_parameters,
+                quest_parameters,
+                range,
+            ),
             QsdCondition::RandomPercent(_) => {
                 // Random percent is only checked on client
                 true
@@ -698,10 +751,6 @@ fn quest_trigger_check_conditions(
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
             } /*
-              // TODO: Implement party system
-              QsdCondition::Party(_) => todo!(),
-              QsdCondition::PartyMemberCount(_) => todo!(),
-
               // TODO: Implement clan system
               QsdCondition::InClan(_) => todo!(),
               QsdCondition::ClanPosition(_, _) => todo!(),
@@ -1745,6 +1794,7 @@ pub fn quest_system(
         &Position,
         Option<&Equipment>,
         Option<&Npc>,
+        Option<&PartyMembership>,
         (
             &mut Team,
             Option<&mut BasicStats>,
@@ -1784,6 +1834,7 @@ pub fn quest_system(
             position,
             equipment,
             npc,
+            party_membership,
             (
                 mut team,
                 mut basic_stats,
@@ -1819,6 +1870,7 @@ pub fn quest_system(
                     mana_points: mana_points.as_mut(),
                     move_speed,
                     npc,
+                    party_membership,
                     position,
                     quest_state: quest_state.as_mut(),
                     skill_list: skill_list.as_mut(),
