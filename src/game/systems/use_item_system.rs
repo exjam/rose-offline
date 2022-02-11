@@ -5,6 +5,7 @@ use bevy_ecs::{
     system::SystemParam,
 };
 use log::warn;
+use nalgebra::Point3;
 
 use crate::{
     data::{
@@ -12,15 +13,19 @@ use crate::{
         AbilityType, SkillType,
     },
     game::{
-        bundles::{ability_values_add_value, ability_values_get_value, skill_list_try_learn_skill},
+        bundles::{
+            ability_values_add_value, ability_values_get_value, client_entity_teleport_zone,
+            skill_list_try_learn_skill,
+        },
         components::{
-            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ExperiencePoints, GameClient,
-            Inventory, ItemSlot, Level, MoveSpeed, NextCommand, SkillList, SkillPoints, Stamina,
-            StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector,
+            ExperiencePoints, GameClient, Inventory, ItemSlot, Level, MoveSpeed, NextCommand,
+            Position, SkillList, SkillPoints, Stamina, StatPoints, StatusEffects,
+            StatusEffectsRegen, Team, UnionMembership,
         },
         events::UseItemEvent,
         messages::server::{ServerMessage, UseInventoryItem, UseItem},
-        resources::{ServerMessages, ServerTime},
+        resources::{ClientEntityList, ServerMessages, ServerTime},
         GameData,
     },
 };
@@ -29,6 +34,7 @@ use crate::{
 pub struct UseItemSystemParameters<'w, 's> {
     commands: Commands<'w, 's>,
     game_data: Res<'w, GameData>,
+    client_entity_list: ResMut<'w, ClientEntityList>,
     server_messages: ResMut<'w, ServerMessages>,
     server_time: Res<'w, ServerTime>,
 }
@@ -39,11 +45,13 @@ struct UseItemUser<'a, 'world> {
     basic_stats: &'a mut Mut<'world, BasicStats>,
     character_info: &'a CharacterInfo,
     client_entity: &'a ClientEntity,
+    client_entity_sector: &'a ClientEntitySector,
     experience_points: &'a ExperiencePoints,
     game_client: Option<&'a GameClient>,
     inventory: &'a mut Mut<'world, Inventory>,
     level: &'a Level,
     move_speed: &'a MoveSpeed,
+    position: &'a Position,
     skill_list: &'a mut Mut<'world, SkillList>,
     skill_points: &'a mut Mut<'world, SkillPoints>,
     stamina: &'a mut Mut<'world, Stamina>,
@@ -117,37 +125,71 @@ fn use_inventory_item(
 
     let (consume_item, message_to_nearby) = match item_data.item_data.class {
         ItemClass::MagicItem => {
-            if let Some(skill_id) = item_data.use_skill_id {
-                if let Some(skill_data) = use_item_system_parameters
+            if let Some((skill_id, skill_data)) = item_data.use_skill_id.and_then(|skill_id| {
+                use_item_system_parameters
                     .game_data
                     .skills
                     .get_skill(skill_id)
-                {
-                    if skill_data.skill_type.is_self_skill() {
-                        use_item_system_parameters
-                            .commands
-                            .entity(use_item_user.entity)
-                            .insert(NextCommand::with_cast_skill_target_self(
-                                skill_id,
-                                Some((item_slot, item.clone())),
-                            ));
-                    } else if skill_data.skill_type.is_target_skill() && target_entity.is_some() {
-                        use_item_system_parameters
-                            .commands
-                            .entity(use_item_user.entity)
-                            .insert(NextCommand::with_cast_skill_target_entity(
-                                skill_id,
-                                target_entity.unwrap(),
-                                Some((item_slot, item.clone())),
-                            ));
-                    } else if matches!(skill_data.skill_type, SkillType::Warp) {
-                        // TODO: Handle warp immediately rather than casting skill
-                        warn!("Unimplemented use of Warp item with item {:?}", item);
-                    }
-                }
-            }
+                    .map(|skill_data| (skill_id, skill_data))
+            }) {
+                if skill_data.skill_type.is_self_skill() {
+                    use_item_system_parameters
+                        .commands
+                        .entity(use_item_user.entity)
+                        .insert(NextCommand::with_cast_skill_target_self(
+                            skill_id,
+                            Some((item_slot, item.clone())),
+                        ));
+                    (false, false)
+                } else if skill_data.skill_type.is_target_skill() && target_entity.is_some() {
+                    use_item_system_parameters
+                        .commands
+                        .entity(use_item_user.entity)
+                        .insert(NextCommand::with_cast_skill_target_entity(
+                            skill_id,
+                            target_entity.unwrap(),
+                            Some((item_slot, item.clone())),
+                        ));
+                    (false, false)
+                } else if matches!(skill_data.skill_type, SkillType::Warp) {
+                    if let Some(zone_id) = skill_data.warp_zone_id {
+                        // TODO: Check skill_data.required_planet
 
-            (false, false)
+                        // We need to send an update inventory packet before teleporting, otherwise it is lost
+                        if let Some(game_client) = use_item_user.game_client {
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateInventory(
+                                    vec![(
+                                        item_slot,
+                                        use_item_user.inventory.get_item(item_slot).cloned(),
+                                    )],
+                                    None,
+                                ))
+                                .ok();
+                        }
+
+                        client_entity_teleport_zone(
+                            &mut use_item_system_parameters.commands,
+                            &mut use_item_system_parameters.client_entity_list,
+                            use_item_user.entity,
+                            use_item_user.client_entity,
+                            use_item_user.client_entity_sector,
+                            use_item_user.position,
+                            Position::new(
+                                Point3::new(skill_data.warp_zone_x, skill_data.warp_zone_y, 0.0),
+                                zone_id,
+                            ),
+                            use_item_user.game_client,
+                        );
+                    }
+                    (true, false)
+                } else {
+                    (false, false)
+                }
+            } else {
+                (false, false)
+            }
         }
         ItemClass::SkillBook => {
             if let Some(skill_id) = item_data.learn_skill_id {
@@ -282,9 +324,11 @@ pub fn use_item_system(
         &AbilityValues,
         &CharacterInfo,
         &ClientEntity,
+        &ClientEntitySector,
         &ExperiencePoints,
         &Level,
         &MoveSpeed,
+        &Position,
         &Team,
         (
             &mut BasicStats,
@@ -311,9 +355,11 @@ pub fn use_item_system(
             ability_values,
             character_info,
             client_entity,
+            client_entity_sector,
             experience_points,
             level,
             move_speed,
+            position,
             team_number,
             (
                 mut basic_stats,
@@ -335,10 +381,12 @@ pub fn use_item_system(
                 basic_stats: &mut basic_stats,
                 character_info,
                 client_entity,
+                client_entity_sector,
                 experience_points,
                 inventory: &mut inventory,
                 level,
                 move_speed,
+                position,
                 skill_list: &mut skill_list,
                 skill_points: &mut skill_points,
                 stamina: &mut stamina,

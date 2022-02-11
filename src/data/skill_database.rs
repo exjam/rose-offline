@@ -156,8 +156,8 @@ pub struct SkillData {
     pub summon_npc_id: Option<NpcId>,
     pub target_filter: SkillTargetFilter,
     pub warp_zone_id: Option<ZoneId>,
-    pub warp_zone_x: i32,
-    pub warp_zone_y: i32,
+    pub warp_zone_x: f32,
+    pub warp_zone_y: f32,
 }
 
 pub struct SkillDatabase {

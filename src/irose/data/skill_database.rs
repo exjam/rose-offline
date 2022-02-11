@@ -268,8 +268,8 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
             .unwrap_or(SkillTargetFilter::OnlySelf),
         use_ability: data.get_use_abilities(id),
         warp_zone_id: data.get_warp_zone_id(id),
-        warp_zone_x: data.get_warp_zone_xpos(id).unwrap_or(0),
-        warp_zone_y: data.get_warp_zone_ypos(id).unwrap_or(0),
+        warp_zone_x: data.get_warp_zone_xpos(id).unwrap_or(0) as f32 * 1000.0,
+        warp_zone_y: data.get_warp_zone_ypos(id).unwrap_or(0) as f32 * 1000.0,
     })
 }
 
