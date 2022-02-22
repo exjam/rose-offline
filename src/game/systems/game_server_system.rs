@@ -1008,20 +1008,47 @@ pub fn game_server_main_system(
                         }
                     }
                     ClientMessage::RunToggle => {
-                        if matches!(*move_mode, MoveMode::Run) {
-                            *move_mode = MoveMode::Walk;
-                        } else {
-                            *move_mode = MoveMode::Run;
+                        if match *move_mode {
+                            MoveMode::Walk => {
+                                *move_mode = MoveMode::Run;
+                                true
+                            }
+                            MoveMode::Run => {
+                                *move_mode = MoveMode::Walk;
+                                true
+                            }
+                            MoveMode::Drive => false,
+                        } {
+                            server_messages.send_entity_message(
+                                client_entity,
+                                ServerMessage::MoveToggle(server::MoveToggle {
+                                    entity_id: client_entity.id,
+                                    move_mode: *move_mode,
+                                    run_speed: None,
+                                }),
+                            );
                         }
-
-                        server_messages.send_entity_message(
-                            client_entity,
-                            ServerMessage::MoveToggle(server::MoveToggle {
-                                entity_id: client_entity.id,
-                                move_mode: *move_mode,
-                                run_speed: None,
-                            }),
-                        );
+                    }
+                    ClientMessage::DriveToggle => {
+                        if match *move_mode {
+                            MoveMode::Walk | MoveMode::Run => {
+                                *move_mode = MoveMode::Drive;
+                                true
+                            }
+                            MoveMode::Drive => {
+                                *move_mode = MoveMode::Run;
+                                true
+                            }
+                        } {
+                            server_messages.send_entity_message(
+                                client_entity,
+                                ServerMessage::MoveToggle(server::MoveToggle {
+                                    entity_id: client_entity.id,
+                                    move_mode: *move_mode,
+                                    run_speed: None,
+                                }),
+                            );
+                        }
                     }
                     ClientMessage::DropMoney(quantity) => {
                         let mut money = Money(quantity as i64);

@@ -466,6 +466,13 @@ pub fn command_system(
                                     .insert(MoveSpeed::new(ability_values.get_run_speed()));
                             }
                         }
+                        Some(MoveMode::Drive) => {
+                            if !matches!(move_mode, MoveMode::Drive) {
+                                entity_commands
+                                    .insert(MoveMode::Drive)
+                                    .insert(MoveSpeed::new(ability_values.get_drive_speed()));
+                            }
+                        }
                         None => {}
                     }
 

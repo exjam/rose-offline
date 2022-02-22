@@ -4,4 +4,5 @@ use bevy_ecs::prelude::Component;
 pub enum MoveMode {
     Walk,
     Run,
+    Drive,
 }

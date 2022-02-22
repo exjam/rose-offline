@@ -101,6 +101,7 @@ pub fn ability_values_system(
             let updated_move_speed = match move_mode {
                 MoveMode::Run => ability_values.get_run_speed(),
                 MoveMode::Walk => ability_values.get_walk_speed(),
+                MoveMode::Drive => ability_values.get_drive_speed(),
             };
             if (move_speed.speed - updated_move_speed).abs() > f32::EPSILON {
                 move_speed.speed = updated_move_speed;

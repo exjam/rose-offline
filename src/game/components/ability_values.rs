@@ -251,4 +251,8 @@ impl AbilityValues {
     pub fn get_run_speed(&self) -> f32 {
         self.run_speed + self.adjust.run_speed
     }
+
+    pub fn get_drive_speed(&self) -> f32 {
+        self.get_run_speed()
+    }
 }
