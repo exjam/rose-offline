@@ -120,7 +120,7 @@ pub fn skill_list_try_learn_skill(
                     .server_message_tx
                     .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
                         skill_slot,
-                        skill_id,
+                        skill_id: Some(skill_id),
                         updated_skill_points: skill_points
                             .map_or_else(SkillPoints::new, |skill_points| **skill_points),
                     })))

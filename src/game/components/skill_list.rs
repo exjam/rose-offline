@@ -32,6 +32,12 @@ impl SkillPage {
         Some((SkillSlot(self.page_type, index), skill_data.id))
     }
 
+    pub fn remove_skill(&mut self, skill_data: &SkillData) -> Option<SkillSlot> {
+        let (skill_slot, _) = self.find_skill(skill_data)?;
+        self.skills[skill_slot.1].take();
+        Some(skill_slot)
+    }
+
     pub fn find_skill(&self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         self.skills
             .iter()
@@ -80,6 +86,10 @@ impl SkillList {
 
     pub fn add_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         self.get_page_mut(skill_data.page).add_skill(skill_data)
+    }
+
+    pub fn remove_skill(&mut self, skill_data: &SkillData) -> Option<SkillSlot> {
+        self.get_page_mut(skill_data.page).remove_skill(skill_data)
     }
 
     pub fn find_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {

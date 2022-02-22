@@ -273,7 +273,7 @@ pub enum LearnSkillError {
 #[derive(Clone)]
 pub struct LearnSkillSuccess {
     pub skill_slot: SkillSlot,
-    pub skill_id: SkillId,
+    pub skill_id: Option<SkillId>,
     pub updated_skill_points: SkillPoints,
 }
 

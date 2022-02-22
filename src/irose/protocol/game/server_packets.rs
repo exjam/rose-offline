@@ -1161,7 +1161,7 @@ impl From<&PacketServerLearnSkillResult> for Packet {
             }) => {
                 writer.write_u8(1); // Success
                 writer.write_skill_slot_u8(skill_slot);
-                writer.write_u16(skill_id.get() as u16);
+                writer.write_u16(skill_id.map_or(0, |skill_id| skill_id.get() as u16));
                 writer.write_u16(updated_skill_points.points as u16);
             }
             Err(error) => {

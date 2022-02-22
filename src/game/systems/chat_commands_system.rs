@@ -2,7 +2,7 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
-use clap::{App, Arg};
+use clap::{App, Arg, PossibleValue};
 use lazy_static::lazy_static;
 use nalgebra::{Point2, Point3};
 use num_traits::FromPrimitive;
@@ -15,7 +15,7 @@ use std::{
 use crate::{
     data::{
         item::{Item, ItemType},
-        AbilityType, ItemReference, ZoneId,
+        AbilityType, ItemReference, SkillId, ZoneId,
     },
     game::{
         bundles::{
@@ -26,12 +26,12 @@ use crate::{
             AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
             ClientEntitySector, ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase,
             GameClient, Inventory, Level, Money, MoveMode, MoveSpeed, NextCommand, Owner,
-            PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillPoints, Stamina,
-            StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+            PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints,
+            Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
             PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},
-        messages::server::{ServerMessage, UpdateSpeed, Whisper},
+        messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
         resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
         GameData,
     },
@@ -58,6 +58,7 @@ pub struct ChatCommandUser<'w, 's> {
     basic_stats: &'s mut Mut<'w, BasicStats>,
     character_info: &'s mut Mut<'w, CharacterInfo>,
     inventory: &'s mut Mut<'w, Inventory>,
+    skill_list: &'s mut Mut<'w, SkillList>,
     skill_points: &'s mut Mut<'w, SkillPoints>,
     stamina: &'s mut Mut<'w, Stamina>,
     stat_points: &'s mut Mut<'w, StatPoints>,
@@ -91,6 +92,18 @@ lazy_static! {
                     .arg(Arg::new("value").required(true)),
             )
             .subcommand(App::new("speed").arg(Arg::new("speed").required(true)))
+            .subcommand(
+                App::new("skill")
+                    .arg(
+                        Arg::new("cmd")
+                            .possible_values([
+                                PossibleValue::new("add"),
+                                PossibleValue::new("remove"),
+                            ])
+                            .required(true),
+                    )
+                    .arg(Arg::new("id").required(true)),
+            )
     };
 }
 
@@ -596,6 +609,37 @@ fn handle_chat_command(
                 }),
             );
         }
+        ("skill", arg_matches) => {
+            let cmd = arg_matches.value_of("cmd").unwrap();
+            let id = arg_matches.value_of("id").unwrap().parse::<SkillId>()?;
+            let skill_data = chat_command_params
+                .game_data
+                .skills
+                .get_skill(id)
+                .ok_or(ChatCommandError::InvalidCommand)?;
+
+            if let Some((skill_slot, skill_id)) = match cmd {
+                "add" => chat_command_user
+                    .skill_list
+                    .add_skill(skill_data)
+                    .map(|(skill_slot, skill_id)| (skill_slot, Some(skill_id))),
+                "remove" => chat_command_user
+                    .skill_list
+                    .remove_skill(skill_data)
+                    .map(|skill_slot| (skill_slot, None)),
+                _ => None,
+            } {
+                chat_command_user
+                    .game_client
+                    .server_message_tx
+                    .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
+                        skill_slot,
+                        skill_id,
+                        updated_skill_points: **chat_command_user.skill_points,
+                    })))
+                    .ok();
+            }
+        }
         _ => return Err(ChatCommandError::InvalidCommand),
     }
 
@@ -614,6 +658,7 @@ pub fn chat_commands_system(
         &mut BasicStats,
         &mut CharacterInfo,
         &mut Inventory,
+        &mut SkillList,
         &mut SkillPoints,
         &mut Stamina,
         &mut StatPoints,
@@ -636,6 +681,7 @@ pub fn chat_commands_system(
             mut basic_stats,
             mut character_info,
             mut inventory,
+            mut skill_list,
             mut skill_points,
             mut stamina,
             mut stat_points,
@@ -653,6 +699,7 @@ pub fn chat_commands_system(
                 basic_stats: &mut basic_stats,
                 character_info: &mut character_info,
                 inventory: &mut inventory,
+                skill_list: &mut skill_list,
                 skill_points: &mut skill_points,
                 stamina: &mut stamina,
                 stat_points: &mut stat_points,
