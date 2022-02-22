@@ -150,6 +150,7 @@ fn send_chat_commands_help(client: &GameClient) {
 pub enum ChatCommandError {
     InvalidCommand,
     InvalidArguments,
+    WithMessage(String),
 }
 
 impl From<shellwords::MismatchedQuotes> for ChatCommandError {
@@ -366,27 +367,23 @@ fn handle_chat_command(
                 (520.0, 520.0)
             };
 
-            if chat_command_params
+            let _zone = chat_command_params
                 .client_entity_list
                 .get_zone(zone_id)
-                .is_some()
-            {
-                client_entity_teleport_zone(
-                    &mut chat_command_params.commands,
-                    &mut chat_command_params.client_entity_list,
-                    chat_command_user.entity,
-                    chat_command_user.client_entity,
-                    chat_command_user.client_entity_sector,
-                    chat_command_user.position,
-                    Position::new(Point3::new(x, y, 0.0), zone_id),
-                    Some(chat_command_user.game_client),
-                );
-            } else {
-                send_multiline_whisper(
-                    chat_command_user.game_client,
-                    &format!("Invalid zone id {}", zone_id.get()),
-                );
-            }
+                .ok_or_else(|| {
+                    ChatCommandError::WithMessage(format!("Invalid zone id {}", zone_id.get()))
+                })?;
+
+            client_entity_teleport_zone(
+                &mut chat_command_params.commands,
+                &mut chat_command_params.client_entity_list,
+                chat_command_user.entity,
+                chat_command_user.client_entity,
+                chat_command_user.client_entity_sector,
+                chat_command_user.position,
+                Position::new(Point3::new(x, y, 0.0), zone_id),
+                Some(chat_command_user.game_client),
+            );
         }
         ("ability_values", _) => {
             send_multiline_whisper(
@@ -451,48 +448,49 @@ fn handle_chat_command(
             }
         }
         ("shop", arg_matches) => {
-            let item_type: Option<ItemType> =
-                FromPrimitive::from_i32(arg_matches.value_of("item_type").unwrap().parse::<i32>()?);
-            if let Some(item_type) = item_type {
-                let mut all_items: Vec<ItemReference> = chat_command_params
-                    .game_data
-                    .items
-                    .iter_items(item_type)
-                    .collect();
-                all_items.sort_by(|a, b| a.item_number.cmp(&b.item_number));
+            let item_type_id = arg_matches.value_of("item_type").unwrap().parse::<i32>()?;
+            let item_type: ItemType = FromPrimitive::from_i32(item_type_id).ok_or_else(|| {
+                ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_id))
+            })?;
 
-                let num_bots =
-                    (all_items.len() + PERSONAL_STORE_ITEM_SLOTS - 1) / PERSONAL_STORE_ITEM_SLOTS;
-                let bot_entities = create_random_bot_entities(
-                    chat_command_params,
-                    num_bots,
-                    30.0,
-                    chat_command_user.position.clone(),
-                    chat_command_user.entity,
-                );
-                let mut index = 0usize;
+            let mut all_items: Vec<ItemReference> = chat_command_params
+                .game_data
+                .items
+                .iter_items(item_type)
+                .collect();
+            all_items.sort_by(|a, b| a.item_number.cmp(&b.item_number));
 
-                for (shop_index, entity) in bot_entities.into_iter().enumerate() {
-                    let mut store = PersonalStore::new(format!("Shop {}", shop_index), 0);
-                    let mut inventory = Inventory::new();
+            let num_bots =
+                (all_items.len() + PERSONAL_STORE_ITEM_SLOTS - 1) / PERSONAL_STORE_ITEM_SLOTS;
+            let bot_entities = create_random_bot_entities(
+                chat_command_params,
+                num_bots,
+                30.0,
+                chat_command_user.position.clone(),
+                chat_command_user.entity,
+            );
+            let mut index = 0usize;
 
-                    for i in index..index + PERSONAL_STORE_ITEM_SLOTS {
-                        if let Some(item) = all_items.get(i).and_then(|item| Item::new(item, 999)) {
-                            if let Ok((slot, _)) = inventory.try_add_item(item) {
-                                store.add_sell_item(slot, Money(1)).ok();
-                            }
+            for (shop_index, entity) in bot_entities.into_iter().enumerate() {
+                let mut store = PersonalStore::new(format!("Shop {}", shop_index), 0);
+                let mut inventory = Inventory::new();
+
+                for i in index..index + PERSONAL_STORE_ITEM_SLOTS {
+                    if let Some(item) = all_items.get(i).and_then(|item| Item::new(item, 999)) {
+                        if let Ok((slot, _)) = inventory.try_add_item(item) {
+                            store.add_sell_item(slot, Money(1)).ok();
                         }
                     }
-
-                    index += PERSONAL_STORE_ITEM_SLOTS;
-
-                    chat_command_params
-                        .commands
-                        .entity(entity)
-                        .insert(store)
-                        .insert(inventory)
-                        .insert(NextCommand::with_personal_store());
                 }
+
+                index += PERSONAL_STORE_ITEM_SLOTS;
+
+                chat_command_params
+                    .commands
+                    .entity(entity)
+                    .insert(store)
+                    .insert(inventory)
+                    .insert(NextCommand::with_personal_store());
             }
         }
         ("add", arg_matches) => {
@@ -523,10 +521,15 @@ fn handle_chat_command(
                 "union_point8" => AbilityType::UnionPoint8,
                 "union_point9" => AbilityType::UnionPoint9,
                 "union_point10" => AbilityType::UnionPoint10,
-                _ => return Err(ChatCommandError::InvalidArguments),
+                _ => {
+                    return Err(ChatCommandError::WithMessage(format!(
+                        "Invalid ability type {}",
+                        ability_type_str
+                    )))
+                }
             };
 
-            if ability_values_add_value(
+            ability_values_add_value(
                 ability_type,
                 value,
                 Some(chat_command_user.basic_stats),
@@ -536,12 +539,7 @@ fn handle_chat_command(
                 Some(chat_command_user.stat_points),
                 Some(chat_command_user.union_membership),
                 Some(chat_command_user.game_client),
-            ) {
-                send_multiline_whisper(
-                    chat_command_user.game_client,
-                    &format!("Success: /add {} {}", ability_type_str, value),
-                );
-            }
+            );
         }
         ("set", arg_matches) => {
             let ability_type_str = arg_matches.value_of("ability_type").unwrap();
@@ -574,22 +572,22 @@ fn handle_chat_command(
                 "union_point8" => AbilityType::UnionPoint8,
                 "union_point9" => AbilityType::UnionPoint9,
                 "union_point10" => AbilityType::UnionPoint10,
-                _ => return Err(ChatCommandError::InvalidArguments),
+                _ => {
+                    return Err(ChatCommandError::WithMessage(format!(
+                        "Invalid ability type {}",
+                        ability_type_str
+                    )))
+                }
             };
 
-            if ability_values_set_value(
+            ability_values_set_value(
                 ability_type,
                 value,
                 Some(chat_command_user.basic_stats),
                 Some(chat_command_user.character_info),
                 Some(chat_command_user.union_membership),
                 Some(chat_command_user.game_client),
-            ) {
-                send_multiline_whisper(
-                    chat_command_user.game_client,
-                    &format!("Success: /set {} {}", ability_type_str, value),
-                );
-            }
+            );
         }
         ("speed", arg_matches) => {
             let value = arg_matches.value_of("speed").unwrap().parse::<i32>()?;
@@ -616,9 +614,21 @@ fn handle_chat_command(
                 .game_data
                 .skills
                 .get_skill(id)
-                .ok_or(ChatCommandError::InvalidCommand)?;
+                .ok_or_else(|| {
+                    ChatCommandError::WithMessage(format!("Invalid skill id {}", id.get()))
+                })?;
 
-            if let Some((skill_slot, skill_id)) = match cmd {
+            if matches!(cmd, "add")
+                && chat_command_user
+                    .skill_list
+                    .find_skill(skill_data)
+                    .is_some()
+            {
+                return Err(ChatCommandError::WithMessage(format!(
+                    "Already have skill {}",
+                    cmd
+                )));
+            } else if let Some((skill_slot, skill_id)) = match cmd {
                 "add" => chat_command_user
                     .skill_list
                     .add_skill(skill_data)
@@ -638,6 +648,11 @@ fn handle_chat_command(
                         updated_skill_points: **chat_command_user.skill_points,
                     })))
                     .ok();
+            } else {
+                return Err(ChatCommandError::WithMessage(format!(
+                    "Invalid skill command {}",
+                    cmd
+                )));
             }
         }
         _ => return Err(ChatCommandError::InvalidCommand),
@@ -706,14 +721,36 @@ pub fn chat_commands_system(
                 union_membership: &mut union_membership,
             };
 
-            if handle_chat_command(
+            match handle_chat_command(
                 &mut chat_command_params,
                 &mut chat_command_user,
                 &command[1..],
-            )
-            .is_err()
-            {
-                send_chat_commands_help(chat_command_user.game_client);
+            ) {
+                Ok(_) => {
+                    send_multiline_whisper(
+                        chat_command_user.game_client,
+                        &format!("Success: {}", command),
+                    );
+                }
+                Err(error) => {
+                    send_multiline_whisper(
+                        chat_command_user.game_client,
+                        &format!("Failed: {}", command),
+                    );
+
+                    match error {
+                        ChatCommandError::InvalidCommand => {
+                            send_multiline_whisper(chat_command_user.game_client, "Invalid command")
+                        }
+                        ChatCommandError::InvalidArguments => send_multiline_whisper(
+                            chat_command_user.game_client,
+                            "Invalid argument",
+                        ),
+                        ChatCommandError::WithMessage(message) => {
+                            send_multiline_whisper(chat_command_user.game_client, &message)
+                        }
+                    };
+                }
             }
         }
     }
