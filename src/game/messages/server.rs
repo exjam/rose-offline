@@ -12,6 +12,7 @@ use crate::{
         Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints,
         ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection,
         Position, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
+        VehiclePartIndex,
     },
 };
 
@@ -198,6 +199,13 @@ pub struct UpdateBasicStat {
 pub struct UpdateEquipment {
     pub entity_id: ClientEntityId,
     pub equipment_index: EquipmentIndex,
+    pub item: Option<EquipmentItem>,
+}
+
+#[derive(Clone)]
+pub struct UpdateVehiclePart {
+    pub entity_id: ClientEntityId,
+    pub vehicle_part_index: VehiclePartIndex,
     pub item: Option<EquipmentItem>,
 }
 
@@ -492,6 +500,7 @@ pub enum ServerMessage {
     UpdateAmmo(ClientEntityId, AmmoIndex, Option<StackableItem>),
     UpdateBasicStat(UpdateBasicStat),
     UpdateEquipment(UpdateEquipment),
+    UpdateVehiclePart(UpdateVehiclePart),
     UpdateInventory(Vec<(ItemSlot, Option<Item>)>, Option<Money>),
     UpdateLevel(UpdateLevel),
     UpdateMoney(Money),

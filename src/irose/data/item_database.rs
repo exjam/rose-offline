@@ -2,13 +2,16 @@ use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use crate::data::{
-    formats::{FileReader, StbFile, StlFile, VfsIndex},
-    item::ItemClass,
-    AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
-    FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData,
-    JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId, SubWeaponItemData,
-    VehicleItemData, WeaponItemData,
+use crate::{
+    data::{
+        formats::{FileReader, StbFile, StlFile, VfsIndex},
+        item::ItemClass,
+        AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
+        FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData,
+        JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
+        SubWeaponItemData, VehicleItemData, WeaponItemData,
+    },
+    game::components::VehiclePartIndex,
 };
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
@@ -16,6 +19,15 @@ pub struct StbItemGrades(pub StbFile);
 use crate::stb_column;
 
 impl FromStr for ItemClass {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<u32>().map_err(|_| ())?;
+        FromPrimitive::from_u32(value).ok_or(())
+    }
+}
+
+impl FromStr for VehiclePartIndex {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -188,6 +200,9 @@ impl StbItem {
         }
         add_ability
     }
+
+    // LIST_PAT
+    stb_column! { 2, get_vehicle_part_index, VehiclePartIndex }
 }
 
 #[allow(dead_code)]
@@ -318,6 +333,14 @@ fn load_gem_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<GemItemData
     })
 }
 
+fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<VehicleItemData> {
+    let base_item_data = load_base_item(data, stl, id, true)?;
+    Some(VehicleItemData {
+        item_data: base_item_data,
+        vehicle_part_index: data.get_vehicle_part_index(id)?,
+    })
+}
+
 macro_rules! load_items {
     ($vfs:ident, $path:literal, $stl_path:literal, load_base_item, $item_data_type:ident) => {{
         let mut items: HashMap<u16, $item_data_type> = HashMap::new();
@@ -358,10 +381,10 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
     let weapon = load_items! { vfs, "3DDATA/STB/LIST_WEAPON.STB", "3DDATA/STB/LIST_WEAPON_S.STL", load_weapon_item, WeaponItemData };
     let subweapon = load_items! { vfs, "3DDATA/STB/LIST_SUBWPN.STB", "3DDATA/STB/LIST_SUBWPN_S.STL", load_base_item, SubWeaponItemData };
     let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA/STB/LIST_USEITEM_S.STL", load_consumeable_item, ConsumableItemData };
-    let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA/STB/LIST_JEMITEM_S.STL",load_gem_item, GemItemData };
+    let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA/STB/LIST_JEMITEM_S.STL", load_gem_item, GemItemData };
     let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA/STB/LIST_NATURAL_S.STL", load_base_item, MaterialItemData };
     let quest = load_items! { vfs, "3DDATA/STB/LIST_QUESTITEM.STB", "3DDATA/STB/LIST_QUESTITEM_S.STL", load_base_item, QuestItemData };
-    let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA/STB/LIST_PAT_S.STL", load_base_item, VehicleItemData };
+    let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA/STB/LIST_PAT_S.STL", load_vehicle_item, VehicleItemData };
 
     let mut item_grades = Vec::new();
     if let Some(file) = vfs.open_file("3DDATA/STB/LIST_GRADE.STB") {

@@ -20,7 +20,7 @@ use crate::{
             ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
             ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
             PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
-            StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
+            StatPoints, StatusEffects, StatusEffectsRegen, Team, VehiclePartIndex, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
@@ -315,6 +315,27 @@ fn unequip_to_inventory(
     }
 }
 
+fn unequip_vehicle_to_inventory(
+    equipment: &mut Equipment,
+    inventory: &mut Inventory,
+    vehicle_part_index: VehiclePartIndex,
+) -> Result<Vec<(ItemSlot, Option<Item>)>, UnequipError> {
+    let vehicle_slot = equipment.get_vehicle_slot_mut(vehicle_part_index);
+    let vehicle_item = vehicle_slot.take().ok_or(UnequipError::NoItem)?;
+
+    match inventory.try_add_equipment_item(vehicle_item) {
+        Ok((item_slot, item)) => Ok(vec![
+            (item_slot, Some(item.clone())),
+            (ItemSlot::Vehicle(vehicle_part_index), None),
+        ]),
+        Err(vehicle_item) => {
+            // Failed to add to inventory, return item to equipment
+            *vehicle_slot = Some(vehicle_item);
+            Err(UnequipError::InventoryFull)
+        }
+    }
+}
+
 enum EquipItemError {
     ItemBroken,
     InvalidEquipmentIndex,
@@ -366,6 +387,8 @@ fn equip_from_inventory(
         return Err(EquipItemError::InvalidEquipmentIndex);
     }
 
+    // TODO: Check equipment ability requirements
+
     let mut updated_inventory_items = Vec::new();
 
     // If we are equipping a two handed weapon, we must unequip offhand first
@@ -409,6 +432,56 @@ fn equip_from_inventory(
     Ok(updated_inventory_items)
 }
 
+fn equip_vehicle_from_inventory(
+    game_data: &GameData,
+    equipment: &mut Equipment,
+    inventory: &mut Inventory,
+    vehicle_part_index: VehiclePartIndex,
+    item_slot: ItemSlot,
+) -> Result<Vec<(ItemSlot, Option<Item>)>, EquipItemError> {
+    // TODO: Cannot change equipment whilst casting spell
+    // TODO: Cannot change equipment whilst stunned
+
+    let equipment_item = inventory
+        .get_equipment_item(item_slot)
+        .ok_or(EquipItemError::InvalidItem)?;
+
+    let item_data = game_data
+        .items
+        .get_vehicle_item(equipment_item.item.item_number)
+        .ok_or(EquipItemError::InvalidItemData)?;
+
+    if vehicle_part_index != item_data.vehicle_part_index {
+        return Err(EquipItemError::InvalidEquipmentIndex);
+    }
+
+    if vehicle_part_index != VehiclePartIndex::Engine && equipment_item.life == 0 {
+        return Err(EquipItemError::ItemBroken);
+    }
+
+    // TODO: Check equipment ability requirements
+
+    let mut updated_inventory_items = Vec::new();
+
+    // Equip item from inventory
+    let inventory_slot = inventory.get_item_slot_mut(item_slot).unwrap();
+    let vehicle_slot = equipment.get_vehicle_slot_mut(vehicle_part_index);
+    let equipment_item = match inventory_slot.take() {
+        Some(Item::Equipment(equipment_item)) => equipment_item,
+        _ => unreachable!(),
+    };
+    *inventory_slot = vehicle_slot.take().map(Item::Equipment);
+    *vehicle_slot = Some(equipment_item);
+
+    updated_inventory_items.push((
+        ItemSlot::Vehicle(vehicle_part_index),
+        vehicle_slot.clone().map(Item::Equipment),
+    ));
+    updated_inventory_items.push((item_slot, inventory_slot.clone()));
+
+    Ok(updated_inventory_items)
+}
+
 pub fn game_server_main_system(
     mut commands: Commands,
     mut game_client_query: Query<(
@@ -419,9 +492,9 @@ pub fn game_server_main_system(
         &Position,
         &AbilityValues,
         &Command,
-        &CharacterInfo,
         (
             &mut BasicStats,
+            &mut CharacterInfo,
             &mut StatPoints,
             &mut SkillPoints,
             &mut SkillList,
@@ -453,9 +526,9 @@ pub fn game_server_main_system(
             position,
             ability_values,
             command,
-            character_info,
             (
                 mut basic_stats,
+                mut character_info,
                 mut stat_points,
                 mut skill_points,
                 mut skill_list,
@@ -555,6 +628,44 @@ pub fn game_server_main_system(
                                     entity_id: client_entity.id,
                                     equipment_index,
                                     item: equipment.get_equipment_item(equipment_index).cloned(),
+                                }),
+                            );
+                        }
+                    }
+                    ClientMessage::ChangeVehiclePart(vehicle_part_index, item_slot) => {
+                        let updated_inventory_items = if let Some(item_slot) = item_slot {
+                            equip_vehicle_from_inventory(
+                                &game_data,
+                                &mut equipment,
+                                &mut inventory,
+                                vehicle_part_index,
+                                item_slot,
+                            )
+                            .ok()
+                        } else {
+                            unequip_vehicle_to_inventory(
+                                &mut equipment,
+                                &mut inventory,
+                                vehicle_part_index,
+                            )
+                            .ok()
+                        };
+
+                        if let Some(updated_inventory_items) = updated_inventory_items {
+                            client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateInventory(
+                                    updated_inventory_items,
+                                    None,
+                                ))
+                                .ok();
+
+                            server_messages.send_entity_message(
+                                client_entity,
+                                ServerMessage::UpdateVehiclePart(server::UpdateVehiclePart {
+                                    entity_id: client_entity.id,
+                                    vehicle_part_index,
+                                    item: equipment.get_vehicle_item(vehicle_part_index).cloned(),
                                 }),
                             );
                         }
@@ -758,6 +869,15 @@ pub fn game_server_main_system(
                                 new_position,
                                 Some(client),
                             );
+                        }
+                    }
+                    ClientMessage::SetReviveZone => {
+                        if let Some(zone_data) = game_data.zones.get_zone(position.zone_id) {
+                            let revive_position = zone_data
+                                .get_closest_revive_position(zone_data.start_position)
+                                .unwrap_or(zone_data.start_position);
+                            character_info.revive_zone_id = position.zone_id;
+                            character_info.revive_position = revive_position;
                         }
                     }
                     ClientMessage::QuestDelete(QuestDelete { slot, quest_id }) => {

@@ -27,7 +27,7 @@ pub enum ItemType {
 }
 
 impl ItemType {
-    pub fn is_stackable(self) -> bool {
+    pub fn is_stackable_item(self) -> bool {
         matches!(
             self,
             ItemType::Consumable | ItemType::Gem | ItemType::Material | ItemType::Quest
@@ -44,7 +44,7 @@ impl ItemType {
         matches!(self, ItemType::Quest)
     }
 
-    pub fn is_equipment(self) -> bool {
+    pub fn is_equipment_item(self) -> bool {
         matches!(
             self,
             ItemType::Face
@@ -56,6 +56,7 @@ impl ItemType {
                 | ItemType::Jewellery
                 | ItemType::Weapon
                 | ItemType::SubWeapon
+                | ItemType::Vehicle
         )
     }
 }
@@ -232,7 +233,7 @@ pub struct EquipmentItem {
 
 impl EquipmentItem {
     pub fn new(item: &ItemReference) -> Option<EquipmentItem> {
-        if item.item_type.is_equipment() {
+        if item.item_type.is_equipment_item() {
             Some(EquipmentItem {
                 item: *item,
                 gem: 0,
@@ -274,7 +275,7 @@ pub enum StackError {
 
 impl StackableItem {
     pub fn new(item: &ItemReference, quantity: u32) -> Option<StackableItem> {
-        if item.item_type.is_stackable() && quantity > 0 {
+        if item.item_type.is_stackable_item() && quantity > 0 {
             Some(StackableItem {
                 item: *item,
                 quantity,
@@ -329,18 +330,13 @@ pub enum Item {
 
 impl Item {
     pub fn new(item: &ItemReference, quantity: u32) -> Option<Item> {
-        if item.item_type.is_stackable() {
+        if item.item_type.is_stackable_item() {
             StackableItem::new(item, quantity).map(Item::Stackable)
-        } else if item.item_type.is_equipment() {
+        } else if item.item_type.is_equipment_item() {
             EquipmentItem::new(item).map(Item::Equipment)
         } else {
             None
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn is_stackable(&self) -> bool {
-        matches!(self, Item::Stackable(_))
     }
 
     pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {

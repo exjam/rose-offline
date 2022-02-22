@@ -839,7 +839,7 @@ fn quest_reward_calculated_item(
     reward_item: ItemReference,
     reward_gem: Option<ItemReference>,
 ) -> bool {
-    let item = if reward_item.item_type.is_stackable() {
+    let item = if reward_item.item_type.is_stackable_item() {
         let reward_value = quest_system_resources
             .game_data
             .ability_value_calculator

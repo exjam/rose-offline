@@ -10,6 +10,7 @@ use crate::{
         CharacterUniqueId, ClientEntityId, Equipment, EquipmentIndex, ExperiencePoints,
         HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Position,
         QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        VehiclePartIndex,
     },
 };
 
@@ -305,10 +306,12 @@ pub enum ClientMessage {
     SetHotbarSlot(SetHotbarSlot),
     ChangeAmmo(AmmoIndex, Option<ItemSlot>),
     ChangeEquipment(ChangeEquipment),
+    ChangeVehiclePart(VehiclePartIndex, Option<ItemSlot>),
     IncreaseBasicStat(BasicStatType),
     PickupItemDrop(PickupItemDrop),
     LogoutRequest(LogoutRequest),
     ReviveRequest(ReviveRequestType),
+    SetReviveZone,
     QuestTrigger(QuestTriggerHash),
     QuestDelete(QuestDelete),
     PersonalStoreListItems(ClientEntityId),

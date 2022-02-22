@@ -143,7 +143,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         if let Some(item_type) = FromPrimitive::from_u8(item_header.item_type()) {
             let item_reference = ItemReference::new(item_type, item_header.item_number() as usize);
 
-            if item_type.is_stackable() {
+            if item_type.is_stackable_item() {
                 let stackable_item =
                     PacketStackableItemFull::from_bytes(item_bytes.try_into().unwrap());
                 if let Some(item) = StackableItem::new(&item_reference, stackable_item.quantity()) {
@@ -369,6 +369,47 @@ impl PacketWriteEquipmentIndex for PacketWriter {
     }
 }
 
+pub trait PacketReadVehiclePartIndex {
+    fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, ProtocolError>;
+}
+
+pub trait PacketWriteVehiclePartIndex {
+    fn write_vehicle_part_index_u16(&mut self, vehicle_part_index: VehiclePartIndex);
+}
+
+fn decode_vehicle_part_index(index: usize) -> Option<VehiclePartIndex> {
+    match index {
+        0 => Some(VehiclePartIndex::Body),
+        1 => Some(VehiclePartIndex::Engine),
+        2 => Some(VehiclePartIndex::Leg),
+        3 => Some(VehiclePartIndex::Ability),
+        4 => Some(VehiclePartIndex::Arms),
+        _ => None,
+    }
+}
+
+fn encode_vehicle_part_index(index: VehiclePartIndex) -> usize {
+    match index {
+        VehiclePartIndex::Body => 0,
+        VehiclePartIndex::Engine => 1,
+        VehiclePartIndex::Leg => 2,
+        VehiclePartIndex::Ability => 3,
+        VehiclePartIndex::Arms => 4,
+    }
+}
+
+impl<'a> PacketReadVehiclePartIndex for PacketReader<'a> {
+    fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, ProtocolError> {
+        decode_vehicle_part_index(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
+    }
+}
+
+impl PacketWriteVehiclePartIndex for PacketWriter {
+    fn write_vehicle_part_index_u16(&mut self, vehicle_part_index: VehiclePartIndex) {
+        self.write_u16(encode_vehicle_part_index(vehicle_part_index) as u16)
+    }
+}
+
 pub trait PacketReadItemSlot {
     fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError>;
     fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError>;
@@ -402,7 +443,7 @@ pub fn decode_item_slot(index: usize) -> Option<ItemSlot> {
             0 => Some(ItemSlot::Vehicle(VehiclePartIndex::Body)),
             1 => Some(ItemSlot::Vehicle(VehiclePartIndex::Engine)),
             2 => Some(ItemSlot::Vehicle(VehiclePartIndex::Leg)),
-            3 => Some(ItemSlot::Vehicle(VehiclePartIndex::Arms)),
+            3 => Some(ItemSlot::Vehicle(VehiclePartIndex::Ability)),
             _ => None,
         }
     } else {
@@ -425,8 +466,8 @@ fn encode_item_slot(slot: ItemSlot) -> usize {
         ItemSlot::Vehicle(VehiclePartIndex::Body) => VEHICLE_START_INDEX,
         ItemSlot::Vehicle(VehiclePartIndex::Engine) => VEHICLE_START_INDEX + 1,
         ItemSlot::Vehicle(VehiclePartIndex::Leg) => VEHICLE_START_INDEX + 2,
-        ItemSlot::Vehicle(VehiclePartIndex::Arms) => VEHICLE_START_INDEX + 3,
-        _ => 0,
+        ItemSlot::Vehicle(VehiclePartIndex::Ability) => VEHICLE_START_INDEX + 3,
+        ItemSlot::Vehicle(VehiclePartIndex::Arms) => VEHICLE_START_INDEX + 4,
     }
 }
 

@@ -103,6 +103,10 @@ impl Equipment {
         &mut self.equipped_items[index as usize]
     }
 
+    pub fn get_vehicle_slot_mut(&mut self, index: VehiclePartIndex) -> &mut Option<EquipmentItem> {
+        &mut self.equipped_vehicle[index as usize]
+    }
+
     pub fn equip_item(
         &mut self,
         item: EquipmentItem,

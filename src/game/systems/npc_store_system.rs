@@ -120,7 +120,7 @@ fn npc_store_do_transaction(
             )
             .ok_or(NpcStoreTransactionError::NpcNotFound)? as i64;
 
-        let buy_quantity = if store_item_reference.item_type.is_stackable() {
+        let buy_quantity = if store_item_reference.item_type.is_stackable_item() {
             buy_item.quantity
         } else {
             1

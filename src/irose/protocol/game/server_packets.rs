@@ -28,6 +28,7 @@ use crate::{
         encode_ammo_index, PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId,
         PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
         PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
+        PacketWriteVehiclePartIndex,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -87,6 +88,7 @@ pub enum ServerPackets {
     FinishCastingSkill = 0x7b9,
     StartCastingSkill = 0x7bb,
     CancelCastingSkill = 0x7bd,
+    UpdateVehiclePart = 0x7ca,
     OpenPersonalStore = 0x7c2,
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
@@ -952,6 +954,26 @@ impl From<&PacketServerUpdateEquipment> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_equipment_index_u16(packet.equipment_index);
+        writer.write_equipment_item_part(packet.item.as_ref());
+        if let Some(run_speed) = packet.run_speed {
+            writer.write_u16(run_speed);
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateVehiclePart {
+    pub entity_id: ClientEntityId,
+    pub vehicle_part_index: VehiclePartIndex,
+    pub item: Option<EquipmentItem>,
+    pub run_speed: Option<u16>,
+}
+
+impl From<&PacketServerUpdateVehiclePart> for Packet {
+    fn from(packet: &PacketServerUpdateVehiclePart) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateVehiclePart as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_vehicle_part_index_u16(packet.vehicle_part_index);
         writer.write_equipment_item_part(packet.item.as_ref());
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed);

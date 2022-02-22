@@ -20,8 +20,8 @@ use crate::{
             PersonalStoreTransactionSuccess, PickupItemDropResult, QuestDeleteResult,
             QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop,
             SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects, UpdateXpStamina,
-            UseEmote, UseInventoryItem, UseItem, Whisper,
+            UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects, UpdateVehiclePart,
+            UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
         },
     },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
@@ -204,6 +204,18 @@ impl GameClient {
                         item_slot,
                     }))?;
             }
+            Some(ClientPackets::ChangeVehiclePart) => {
+                let PacketClientChangeVehiclePart {
+                    vehicle_part_index,
+                    item_slot,
+                } = PacketClientChangeVehiclePart::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ChangeVehiclePart(
+                        vehicle_part_index,
+                        item_slot,
+                    ))?;
+            }
             Some(ClientPackets::IncreaseBasicStat) => {
                 let PacketClientIncreaseBasicStat { basic_stat_type } =
                     PacketClientIncreaseBasicStat::try_from(&packet)?;
@@ -234,6 +246,11 @@ impl GameClient {
                 client
                     .client_message_tx
                     .send(ClientMessage::ReviveRequest(packet.revive_request_type))?;
+            }
+            Some(ClientPackets::SetReviveZone) => {
+                client
+                    .client_message_tx
+                    .send(ClientMessage::SetReviveZone)?;
             }
             Some(ClientPackets::QuestRequest) => {
                 let packet = PacketClientQuestRequest::try_from(&packet)?;
@@ -700,6 +717,21 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerUpdateEquipment {
                         entity_id,
                         equipment_index,
+                        item,
+                        run_speed: None,
+                    }))
+                    .await?;
+            }
+            ServerMessage::UpdateVehiclePart(UpdateVehiclePart {
+                entity_id,
+                vehicle_part_index,
+                item,
+            }) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateVehiclePart {
+                        entity_id,
+                        vehicle_part_index,
                         item,
                         run_speed: None,
                     }))

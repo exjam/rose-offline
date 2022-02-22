@@ -12,7 +12,7 @@ use crate::{
     game::{
         components::{
             AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,
-            SkillSlot,
+            SkillSlot, VehiclePartIndex,
         },
         messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
     },
@@ -23,6 +23,8 @@ use crate::{
     protocol::{Packet, PacketReader, ProtocolError},
 };
 
+use super::common_packets::PacketReadVehiclePartIndex;
+
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
     LogoutRequest = 0x707,
@@ -31,6 +33,7 @@ pub enum ClientPackets {
     QuestRequest = 0x730,
     JoinZone = 0x753,
     ReviveRequest = 0x755,
+    SetReviveZone = 0x756,
     Emote = 0x781,
     MoveToggle = 0x782,
     Chat = 0x783,
@@ -50,6 +53,7 @@ pub enum ClientPackets {
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
+    ChangeVehiclePart = 0x7ca,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
     PartyRequest = 0x7d0,
@@ -212,6 +216,28 @@ impl TryFrom<&Packet> for PacketClientChangeEquipment {
         let item_slot = reader.read_item_slot_u16().ok();
         Ok(PacketClientChangeEquipment {
             equipment_index,
+            item_slot,
+        })
+    }
+}
+pub struct PacketClientChangeVehiclePart {
+    pub vehicle_part_index: VehiclePartIndex,
+    pub item_slot: Option<ItemSlot>,
+}
+
+impl TryFrom<&Packet> for PacketClientChangeVehiclePart {
+    type Error = ProtocolError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ChangeVehiclePart as u16 {
+            return Err(ProtocolError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let vehicle_part_index = reader.read_vehicle_part_index_u16()?;
+        let item_slot = reader.read_item_slot_u16().ok();
+        Ok(PacketClientChangeVehiclePart {
+            vehicle_part_index,
             item_slot,
         })
     }
