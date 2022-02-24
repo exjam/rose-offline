@@ -2,7 +2,7 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
-use clap::{App, Arg, PossibleValue};
+use clap::{Arg, PossibleValue};
 use lazy_static::lazy_static;
 use nalgebra::{Point2, Point3};
 use num_traits::FromPrimitive;
@@ -66,34 +66,34 @@ pub struct ChatCommandUser<'w, 's> {
 }
 
 lazy_static! {
-    pub static ref CHAT_COMMANDS: App<'static> = {
-        App::new("Chat Commands")
-            .subcommand(App::new("help"))
-            .subcommand(App::new("where"))
-            .subcommand(App::new("ability_values"))
+    pub static ref CHAT_COMMANDS: clap::Command<'static> = {
+        clap::Command::new("Chat Commands")
+            .subcommand(clap::Command::new("help"))
+            .subcommand(clap::Command::new("where"))
+            .subcommand(clap::Command::new("ability_values"))
             .subcommand(
-                App::new("mm")
+                clap::Command::new("mm")
                     .arg(Arg::new("zone").required(true))
                     .arg(Arg::new("x"))
                     .arg(Arg::new("y")),
             )
-            .subcommand(App::new("level").arg(Arg::new("level").required(true)))
-            .subcommand(App::new("bot").arg(Arg::new("n").required(true)))
-            .subcommand(App::new("snowball_fight").arg(Arg::new("n").required(true)))
-            .subcommand(App::new("shop").arg(Arg::new("item_type").required(true)))
+            .subcommand(clap::Command::new("level").arg(Arg::new("level").required(true)))
+            .subcommand(clap::Command::new("bot").arg(Arg::new("n").required(true)))
+            .subcommand(clap::Command::new("snowball_fight").arg(Arg::new("n").required(true)))
+            .subcommand(clap::Command::new("shop").arg(Arg::new("item_type").required(true)))
             .subcommand(
-                App::new("add")
+                clap::Command::new("add")
                     .arg(Arg::new("ability_type").required(true))
                     .arg(Arg::new("value").required(true)),
             )
             .subcommand(
-                App::new("set")
+                clap::Command::new("set")
                     .arg(Arg::new("ability_type").required(true))
                     .arg(Arg::new("value").required(true)),
             )
-            .subcommand(App::new("speed").arg(Arg::new("speed").required(true)))
+            .subcommand(clap::Command::new("speed").arg(Arg::new("speed").required(true)))
             .subcommand(
-                App::new("skill")
+                clap::Command::new("skill")
                     .arg(
                         Arg::new("cmd")
                             .possible_values([
@@ -123,17 +123,17 @@ fn send_chat_commands_help(client: &GameClient) {
     for subcommand in CHAT_COMMANDS.get_subcommands() {
         let mut help_string = String::from(subcommand.get_name());
         for arg in subcommand.get_arguments() {
-            if arg.get_name() == "help" || arg.get_name() == "version" {
+            if arg.get_id() == "help" || arg.get_id() == "version" {
                 continue;
             }
 
             help_string.push(' ');
-            if !arg.is_set(clap::ArgSettings::Required) {
+            if !arg.is_required_set() {
                 help_string.push('[');
-                help_string.push_str(arg.get_name());
+                help_string.push_str(arg.get_id());
                 help_string.push(']');
             } else {
-                help_string.push_str(arg.get_name());
+                help_string.push_str(arg.get_id());
             }
         }
 
@@ -161,7 +161,7 @@ impl From<shellwords::MismatchedQuotes> for ChatCommandError {
 
 impl From<clap::Error> for ChatCommandError {
     fn from(error: clap::Error) -> Self {
-        match error.kind {
+        match error.kind() {
             clap::ErrorKind::MissingRequiredArgument => Self::InvalidArguments,
             _ => Self::InvalidCommand,
         }

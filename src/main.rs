@@ -13,7 +13,7 @@ mod protocol;
 
 use std::{path::Path, time::Instant};
 
-use clap::{App, Arg};
+use clap::{Arg, Command};
 use log::debug;
 use simplelog::*;
 use tokio::net::TcpListener;
@@ -38,7 +38,7 @@ async fn async_main() {
     )
     .expect("Failed to initialise logging");
 
-    let app = App::new("rose-offline")
+    let command = Command::new("rose-offline")
         .arg(
             Arg::new("data-idx")
                 .long("data-idx")
@@ -74,7 +74,7 @@ async fn async_main() {
                 .takes_value(true)
                 .default_value("29200"),
         );
-    let matches = app.get_matches();
+    let matches = command.get_matches();
     let listen_ip = matches.value_of("ip").unwrap();
     let login_port = matches.value_of("login-port").unwrap();
     let world_port = matches.value_of("world-port").unwrap();

@@ -13,7 +13,7 @@ bevy_ecs = { version = "0.6" }
 bitvec = { version = "0.22", features = ["serde"] }
 bytes = "1.1"
 chrono = "0.4"
-clap = "3.0"
+clap = "3.1"
 crossbeam-channel = "0.5"
 directories = "4.0"
 encoding_rs = "0.8"
