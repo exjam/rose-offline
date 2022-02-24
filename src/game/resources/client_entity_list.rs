@@ -267,7 +267,7 @@ pub struct ClientEntityZoneEntityIterator<'a> {
     min_sector: Point2<u32>,
     max_sector: Point2<u32>,
     current_sector: Point2<u32>,
-    current_iter: bitvec::slice::IterOnes<'a, Lsb0, usize>,
+    current_iter: bitvec::slice::IterOnes<'a, usize, Lsb0>,
     origin: Point2<f32>,
     max_distance_squared: f32,
 }

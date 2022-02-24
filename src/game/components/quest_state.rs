@@ -12,7 +12,7 @@ pub struct ActiveQuest {
     pub quest_id: usize,
     pub expire_time: Option<WorldTicks>,
     pub variables: [u16; 10],
-    pub switches: BitArr!(for 32, in Lsb0, u32),
+    pub switches: BitArr!(for 32, in u32, Lsb0),
     pub items: [Option<Item>; 6],
 }
 
@@ -81,7 +81,7 @@ pub struct QuestState {
     pub job_variables: [u16; 3],
     pub planet_variables: [u16; 7],
     pub union_variables: [u16; 10],
-    pub quest_switches: BitArr!(for 1024, in Lsb0, u32),
+    pub quest_switches: BitArr!(for 1024, in u32, Lsb0),
     pub active_quests: [Option<ActiveQuest>; 10],
 }
 

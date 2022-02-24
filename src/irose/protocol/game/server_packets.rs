@@ -376,7 +376,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
             }
 
             // Active Quest Switches
-            writer.write_u32(quest.map_or(0, |quest| quest.switches.as_buffer()[0]));
+            writer.write_u32(quest.map_or(0, |quest| quest.switches.into_inner()[0]));
 
             // Active Quest Items
             for j in 0..6 {
@@ -387,7 +387,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
         }
 
         // Quest Switches
-        let quest_switches_u32 = packet.quest_state.quest_switches.as_buffer();
+        let quest_switches_u32 = packet.quest_state.quest_switches.into_inner();
         for i in 0..(1024 / 32) {
             writer.write_u32(quest_switches_u32.get(i).cloned().unwrap_or(0));
         }

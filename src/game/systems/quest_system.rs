@@ -1472,7 +1472,7 @@ fn quest_reward_spawn_monster(
 
 fn quest_reward_clear_all_switches(quest_parameters: &mut QuestParameters) -> bool {
     if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
-        quest_state.quest_switches.set_all(false);
+        quest_state.quest_switches.fill(false);
         true
     } else {
         false
