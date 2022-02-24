@@ -34,7 +34,7 @@ simplelog = "0.11"
 sha2 = "0.10"
 shellwords = "1.1"
 tempfile = "3.3"
-tokio = { version = "1.15", features = ["full"] }
+tokio = { version = "1.17", features = ["full"] }
 
 [profile.dev.package."*"]
 opt-level = 3
