@@ -40,7 +40,7 @@ impl<'a> From<&'a VfsFile<'a>> for FileReader<'a> {
 
 impl VfsIndex {
     pub fn normalise_path(path: &str) -> String {
-        path.replace(r#"\"#, "/").to_uppercase()
+        path.replace('\\', "/").to_uppercase()
     }
 
     pub fn load(path: &Path) -> Result<VfsIndex, std::io::Error> {

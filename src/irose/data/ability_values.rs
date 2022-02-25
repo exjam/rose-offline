@@ -1852,8 +1852,7 @@ fn calculate_avoid(
     // Get total durability for specific set of equipment
     let equipment_durability: i32 = AVOID_DURABILITY_ITEMS
         .iter()
-        .map(|x| equipment.get_equipment_item(*x))
-        .flatten()
+        .filter_map(|x| equipment.get_equipment_item(*x))
         .filter(|x| x.life > 0)
         .map(|item| item.durability as i32)
         .sum();
