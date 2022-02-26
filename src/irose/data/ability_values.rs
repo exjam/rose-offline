@@ -12,7 +12,7 @@ use crate::{
     game::components::{
         AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
         DamageType, Equipment, EquipmentIndex, EquipmentItemDatabase, Level, SkillList,
-        StatusEffects,
+        StatusEffects, VehiclePartIndex,
     },
 };
 
@@ -70,6 +70,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             damage_category: DamageCategory::Npc,
             walk_speed: npc_data.walk_speed as f32,
             run_speed: npc_data.run_speed as f32,
+            drive_speed: 0.0,
             level,
             strength: 0,
             dexterity: 0,
@@ -117,6 +118,8 @@ impl AbilityValueCalculator for AbilityValuesData {
     ) -> AbilityValues {
         let equipment_ability_values =
             calculate_equipment_ability_values(&self.item_database, equipment);
+        let vehicle_ability_values =
+            calculate_vehicle_ability_values(&self.item_database, equipment);
         let passive_ability_values = calculate_passive_skill_ability_values(
             &self.skill_database,
             skill_list.get_passive_skills(),
@@ -157,7 +160,16 @@ impl AbilityValueCalculator for AbilityValuesData {
             &passive_ability_values,
         );
 
-        // TODO: If riding cart, most stat calculations are different
+        // TODO:
+        // If riding cart, some stat calculations are different:
+        //  - equipment_ability_values from vehicle parts
+        //  - Driving speed
+        //  - Attack
+        //  - Hit
+        //  - Defence
+        //  - Avoid
+        //  - Critical
+
         AbilityValues {
             damage_category: DamageCategory::Character,
             walk_speed: 200.0,
@@ -167,6 +179,11 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
+            ),
+            drive_speed: calculate_drive_speed(
+                &self.item_database,
+                &vehicle_ability_values,
+                equipment,
             ),
             max_health: calculate_max_health(
                 character_info,
@@ -1252,7 +1269,31 @@ fn calculate_equipment_ability_values(
         }
     }
 
-    // TODO: If riding cart, add values from vehicle
+    result
+}
+
+fn calculate_vehicle_ability_values(
+    item_database: &ItemDatabase,
+    equipment: &Equipment,
+) -> EquipmentAbilityValue {
+    let mut result = EquipmentAbilityValue::new();
+
+    for item in equipment.equipped_vehicle.iter().filter_map(|x| x.as_ref()) {
+        if item.is_appraised || item.has_socket {
+            if let Some(item_data) = item_database.get_gem_item(item.gem as usize) {
+                for (ability, value) in item_data.gem_add_ability.iter() {
+                    result.add_ability_value(*ability, *value);
+                }
+            }
+        }
+
+        if let Some(item_data) = item_database.get_base_item(item.into()) {
+            // TODO: Check item_stb.get_item_union_requirement(item_number)
+            for (ability, value) in item_data.add_ability.iter() {
+                result.add_ability_value(*ability, *value);
+            }
+        }
+    }
 
     result
 }
@@ -1441,6 +1482,36 @@ fn calculate_run_speed(
         + item_run_speed * (passive_ability_values.rate.move_speed as f32 / 100.0);
 
     item_run_speed + passive_run_speed
+}
+
+fn calculate_drive_speed(
+    item_database: &ItemDatabase,
+    vehicle_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+) -> f32 {
+    let engine_item = equipment.get_vehicle_item(VehiclePartIndex::Engine);
+    let leg_item = equipment.get_vehicle_item(VehiclePartIndex::Leg);
+
+    let broken = engine_item.map_or(true, |item| item.is_broken())
+        || leg_item.map_or(true, |item| item.is_broken());
+
+    let item_speed = if broken {
+        200.0
+    } else {
+        engine_item
+            .and_then(|item| item_database.get_vehicle_item(item.item.item_number))
+            .map(|item_data| item_data.move_speed)
+            .unwrap_or(0) as f32
+            * leg_item
+                .and_then(|item| item_database.get_vehicle_item(item.item.item_number))
+                .map(|item_data| item_data.move_speed)
+                .unwrap_or(0) as f32
+            / 10.0
+    };
+
+    // TODO: Limit speed to 300 if > max weight
+
+    item_speed + vehicle_ability_values.move_speed as f32
 }
 
 fn calculate_max_health(

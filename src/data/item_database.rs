@@ -161,6 +161,7 @@ pub struct QuestItemData {
 pub struct VehicleItemData {
     pub item_data: BaseItemData,
     pub vehicle_part_index: VehiclePartIndex,
+    pub move_speed: u32,
 }
 
 #[derive(Debug)]

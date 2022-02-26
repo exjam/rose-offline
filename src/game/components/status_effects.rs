@@ -27,7 +27,7 @@ pub struct ActiveStatusEffectRegen {
 }
 
 // This is stored in a separate component as it must change every tick, and we want
-// Changed<StatusEffects> to only be triggerd when effects have been added / removed
+// Changed<StatusEffects> to only be triggered when effects have been added / removed
 #[derive(Component, Clone)]
 pub struct StatusEffectsRegen {
     pub regens: EnumMap<StatusEffectType, Option<ActiveStatusEffectRegen>>,

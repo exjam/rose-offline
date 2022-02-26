@@ -100,6 +100,7 @@ pub struct AbilityValues {
     pub level: i32,
     pub walk_speed: f32,
     pub run_speed: f32,
+    pub drive_speed: f32,
     pub strength: i32,
     pub dexterity: i32,
     pub intelligence: i32,
@@ -253,6 +254,6 @@ impl AbilityValues {
     }
 
     pub fn get_drive_speed(&self) -> f32 {
-        self.get_run_speed()
+        self.drive_speed + self.adjust.run_speed
     }
 }

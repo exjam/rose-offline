@@ -203,6 +203,7 @@ impl StbItem {
 
     // LIST_PAT
     stb_column! { 2, get_vehicle_part_index, VehiclePartIndex }
+    stb_column! { 33, get_vehicle_move_speed, u32 }
 }
 
 #[allow(dead_code)]
@@ -338,6 +339,7 @@ fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Vehicle
     Some(VehicleItemData {
         item_data: base_item_data,
         vehicle_part_index: data.get_vehicle_part_index(id)?,
+        move_speed: data.get_vehicle_move_speed(id).unwrap_or(0),
     })
 }
 
