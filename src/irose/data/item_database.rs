@@ -1,22 +1,19 @@
 use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
+use rose_file_readers::{stb_column, FileReader, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use crate::{
     data::{
-        formats::{FileReader, StbFile, StlFile, VfsIndex},
-        item::ItemClass,
-        AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
-        FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase, ItemGradeData,
-        JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
+        item::ItemClass, AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData,
+        FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase,
+        ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
         SubWeaponItemData, VehicleItemData, WeaponItemData,
     },
     game::components::VehiclePartIndex,
 };
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
-
-use crate::stb_column;
 
 impl FromStr for ItemClass {
     type Err = ();

@@ -1,12 +1,9 @@
+use rose_file_readers::{stb_column, ChrFile, FileReader, StbFile, StlFile, VfsIndex, ZmoFile};
 use std::{collections::HashMap, num::NonZeroUsize};
 
-use crate::{
-    data::{
-        formats::{ChrFile, FileReader, StbFile, StlFile, VfsIndex, ZmoFile},
-        ItemReference, MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId,
-        NpcStoreTabData, NpcStoreTabId,
-    },
-    stb_column,
+use crate::data::{
+    ItemReference, MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId,
+    NpcStoreTabData, NpcStoreTabId,
 };
 
 struct StbNpc(StbFile);

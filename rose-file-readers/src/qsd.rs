@@ -1,5 +1,4 @@
 use log::warn;
-use nalgebra::Point2;
 
 use std::{
     collections::HashMap,
@@ -8,7 +7,10 @@ use std::{
     time::Duration,
 };
 
-use crate::data::formats::reader::{FileReader, ReadError};
+use crate::{
+    reader::{FileReader, ReadError},
+    types::Vec2,
+};
 
 #[derive(Debug)]
 pub enum QsdReadError {
@@ -141,7 +143,7 @@ pub struct QsdConditionObjectVariable {
 #[derive(Debug)]
 pub struct QsdConditionSelectEventObject {
     pub zone: QsdZoneId,
-    pub chunk: Point2<usize>,
+    pub chunk: Vec2<usize>,
     pub event_id: QsdEventId,
 }
 
@@ -164,7 +166,7 @@ pub enum QsdCondition {
     AbilityValue(Vec<(QsdAbilityType, QsdConditionOperator, i32)>),
     QuestItems(Vec<QsdConditionQuestItem>),
     Party(QsdConditionCheckParty),
-    Position(QsdZoneId, Point2<f32>, QsdDistance),
+    Position(QsdZoneId, Vec2<f32>, QsdDistance),
     WorldTime(RangeInclusive<u32>),
     HasSkill(RangeInclusive<QsdSkillId>, bool),
     RandomPercent(RangeInclusive<u8>),
@@ -253,7 +255,7 @@ pub enum QsdRewardSpawnMonsterLocation {
     Owner,
     Npc,
     Event,
-    Position(QsdZoneId, Point2<f32>),
+    Position(QsdZoneId, Vec2<f32>),
 }
 
 #[derive(Debug)]
@@ -305,7 +307,7 @@ pub enum QsdReward {
     CalculatedMoney(QsdRewardTarget, QsdEquationId, i32),
     CalculatedItem(QsdRewardTarget, QsdRewardCalculatedItem),
     SetHealthManaPercent(QsdRewardTarget, QsdHealthPercent, QsdManaPercent),
-    Teleport(QsdRewardTarget, QsdZoneId, Point2<f32>),
+    Teleport(QsdRewardTarget, QsdZoneId, Vec2<f32>),
     SpawnMonster(QsdRewardSpawnMonster),
     Trigger(String),
     ResetBasicStats,
@@ -320,7 +322,7 @@ pub enum QsdReward {
     FormatAnnounceMessage(QsdStringId, Vec<(QsdNpcId, QsdVariableId)>),
     TriggerForZoneTeam(QsdZoneId, QsdTeamNumber, String),
     SetTeamNumber(QsdRewardSetTeamNumberSource),
-    SetRevivePosition(Point2<f32>),
+    SetRevivePosition(Vec2<f32>),
     SetMonsterSpawnState(QsdZoneId, QsdRewardMonsterSpawnState),
     ClanLevel(QsdRewardOperator, QsdClanLevel),
     ClanMoney(QsdRewardOperator, QsdMoney),
@@ -328,7 +330,7 @@ pub enum QsdReward {
     AddClanSkill(QsdSkillId),
     RemoveClanSkill(QsdSkillId),
     ClanPointContribution(QsdRewardOperator, QsdClanPoints),
-    TeleportNearbyClanMembers(QsdDistance, QsdZoneId, Point2<f32>),
+    TeleportNearbyClanMembers(QsdDistance, QsdZoneId, Vec2<f32>),
     CallLuaFunction(String),
     ResetSkills,
 }
@@ -447,16 +449,12 @@ impl QsdFile {
                         }
                         6 => {
                             let zone = reader.read_u32()? as QsdZoneId;
-                            let x = reader.read_u32()?;
-                            let y = reader.read_u32()?;
+                            let x = reader.read_u32()? as f32;
+                            let y = reader.read_u32()? as f32;
                             let _z = reader.read_u32()?;
                             let distance = reader.read_u32()? as QsdDistance;
 
-                            conditions.push(QsdCondition::Position(
-                                zone,
-                                Point2::new(x as f32, y as f32),
-                                distance,
-                            ));
+                            conditions.push(QsdCondition::Position(zone, Vec2 { x, y }, distance));
                         }
                         7 => {
                             let start_time = reader.read_u32()?;
@@ -524,7 +522,10 @@ impl QsdFile {
                             conditions.push(QsdCondition::SelectEventObject(
                                 QsdConditionSelectEventObject {
                                     zone,
-                                    chunk: Point2::new(chunk_x, chunk_y),
+                                    chunk: Vec2 {
+                                        x: chunk_x,
+                                        y: chunk_y,
+                                    },
                                     event_id,
                                 },
                             ));
@@ -839,7 +840,7 @@ impl QsdFile {
                             };
                             reader.skip(3);
 
-                            rewards.push(QsdReward::Teleport(target, zone, Point2::new(x, y)));
+                            rewards.push(QsdReward::Teleport(target, zone, Vec2 { x, y }));
                         }
                         8 => {
                             let npc = reader.read_u32()? as QsdNpcId;
@@ -856,9 +857,7 @@ impl QsdFile {
                                 0 => QsdRewardSpawnMonsterLocation::Owner,
                                 1 => QsdRewardSpawnMonsterLocation::Npc,
                                 2 => QsdRewardSpawnMonsterLocation::Event,
-                                3 => {
-                                    QsdRewardSpawnMonsterLocation::Position(zone, Point2::new(x, y))
-                                }
+                                3 => QsdRewardSpawnMonsterLocation::Position(zone, Vec2 { x, y }),
                                 _ => return Err(QsdReadError::InvalidSpawnMonsterLocation),
                             };
 
@@ -992,7 +991,7 @@ impl QsdFile {
                             let x = reader.read_i32()? as f32;
                             let y = reader.read_i32()? as f32;
 
-                            rewards.push(QsdReward::SetRevivePosition(Point2::new(x, y)));
+                            rewards.push(QsdReward::SetRevivePosition(Vec2 { x, y }));
                         }
                         22 => {
                             let zone = reader.read_u16()? as QsdZoneId;
@@ -1048,7 +1047,7 @@ impl QsdFile {
                             rewards.push(QsdReward::TeleportNearbyClanMembers(
                                 distance,
                                 zone,
-                                Point2::new(x, y),
+                                Vec2 { x, y },
                             ));
                         }
                         29 => {

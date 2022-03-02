@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use crate::data::formats::reader::FileReader;
+use crate::reader::FileReader;
 
 struct FileEntry {
     offset: usize,

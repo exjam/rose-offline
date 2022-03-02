@@ -1,3 +1,7 @@
+use arrayvec::ArrayVec;
+use log::debug;
+use num_traits::FromPrimitive;
+use rose_file_readers::{stb_column, FileReader, StbFile, StlFile, VfsIndex};
 use std::{
     collections::HashMap,
     num::{NonZeroU32, NonZeroUsize},
@@ -5,19 +9,10 @@ use std::{
     time::Duration,
 };
 
-use arrayvec::ArrayVec;
-use log::debug;
-use num_traits::FromPrimitive;
-
-use crate::{
-    data::{
-        formats::{FileReader, StbFile, StlFile, VfsIndex},
-        item::ItemClass,
-        AbilityType, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
-        SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
-        SkillType, StatusEffectId, ZoneId,
-    },
-    stb_column,
+use crate::data::{
+    item::ItemClass, AbilityType, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
+    SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
+    SkillType, StatusEffectId, ZoneId,
 };
 
 pub struct StbSkill(pub StbFile);

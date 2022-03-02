@@ -1,6 +1,5 @@
+use rose_file_readers::AipFile;
 use std::collections::HashMap;
-
-use crate::data::formats::AipFile;
 
 pub struct AiDatabase {
     pub strings: HashMap<u16, String>,

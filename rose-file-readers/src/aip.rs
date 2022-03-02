@@ -5,7 +5,7 @@ use std::{
     time::Duration,
 };
 
-use crate::data::formats::reader::{FileReader, ReadError};
+use crate::reader::{FileReader, ReadError};
 
 #[derive(Copy, Clone, Debug)]
 pub enum AipAbilityType {

@@ -1,7 +1,10 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::data::formats::reader::{FileReader, ReadError};
+use crate::{
+    reader::{FileReader, ReadError},
+    types::{Quat4, Vec2, Vec3},
+};
 
 #[derive(Debug)]
 pub enum IfoReadError {
@@ -36,14 +39,14 @@ enum BlockType {
 #[allow(dead_code)]
 pub struct Object {
     pub object_name: String,
-    pub minimap_position: [u32; 2],
+    pub minimap_position: Vec2<u32>,
     pub object_type: u32,
     pub object_id: u32,
     pub warp_id: u16,
     pub event_id: u16,
-    pub position: [f32; 3],
-    pub rotation: [f32; 4],
-    pub scale: [f32; 3],
+    pub position: Vec3<f32>,
+    pub rotation: Quat4<f32>,
+    pub scale: Vec3<f32>,
 }
 
 fn read_object(reader: &mut FileReader) -> Result<Object, IfoReadError> {
@@ -64,7 +67,10 @@ fn read_object(reader: &mut FileReader) -> Result<Object, IfoReadError> {
         event_id,
         object_type,
         object_id,
-        minimap_position: [minimap_pos_x, minimap_pos_y],
+        minimap_position: Vec2 {
+            x: minimap_pos_x,
+            y: minimap_pos_y,
+        },
         rotation,
         position,
         scale,

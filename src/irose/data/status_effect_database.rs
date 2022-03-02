@@ -1,16 +1,12 @@
-use std::{collections::HashMap, str::FromStr};
-
 use arrayvec::ArrayVec;
 use log::debug;
 use num_traits::FromPrimitive;
+use rose_file_readers::{stb_column, FileReader, StbFile, StlFile, VfsIndex};
+use std::{collections::HashMap, str::FromStr};
 
-use crate::{
-    data::{
-        formats::{FileReader, StbFile, StlFile, VfsIndex},
-        StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
-        StatusEffectType,
-    },
-    stb_column,
+use crate::data::{
+    StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
+    StatusEffectType,
 };
 
 impl FromStr for StatusEffectClearedByType {

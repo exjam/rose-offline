@@ -81,7 +81,6 @@ mod zone_database;
 
 pub mod account;
 pub mod character;
-pub mod formats;
 pub mod item;
 
 pub use ability::{AbilityType, AbilityValueCalculator, Damage, PassiveRecoveryState};

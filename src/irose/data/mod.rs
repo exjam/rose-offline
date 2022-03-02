@@ -1,8 +1,7 @@
-use crate::{
-    data::{formats::VfsIndex, AbilityType},
-    game::GameData,
-};
+use rose_file_readers::VfsIndex;
 use std::{path::Path, str::FromStr, sync::Arc};
+
+use crate::{data::AbilityType, game::GameData};
 
 impl FromStr for AbilityType {
     type Err = ();

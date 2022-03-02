@@ -5,6 +5,9 @@ use std::io::SeekFrom;
 use std::str;
 use std::{borrow::Cow, io::Cursor};
 
+use crate::types::Quat4;
+use crate::types::Vec3;
+
 pub enum ReadError {
     UnexpectedEof,
 }
@@ -155,19 +158,19 @@ impl<'a> FileReader<'a> {
         }
     }
 
-    pub fn read_vector3_f32(&mut self) -> Result<[f32; 3], ReadError> {
+    pub fn read_vector3_f32(&mut self) -> Result<Vec3<f32>, ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
         let z = self.read_f32()?;
-        Ok([x, y, z])
+        Ok(Vec3 { x, y, z })
     }
 
-    pub fn read_quaternion_f32(&mut self) -> Result<[f32; 4], ReadError> {
+    pub fn read_quaternion_f32(&mut self) -> Result<Quat4<f32>, ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
         let z = self.read_f32()?;
         let w = self.read_f32()?;
-        Ok([x, y, z, w])
+        Ok(Quat4 { x, y, z, w })
     }
 
     pub fn read_fixed_length_bytes(&mut self, length: usize) -> Result<&'a [u8], ReadError> {

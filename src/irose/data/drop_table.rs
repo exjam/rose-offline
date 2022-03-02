@@ -1,10 +1,9 @@
-use std::sync::Arc;
-
 use rand::Rng;
+use rose_file_readers::{FileReader, StbFile, VfsIndex};
+use std::sync::Arc;
 
 use crate::{
     data::{
-        formats::{FileReader, StbFile, VfsIndex},
         item::{EquipmentItem, Item, ItemType},
         DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcId, ZoneId,
     },

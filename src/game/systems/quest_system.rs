@@ -10,19 +10,19 @@ use nalgebra::{Point2, Point3};
 use num_traits::FromPrimitive;
 use rand::Rng;
 
+use rose_file_readers::{
+    QsdAbilityType, QsdCondition, QsdConditionCheckParty, QsdConditionMonthDayTime,
+    QsdConditionObjectVariable, QsdConditionOperator, QsdConditionQuestItem,
+    QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdDistance, QsdEquipmentIndex,
+    QsdEventId, QsdItemBase1000, QsdNpcId, QsdObjectType, QsdReward, QsdRewardCalculatedItem,
+    QsdRewardMonsterSpawnState, QsdRewardNpcMessageType, QsdRewardObjectVariable,
+    QsdRewardOperator, QsdRewardQuestAction, QsdRewardSetTeamNumberSource, QsdRewardSpawnMonster,
+    QsdRewardSpawnMonsterLocation, QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber,
+    QsdVariableId, QsdVariableType, QsdZoneId,
+};
+
 use crate::{
     data::{
-        formats::qsd::{
-            QsdAbilityType, QsdCondition, QsdConditionCheckParty, QsdConditionMonthDayTime,
-            QsdConditionObjectVariable, QsdConditionOperator, QsdConditionQuestItem,
-            QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdDistance, QsdEquipmentIndex,
-            QsdEventId, QsdItemBase1000, QsdNpcId, QsdObjectType, QsdReward,
-            QsdRewardCalculatedItem, QsdRewardMonsterSpawnState, QsdRewardNpcMessageType,
-            QsdRewardObjectVariable, QsdRewardOperator, QsdRewardQuestAction,
-            QsdRewardSetTeamNumberSource, QsdRewardSpawnMonster, QsdRewardSpawnMonsterLocation,
-            QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber, QsdVariableId,
-            QsdVariableType, QsdZoneId,
-        },
         item::{EquipmentItem, Item},
         ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
     },
@@ -650,9 +650,12 @@ fn quest_trigger_check_conditions(
             QsdCondition::QuestSwitch(switch_id, value) => {
                 quest_condition_quest_switch(quest_parameters, switch_id, value)
             }
-            QsdCondition::Position(zone_id, position, distance) => {
-                quest_condition_position(quest_parameters, zone_id, position, distance)
-            }
+            QsdCondition::Position(zone_id, ref position, distance) => quest_condition_position(
+                quest_parameters,
+                zone_id,
+                Point2::new(position.x, position.y),
+                distance,
+            ),
             QsdCondition::QuestVariable(ref quest_variables) => {
                 quest_variables.iter().all(|quest_variable| {
                     quest_condition_quest_variable(

@@ -1,7 +1,7 @@
 use core::mem::size_of;
 use std::{collections::HashMap, str};
 
-use crate::data::formats::reader::{FileReader, ReadError};
+use crate::reader::{FileReader, ReadError};
 
 pub struct StbFile {
     rows: usize,

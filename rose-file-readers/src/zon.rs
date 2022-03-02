@@ -1,12 +1,15 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use crate::data::formats::reader::{FileReader, ReadError};
+use crate::{
+    reader::{FileReader, ReadError},
+    types::Vec3,
+};
 
 pub struct ZonFile {
     pub grid_per_patch: f32,
     pub grid_size: f32,
-    pub event_positions: Vec<(String, [f32; 3])>,
+    pub event_positions: Vec<(String, Vec3<f32>)>,
 }
 
 #[derive(Debug)]

@@ -1,10 +1,8 @@
 use log::{debug, warn};
+use rose_file_readers::{AipFile, FileReader, StbFile, VfsIndex};
 use std::collections::HashMap;
 
-use crate::data::{
-    formats::{AipFile, FileReader, StbFile, VfsIndex},
-    AiDatabase,
-};
+use crate::data::AiDatabase;
 
 pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
     let ai_s = vfs.open_file("3DDATA/AI/AI_s.STB")?;

@@ -1,6 +1,7 @@
+use crate::data::WorldTicks;
 use std::{collections::HashMap, num::Wrapping};
 
-pub use crate::data::{formats::qsd::QsdTrigger as QuestTrigger, WorldTicks};
+pub use rose_file_readers::qsd::QsdTrigger as QuestTrigger;
 
 pub struct QuestData {
     pub time_limit: Option<WorldTicks>,

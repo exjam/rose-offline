@@ -1,11 +1,10 @@
 use nalgebra::Point3;
+use rose_file_readers::{stb_column, FileReader, StbFile, VfsIndex};
 use std::sync::Arc;
 
 use crate::{
     data::{
         character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
-        formats::StbFile,
-        formats::{FileReader, VfsIndex},
         item::{EquipmentItem, Item},
         ItemReference, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
     },
@@ -14,7 +13,6 @@ use crate::{
         Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
         UnionMembership,
     },
-    stb_column,
 };
 
 struct CharacterGenderData {
