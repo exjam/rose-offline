@@ -19,9 +19,10 @@ use crate::{
             AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition,
             AipConditionFindNearbyEntities, AipConditionMonthDayTime, AipConditionWeekDayTime,
             AipDamageType, AipDistance, AipDistanceOrigin, AipEvent, AipHaveStatusTarget,
-            AipHaveStatusType, AipMessageType, AipMonsterSpawnState, AipMotionId, AipMoveMode,
-            AipMoveOrigin, AipNearbyAlly, AipNpcId, AipOperatorType, AipResultOperator, AipSkillId,
-            AipSkillTarget, AipSpawnNpcOrigin, AipTrigger, AipVariableType, AipZoneId,
+            AipHaveStatusType, AipItemBase1000, AipMessageType, AipMonsterSpawnState, AipMotionId,
+            AipMoveMode, AipMoveOrigin, AipNearbyAlly, AipNpcId, AipOperatorType,
+            AipResultOperator, AipSkillId, AipSkillTarget, AipSpawnNpcOrigin, AipTrigger,
+            AipVariableType, AipZoneId,
         },
         item::Item,
         Damage, ItemReference, MotionId, NpcId, SkillId, ZoneId,
@@ -1326,11 +1327,11 @@ fn ai_action_drop_random_item(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
     ai_parameters: &mut AiParameters,
-    item_list: &[Option<ItemReference>],
+    items_base1000: &[AipItemBase1000],
 ) {
-    if let Some(item) = item_list
+    if let Some(item) = items_base1000
         .choose(&mut rand::thread_rng())
-        .unwrap()
+        .and_then(|item_base1000| ItemReference::from_base1000(*item_base1000).ok())
         .and_then(|item_reference| Item::new(&item_reference, 1))
     {
         ItemDropBundle::spawn(
@@ -1347,10 +1348,13 @@ fn ai_action_drop_random_item(
 fn ai_action_give_item_to_owner(
     ai_system_parameters: &mut AiSystemParameters,
     ai_parameters: &mut AiParameters,
-    item_reference: ItemReference,
+    item_base1000: AipItemBase1000,
     quantity: usize,
 ) {
-    if let Some(item) = Item::new(&item_reference, quantity as u32) {
+    if let Some(item) = ItemReference::from_base1000(item_base1000)
+        .ok()
+        .and_then(|item_reference| Item::new(&item_reference, quantity as u32))
+    {
         ai_system_parameters
             .reward_item_events
             .send(RewardItemEvent::new(
@@ -1467,15 +1471,18 @@ fn npc_ai_do_actions(
             ),
             AipAction::Say(_) => {}        // This is client side only
             AipAction::SpecialAttack => {} // This is not actually used, probably an old removed feature
-            AipAction::DropRandomItem(ref item_list) => ai_action_drop_random_item(
+            AipAction::DropRandomItem(ref items_base1000) => ai_action_drop_random_item(
                 ai_system_parameters,
                 ai_system_resources,
                 ai_parameters,
-                item_list,
+                items_base1000,
             ),
-            AipAction::GiveItemToOwner(item, quantity) => {
-                ai_action_give_item_to_owner(ai_system_parameters, ai_parameters, item, quantity)
-            }
+            AipAction::GiveItemToOwner(item_base1000, quantity) => ai_action_give_item_to_owner(
+                ai_system_parameters,
+                ai_parameters,
+                item_base1000,
+                quantity,
+            ),
             /*
             AipAction::SetPvpFlag(_, _) => {}
             */

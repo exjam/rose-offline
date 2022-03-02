@@ -25,7 +25,7 @@ impl From<ReadError> for ZmoReadError {
 
 #[allow(dead_code)]
 impl ZmoFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, ZmoReadError> {
+    pub fn read_server(mut reader: FileReader) -> Result<Self, ZmoReadError> {
         let magic = reader.read_null_terminated_string()?;
         if magic != "ZMO0002" {
             return Err(ZmoReadError::InvalidMagic);
@@ -34,7 +34,7 @@ impl ZmoFile {
         let fps = reader.read_u32()? as usize;
         let num_frames = reader.read_u32()? as usize;
 
-        // TODO: There is the animation data here, which we do not need for server
+        // We do not need the actual animation data when reading for server
 
         let mut frame_events = Vec::new();
         let mut total_attack_frames = 0;

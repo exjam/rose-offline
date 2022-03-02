@@ -1,24 +1,20 @@
 use log::warn;
 use nalgebra::Point2;
-use num_traits::FromPrimitive;
-use std::{collections::HashMap, num::NonZeroU8, ops::RangeInclusive, time::Duration};
 
-use crate::{
-    data::{
-        ability::AbilityType,
-        formats::reader::{FileReader, ReadError},
-        item::ItemType,
-        item_database::ItemReferenceDecodeError,
-        ItemReference,
-    },
-    game::components::EquipmentIndex,
+use std::{
+    collections::HashMap,
+    num::{NonZeroU32, NonZeroU8, NonZeroUsize},
+    ops::RangeInclusive,
+    time::Duration,
 };
+
+use crate::data::formats::reader::{FileReader, ReadError};
 
 #[derive(Debug)]
 pub enum QsdReadError {
     UnexpectedEof,
-    InvalidValue,
     InvalidAbilityType,
+    InvalidValue,
     InvalidItemReference,
     InvalidObjectType,
     InvalidQuestAction,
@@ -34,12 +30,6 @@ impl From<ReadError> for QsdReadError {
         match err {
             ReadError::UnexpectedEof => Self::UnexpectedEof,
         }
-    }
-}
-
-impl From<ItemReferenceDecodeError> for QsdReadError {
-    fn from(_: ItemReferenceDecodeError) -> Self {
-        QsdReadError::InvalidItemReference
     }
 }
 
@@ -89,10 +79,12 @@ fn decode_condition_operator(value: u8) -> Result<QsdConditionOperator, QsdReadE
     }
 }
 
+pub type QsdAbilityType = NonZeroUsize;
 pub type QsdClanLevel = i32;
 pub type QsdClanPosition = usize;
 pub type QsdClanPoints = i32;
 pub type QsdDistance = i32;
+pub type QsdEquipmentIndex = NonZeroUsize;
 pub type QsdQuestId = usize;
 pub type QsdSkillId = usize;
 pub type QsdQuestSwitchId = usize;
@@ -106,6 +98,7 @@ pub type QsdTeamNumber = usize;
 pub type QsdServerChannelId = usize;
 pub type QsdEquationId = usize;
 pub type QsdStringId = usize;
+pub type QsdItemBase1000 = NonZeroU32;
 
 #[derive(Copy, Clone, Debug)]
 pub enum QsdObjectType {
@@ -124,8 +117,8 @@ pub struct QsdConditionQuestVariable {
 
 #[derive(Debug)]
 pub struct QsdConditionQuestItem {
-    pub item: Option<ItemReference>,
-    pub equipment_index: Option<EquipmentIndex>,
+    pub item: Option<QsdItemBase1000>,
+    pub equipment_index: Option<QsdEquipmentIndex>,
     pub required_count: u32,
     pub operator: QsdConditionOperator,
 }
@@ -168,7 +161,7 @@ pub struct QsdConditionMonthDayTime {
 pub enum QsdCondition {
     SelectQuest(QsdQuestId),
     QuestVariable(Vec<QsdConditionQuestVariable>),
-    AbilityValue(Vec<(AbilityType, QsdConditionOperator, i32)>),
+    AbilityValue(Vec<(QsdAbilityType, QsdConditionOperator, i32)>),
     QuestItems(Vec<QsdConditionQuestItem>),
     Party(QsdConditionCheckParty),
     Position(QsdZoneId, Point2<f32>, QsdDistance),
@@ -248,8 +241,8 @@ pub struct QsdRewardQuestVariable {
 pub struct QsdRewardCalculatedItem {
     pub equation: usize,
     pub value: i32,
-    pub item: ItemReference,
-    pub gem: Option<ItemReference>,
+    pub item: QsdItemBase1000,
+    pub gem: Option<QsdItemBase1000>,
 }
 
 pub type QsdHealthPercent = u8;
@@ -304,10 +297,10 @@ pub enum QsdRewardMonsterSpawnState {
 #[derive(Debug)]
 pub enum QsdReward {
     Quest(QsdRewardQuestAction),
-    AddItem(QsdRewardTarget, ItemReference, usize),
-    RemoveItem(QsdRewardTarget, ItemReference, usize),
+    AddItem(QsdRewardTarget, QsdItemBase1000, usize),
+    RemoveItem(QsdRewardTarget, QsdItemBase1000, usize),
     QuestVariable(Vec<QsdRewardQuestVariable>),
-    AbilityValue(Vec<(AbilityType, QsdRewardOperator, i32)>),
+    AbilityValue(Vec<(QsdAbilityType, QsdRewardOperator, i32)>),
     CalculatedExperiencePoints(QsdRewardTarget, QsdEquationId, i32),
     CalculatedMoney(QsdRewardTarget, QsdEquationId, i32),
     CalculatedItem(QsdRewardTarget, QsdRewardCalculatedItem),
@@ -405,7 +398,7 @@ impl QsdFile {
                             let data_count = reader.read_u32()?;
                             let mut variables = Vec::new();
                             for _ in 0..data_count {
-                                let ability_type = FromPrimitive::from_i32(reader.read_i32()?)
+                                let ability_type = QsdAbilityType::new(reader.read_u32()? as usize)
                                     .ok_or(QsdReadError::InvalidAbilityType)?;
                                 let value = reader.read_i32()?;
                                 let operator = decode_condition_operator(reader.read_u8()?)?;
@@ -419,8 +412,9 @@ impl QsdFile {
                             let data_count = reader.read_u32()?;
                             let mut items = Vec::new();
                             for _ in 0..data_count {
-                                let item = ItemReference::from_base1000(reader.read_u32()?).ok();
-                                let equipment_index = FromPrimitive::from_i32(reader.read_i32()?);
+                                let item = QsdItemBase1000::new(reader.read_u32()?);
+                                let equipment_index =
+                                    QsdEquipmentIndex::new(reader.read_u32()? as usize);
                                 let required_count = reader.read_u32()?;
                                 let operator = decode_condition_operator(reader.read_u8()?)?;
                                 reader.skip(3); // padding
@@ -728,7 +722,8 @@ impl QsdFile {
                             rewards.push(QsdReward::Quest(action));
                         }
                         1 => {
-                            let item = ItemReference::from_base1000(reader.read_u32()?)?;
+                            let item_base1000 = QsdItemBase1000::new(reader.read_u32()?)
+                                .ok_or(QsdReadError::InvalidItemReference)?;
                             let add_or_remove = reader.read_u8()? != 0;
                             reader.skip(1); // padding
                             let count = reader.read_u16()? as usize;
@@ -740,9 +735,9 @@ impl QsdFile {
                             reader.skip(3); // padding
 
                             if add_or_remove {
-                                rewards.push(QsdReward::AddItem(target, item, count));
+                                rewards.push(QsdReward::AddItem(target, item_base1000, count));
                             } else {
-                                rewards.push(QsdReward::RemoveItem(target, item, count));
+                                rewards.push(QsdReward::RemoveItem(target, item_base1000, count));
                             }
                         }
                         2 | 4 => {
@@ -768,7 +763,7 @@ impl QsdFile {
                             let data_count = reader.read_u32()?;
                             let mut variables = Vec::new();
                             for _ in 0..data_count {
-                                let ability_type = FromPrimitive::from_i32(reader.read_i32()?)
+                                let ability_type = QsdAbilityType::new(reader.read_u32()? as usize)
                                     .ok_or(QsdReadError::InvalidAbilityType)?;
                                 let value = reader.read_i32()?;
                                 let operator = decode_reward_operator(reader.read_u8()?)?;
@@ -783,14 +778,14 @@ impl QsdFile {
                             let equation = reader.read_u8()? as QsdEquationId;
                             reader.skip(2);
                             let value = reader.read_i32()?;
-                            let item = ItemReference::from_base1000(reader.read_u32()?);
+                            let item = reader.read_u32()?;
                             let target = if reader.read_u8()? == 0 {
                                 QsdRewardTarget::Player
                             } else {
                                 QsdRewardTarget::Party
                             };
                             reader.skip(1);
-                            let gem_id = reader.read_u16()?;
+                            let gem = QsdItemBase1000::new(reader.read_u16()? as u32);
 
                             match reward_type {
                                 0 => {
@@ -803,17 +798,13 @@ impl QsdFile {
                                         .push(QsdReward::CalculatedMoney(target, equation, value));
                                 }
                                 2 => {
-                                    let gem = if gem_id != 0 {
-                                        Some(ItemReference::new(ItemType::Gem, gem_id as usize))
-                                    } else {
-                                        None
-                                    };
                                     rewards.push(QsdReward::CalculatedItem(
                                         target,
                                         QsdRewardCalculatedItem {
                                             equation,
                                             value,
-                                            item: item?,
+                                            item: QsdItemBase1000::new(item)
+                                                .ok_or(QsdReadError::InvalidItemReference)?,
                                             gem,
                                         },
                                     ));

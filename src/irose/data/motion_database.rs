@@ -7,7 +7,7 @@ use crate::data::{
 
 fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
     let file = vfs.open_file(path)?;
-    let zmo = ZmoFile::read(FileReader::from(&file)).ok()?;
+    let zmo = ZmoFile::read_server(FileReader::from(&file)).ok()?;
     Some(MotionFileData {
         path: path.to_string(),
         duration: zmo.get_duration(),

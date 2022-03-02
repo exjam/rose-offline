@@ -5,10 +5,7 @@ use std::{
     time::Duration,
 };
 
-use crate::data::{
-    formats::reader::{FileReader, ReadError},
-    ItemReference,
-};
+use crate::data::formats::reader::{FileReader, ReadError};
 
 #[derive(Copy, Clone, Debug)]
 pub enum AipAbilityType {
@@ -181,6 +178,7 @@ pub enum AipNearbyAlly {
 }
 
 pub type AipDistance = i32;
+pub type AipItemBase1000 = u32;
 pub type AipNpcId = i32;
 pub type AipSkillId = i32;
 pub type AipMotionId = i32;
@@ -230,7 +228,7 @@ pub enum AipAction {
     AttackFindChar,
     AttackAttacker,
     RunAway(AipDistance),
-    DropRandomItem(Vec<Option<ItemReference>>),
+    DropRandomItem(Vec<AipItemBase1000>),
     KillSelf,
     UseSkill(AipSkillTarget, AipSkillId, AipMotionId),
     SetVariable(AipVariableType, usize, AipResultOperator, i32),
@@ -240,7 +238,7 @@ pub enum AipAction {
     AttackOwnerTarget,
     SetPvpFlag(Option<AipZoneId>, bool),
     SetMonsterSpawnState(Option<AipZoneId>, AipMonsterSpawnState),
-    GiveItemToOwner(ItemReference, usize),
+    GiveItemToOwner(AipItemBase1000, usize),
 }
 
 pub struct AipEvent {
@@ -814,8 +812,7 @@ impl AipFile {
                         18 => {
                             let mut items = Vec::new();
                             for _ in 0..5 {
-                                let value = reader.read_u16()? as u32;
-                                items.push(ItemReference::from_base1000(value).ok());
+                                items.push(reader.read_u16()? as u32);
                             }
                             reader.skip(2); // padding
 
@@ -952,11 +949,10 @@ impl AipFile {
                             ));
                         }
                         35 => {
-                            let item = ItemReference::from_base1000(reader.read_u16()? as u32)
-                                .map_err(|_| AipReadError::InvalidValue)?;
+                            let item_base1000 = reader.read_u16()? as u32;
                             let count = reader.read_u16()? as usize;
 
-                            actions.push(AipAction::GiveItemToOwner(item, count));
+                            actions.push(AipAction::GiveItemToOwner(item_base1000, count));
                         }
                         36 => {
                             let variable = reader.read_u16()? as usize;

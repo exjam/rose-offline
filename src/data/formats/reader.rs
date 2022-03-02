@@ -1,6 +1,5 @@
 use bytes::Buf;
 use encoding_rs::{EUC_KR, UTF_16LE};
-use nalgebra::{Quaternion, Unit, UnitQuaternion, Vector3};
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::str;
@@ -156,19 +155,19 @@ impl<'a> FileReader<'a> {
         }
     }
 
-    pub fn read_vector3_f32(&mut self) -> Result<Vector3<f32>, ReadError> {
+    pub fn read_vector3_f32(&mut self) -> Result<[f32; 3], ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
         let z = self.read_f32()?;
-        Ok(Vector3::new(x, y, z))
+        Ok([x, y, z])
     }
 
-    pub fn read_quaternion_f32(&mut self) -> Result<UnitQuaternion<f32>, ReadError> {
+    pub fn read_quaternion_f32(&mut self) -> Result<[f32; 4], ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
         let z = self.read_f32()?;
         let w = self.read_f32()?;
-        Ok(Unit::new_unchecked(Quaternion::new(w, x, y, z)))
+        Ok([x, y, z, w])
     }
 
     pub fn read_fixed_length_bytes(&mut self, length: usize) -> Result<&'a [u8], ReadError> {

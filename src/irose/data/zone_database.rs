@@ -1,5 +1,5 @@
 use log::debug;
-use nalgebra::{Point2, Point3, Vector3};
+use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
 use std::{collections::HashMap, path::Path};
 
 use crate::{
@@ -91,7 +91,7 @@ impl From<&ifo::MonsterSpawnPoint> for ZoneMonsterSpawnPoint {
                 .collect()
         };
         Self {
-            position: spawn.object.position,
+            position: Point3::from_slice(&spawn.object.position),
             basic_spawns: transform_spawn_list(&spawn.basic_spawns),
             tactic_spawns: transform_spawn_list(&spawn.tactic_spawns),
             interval: spawn.interval,
@@ -116,7 +116,7 @@ fn create_monster_spawn(
     };
 
     ZoneMonsterSpawnPoint {
-        position: spawn.object.position + object_offset,
+        position: Point3::from_slice(&spawn.object.position) + object_offset,
         basic_spawns: transform_spawn_list(&spawn.basic_spawns),
         tactic_spawns: transform_spawn_list(&spawn.tactic_spawns),
         interval: spawn.interval,
@@ -129,8 +129,16 @@ fn create_monster_spawn(
 fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn {
     ZoneNpcSpawn {
         npc_id: NpcId::new(npc.object.object_id as u16).unwrap(),
-        position: npc.object.position + object_offset,
-        direction: npc.object.rotation.euler_angles().2.to_degrees(),
+        position: Point3::from_slice(&npc.object.position) + object_offset,
+        direction: Unit::new_unchecked(Quaternion::new(
+            npc.object.rotation[3],
+            npc.object.rotation[0],
+            npc.object.rotation[1],
+            npc.object.rotation[2],
+        ))
+        .euler_angles()
+        .2
+        .to_degrees(),
         conversation: NpcConversationId::new(npc.quest_file_name.to_string()),
     }
 }
@@ -145,7 +153,7 @@ fn create_event_object(
         event_id: event_object.object.event_id,
         map_chunk_x,
         map_chunk_y,
-        position: event_object.object.position + object_offset,
+        position: Point3::from_slice(&event_object.object.position) + object_offset,
     }
 }
 
@@ -188,7 +196,7 @@ fn load_zone(
         for x in 0..64u32 {
             let ifo_file_path = zone_base_directory.join(format!("{}_{}.IFO", x, y));
             if let Some(file) = vfs.open_file(&ifo_file_path.to_string_lossy()) {
-                let ifo_file = IfoFile::read(FileReader::from(&file))?;
+                let ifo_file = IfoFile::read_server(FileReader::from(&file))?;
                 monster_spawns.extend(
                     ifo_file
                         .monster_spawns
@@ -238,7 +246,7 @@ fn load_zone(
     let mut start_position = Point3::new(0.0, 0.0, 0.0);
     let mut revive_positions = Vec::new();
     for (name, position) in zon_file.event_positions.iter() {
-        let position = position.xzy() + objects_offset;
+        let position = Point3::from_slice(position).xzy() + objects_offset;
 
         if name == start_event_position_name {
             start_position = position;
@@ -284,7 +292,7 @@ fn load_zone(
         event_positions: zon_file
             .event_positions
             .into_iter()
-            .map(|(name, position)| (name, position.xzy() + objects_offset))
+            .map(|(name, position)| (name, Point3::from_slice(&position).xzy() + objects_offset))
             .collect(),
         day_cycle: data
             .get_zone_day_cycle_time(id)

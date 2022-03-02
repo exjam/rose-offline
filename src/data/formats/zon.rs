@@ -1,4 +1,3 @@
-use nalgebra::Point3;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -7,7 +6,7 @@ use crate::data::formats::reader::{FileReader, ReadError};
 pub struct ZonFile {
     pub grid_per_patch: f32,
     pub grid_size: f32,
-    pub event_positions: Vec<(String, Point3<f32>)>,
+    pub event_positions: Vec<(String, [f32; 3])>,
 }
 
 #[derive(Debug)]
@@ -56,7 +55,7 @@ impl ZonFile {
                 Some(BlockType::EventPositions) => {
                     let object_count = reader.read_u32()?;
                     for _ in 0..object_count {
-                        let position = Point3::from(reader.read_vector3_f32()?);
+                        let position = reader.read_vector3_f32()?;
                         let name = reader.read_u8_length_string()?;
                         event_positions.push((String::from(name), position));
                     }
