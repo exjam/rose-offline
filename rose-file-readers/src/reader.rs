@@ -1,5 +1,6 @@
 use bytes::Buf;
 use encoding_rs::{EUC_KR, UTF_16LE};
+use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
 use std::str;
@@ -7,6 +8,7 @@ use std::{borrow::Cow, io::Cursor};
 
 use crate::types::Quat4;
 use crate::types::Vec3;
+use crate::types::Vec4;
 
 pub enum ReadError {
     UnexpectedEof,
@@ -158,11 +160,54 @@ impl<'a> FileReader<'a> {
         }
     }
 
+    pub fn read_vec<T>(&mut self, elements: usize) -> Result<Vec<T>, ReadError> {
+        let bytes_length = std::mem::size_of::<T>() * elements;
+        if self.cursor.remaining() < bytes_length {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            let mut result: Vec<T> = Vec::with_capacity(elements);
+            unsafe {
+                result.set_len(elements);
+                self.cursor
+                    .read_exact(std::slice::from_raw_parts_mut(
+                        result.as_mut_ptr() as *mut u8,
+                        bytes_length,
+                    ))
+                    .map_err(|_| ReadError::UnexpectedEof)?
+            }
+            Ok(result)
+        }
+    }
+
     pub fn read_vector3_f32(&mut self) -> Result<Vec3<f32>, ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
         let z = self.read_f32()?;
         Ok(Vec3 { x, y, z })
+    }
+
+    pub fn read_vector4_f32(&mut self) -> Result<Vec4<f32>, ReadError> {
+        let x = self.read_f32()?;
+        let y = self.read_f32()?;
+        let z = self.read_f32()?;
+        let w = self.read_f32()?;
+        Ok(Vec4 { x, y, z, w })
+    }
+
+    pub fn read_vector4_u16(&mut self) -> Result<Vec4<u16>, ReadError> {
+        let x = self.read_u16()?;
+        let y = self.read_u16()?;
+        let z = self.read_u16()?;
+        let w = self.read_u16()?;
+        Ok(Vec4 { x, y, z, w })
+    }
+
+    pub fn read_vector4_u32(&mut self) -> Result<Vec4<u32>, ReadError> {
+        let x = self.read_u32()?;
+        let y = self.read_u32()?;
+        let z = self.read_u32()?;
+        let w = self.read_u32()?;
+        Ok(Vec4 { x, y, z, w })
     }
 
     pub fn read_quaternion_f32(&mut self) -> Result<Quat4<f32>, ReadError> {

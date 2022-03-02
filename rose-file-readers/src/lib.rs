@@ -10,6 +10,7 @@ pub mod qsd;
 pub mod stl;
 pub mod vfs;
 pub mod zmo;
+pub mod zms;
 pub mod zon;
 
 #[macro_use]
@@ -23,4 +24,5 @@ pub use stb::{StbFile, StbReadError};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadError};
 pub use vfs::{VfsFile, VfsIndex};
 pub use zmo::{ZmoFile, ZmoReadError};
+pub use zms::{ZmsFile, ZmsReadError};
 pub use zon::{ZonFile, ZonReadError};
