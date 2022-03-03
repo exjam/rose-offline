@@ -48,9 +48,19 @@ enum BlockType {
     Economy = 4,
 }
 
+#[derive(Default, Clone, Copy)]
+pub struct ZonReadOptions {
+    pub skip_zone_info: bool,
+    pub skip_event_positions: bool,
+    pub skip_textures: bool,
+    pub skip_tiles: bool,
+}
+
 #[allow(dead_code)]
 impl RoseFile for ZonFile {
-    fn read(mut reader: FileReader) -> Result<Self, anyhow::Error> {
+    type ReadOptions = ZonReadOptions;
+
+    fn read(mut reader: FileReader, read_options: &ZonReadOptions) -> Result<Self, anyhow::Error> {
         let mut event_positions = Vec::new();
         let mut grid_per_patch = 0.0;
         let mut grid_size = 0.0;
@@ -66,47 +76,55 @@ impl RoseFile for ZonFile {
 
             match FromPrimitive::from_u32(block_type) {
                 Some(BlockType::ZoneInfo) => {
-                    reader.skip(12);
-                    grid_per_patch = reader.read_u32()? as f32;
-                    grid_size = reader.read_f32()?;
-                    reader.skip(8);
+                    if !read_options.skip_zone_info {
+                        reader.skip(12);
+                        grid_per_patch = reader.read_u32()? as f32;
+                        grid_size = reader.read_f32()?;
+                        reader.skip(8);
+                    }
                 }
                 Some(BlockType::EventPositions) => {
-                    let object_count = reader.read_u32()? as usize;
-                    event_positions.reserve_exact(object_count);
-                    for _ in 0..object_count {
-                        let position = reader.read_vector3_f32()?;
-                        let name = reader.read_u8_length_string()?;
-                        event_positions.push((name.into(), position));
+                    if !read_options.skip_event_positions {
+                        let object_count = reader.read_u32()? as usize;
+                        event_positions.reserve_exact(object_count);
+                        for _ in 0..object_count {
+                            let position = reader.read_vector3_f32()?;
+                            let name = reader.read_u8_length_string()?;
+                            event_positions.push((name.into(), position));
+                        }
                     }
                 }
                 Some(BlockType::Textures) => {
-                    let texture_count = reader.read_u32()? as usize;
-                    tile_textures.reserve_exact(texture_count);
-                    for _ in 0..texture_count {
-                        tile_textures.push(reader.read_u8_length_string()?.into());
+                    if !read_options.skip_textures {
+                        let texture_count = reader.read_u32()? as usize;
+                        tile_textures.reserve_exact(texture_count);
+                        for _ in 0..texture_count {
+                            tile_textures.push(reader.read_u8_length_string()?.into());
+                        }
                     }
                 }
                 Some(BlockType::Tiles) => {
-                    let tile_count = reader.read_u32()? as usize;
-                    tiles.reserve_exact(tile_count);
-                    for _ in 0..tile_count {
-                        let layer1 = reader.read_u32()?;
-                        let layer2 = reader.read_u32()?;
-                        let offset1 = reader.read_u32()?;
-                        let offset2 = reader.read_u32()?;
-                        let blend = reader.read_u32()? != 0;
-                        let rotation = FromPrimitive::from_u32(reader.read_u32()?)
-                            .ok_or(ZonReadError::InvalidTileRotation)?;
-                        reader.skip(4);
-                        tiles.push(ZonTile {
-                            layer1,
-                            layer2,
-                            offset1,
-                            offset2,
-                            blend,
-                            rotation,
-                        })
+                    if !read_options.skip_tiles {
+                        let tile_count = reader.read_u32()? as usize;
+                        tiles.reserve_exact(tile_count);
+                        for _ in 0..tile_count {
+                            let layer1 = reader.read_u32()?;
+                            let layer2 = reader.read_u32()?;
+                            let offset1 = reader.read_u32()?;
+                            let offset2 = reader.read_u32()?;
+                            let blend = reader.read_u32()? != 0;
+                            let rotation = FromPrimitive::from_u32(reader.read_u32()?)
+                                .ok_or(ZonReadError::InvalidTileRotation)?;
+                            reader.skip(4);
+                            tiles.push(ZonTile {
+                                layer1,
+                                layer2,
+                                offset1,
+                                offset2,
+                                blend,
+                                rotation,
+                            })
+                        }
                     }
                 }
                 _ => {}

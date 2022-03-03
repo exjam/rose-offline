@@ -16,7 +16,9 @@ impl TilFile {
 
 #[allow(dead_code)]
 impl RoseFile for TilFile {
-    fn read(mut reader: FileReader) -> Result<Self, anyhow::Error> {
+    type ReadOptions = ();
+
+    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let mut tiles = Vec::with_capacity((width * height) as usize);

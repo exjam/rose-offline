@@ -198,7 +198,19 @@ impl VfsIndex {
         path: P,
     ) -> Result<T, anyhow::Error> {
         if let Some(file) = self.open_file(path) {
-            RoseFile::read(FileReader::from(&file))
+            RoseFile::read(FileReader::from(&file), &Default::default())
+        } else {
+            Err(VfsError::FileNotFound.into())
+        }
+    }
+
+    pub fn read_file_with<'a, T: RoseFile + Sized, P: Into<VfsPath<'a>>>(
+        &self,
+        path: P,
+        options: &T::ReadOptions,
+    ) -> Result<T, anyhow::Error> {
+        if let Some(file) = self.open_file(path) {
+            RoseFile::read(FileReader::from(&file), options)
         } else {
             Err(VfsError::FileNotFound.into())
         }

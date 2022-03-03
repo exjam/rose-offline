@@ -2,7 +2,7 @@ use log::debug;
 use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
 use rose_file_readers::{
     stb_column, FileReader, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
-    StbFile, StlFile, VfsIndex, VfsPath, ZonFile, ZonReadError,
+    IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile, ZonReadError,
 };
 use std::collections::HashMap;
 
@@ -196,11 +196,18 @@ fn load_zone(
         0.0,
     );
 
+    let ifo_read_options = IfoReadOptions {
+        skip_cnst_objects: true,
+        skip_deco_objects: true,
+        skip_water_planes: true,
+        ..Default::default()
+    };
     for y in 0..64u32 {
         for x in 0..64u32 {
-            if let Ok(ifo_file) =
-                vfs.read_file::<IfoFile, _>(zone_base_directory.join(format!("{}_{}.IFO", x, y)))
-            {
+            if let Ok(ifo_file) = vfs.read_file_with::<IfoFile, _>(
+                zone_base_directory.join(format!("{}_{}.IFO", x, y)),
+                &ifo_read_options,
+            ) {
                 monster_spawns.extend(
                     ifo_file
                         .monster_spawns

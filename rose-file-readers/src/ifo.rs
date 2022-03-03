@@ -102,9 +102,21 @@ enum BlockType {
     EventObject = 12,
 }
 
+#[derive(Default, Clone, Copy)]
+pub struct IfoReadOptions {
+    pub skip_monster_spawns: bool,
+    pub skip_npcs: bool,
+    pub skip_event_objects: bool,
+    pub skip_cnst_objects: bool,
+    pub skip_deco_objects: bool,
+    pub skip_water_planes: bool,
+}
+
 #[allow(dead_code)]
 impl RoseFile for IfoFile {
-    fn read(mut reader: FileReader) -> Result<Self, anyhow::Error> {
+    type ReadOptions = IfoReadOptions;
+
+    fn read(mut reader: FileReader, read_options: &IfoReadOptions) -> Result<Self, anyhow::Error> {
         let mut monster_spawns = Vec::new();
         let mut npcs = Vec::new();
         let mut event_objects = Vec::new();
@@ -122,108 +134,120 @@ impl RoseFile for IfoFile {
 
             match FromPrimitive::from_u32(block_type) {
                 Some(BlockType::CnstObject) => {
-                    let object_count = reader.read_u32()? as usize;
-                    cnst_objects.reserve_exact(object_count);
+                    if !read_options.skip_cnst_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        cnst_objects.reserve_exact(object_count);
 
-                    for _ in 0..object_count {
-                        cnst_objects.push(read_object(&mut reader)?);
+                        for _ in 0..object_count {
+                            cnst_objects.push(read_object(&mut reader)?);
+                        }
                     }
                 }
                 Some(BlockType::DecoObject) => {
-                    let object_count = reader.read_u32()? as usize;
-                    cnst_objects.reserve_exact(object_count);
+                    if !read_options.skip_deco_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        cnst_objects.reserve_exact(object_count);
 
-                    for _ in 0..object_count {
-                        deco_objects.push(read_object(&mut reader)?);
+                        for _ in 0..object_count {
+                            deco_objects.push(read_object(&mut reader)?);
+                        }
                     }
                 }
                 Some(BlockType::EventObject) => {
-                    let object_count = reader.read_u32()? as usize;
-                    event_objects.reserve_exact(object_count);
+                    if !read_options.skip_event_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        event_objects.reserve_exact(object_count);
 
-                    for _ in 0..object_count {
-                        let object = read_object(&mut reader)?;
-                        let function_name = reader.read_u8_length_string()?;
-                        let file_name = reader.read_u8_length_string()?;
-                        event_objects.push(IfoEventObject {
-                            object,
-                            function_name: String::from(function_name),
-                            file_name: String::from(file_name),
-                        })
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            let function_name = reader.read_u8_length_string()?;
+                            let file_name = reader.read_u8_length_string()?;
+                            event_objects.push(IfoEventObject {
+                                object,
+                                function_name: String::from(function_name),
+                                file_name: String::from(file_name),
+                            })
+                        }
                     }
                 }
                 Some(BlockType::Npc) => {
-                    let object_count = reader.read_u32()? as usize;
-                    npcs.reserve_exact(object_count);
+                    if !read_options.skip_npcs {
+                        let object_count = reader.read_u32()? as usize;
+                        npcs.reserve_exact(object_count);
 
-                    for _ in 0..object_count {
-                        let object = read_object(&mut reader)?;
-                        let ai_id = reader.read_u32()?;
-                        let quest_file_name = reader.read_u8_length_string()?;
-                        npcs.push(IfoNpc {
-                            object,
-                            ai_id,
-                            quest_file_name: String::from(quest_file_name),
-                        });
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            let ai_id = reader.read_u32()?;
+                            let quest_file_name = reader.read_u8_length_string()?;
+                            npcs.push(IfoNpc {
+                                object,
+                                ai_id,
+                                quest_file_name: String::from(quest_file_name),
+                            });
+                        }
                     }
                 }
                 Some(BlockType::MonsterSpawn) => {
-                    let object_count = reader.read_u32()? as usize;
-                    monster_spawns.reserve_exact(object_count);
+                    if !read_options.skip_monster_spawns {
+                        let object_count = reader.read_u32()? as usize;
+                        monster_spawns.reserve_exact(object_count);
 
-                    for _ in 0..object_count {
-                        let object = read_object(&mut reader)?;
-                        let _spawn_name = reader.read_u8_length_string()?;
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            let _spawn_name = reader.read_u8_length_string()?;
 
-                        let basic_count = reader.read_u32()?;
-                        let mut basic_spawns = Vec::with_capacity(basic_count as usize);
-                        for _ in 0..basic_count {
-                            let _monster_name = reader.read_u8_length_string()?;
-                            let monster_id = reader.read_u32()?;
-                            let monster_count = reader.read_u32()?;
-                            basic_spawns.push(IfoMonsterSpawn {
-                                id: monster_id,
-                                count: monster_count,
+                            let basic_count = reader.read_u32()?;
+                            let mut basic_spawns = Vec::with_capacity(basic_count as usize);
+                            for _ in 0..basic_count {
+                                let _monster_name = reader.read_u8_length_string()?;
+                                let monster_id = reader.read_u32()?;
+                                let monster_count = reader.read_u32()?;
+                                basic_spawns.push(IfoMonsterSpawn {
+                                    id: monster_id,
+                                    count: monster_count,
+                                });
+                            }
+
+                            let tactic_count = reader.read_u32()?;
+                            let mut tactic_spawns = Vec::with_capacity(basic_count as usize);
+                            for _ in 0..tactic_count {
+                                let _monster_name = reader.read_u8_length_string()?;
+                                let monster_id = reader.read_u32()?;
+                                let monster_count = reader.read_u32()?;
+                                tactic_spawns.push(IfoMonsterSpawn {
+                                    id: monster_id,
+                                    count: monster_count,
+                                });
+                            }
+
+                            let interval = reader.read_u32()?;
+                            let limit_count = reader.read_u32()?;
+                            let range = reader.read_u32()?;
+                            let tactic_points = reader.read_u32()?;
+                            monster_spawns.push(IfoMonsterSpawnPoint {
+                                object,
+                                basic_spawns,
+                                tactic_spawns,
+                                interval,
+                                limit_count,
+                                range,
+                                tactic_points,
                             });
                         }
-
-                        let tactic_count = reader.read_u32()?;
-                        let mut tactic_spawns = Vec::with_capacity(basic_count as usize);
-                        for _ in 0..tactic_count {
-                            let _monster_name = reader.read_u8_length_string()?;
-                            let monster_id = reader.read_u32()?;
-                            let monster_count = reader.read_u32()?;
-                            tactic_spawns.push(IfoMonsterSpawn {
-                                id: monster_id,
-                                count: monster_count,
-                            });
-                        }
-
-                        let interval = reader.read_u32()?;
-                        let limit_count = reader.read_u32()?;
-                        let range = reader.read_u32()?;
-                        let tactic_points = reader.read_u32()?;
-                        monster_spawns.push(IfoMonsterSpawnPoint {
-                            object,
-                            basic_spawns,
-                            tactic_spawns,
-                            interval,
-                            limit_count,
-                            range,
-                            tactic_points,
-                        });
                     }
                 }
                 Some(BlockType::WaterPlanes) => {
-                    water_size = reader.read_f32()?;
+                    if !read_options.skip_water_planes {
+                        water_size = reader.read_f32()?;
 
-                    let object_count = reader.read_u32()? as usize;
-                    water_planes.reserve_exact(object_count);
+                        let object_count = reader.read_u32()? as usize;
+                        water_planes.reserve_exact(object_count);
 
-                    for _ in 0..object_count {
-                        let start = reader.read_vector3_f32()?;
-                        let end = reader.read_vector3_f32()?;
-                        water_planes.push((start, end));
+                        for _ in 0..object_count {
+                            let start = reader.read_vector3_f32()?;
+                            let end = reader.read_vector3_f32()?;
+                            water_planes.push((start, end));
+                        }
                     }
                 }
                 _ => {} // We do not need every block when reading for server
