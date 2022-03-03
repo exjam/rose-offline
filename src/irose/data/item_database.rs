@@ -8,7 +8,7 @@ use crate::{
         item::ItemClass, AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData,
         FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase,
         ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
-        SubWeaponItemData, VehicleItemData, WeaponItemData,
+        SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
     },
     game::components::VehiclePartIndex,
 };
@@ -199,7 +199,16 @@ impl StbItem {
     }
 
     // LIST_PAT
-    stb_column! { 2, get_vehicle_part_index, VehiclePartIndex }
+    pub fn get_vehicle_part(&self, id: usize) -> Option<VehicleItemPart> {
+        match self.0.try_get_int(id, 2)? {
+            0 => Some(VehicleItemPart::Body),
+            1 => Some(VehicleItemPart::Engine),
+            2 => Some(VehicleItemPart::Leg),
+            3 => Some(VehicleItemPart::Ability),
+            4 => Some(VehicleItemPart::Arms),
+            _ => None,
+        }
+    }
     stb_column! { 33, get_vehicle_move_speed, u32 }
 }
 
@@ -335,7 +344,7 @@ fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Vehicle
     let base_item_data = load_base_item(data, stl, id, true)?;
     Some(VehicleItemData {
         item_data: base_item_data,
-        vehicle_part_index: data.get_vehicle_part_index(id)?,
+        vehicle_part: data.get_vehicle_part(id)?,
         move_speed: data.get_vehicle_move_speed(id).unwrap_or(0),
     })
 }

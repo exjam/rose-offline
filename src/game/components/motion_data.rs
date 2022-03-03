@@ -1,6 +1,8 @@
 use bevy_ecs::prelude::Component;
 
-use crate::data::MotionFileData;
+use crate::data::{
+    MotionCharacterAction, MotionDatabase, MotionFileData, MotionId, NpcData, NpcMotionAction,
+};
 
 #[derive(Default)]
 pub struct MotionDataCharacter {
@@ -48,12 +50,57 @@ pub enum MotionData {
 }
 
 impl MotionData {
-    pub fn with_character_motions(character: MotionDataCharacter) -> Self {
-        Self::Character(character)
+    pub fn from_npc(npc_data: &NpcData) -> Self {
+        let get_motion = |action| npc_data.motion_data.get(&(action as u16)).cloned();
+
+        Self::Npc(MotionDataNpc {
+            stop: get_motion(NpcMotionAction::Stop),
+            walk: get_motion(NpcMotionAction::Move),
+            attack: get_motion(NpcMotionAction::Attack),
+            hit: get_motion(NpcMotionAction::Hit),
+            die: get_motion(NpcMotionAction::Die),
+            run: get_motion(NpcMotionAction::Run),
+            cast1: get_motion(NpcMotionAction::Cast1),
+            skill_action1: get_motion(NpcMotionAction::SkillAction1),
+            cast2: get_motion(NpcMotionAction::Cast2),
+            skill_action2: get_motion(NpcMotionAction::SkillAction2),
+            etc: get_motion(NpcMotionAction::Etc),
+        })
     }
 
-    pub fn with_npc_motions(npc: MotionDataNpc) -> Self {
-        Self::Npc(npc)
+    pub fn from_character(
+        motion_database: &MotionDatabase,
+        weapon_motion_type: usize,
+        gender: usize,
+    ) -> Self {
+        let get_motion = |action| {
+            motion_database
+                .get_character_motion(MotionId::new(action as u16), weapon_motion_type, gender)
+                .cloned()
+        };
+
+        Self::Character(MotionDataCharacter {
+            weapon_motion_type,
+            gender,
+            attack1: get_motion(MotionCharacterAction::Attack),
+            attack2: get_motion(MotionCharacterAction::Attack2),
+            attack3: get_motion(MotionCharacterAction::Attack3),
+            die: get_motion(MotionCharacterAction::Die),
+            fall: get_motion(MotionCharacterAction::Fall),
+            hit: get_motion(MotionCharacterAction::Hit),
+            jump1: get_motion(MotionCharacterAction::Jump1),
+            jump2: get_motion(MotionCharacterAction::Jump2),
+            pickup_dropped_item: get_motion(MotionCharacterAction::Pickitem),
+            raise: get_motion(MotionCharacterAction::Raise),
+            run: get_motion(MotionCharacterAction::Run),
+            sit: get_motion(MotionCharacterAction::Sit),
+            sitting: get_motion(MotionCharacterAction::Sitting),
+            standup: get_motion(MotionCharacterAction::Standup),
+            stop1: get_motion(MotionCharacterAction::Stop1),
+            stop2: get_motion(MotionCharacterAction::Stop2),
+            stop3: get_motion(MotionCharacterAction::Stop3),
+            walk: get_motion(MotionCharacterAction::Walk),
+        })
     }
 
     pub fn get_attack(&self) -> Option<&MotionFileData> {

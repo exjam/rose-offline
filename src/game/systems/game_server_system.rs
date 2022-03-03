@@ -7,6 +7,7 @@ use crate::{
         account::AccountStorage,
         character::CharacterStorage,
         item::{Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour},
+        VehicleItemPart,
     },
     game::{
         bundles::{
@@ -18,7 +19,7 @@ use crate::{
             ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
             CommandSit, DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase,
             ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
-            ManaPoints, Money, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
+            ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
             PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
             StatPoints, StatusEffects, StatusEffectsRegen, Team, VehiclePartIndex, WorldClient,
         },
@@ -133,9 +134,11 @@ fn handle_game_connection_request(
         .map(|item_data| item_data.motion_type)
         .unwrap_or(0) as usize;
 
-    let motion_data = game_data
-        .motions
-        .get_character_action_motions(weapon_motion_type, character.info.gender as usize);
+    let motion_data = MotionData::from_character(
+        game_data.motions.as_ref(),
+        weapon_motion_type,
+        character.info.gender as usize,
+    );
 
     let move_mode = MoveMode::Run;
     let move_speed = MoveSpeed::new(ability_values.get_run_speed());
@@ -451,7 +454,13 @@ fn equip_vehicle_from_inventory(
         .get_vehicle_item(equipment_item.item.item_number)
         .ok_or(EquipItemError::InvalidItemData)?;
 
-    if vehicle_part_index != item_data.vehicle_part_index {
+    if match item_data.vehicle_part {
+        VehicleItemPart::Body => vehicle_part_index != VehiclePartIndex::Body,
+        VehicleItemPart::Engine => vehicle_part_index != VehiclePartIndex::Engine,
+        VehicleItemPart::Leg => vehicle_part_index != VehiclePartIndex::Leg,
+        VehicleItemPart::Ability => vehicle_part_index != VehiclePartIndex::Ability,
+        VehicleItemPart::Arms => vehicle_part_index != VehiclePartIndex::Arms,
+    } {
         return Err(EquipItemError::InvalidEquipmentIndex);
     }
 

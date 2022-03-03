@@ -91,7 +91,7 @@ pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
     GemItemData, HandsItemData, HeadItemData, ItemData, ItemDatabase, ItemGradeData, ItemReference,
     JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData, VehicleItemData,
-    WeaponItemData,
+    VehicleItemPart, WeaponItemData,
 };
 pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData, MotionId};
 pub use npc_database::{

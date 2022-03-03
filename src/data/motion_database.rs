@@ -1,7 +1,5 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use crate::game::components::{MotionData, MotionDataCharacter};
-
 #[derive(Copy, Clone, Debug)]
 pub struct MotionId(u16);
 
@@ -85,39 +83,5 @@ impl MotionDatabase {
         }
 
         None
-    }
-
-    pub fn get_character_action_motions(
-        &self,
-        weapon_motion_type: usize,
-        gender: usize,
-    ) -> MotionData {
-        let get_motion = |action| {
-            self.get_character_motion(MotionId::new(action as u16), weapon_motion_type, gender)
-                .cloned()
-        };
-
-        MotionData::with_character_motions(MotionDataCharacter {
-            weapon_motion_type,
-            gender,
-            attack1: get_motion(MotionCharacterAction::Attack),
-            attack2: get_motion(MotionCharacterAction::Attack2),
-            attack3: get_motion(MotionCharacterAction::Attack3),
-            die: get_motion(MotionCharacterAction::Die),
-            fall: get_motion(MotionCharacterAction::Fall),
-            hit: get_motion(MotionCharacterAction::Hit),
-            jump1: get_motion(MotionCharacterAction::Jump1),
-            jump2: get_motion(MotionCharacterAction::Jump2),
-            pickup_dropped_item: get_motion(MotionCharacterAction::Pickitem),
-            raise: get_motion(MotionCharacterAction::Raise),
-            run: get_motion(MotionCharacterAction::Run),
-            sit: get_motion(MotionCharacterAction::Sit),
-            sitting: get_motion(MotionCharacterAction::Sitting),
-            standup: get_motion(MotionCharacterAction::Standup),
-            stop1: get_motion(MotionCharacterAction::Stop1),
-            stop2: get_motion(MotionCharacterAction::Stop2),
-            stop3: get_motion(MotionCharacterAction::Stop3),
-            walk: get_motion(MotionCharacterAction::Walk),
-        })
     }
 }

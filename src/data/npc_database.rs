@@ -4,10 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{
-    data::{ItemReference, MotionFileData, MotionId},
-    game::components::{MotionData, MotionDataNpc},
-};
+use crate::data::{ItemReference, MotionFileData, MotionId};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NpcId(NonZeroU16);
@@ -128,27 +125,6 @@ impl NpcDatabase {
     pub fn get_npc_motion(&self, id: NpcId, motion_id: MotionId) -> Option<&MotionFileData> {
         let npc_data = self.get_npc(id)?;
         npc_data.motion_data.get(&motion_id.get())
-    }
-
-    pub fn get_npc_action_motions(&self, id: NpcId) -> MotionData {
-        let npc_data = self.get_npc(id);
-        let get_motion = |action| {
-            npc_data.and_then(|npc_data| npc_data.motion_data.get(&(action as u16)).cloned())
-        };
-
-        MotionData::with_npc_motions(MotionDataNpc {
-            stop: get_motion(NpcMotionAction::Stop),
-            walk: get_motion(NpcMotionAction::Move),
-            attack: get_motion(NpcMotionAction::Attack),
-            hit: get_motion(NpcMotionAction::Hit),
-            die: get_motion(NpcMotionAction::Die),
-            run: get_motion(NpcMotionAction::Run),
-            cast1: get_motion(NpcMotionAction::Cast1),
-            skill_action1: get_motion(NpcMotionAction::SkillAction1),
-            cast2: get_motion(NpcMotionAction::Cast2),
-            skill_action2: get_motion(NpcMotionAction::SkillAction2),
-            etc: get_motion(NpcMotionAction::Etc),
-        })
     }
 
     pub fn get_store_tab(&self, id: NpcStoreTabId) -> Option<&NpcStoreTabData> {

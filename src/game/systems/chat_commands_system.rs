@@ -25,10 +25,10 @@ use crate::{
         components::{
             AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
             ClientEntitySector, ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase,
-            GameClient, Inventory, Level, Money, MoveMode, MoveSpeed, NextCommand, Owner,
-            PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints,
-            Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
-            PERSONAL_STORE_ITEM_SLOTS,
+            GameClient, Inventory, Level, Money, MotionData, MoveMode, MoveSpeed, NextCommand,
+            Owner, PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList,
+            SkillPoints, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
+            UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},
         messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
@@ -219,10 +219,11 @@ fn create_bot_entity(
         .map(|item_data| item_data.motion_type)
         .unwrap_or(0) as usize;
 
-    let motion_data = chat_command_params
-        .game_data
-        .motions
-        .get_character_action_motions(weapon_motion_type, bot_data.info.gender as usize);
+    let motion_data = MotionData::from_character(
+        chat_command_params.game_data.motions.as_ref(),
+        weapon_motion_type,
+        bot_data.info.gender as usize,
+    );
 
     bot_data.position = position.clone();
     bot_data.health_points.hp = ability_values.get_max_health();

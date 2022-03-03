@@ -4,12 +4,9 @@ use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    data::{
-        item::{ItemClass, ItemType},
-        AbilityType, SkillId, StatusEffectId,
-    },
-    game::components::VehiclePartIndex,
+use crate::data::{
+    item::{ItemClass, ItemType},
+    AbilityType, SkillId, StatusEffectId,
 };
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
@@ -158,9 +155,18 @@ pub struct QuestItemData {
 }
 
 #[derive(Debug)]
+pub enum VehicleItemPart {
+    Body,
+    Engine,
+    Leg,
+    Ability,
+    Arms,
+}
+
+#[derive(Debug)]
 pub struct VehicleItemData {
     pub item_data: BaseItemData,
-    pub vehicle_part_index: VehiclePartIndex,
+    pub vehicle_part: VehicleItemPart,
     pub move_speed: u32,
 }
 
