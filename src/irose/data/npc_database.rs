@@ -104,8 +104,9 @@ fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
 }
 
 pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
-    let file = vfs.open_file("3DDATA/STB/LIST_NPC_S.STL")?;
-    let stl = StlFile::read(FileReader::from(&file)).ok()?;
+    let stl = vfs
+        .read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")
+        .ok()?;
 
     let file = vfs.open_file("3DDATA/NPC/LIST_NPC.CHR")?;
     let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
@@ -219,9 +220,9 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         );
     }
 
-    let file = vfs.open_file("3DDATA/STB/LIST_SELL_S.STL")?;
-    let stl = StlFile::read(FileReader::from(&file)).ok()?;
-
+    let stl = vfs
+        .read_file::<StlFile, _>("3DDATA/STB/LIST_SELL_S.STL")
+        .ok()?;
     let data = vfs
         .read_file::<StbFile, _>("3DDATA/STB/LIST_SELL.STB")
         .ok()?;

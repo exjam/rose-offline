@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use log::debug;
 use num_traits::FromPrimitive;
-use rose_file_readers::{stb_column, FileReader, StbFile, StlFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, str::FromStr};
 
 use crate::data::{
@@ -81,9 +81,9 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
 }
 
 pub fn get_status_effect_database(vfs: &VfsIndex) -> Option<StatusEffectDatabase> {
-    let file = vfs.open_file("3DDATA/STB/LIST_STATUS_S.STL")?;
-    let stl = StlFile::read(FileReader::from(&file)).ok()?;
-
+    let stl = vfs
+        .read_file::<StlFile, _>("3DDATA/STB/LIST_STATUS_S.STL")
+        .ok()?;
     let data = StbStatus(
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STATUS.STB")
             .ok()?,

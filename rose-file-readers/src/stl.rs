@@ -4,8 +4,9 @@ use std::{
     collections::{hash_map::Keys, HashMap},
     str,
 };
+use thiserror::Error;
 
-use crate::reader::{FileReader, ReadError};
+use crate::{reader::FileReader, RoseFile};
 
 struct StlEntry {
     pub text_offset: u32,
@@ -45,18 +46,10 @@ pub struct StlQuestEntry<'a> {
     pub end_message: &'a str,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StlReadError {
-    InvalidType,
-    UnexpectedEof,
-}
-
-impl From<ReadError> for StlReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => StlReadError::UnexpectedEof,
-        }
-    }
+    #[error("Invalid magic header")]
+    InvalidMagic,
 }
 
 enum StlType {
@@ -65,8 +58,10 @@ enum StlType {
     Quest,
 }
 
-impl StlFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, StlReadError> {
+impl RoseFile for StlFile {
+    type ReadOptions = ();
+
+    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let stl_type_str = reader.read_variable_length_string()?;
         let stl_type = if stl_type_str == "ITST01" {
             StlType::Item
@@ -75,7 +70,7 @@ impl StlFile {
         } else if stl_type_str == "QEST01" {
             StlType::Quest
         } else {
-            return Err(StlReadError::InvalidType);
+            return Err(StlReadError::InvalidMagic.into());
         };
 
         let key_count = reader.read_u32()?;
@@ -92,7 +87,7 @@ impl StlFile {
         let mut data = Vec::new();
 
         let read_stl_entry =
-            |reader: &mut FileReader, data: &mut Vec<u8>| -> Result<(u32, u32), StlReadError> {
+            |reader: &mut FileReader, data: &mut Vec<u8>| -> Result<(u32, u32), anyhow::Error> {
                 let text = reader.read_variable_length_string()?;
                 let text_bytes = text.as_bytes();
                 let text_bytes_length = text_bytes.len();
@@ -151,7 +146,9 @@ impl StlFile {
             languages,
         })
     }
+}
 
+impl StlFile {
     pub fn keys(&self) -> Keys<'_, String, u32> {
         self.string_keys.keys()
     }

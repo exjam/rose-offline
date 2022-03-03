@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use num_traits::FromPrimitive;
-use rose_file_readers::{stb_column, FileReader, StbFile, StlFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use crate::{
@@ -343,8 +343,7 @@ fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Vehicle
 macro_rules! load_items {
     ($vfs:ident, $path:literal, $stl_path:literal, load_base_item, $item_data_type:ident) => {{
         let mut items: HashMap<u16, $item_data_type> = HashMap::new();
-        let file = $vfs.open_file($stl_path)?;
-        let stl = StlFile::read(FileReader::from(&file)).ok()?;
+        let stl = $vfs.read_file::<StlFile, _>($stl_path).ok()?;
         let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
         for id in 0..data.rows() {
             if let Some(item) = load_base_item(&data, &stl, id, true) {
@@ -355,8 +354,7 @@ macro_rules! load_items {
     }};
     ($vfs:ident, $path:literal, $stl_path:literal, $load_item_fn:ident, $item_data_type:ident) => {{
         let mut items: HashMap<u16, $item_data_type> = HashMap::new();
-        let file = $vfs.open_file($stl_path)?;
-        let stl = StlFile::read(FileReader::from(&file)).ok()?;
+        let stl = $vfs.read_file::<StlFile, _>($stl_path).ok()?;
         let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
         for id in 0..data.rows() {
             if let Some(item) = $load_item_fn(&data, &stl, id) {

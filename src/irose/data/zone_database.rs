@@ -1,7 +1,7 @@
 use log::debug;
 use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
 use rose_file_readers::{
-    stb_column, FileReader, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
+    stb_column, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
     IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile, ZonReadError,
 };
 use std::collections::HashMap;
@@ -329,9 +329,9 @@ fn load_zone(
 }
 
 pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
-    let file = vfs.open_file("3DDATA/STB/LIST_ZONE_S.STL")?;
-    let stl = StlFile::read(FileReader::from(&file)).ok()?;
-
+    let stl = vfs
+        .read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")
+        .ok()?;
     let data = StbZone(
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")
             .ok()?,

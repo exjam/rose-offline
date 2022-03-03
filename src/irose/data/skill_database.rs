@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use log::debug;
 use num_traits::FromPrimitive;
-use rose_file_readers::{stb_column, FileReader, StbFile, StlFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{
     collections::HashMap,
     num::{NonZeroU32, NonZeroUsize},
@@ -269,9 +269,9 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
 }
 
 pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
-    let file = vfs.open_file("3DDATA/STB/LIST_SKILL_S.STL")?;
-    let stl = StlFile::read(FileReader::from(&file)).ok()?;
-
+    let stl = vfs
+        .read_file::<StlFile, _>("3DDATA/STB/LIST_SKILL_S.STL")
+        .ok()?;
     let data = StbSkill(
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")
             .ok()?,
