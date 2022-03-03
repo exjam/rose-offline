@@ -34,7 +34,7 @@ pub use ifo::{
     IfoReadOptions,
 };
 pub use qsd::*;
-pub use stb::{StbFile, StbReadError};
+pub use stb::{StbFile, StbReadError, StbReadOptions};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadError};
 pub use til::TilFile;
 pub use vfs::{VfsFile, VfsIndex, VfsPath};

@@ -1,5 +1,5 @@
 use nalgebra::Point3;
-use rose_file_readers::{stb_column, FileReader, StbFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, VfsIndex};
 use std::sync::Arc;
 
 use crate::{
@@ -210,8 +210,10 @@ pub fn get_character_creator(
     skill_database: Arc<SkillDatabase>,
     zone_database: &ZoneDatabase,
 ) -> Option<Box<impl CharacterCreator + Send + Sync>> {
-    let file = vfs.open_file("3DDATA/STB/INIT_AVATAR.STB")?;
-    let data = StbInitAvatar(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbInitAvatar(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/INIT_AVATAR.STB")
+            .ok()?,
+    );
     let mut gender_data = Vec::new();
     for id in 0..data.0.rows() {
         if let Some(gender) = load_gender(&data, id) {

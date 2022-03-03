@@ -1,5 +1,5 @@
 use rand::Rng;
-use rose_file_readers::{FileReader, StbFile, VfsIndex};
+use rose_file_readers::{StbFile, VfsIndex};
 use std::sync::Arc;
 
 use crate::{
@@ -188,8 +188,9 @@ pub fn get_drop_table(
     item_database: Arc<ItemDatabase>,
     npc_database: Arc<NpcDatabase>,
 ) -> Option<Box<impl DropTable + Send + Sync>> {
-    let file = vfs.open_file("3DDATA/STB/ITEM_DROP.STB")?;
-    let stb = StbFile::read(FileReader::from(&file)).ok()?;
+    let stb = vfs
+        .read_file::<StbFile, _>("3DDATA/STB/ITEM_DROP.STB")
+        .ok()?;
     let rows = stb.rows();
     let columns = stb.columns();
     let mut drop_table = Vec::with_capacity(rows * columns);

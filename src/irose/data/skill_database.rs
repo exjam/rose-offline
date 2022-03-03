@@ -272,8 +272,10 @@ pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
     let file = vfs.open_file("3DDATA/STB/LIST_SKILL_S.STL")?;
     let stl = StlFile::read(FileReader::from(&file)).ok()?;
 
-    let file = vfs.open_file("3DDATA/STB/LIST_SKILL.STB")?;
-    let data = StbSkill(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbSkill(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")
+            .ok()?,
+    );
     let mut skills = HashMap::new();
     for id in 1..data.rows() {
         if let Some(skill) = load_skill(&data, &stl, id) {

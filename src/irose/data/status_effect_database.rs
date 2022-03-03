@@ -84,8 +84,10 @@ pub fn get_status_effect_database(vfs: &VfsIndex) -> Option<StatusEffectDatabase
     let file = vfs.open_file("3DDATA/STB/LIST_STATUS_S.STL")?;
     let stl = StlFile::read(FileReader::from(&file)).ok()?;
 
-    let file = vfs.open_file("3DDATA/STB/LIST_STATUS.STB")?;
-    let data = StbStatus(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbStatus(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STATUS.STB")
+            .ok()?,
+    );
     let mut status_effects = HashMap::new();
 
     for row in 1..data.0.rows() {

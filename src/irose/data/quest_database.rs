@@ -1,5 +1,5 @@
 use log::{debug, warn};
-use rose_file_readers::{stb_column, FileReader, QsdFile, StbFile, VfsIndex};
+use rose_file_readers::{stb_column, FileReader, QsdFile, StbFile, StbReadOptions, VfsIndex};
 use std::collections::HashMap;
 
 use crate::data::{QuestData, QuestDatabase, WorldTicks};
@@ -11,8 +11,15 @@ impl StbQuest {
 }
 
 pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
-    let file = vfs.open_file("3DDATA/QUESTDATA/QUEST_S.STB")?;
-    let quest_s_stb = StbFile::read_wide(FileReader::from(&file)).ok()?;
+    let quest_s_stb = vfs
+        .read_file_with::<StbFile, _>(
+            "3DDATA/QUESTDATA/QUEST_S.STB",
+            &StbReadOptions {
+                is_wide: true,
+                ..Default::default()
+            },
+        )
+        .ok()?;
     let mut strings = HashMap::new();
 
     for row in 0..quest_s_stb.rows() {
@@ -22,16 +29,19 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
         }
     }
 
-    let file = vfs.open_file("3DDATA/STB/LIST_QUEST.STB")?;
-    let quest_stb = StbQuest(StbFile::read(FileReader::from(&file)).ok()?);
+    let quest_stb = StbQuest(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_QUEST.STB")
+            .ok()?,
+    );
     let mut quests = Vec::new();
     for row in 0..quest_stb.0.rows() {
         let time_limit = quest_stb.get_time_limit(row).filter(|x| x.0 != 0);
         quests.push(QuestData { time_limit });
     }
 
-    let file = vfs.open_file("3DDATA/STB/LIST_QUESTDATA.STB")?;
-    let qsd_files_stb = StbFile::read(FileReader::from(&file)).ok()?;
+    let qsd_files_stb = vfs
+        .read_file::<StbFile, _>("3DDATA/STB/LIST_QUESTDATA.STB")
+        .ok()?;
     let mut triggers = HashMap::new();
 
     for row in 0..qsd_files_stb.rows() {

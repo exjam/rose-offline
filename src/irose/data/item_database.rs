@@ -345,8 +345,7 @@ macro_rules! load_items {
         let mut items: HashMap<u16, $item_data_type> = HashMap::new();
         let file = $vfs.open_file($stl_path)?;
         let stl = StlFile::read(FileReader::from(&file)).ok()?;
-        let file = $vfs.open_file($path)?;
-        let data = StbItem(StbFile::read(FileReader::from(&file)).ok()?);
+        let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
         for id in 0..data.rows() {
             if let Some(item) = load_base_item(&data, &stl, id, true) {
                 items.insert(id as u16, $item_data_type { item_data: item });
@@ -358,8 +357,7 @@ macro_rules! load_items {
         let mut items: HashMap<u16, $item_data_type> = HashMap::new();
         let file = $vfs.open_file($stl_path)?;
         let stl = StlFile::read(FileReader::from(&file)).ok()?;
-        let file = $vfs.open_file($path)?;
-        let data = StbItem(StbFile::read(FileReader::from(&file)).ok()?);
+        let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
         for id in 0..data.rows() {
             if let Some(item) = $load_item_fn(&data, &stl, id) {
                 items.insert(id as u16, item);
@@ -386,19 +384,17 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
     let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA/STB/LIST_PAT_S.STL", load_vehicle_item, VehicleItemData };
 
     let mut item_grades = Vec::new();
-    if let Some(file) = vfs.open_file("3DDATA/STB/LIST_GRADE.STB") {
-        if let Ok(data) = StbFile::read(FileReader::from(&file)) {
-            let data = StbItemGrades(data);
-            for i in 0..data.rows() {
-                item_grades.push(ItemGradeData {
-                    attack: data.get_attack(i).unwrap_or(0),
-                    hit: data.get_hit(i).unwrap_or(0),
-                    defence: data.get_defence(i).unwrap_or(0),
-                    resistance: data.get_resistance(i).unwrap_or(0),
-                    avoid: data.get_avoid(i).unwrap_or(0),
-                    glow_colour: data.get_glow_colour(i),
-                });
-            }
+    if let Ok(data) = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_GRADE.STB") {
+        let data = StbItemGrades(data);
+        for i in 0..data.rows() {
+            item_grades.push(ItemGradeData {
+                attack: data.get_attack(i).unwrap_or(0),
+                hit: data.get_hit(i).unwrap_or(0),
+                defence: data.get_defence(i).unwrap_or(0),
+                resistance: data.get_resistance(i).unwrap_or(0),
+                avoid: data.get_avoid(i).unwrap_or(0),
+                glow_colour: data.get_glow_colour(i),
+            });
         }
     }
 

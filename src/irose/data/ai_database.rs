@@ -1,12 +1,19 @@
 use log::{debug, warn};
-use rose_file_readers::{AipFile, FileReader, StbFile, VfsIndex};
+use rose_file_readers::{AipFile, FileReader, StbFile, StbReadOptions, VfsIndex};
 use std::collections::HashMap;
 
 use crate::data::AiDatabase;
 
 pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
-    let ai_s = vfs.open_file("3DDATA/AI/AI_s.STB")?;
-    let ai_s_stb = StbFile::read_wide(FileReader::from(&ai_s)).ok()?;
+    let ai_s_stb = vfs
+        .read_file_with::<StbFile, _>(
+            "3DDATA/AI/AI_S.STB",
+            &StbReadOptions {
+                is_wide: true,
+                ..Default::default()
+            },
+        )
+        .ok()?;
     let mut strings = HashMap::new();
 
     for row in 0..ai_s_stb.rows() {
@@ -16,8 +23,7 @@ pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
         }
     }
 
-    let file_ai = vfs.open_file("3DDATA/STB/FILE_AI.STB")?;
-    let file_ai_stb = StbFile::read(FileReader::from(&file_ai)).ok()?;
+    let file_ai_stb = vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_AI.STB").ok()?;
     let mut aips = HashMap::new();
 
     for row in 0..file_ai_stb.rows() {

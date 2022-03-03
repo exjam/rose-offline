@@ -110,8 +110,10 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
     let file = vfs.open_file("3DDATA/NPC/LIST_NPC.CHR")?;
     let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
 
-    let file = vfs.open_file("3DDATA/STB/LIST_NPC.STB")?;
-    let data = StbNpc(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbNpc(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")
+            .ok()?,
+    );
 
     let mut npcs = HashMap::new();
     for id in 1..data.rows() {
@@ -194,8 +196,10 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         );
     }
 
-    let file = vfs.open_file("3DDATA/STB/LIST_EVENT.STB")?;
-    let data = StbEvent(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbEvent(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_EVENT.STB")
+            .ok()?,
+    );
     let mut conversation_files = HashMap::new();
     for id in 0..data.rows() {
         let key = data.get_row_key(id);
@@ -218,8 +222,9 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
     let file = vfs.open_file("3DDATA/STB/LIST_SELL_S.STL")?;
     let stl = StlFile::read(FileReader::from(&file)).ok()?;
 
-    let file = vfs.open_file("3DDATA/STB/LIST_SELL.STB")?;
-    let data = StbFile::read(FileReader::from(&file)).ok()?;
+    let data = vfs
+        .read_file::<StbFile, _>("3DDATA/STB/LIST_SELL.STB")
+        .ok()?;
     let mut store_tabs = HashMap::new();
     for id in 0..data.rows() {
         let tab_string_id = data.get(id, 1);

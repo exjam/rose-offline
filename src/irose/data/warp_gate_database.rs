@@ -1,5 +1,5 @@
 use log::debug;
-use rose_file_readers::{stb_column, FileReader, StbFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, VfsIndex};
 use std::collections::HashMap;
 
 use crate::data::{WarpGateData, WarpGateDatabase, WarpGateId, ZoneId};
@@ -25,8 +25,7 @@ fn load_warp_gate(data: &StbWarp, id: usize) -> Option<WarpGateData> {
 }
 
 pub fn get_warp_gate_database(vfs: &VfsIndex) -> Option<WarpGateDatabase> {
-    let file = vfs.open_file("3DDATA/STB/WARP.STB")?;
-    let data = StbWarp(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbWarp(vfs.read_file::<StbFile, _>("3DDATA/STB/WARP.STB").ok()?);
     let mut warp_gates = HashMap::new();
     for id in 1..data.rows() {
         if let Some(warp_gate_data) = load_warp_gate(&data, id) {

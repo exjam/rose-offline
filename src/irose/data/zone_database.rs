@@ -332,8 +332,10 @@ pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
     let file = vfs.open_file("3DDATA/STB/LIST_ZONE_S.STL")?;
     let stl = StlFile::read(FileReader::from(&file)).ok()?;
 
-    let file = vfs.open_file("3DDATA/STB/LIST_ZONE.STB")?;
-    let data = StbZone(StbFile::read(FileReader::from(&file)).ok()?);
+    let data = StbZone(
+        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")
+            .ok()?,
+    );
     let mut zones = HashMap::new();
     for id in 1..data.rows() {
         let zone_file = data.get_zone_file(id);

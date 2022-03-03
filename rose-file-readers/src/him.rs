@@ -14,7 +14,6 @@ impl HimFile {
     }
 }
 
-#[allow(dead_code)]
 impl RoseFile for HimFile {
     type ReadOptions = ();
 

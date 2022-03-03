@@ -1,7 +1,9 @@
 use core::mem::size_of;
 use std::{collections::HashMap, str};
 
-use crate::reader::{FileReader, ReadError};
+use thiserror::Error;
+
+use crate::{reader::FileReader, RoseFile};
 
 pub struct StbFile {
     rows: usize,
@@ -13,43 +15,43 @@ pub struct StbFile {
     row_keys: HashMap<String, usize>,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum StbReadError {
+    #[error("Invalid STB magic header")]
     InvalidMagic,
+    #[error("Unsupported STB version")]
     UnsupportedVersion,
-    UnexpectedEof,
 }
 
-impl From<ReadError> for StbReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => StbReadError::UnexpectedEof,
+#[derive(Default)]
+pub struct StbReadOptions {
+    pub is_wide: bool,
+    pub with_keys: bool,
+}
+
+impl RoseFile for StbFile {
+    type ReadOptions = StbReadOptions;
+
+    fn read(mut reader: FileReader, read_options: &StbReadOptions) -> Result<Self, anyhow::Error> {
+        let magic = reader.read_fixed_length_string(3)?;
+        if magic != "STB" {
+            return Err(StbReadError::InvalidMagic.into());
         }
+
+        if read_options.is_wide {
+            reader.use_wide_strings = true;
+        }
+
+        StbFile::read_data(reader, read_options)
     }
 }
 
 #[allow(dead_code)]
 impl StbFile {
-    pub fn read_wide(mut reader: FileReader) -> Result<Self, StbReadError> {
-        let magic = reader.read_fixed_length_string(3)?;
-        if magic != "STB" {
-            return Err(StbReadError::InvalidMagic);
-        }
-
-        reader.use_wide_strings = true;
-        Self::read_data(reader)
-    }
-
-    pub fn read(mut reader: FileReader) -> Result<Self, StbReadError> {
-        let magic = reader.read_fixed_length_string(3)?;
-        if magic != "STB" {
-            return Err(StbReadError::InvalidMagic);
-        }
-
-        Self::read_data(reader)
-    }
-
-    fn read_data(mut reader: FileReader) -> Result<Self, StbReadError> {
+    fn read_data(
+        mut reader: FileReader,
+        read_options: &StbReadOptions,
+    ) -> Result<Self, anyhow::Error> {
         let version = {
             let version = reader.read_u8()?;
             if version == b'0' {
@@ -57,7 +59,7 @@ impl StbFile {
             } else if version == b'1' {
                 1
             } else {
-                return Err(StbReadError::UnsupportedVersion);
+                return Err(StbReadError::UnsupportedVersion.into());
             }
         };
 
@@ -103,6 +105,15 @@ impl StbFile {
             }
         }
 
+        let mut row_keys = HashMap::new();
+        if read_options.with_keys {
+            for (index, key) in row_names.iter().enumerate() {
+                if !key.is_empty() {
+                    row_keys.insert(key.clone(), index);
+                }
+            }
+        }
+
         Ok(Self {
             rows,
             columns,
@@ -110,20 +121,8 @@ impl StbFile {
             _column_names: column_names,
             data,
             cells,
-            row_keys: Default::default(),
+            row_keys,
         })
-    }
-
-    pub fn read_with_keys(reader: FileReader) -> Result<Self, StbReadError> {
-        let mut stb = Self::read(reader)?;
-
-        for (index, key) in stb.row_names.iter().enumerate() {
-            if !key.is_empty() {
-                stb.row_keys.insert(key.clone(), index);
-            }
-        }
-
-        Ok(stb)
     }
 
     pub fn rows(&self) -> usize {

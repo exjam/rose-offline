@@ -15,8 +15,9 @@ fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
 
 pub fn get_motion_database(vfs: &VfsIndex) -> Option<MotionDatabase> {
     // Read motion file list
-    let file = vfs.open_file("3DDATA/STB/FILE_MOTION.STB")?;
-    let file_motion = StbFile::read(FileReader::from(&file)).ok()?;
+    let file_motion = vfs
+        .read_file::<StbFile, _>("3DDATA/STB/FILE_MOTION.STB")
+        .ok()?;
 
     let mut motion_files = Vec::new();
     for gender in 0..file_motion.columns() {
@@ -33,8 +34,9 @@ pub fn get_motion_database(vfs: &VfsIndex) -> Option<MotionDatabase> {
     }
 
     // Read character motion mappings
-    let file = vfs.open_file("3DDATA/STB/TYPE_MOTION.STB")?;
-    let type_motion = StbFile::read(FileReader::from(&file)).ok()?;
+    let type_motion = vfs
+        .read_file::<StbFile, _>("3DDATA/STB/TYPE_MOTION.STB")
+        .ok()?;
     let num_character_motion_weapons = type_motion.columns();
     let num_character_motion_actions = type_motion.rows();
     let mut motion_indices = Vec::new();
