@@ -1,0 +1,37 @@
+use crate::{reader::FileReader, RoseFile};
+
+pub struct TilFile {
+    pub width: u32,
+    pub height: u32,
+    pub tiles: Vec<u32>,
+}
+
+impl TilFile {
+    pub fn get_clamped(&self, x: usize, y: usize) -> u32 {
+        let x = usize::clamp(x, 0, self.width as usize - 1);
+        let y = usize::clamp(y, 0, self.height as usize - 1);
+        self.tiles[y * self.width as usize + x]
+    }
+}
+
+#[allow(dead_code)]
+impl RoseFile for TilFile {
+    fn read(mut reader: FileReader) -> Result<Self, anyhow::Error> {
+        let width = reader.read_u32()?;
+        let height = reader.read_u32()?;
+        let mut tiles = Vec::with_capacity((width * height) as usize);
+
+        for _ in 0..height {
+            for _ in 0..width {
+                reader.skip(3);
+                tiles.push(reader.read_u32()?);
+            }
+        }
+
+        Ok(Self {
+            width,
+            height,
+            tiles,
+        })
+    }
+}

@@ -11,9 +11,11 @@ pub mod types;
 
 pub mod aip;
 pub mod chr;
+pub mod him;
 pub mod ifo;
 pub mod qsd;
 pub mod stl;
+pub mod til;
 pub mod vfs;
 pub mod zmo;
 pub mod zms;
@@ -24,10 +26,12 @@ pub mod stb;
 
 pub use aip::*;
 pub use chr::{ChrFile, ChrReadError};
+pub use him::HimFile;
 pub use ifo::{IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc, IfoObject};
 pub use qsd::*;
 pub use stb::{StbFile, StbReadError};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadError};
+pub use til::TilFile;
 pub use vfs::{VfsFile, VfsIndex, VfsPath};
 pub use zmo::{ZmoFile, ZmoReadError};
 pub use zms::{ZmsFile, ZmsReadError};
