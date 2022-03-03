@@ -2,42 +2,13 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::{
-    reader::{FileReader, ReadError},
+    reader::FileReader,
     types::{Quat4, Vec2, Vec3},
+    RoseFile,
 };
 
-#[derive(Debug)]
-pub enum IfoReadError {
-    UnexpectedEof,
-}
-
-impl From<ReadError> for IfoReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => IfoReadError::UnexpectedEof,
-        }
-    }
-}
-
-#[derive(FromPrimitive)]
-enum BlockType {
-    MapInfo = 0,
-    Object = 1,
-    Npc = 2,
-    Building = 3,
-    Sound = 4,
-    Effect = 5,
-    Animation = 6,
-    Water = 7,
-    MonsterSpawn = 8,
-    Ocean = 9,
-    Warp = 10,
-    CollisionObject = 11,
-    EventObject = 12,
-}
-
 #[allow(dead_code)]
-pub struct Object {
+pub struct IfoObject {
     pub object_name: String,
     pub minimap_position: Vec2<u32>,
     pub object_type: u32,
@@ -49,7 +20,7 @@ pub struct Object {
     pub scale: Vec3<f32>,
 }
 
-fn read_object(reader: &mut FileReader) -> Result<Object, IfoReadError> {
+fn read_object(reader: &mut FileReader) -> anyhow::Result<IfoObject> {
     let object_name = reader.read_u8_length_string()?;
     let warp_id = reader.read_u16()?;
     let event_id = reader.read_u16()?;
@@ -61,7 +32,7 @@ fn read_object(reader: &mut FileReader) -> Result<Object, IfoReadError> {
     let position = reader.read_vector3_f32()?;
     let scale = reader.read_vector3_f32()?;
 
-    Ok(Object {
+    Ok(IfoObject {
         object_name: String::from(object_name),
         warp_id,
         event_id,
@@ -77,45 +48,70 @@ fn read_object(reader: &mut FileReader) -> Result<Object, IfoReadError> {
     })
 }
 
-pub struct MonsterSpawn {
+pub struct IfoMonsterSpawn {
     pub id: u32,
     pub count: u32,
 }
 
-pub struct MonsterSpawnPoint {
-    pub object: Object,
-    pub basic_spawns: Vec<MonsterSpawn>,
-    pub tactic_spawns: Vec<MonsterSpawn>,
+pub struct IfoMonsterSpawnPoint {
+    pub object: IfoObject,
+    pub basic_spawns: Vec<IfoMonsterSpawn>,
+    pub tactic_spawns: Vec<IfoMonsterSpawn>,
     pub interval: u32,
     pub limit_count: u32,
     pub range: u32,
     pub tactic_points: u32,
 }
 
-pub struct EventObject {
-    pub object: Object,
+pub struct IfoEventObject {
+    pub object: IfoObject,
     pub function_name: String,
     pub file_name: String,
 }
 
-pub struct Npc {
-    pub object: Object,
+pub struct IfoNpc {
+    pub object: IfoObject,
     pub ai_id: u32,
     pub quest_file_name: String,
 }
 
 pub struct IfoFile {
-    pub monster_spawns: Vec<MonsterSpawnPoint>,
-    pub npcs: Vec<Npc>,
-    pub event_objects: Vec<EventObject>,
+    pub monster_spawns: Vec<IfoMonsterSpawnPoint>,
+    pub npcs: Vec<IfoNpc>,
+    pub event_objects: Vec<IfoEventObject>,
+    pub deco_objects: Vec<IfoObject>,
+    pub cnst_objects: Vec<IfoObject>,
+    pub water_size: f32,
+    pub water_planes: Vec<(Vec3<f32>, Vec3<f32>)>,
+}
+
+#[derive(FromPrimitive)]
+enum BlockType {
+    MapInfo = 0,
+    DecoObject = 1,
+    Npc = 2,
+    CnstObject = 3,
+    Sound = 4,
+    Effect = 5,
+    Animation = 6,
+    LegacyWater = 7,
+    MonsterSpawn = 8,
+    WaterPlanes = 9,
+    Warp = 10,
+    CollisionObject = 11,
+    EventObject = 12,
 }
 
 #[allow(dead_code)]
-impl IfoFile {
-    pub fn read_server(mut reader: FileReader) -> Result<Self, IfoReadError> {
+impl RoseFile for IfoFile {
+    fn read(mut reader: FileReader) -> Result<Self, anyhow::Error> {
         let mut monster_spawns = Vec::new();
         let mut npcs = Vec::new();
         let mut event_objects = Vec::new();
+        let mut cnst_objects = Vec::new();
+        let mut deco_objects = Vec::new();
+        let mut water_size = 0.0;
+        let mut water_planes = Vec::new();
 
         let block_count = reader.read_u32()?;
         for _ in 0..block_count {
@@ -125,13 +121,31 @@ impl IfoFile {
             reader.set_position(block_offset as u64);
 
             match FromPrimitive::from_u32(block_type) {
+                Some(BlockType::CnstObject) => {
+                    let object_count = reader.read_u32()? as usize;
+                    cnst_objects.reserve_exact(object_count);
+
+                    for _ in 0..object_count {
+                        cnst_objects.push(read_object(&mut reader)?);
+                    }
+                }
+                Some(BlockType::DecoObject) => {
+                    let object_count = reader.read_u32()? as usize;
+                    cnst_objects.reserve_exact(object_count);
+
+                    for _ in 0..object_count {
+                        deco_objects.push(read_object(&mut reader)?);
+                    }
+                }
                 Some(BlockType::EventObject) => {
-                    let object_count = reader.read_u32()?;
+                    let object_count = reader.read_u32()? as usize;
+                    event_objects.reserve_exact(object_count);
+
                     for _ in 0..object_count {
                         let object = read_object(&mut reader)?;
                         let function_name = reader.read_u8_length_string()?;
                         let file_name = reader.read_u8_length_string()?;
-                        event_objects.push(EventObject {
+                        event_objects.push(IfoEventObject {
                             object,
                             function_name: String::from(function_name),
                             file_name: String::from(file_name),
@@ -139,12 +153,14 @@ impl IfoFile {
                     }
                 }
                 Some(BlockType::Npc) => {
-                    let object_count = reader.read_u32()?;
+                    let object_count = reader.read_u32()? as usize;
+                    npcs.reserve_exact(object_count);
+
                     for _ in 0..object_count {
                         let object = read_object(&mut reader)?;
                         let ai_id = reader.read_u32()?;
                         let quest_file_name = reader.read_u8_length_string()?;
-                        npcs.push(Npc {
+                        npcs.push(IfoNpc {
                             object,
                             ai_id,
                             quest_file_name: String::from(quest_file_name),
@@ -152,7 +168,9 @@ impl IfoFile {
                     }
                 }
                 Some(BlockType::MonsterSpawn) => {
-                    let object_count = reader.read_u32()?;
+                    let object_count = reader.read_u32()? as usize;
+                    monster_spawns.reserve_exact(object_count);
+
                     for _ in 0..object_count {
                         let object = read_object(&mut reader)?;
                         let _spawn_name = reader.read_u8_length_string()?;
@@ -163,7 +181,7 @@ impl IfoFile {
                             let _monster_name = reader.read_u8_length_string()?;
                             let monster_id = reader.read_u32()?;
                             let monster_count = reader.read_u32()?;
-                            basic_spawns.push(MonsterSpawn {
+                            basic_spawns.push(IfoMonsterSpawn {
                                 id: monster_id,
                                 count: monster_count,
                             });
@@ -175,7 +193,7 @@ impl IfoFile {
                             let _monster_name = reader.read_u8_length_string()?;
                             let monster_id = reader.read_u32()?;
                             let monster_count = reader.read_u32()?;
-                            tactic_spawns.push(MonsterSpawn {
+                            tactic_spawns.push(IfoMonsterSpawn {
                                 id: monster_id,
                                 count: monster_count,
                             });
@@ -185,7 +203,7 @@ impl IfoFile {
                         let limit_count = reader.read_u32()?;
                         let range = reader.read_u32()?;
                         let tactic_points = reader.read_u32()?;
-                        monster_spawns.push(MonsterSpawnPoint {
+                        monster_spawns.push(IfoMonsterSpawnPoint {
                             object,
                             basic_spawns,
                             tactic_spawns,
@@ -194,6 +212,18 @@ impl IfoFile {
                             range,
                             tactic_points,
                         });
+                    }
+                }
+                Some(BlockType::WaterPlanes) => {
+                    water_size = reader.read_f32()?;
+
+                    let object_count = reader.read_u32()? as usize;
+                    water_planes.reserve_exact(object_count);
+
+                    for _ in 0..object_count {
+                        let start = reader.read_vector3_f32()?;
+                        let end = reader.read_vector3_f32()?;
+                        water_planes.push((start, end));
                     }
                 }
                 _ => {} // We do not need every block when reading for server
@@ -206,6 +236,10 @@ impl IfoFile {
             monster_spawns,
             npcs,
             event_objects,
+            deco_objects,
+            cnst_objects,
+            water_size,
+            water_planes,
         })
     }
 }

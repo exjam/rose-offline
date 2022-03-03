@@ -1,16 +1,17 @@
 use bytes::Buf;
 use encoding_rs::{EUC_KR, UTF_16LE};
-use std::io::Read;
-use std::io::Seek;
-use std::io::SeekFrom;
-use std::str;
-use std::{borrow::Cow, io::Cursor};
+use std::{
+    borrow::Cow,
+    io::{Cursor, Read, Seek, SeekFrom},
+    str,
+};
+use thiserror::Error;
 
-use crate::types::Quat4;
-use crate::types::Vec3;
-use crate::types::Vec4;
+use crate::types::{Quat4, Vec3, Vec4};
 
+#[derive(Error, Debug)]
 pub enum ReadError {
+    #[error("Unexpected end of file")]
     UnexpectedEof,
 }
 

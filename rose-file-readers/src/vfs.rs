@@ -1,10 +1,12 @@
 use encoding_rs::EUC_KR;
 use memmap::{Mmap, MmapOptions};
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use thiserror::Error;
 
-use crate::reader::FileReader;
+use crate::{reader::FileReader, RoseFile};
 
 struct FileEntry {
     offset: usize,
@@ -13,7 +15,7 @@ struct FileEntry {
 
 struct Storage {
     mmap: Mmap,
-    files: HashMap<String, FileEntry>,
+    files: HashMap<PathBuf, FileEntry>,
 }
 
 #[derive(Default)]
@@ -29,6 +31,12 @@ pub enum VfsFile<'a> {
     View(&'a [u8]),
 }
 
+#[derive(Error, Debug)]
+pub enum VfsError {
+    #[error("File not found")]
+    FileNotFound,
+}
+
 impl<'a> From<&'a VfsFile<'a>> for FileReader<'a> {
     fn from(file: &'a VfsFile<'a>) -> Self {
         match file {
@@ -38,9 +46,65 @@ impl<'a> From<&'a VfsFile<'a>> for FileReader<'a> {
     }
 }
 
+#[derive(Debug, Hash, Clone)]
+pub struct VfsPath<'a> {
+    path: Cow<'a, Path>,
+}
+
+impl<'a> VfsPath<'a> {
+    #[inline]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn normalise_path(path: &str) -> PathBuf {
+        path.replace('\\', "/").to_uppercase().into()
+    }
+}
+
+impl<'a> From<&'a str> for VfsPath<'_> {
+    fn from(path: &'a str) -> Self {
+        VfsPath {
+            path: Cow::Owned(VfsPath::normalise_path(path)),
+        }
+    }
+}
+
+impl<'a> From<&'a String> for VfsPath<'_> {
+    fn from(path: &'a String) -> Self {
+        VfsPath {
+            path: Cow::Owned(VfsPath::normalise_path(path.as_str())),
+        }
+    }
+}
+
+impl<'a> From<&'a Path> for VfsPath<'_> {
+    fn from(path: &'a Path) -> Self {
+        VfsPath {
+            path: Cow::Owned(VfsPath::normalise_path(path.to_string_lossy().as_ref())),
+        }
+    }
+}
+
+impl<'a> From<PathBuf> for VfsPath<'_> {
+    fn from(path: PathBuf) -> Self {
+        VfsPath {
+            path: Cow::Owned(VfsPath::normalise_path(path.to_string_lossy().as_ref())),
+        }
+    }
+}
+
+impl<'a> From<&'a VfsPath<'a>> for VfsPath<'a> {
+    fn from(path: &'a VfsPath<'a>) -> Self {
+        VfsPath {
+            path: Cow::Borrowed(&path.path),
+        }
+    }
+}
+
 impl VfsIndex {
-    pub fn normalise_path(path: &str) -> String {
-        path.replace('\\', "/").to_uppercase()
+    pub fn normalise_path(path: &str) -> PathBuf {
+        path.replace('\\', "/").to_uppercase().into()
     }
 
     pub fn load(path: &Path) -> Result<VfsIndex, std::io::Error> {
@@ -111,20 +175,32 @@ impl VfsIndex {
         Ok(index)
     }
 
-    pub fn open_file(&self, path: &str) -> Option<VfsFile> {
-        if let Ok(buffer) = std::fs::read(self.root_path.join(path)) {
-            return Some(VfsFile::Buffer(buffer));
-        }
+    pub fn open_file<'a, P: Into<VfsPath<'a>>>(&self, path: P) -> Option<VfsFile> {
+        let vfs_path: VfsPath = path.into();
 
-        let path = Self::normalise_path(path);
         for vfs in &self.storages {
-            if let Some(entry) = vfs.files.get(&path) {
+            if let Some(entry) = vfs.files.get(vfs_path.path()) {
                 return Some(VfsFile::View(
                     &vfs.mmap[entry.offset..entry.offset + entry.size],
                 ));
             }
         }
 
+        if let Ok(buffer) = std::fs::read(self.root_path.join(vfs_path.path())) {
+            return Some(VfsFile::Buffer(buffer));
+        }
+
         None
+    }
+
+    pub fn read_file<'a, T: RoseFile + Sized, P: Into<VfsPath<'a>>>(
+        &self,
+        path: P,
+    ) -> Result<T, anyhow::Error> {
+        if let Some(file) = self.open_file(path) {
+            RoseFile::read(FileReader::from(&file))
+        } else {
+            Err(VfsError::FileNotFound.into())
+        }
     }
 }

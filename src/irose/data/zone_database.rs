@@ -1,10 +1,10 @@
 use log::debug;
 use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
 use rose_file_readers::{
-    ifo::{self, IfoReadError, MonsterSpawn},
-    stb_column, FileReader, IfoFile, StbFile, StlFile, VfsIndex, ZonFile, ZonReadError,
+    stb_column, FileReader, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
+    StbFile, StlFile, VfsIndex, VfsPath, ZonFile, ZonReadError,
 };
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 use crate::data::{
     NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId,
@@ -71,19 +71,13 @@ impl From<ZonReadError> for LoadZoneError {
     }
 }
 
-impl From<IfoReadError> for LoadZoneError {
-    fn from(_: IfoReadError) -> Self {
-        Self::IfoFileInvalid
-    }
-}
-
-impl From<&ifo::MonsterSpawnPoint> for ZoneMonsterSpawnPoint {
-    fn from(spawn: &ifo::MonsterSpawnPoint) -> Self {
-        let transform_spawn_list = |spawn_list: &Vec<MonsterSpawn>| {
+impl From<&IfoMonsterSpawnPoint> for ZoneMonsterSpawnPoint {
+    fn from(spawn: &IfoMonsterSpawnPoint) -> Self {
+        let transform_spawn_list = |spawn_list: &Vec<IfoMonsterSpawn>| {
             spawn_list
                 .iter()
-                .map(|ifo::MonsterSpawn { id, count }| {
-                    (NpcId::new(*id as u16).unwrap(), *count as usize)
+                .map(|&IfoMonsterSpawn { id, count }| {
+                    (NpcId::new(id as u16).unwrap(), count as usize)
                 })
                 .collect()
         };
@@ -104,15 +98,13 @@ impl From<&ifo::MonsterSpawnPoint> for ZoneMonsterSpawnPoint {
 }
 
 fn create_monster_spawn(
-    spawn: &ifo::MonsterSpawnPoint,
+    spawn: &IfoMonsterSpawnPoint,
     object_offset: Vector3<f32>,
 ) -> ZoneMonsterSpawnPoint {
-    let transform_spawn_list = |spawn_list: &Vec<MonsterSpawn>| {
+    let transform_spawn_list = |spawn_list: &Vec<IfoMonsterSpawn>| {
         spawn_list
             .iter()
-            .map(|ifo::MonsterSpawn { id, count }| {
-                (NpcId::new(*id as u16).unwrap(), *count as usize)
-            })
+            .map(|&IfoMonsterSpawn { id, count }| (NpcId::new(id as u16).unwrap(), count as usize))
             .collect()
     };
 
@@ -131,7 +123,7 @@ fn create_monster_spawn(
     }
 }
 
-fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn {
+fn create_npc_spawn(npc: &IfoNpc, object_offset: Vector3<f32>) -> ZoneNpcSpawn {
     ZoneNpcSpawn {
         npc_id: NpcId::new(npc.object.object_id as u16).unwrap(),
         position: Point3::new(
@@ -153,7 +145,7 @@ fn create_npc_spawn(npc: &ifo::Npc, object_offset: Vector3<f32>) -> ZoneNpcSpawn
 }
 
 fn create_event_object(
-    event_object: &ifo::EventObject,
+    event_object: &IfoEventObject,
     object_offset: Vector3<f32>,
     map_chunk_x: i32,
     map_chunk_y: i32,
@@ -176,16 +168,15 @@ fn load_zone(
     stl: &StlFile,
     id: usize,
 ) -> Result<ZoneData, LoadZoneError> {
-    let zone_file =
-        VfsIndex::normalise_path(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?);
-    let zone_base_directory = Path::new(&zone_file)
+    let zone_file = VfsPath::from(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?);
+    let zone_base_directory = zone_file
+        .path()
         .parent()
         .ok_or(LoadZoneError::ZonFileInvalidPath)?;
 
-    let file = vfs
-        .open_file(&zone_file)
-        .ok_or(LoadZoneError::ZonFileNotFound)?;
-    let zon_file = ZonFile::read(FileReader::from(&file))?;
+    let zon_file: ZonFile = vfs
+        .read_file(&zone_file)
+        .map_err(|_| LoadZoneError::ZonFileNotFound)?;
 
     let mut monster_spawns = Vec::new();
     let mut npcs = Vec::new();
@@ -207,9 +198,9 @@ fn load_zone(
 
     for y in 0..64u32 {
         for x in 0..64u32 {
-            let ifo_file_path = zone_base_directory.join(format!("{}_{}.IFO", x, y));
-            if let Some(file) = vfs.open_file(&ifo_file_path.to_string_lossy()) {
-                let ifo_file = IfoFile::read_server(FileReader::from(&file))?;
+            if let Ok(ifo_file) =
+                vfs.read_file::<IfoFile, _>(zone_base_directory.join(format!("{}_{}.IFO", x, y)))
+            {
                 monster_spawns.extend(
                     ifo_file
                         .monster_spawns
