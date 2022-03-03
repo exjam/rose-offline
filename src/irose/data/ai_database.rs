@@ -1,5 +1,5 @@
 use log::{debug, warn};
-use rose_file_readers::{AipFile, FileReader, StbFile, StbReadOptions, VfsIndex};
+use rose_file_readers::{AipFile, StbFile, StbReadOptions, VfsIndex};
 use std::collections::HashMap;
 
 use crate::data::AiDatabase;
@@ -32,14 +32,12 @@ pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
             continue;
         }
 
-        if let Some(aip_file) = vfs.open_file(aip_path) {
-            match AipFile::read(FileReader::from(&aip_file)) {
-                Ok(aip) => {
-                    aips.insert(row as u16, aip);
-                }
-                Err(error) => {
-                    warn!("Failed to parse {}, error: {:?}", aip_path, error);
-                }
+        match vfs.read_file::<AipFile, _>(aip_path) {
+            Ok(aip) => {
+                aips.insert(row as u16, aip);
+            }
+            Err(error) => {
+                warn!("Failed to parse {}, error: {:?}", aip_path, error);
             }
         }
     }

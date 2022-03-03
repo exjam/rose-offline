@@ -4,8 +4,9 @@ use std::{
     ops::{Range, RangeInclusive},
     time::Duration,
 };
+use thiserror::Error;
 
-use crate::reader::{FileReader, ReadError};
+use crate::{reader::FileReader, RoseFile};
 
 #[derive(Copy, Clone, Debug)]
 pub enum AipAbilityType {
@@ -263,23 +264,16 @@ pub struct AipFile {
     pub trigger_on_dead: Option<AipTrigger>,
 }
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum AipReadError {
-    UnexpectedEof,
+    #[error("Invalid value")]
     InvalidValue,
 }
 
-impl From<ReadError> for AipReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => AipReadError::UnexpectedEof,
-        }
-    }
-}
+impl RoseFile for AipFile {
+    type ReadOptions = ();
 
-#[allow(dead_code)]
-impl AipFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, AipReadError> {
+    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let num_triggers = reader.read_u32()?;
         let idle_trigger_interval = Duration::from_secs(reader.read_u32()? as u64);
         let damage_trigger_new_target_chance = reader.read_u32()?;
@@ -653,7 +647,7 @@ impl AipFile {
                             } else if target == 1 {
                                 conditions.push(AipCondition::IsTargetClanMaster);
                             } else {
-                                return Err(AipReadError::InvalidValue);
+                                return Err(AipReadError::InvalidValue.into());
                             }
                         }
                         _ => {
@@ -836,7 +830,7 @@ impl AipFile {
                                 0 => AipSpawnNpcOrigin::CurrentPosition,
                                 1 => AipSpawnNpcOrigin::AttackerPosition,
                                 2 => AipSpawnNpcOrigin::TargetPosition,
-                                _ => return Err(AipReadError::InvalidValue),
+                                _ => return Err(AipReadError::InvalidValue.into()),
                             };
                             reader.skip(1); // padding
                             let distance = reader.read_i32()?;
@@ -852,7 +846,7 @@ impl AipFile {
                                 1 => AipSkillTarget::Target,
                                 2 => AipSkillTarget::This,
                                 3 => AipSkillTarget::NearChar,
-                                _ => return Err(AipReadError::InvalidValue),
+                                _ => return Err(AipReadError::InvalidValue.into()),
                             };
                             reader.skip(1); // padding
                             let skill_id = reader.read_u16()? as i32;
@@ -908,7 +902,7 @@ impl AipFile {
                                 0 => AipMessageType::Say,
                                 1 => AipMessageType::Shout,
                                 2 => AipMessageType::Announce,
-                                _ => return Err(AipReadError::InvalidValue),
+                                _ => return Err(AipReadError::InvalidValue.into()),
                             };
                             reader.skip(3); // padding
                             let string_id = reader.read_u32()? as usize;
@@ -939,7 +933,7 @@ impl AipFile {
                                 0 => AipMonsterSpawnState::Disabled,
                                 1 => AipMonsterSpawnState::Enabled,
                                 2 => AipMonsterSpawnState::Toggle,
-                                _ => return Err(AipReadError::InvalidValue),
+                                _ => return Err(AipReadError::InvalidValue.into()),
                             };
                             reader.skip(1); // padding
 
@@ -986,7 +980,7 @@ impl AipFile {
                                 0 => AipSpawnNpcOrigin::CurrentPosition,
                                 1 => AipSpawnNpcOrigin::AttackerPosition,
                                 2 => AipSpawnNpcOrigin::TargetPosition,
-                                _ => return Err(AipReadError::InvalidValue),
+                                _ => return Err(AipReadError::InvalidValue.into()),
                             };
                             reader.skip(1); // padding
                             let distance = reader.read_i32()?;
