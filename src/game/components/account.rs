@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
 
-use crate::data::account::AccountStorage;
+use crate::game::storage::account::AccountStorage;
 
 #[derive(Component)]
 pub struct Account {

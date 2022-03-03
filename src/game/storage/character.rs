@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf};
 
-use crate::data::CHARACTER_STORAGE_DIR;
-use crate::game::components::{
-    BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, ExperiencePoints, HealthPoints,
-    Hotbar, Inventory, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina,
-    StatPoints, UnionMembership,
+use crate::game::{
+    components::{
+        BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, ExperiencePoints, HealthPoints,
+        Hotbar, Inventory, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints,
+        Stamina, StatPoints, UnionMembership,
+    },
+    storage::CHARACTER_STORAGE_DIR,
 };
 
 #[derive(Debug)]

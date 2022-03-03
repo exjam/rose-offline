@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
 
-use crate::data::character::CharacterStorage;
+use crate::game::storage::character::CharacterStorage;
 
 #[derive(Component)]
 pub struct CharacterList {

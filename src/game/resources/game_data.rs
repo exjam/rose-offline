@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
-use crate::data::{
-    AbilityValueCalculator, AiDatabase, CharacterCreator, DropTable, ItemDatabase, MotionDatabase,
-    NpcDatabase, QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase,
-    ZoneDatabase,
+use crate::{
+    data::{
+        AbilityValueCalculator, AiDatabase, DropTable, ItemDatabase, MotionDatabase, NpcDatabase,
+        QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
+    },
+    game::storage::character::CharacterCreator,
 };
 
 pub struct GameData {

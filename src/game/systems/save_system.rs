@@ -4,18 +4,16 @@ use bevy_ecs::{
 };
 use log::{error, info};
 
-use crate::{
-    data::character::CharacterStorage,
-    game::{
-        bundles::client_entity_leave_zone,
-        components::{
-            BasicStats, CharacterInfo, ClientEntity, ClientEntitySector, Equipment,
-            ExperiencePoints, HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership,
-            Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
-        },
-        events::{PartyEvent, PartyMemberDisconnect, SaveEvent, SaveEventCharacter},
-        resources::ClientEntityList,
+use crate::game::{
+    bundles::client_entity_leave_zone,
+    components::{
+        BasicStats, CharacterInfo, ClientEntity, ClientEntitySector, Equipment, ExperiencePoints,
+        HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership, Position, QuestState,
+        SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
     },
+    events::{PartyEvent, PartyMemberDisconnect, SaveEvent, SaveEventCharacter},
+    resources::ClientEntityList,
+    storage::character::CharacterStorage,
 };
 
 pub fn save_system(

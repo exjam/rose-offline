@@ -4,8 +4,6 @@ use nalgebra::Point3;
 
 use crate::{
     data::{
-        account::AccountStorage,
-        character::CharacterStorage,
         item::{Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour},
         VehicleItemPart,
     },
@@ -41,6 +39,7 @@ use crate::{
         resources::{
             ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldTime,
         },
+        storage::{account::AccountStorage, character::CharacterStorage},
     },
 };
 

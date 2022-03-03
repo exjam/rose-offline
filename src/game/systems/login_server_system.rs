@@ -1,16 +1,14 @@
 use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
 use log::warn;
 
-use crate::{
-    data::account::{AccountStorage, AccountStorageError},
-    game::{
-        components::{Account, LoginClient},
-        messages::client::{
-            ClientMessage, ConnectionRequestResponse, GetChannelListError, JoinServerError,
-            JoinServerResponse, LoginError,
-        },
-        resources::{LoginTokens, ServerList},
+use crate::game::{
+    components::{Account, LoginClient},
+    messages::client::{
+        ClientMessage, ConnectionRequestResponse, GetChannelListError, JoinServerError,
+        JoinServerResponse, LoginError,
     },
+    resources::{LoginTokens, ServerList},
+    storage::account::{AccountStorage, AccountStorageError},
 };
 
 pub fn login_server_authentication_system(

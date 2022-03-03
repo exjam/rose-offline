@@ -1,19 +1,17 @@
 use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
 use log::warn;
 
-use crate::{
-    data::{
+use crate::game::{
+    components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
+    messages::client::{
+        CharacterListItem, ClientMessage, ConnectionRequestError, ConnectionRequestResponse,
+        CreateCharacter, CreateCharacterError, DeleteCharacterError, JoinServerResponse,
+        SelectCharacterError,
+    },
+    resources::{GameData, LoginTokens},
+    storage::{
         account::{AccountStorage, AccountStorageError},
         character::CharacterStorage,
-    },
-    game::{
-        components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
-        messages::client::{
-            CharacterListItem, ClientMessage, ConnectionRequestError, ConnectionRequestResponse,
-            CreateCharacter, CreateCharacterError, DeleteCharacterError, JoinServerResponse,
-            SelectCharacterError,
-        },
-        resources::{GameData, LoginTokens},
     },
 };
 

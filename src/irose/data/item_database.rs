@@ -3,28 +3,16 @@ use num_traits::FromPrimitive;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-use crate::{
-    data::{
-        item::ItemClass, AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData,
-        FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase,
-        ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
-        SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
-    },
-    game::components::VehiclePartIndex,
+use crate::data::{
+    item::ItemClass, AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData,
+    FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemDatabase,
+    ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
+    SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
 };
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
 
 impl FromStr for ItemClass {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
-    }
-}
-
-impl FromStr for VehiclePartIndex {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {

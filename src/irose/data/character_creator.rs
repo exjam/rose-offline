@@ -4,14 +4,16 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
         item::{EquipmentItem, Item},
         ItemReference, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
     },
-    game::components::{
-        BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar, Inventory,
-        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
-        UnionMembership,
+    game::{
+        components::{
+            BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar,
+            Inventory, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina,
+            StatPoints, UnionMembership,
+        },
+        storage::character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
     },
 };
 

@@ -1,16 +1,3 @@
-use directories::ProjectDirs;
-use lazy_static::lazy_static;
-use std::path::PathBuf;
-
-lazy_static! {
-    pub static ref LOCAL_STORAGE_DIR: PathBuf = {
-        let project = ProjectDirs::from("", "", "rose-offline").unwrap();
-        PathBuf::from(project.data_local_dir())
-    };
-    pub static ref ACCOUNT_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("accounts");
-    pub static ref CHARACTER_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("characters");
-}
-
 macro_rules! id_wrapper_impl {
     ($name:ident, String) => {
         impl $name {
@@ -79,13 +66,10 @@ mod warp_gate_database;
 mod world;
 mod zone_database;
 
-pub mod account;
-pub mod character;
 pub mod item;
 
 pub use ability::{AbilityType, AbilityValueCalculator, Damage, PassiveRecoveryState};
 pub use ai_database::AiDatabase;
-pub use character::{CharacterCreator, CharacterCreatorError};
 pub use drop_table::DropTable;
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
