@@ -20,7 +20,7 @@ struct Storage {
 
 #[derive(Default)]
 pub struct VfsIndex {
-    root_path: PathBuf,
+    extracted_path: Option<PathBuf>,
     base_version: u32,
     current_version: u32,
     storages: Vec<Storage>,
@@ -133,18 +133,39 @@ impl VfsIndex {
         path.replace('\\', "/").to_uppercase().into()
     }
 
-    pub fn load(path: &Path) -> Result<VfsIndex, std::io::Error> {
-        let data = std::fs::read(path)?;
+    pub fn with_paths(
+        index_path: Option<&Path>,
+        extracted_path: Option<&Path>,
+    ) -> Result<VfsIndex, anyhow::Error> {
+        if let Some(index_path) = index_path {
+            Self::load(index_path, extracted_path)
+        } else if let Some(extracted_path) = extracted_path {
+            Ok(Self::with_extracted_only(extracted_path))
+        } else {
+            Err(anyhow::anyhow!("No valid index_path or extracted_path"))
+        }
+    }
+
+    pub fn with_extracted_only(extracted_path: &Path) -> Self {
+        Self {
+            extracted_path: Some(extracted_path.into()),
+            ..Default::default()
+        }
+    }
+
+    pub fn load(
+        index_path: &Path,
+        extracted_path: Option<&Path>,
+    ) -> Result<VfsIndex, anyhow::Error> {
+        let index_root_path = index_path
+            .parent()
+            .map(|path| path.into())
+            .unwrap_or_else(PathBuf::new);
+        let data = std::fs::read(index_path)?;
         let mut reader = RoseFileReader::from(&data);
 
         let mut index = VfsIndex {
-            root_path: {
-                if let Some(path) = path.parent() {
-                    path.to_owned()
-                } else {
-                    PathBuf::new()
-                }
-            },
+            extracted_path: extracted_path.map(|path| path.into()),
             ..Default::default()
         };
         index.base_version = reader.read_u32()?;
@@ -167,7 +188,7 @@ impl VfsIndex {
                 continue;
             }
 
-            let file = File::open(index.root_path.join(String::from(filename)))?;
+            let file = File::open(index_root_path.join(String::from(filename)))?;
             let mmap = unsafe { MmapOptions::new().map(&file)? };
 
             let mut storage = Storage {
@@ -204,16 +225,18 @@ impl VfsIndex {
     pub fn open_file<'a, P: Into<VfsPath<'a>>>(&self, path: P) -> Option<VfsFile> {
         let vfs_path: VfsPath = path.into();
 
+        if let Some(extracted_path) = self.extracted_path.as_ref() {
+            if let Ok(buffer) = std::fs::read(extracted_path.join(vfs_path.path())) {
+                return Some(VfsFile::Buffer(buffer));
+            }
+        }
+
         for vfs in &self.storages {
             if let Some(entry) = vfs.files.get(vfs_path.path()) {
                 return Some(VfsFile::View(
                     &vfs.mmap[entry.offset..entry.offset + entry.size],
                 ));
             }
-        }
-
-        if let Ok(buffer) = std::fs::read(self.root_path.join(vfs_path.path())) {
-            return Some(VfsFile::Buffer(buffer));
         }
 
         None

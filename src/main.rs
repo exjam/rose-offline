@@ -38,13 +38,18 @@ async fn async_main() {
     )
     .expect("Failed to initialise logging");
 
-    let command = Command::new("rose-offline")
+    let mut command = Command::new("rose-offline")
         .arg(
             Arg::new("data-idx")
                 .long("data-idx")
                 .help("Path to data.idx")
-                .takes_value(true)
-                .default_value("data.idx"),
+                .takes_value(true),
+        )
+        .arg(
+            Arg::new("data-path")
+                .long("data-path")
+                .help("Optional path to extracted data, any files here override ones in data.idx")
+                .takes_value(true),
         )
         .arg(
             Arg::new("ip")
@@ -74,15 +79,28 @@ async fn async_main() {
                 .takes_value(true)
                 .default_value("29200"),
         );
+    let data_path_error = command.error(
+        clap::ErrorKind::ArgumentNotFound,
+        "Must specify at least one of --data-idx or --data-path",
+    );
     let matches = command.get_matches();
     let listen_ip = matches.value_of("ip").unwrap();
     let login_port = matches.value_of("login-port").unwrap();
     let world_port = matches.value_of("world-port").unwrap();
     let game_port = matches.value_of("game-port").unwrap();
-    let data_idx_path = Path::new(matches.value_of("data-idx").unwrap());
+    let mut data_idx_path = matches.value_of("data-idx").map(Path::new);
+    let data_extracted_path = matches.value_of("data-path").map(Path::new);
+
+    if data_idx_path.is_none() && data_extracted_path.is_none() {
+        if Path::new("data.idx").exists() {
+            data_idx_path = Some(Path::new("data.idx"));
+        } else {
+            data_path_error.exit();
+        }
+    }
 
     let started_load = Instant::now();
-    let game_data = irose::get_game_data(data_idx_path);
+    let game_data = irose::get_game_data(data_idx_path, data_extracted_path);
     debug!("Time take to read game data {:?}", started_load.elapsed());
 
     let game_config = GameConfig {
