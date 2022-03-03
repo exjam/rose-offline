@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use log::warn;
 
 use std::{
@@ -7,33 +8,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{
-    reader::{FileReader, ReadError},
-    types::Vec2,
-};
-
-#[derive(Debug)]
-pub enum QsdReadError {
-    UnexpectedEof,
-    InvalidAbilityType,
-    InvalidValue,
-    InvalidItemReference,
-    InvalidObjectType,
-    InvalidQuestAction,
-    InvalidCalculatedRewardType,
-    InvalidSpawnMonsterLocation,
-    InvalidMessageType,
-    InvalidTeamNumberSource,
-    InvalidMonsterSpawnState,
-}
-
-impl From<ReadError> for QsdReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => Self::UnexpectedEof,
-        }
-    }
-}
+use crate::{reader::FileReader, types::Vec2, RoseFile};
 
 #[derive(Copy, Clone, Debug)]
 pub enum QsdVariableType {
@@ -46,7 +21,7 @@ pub enum QsdVariableType {
     Union,
 }
 
-fn decode_variable_type(value: u16) -> Result<QsdVariableType, QsdReadError> {
+fn decode_variable_type(value: u16) -> Result<QsdVariableType, anyhow::Error> {
     match value {
         0x0000 => Ok(QsdVariableType::Variable),
         0x0100 => Ok(QsdVariableType::Switch),
@@ -55,7 +30,7 @@ fn decode_variable_type(value: u16) -> Result<QsdVariableType, QsdReadError> {
         0x0400 => Ok(QsdVariableType::Job),
         0x0500 => Ok(QsdVariableType::Planet),
         0x0600 => Ok(QsdVariableType::Union),
-        _ => Err(QsdReadError::InvalidValue),
+        invalid => Err(anyhow!("Invalid QsdVariableType {}", invalid)),
     }
 }
 
@@ -69,7 +44,7 @@ pub enum QsdConditionOperator {
     NotEqual,
 }
 
-fn decode_condition_operator(value: u8) -> Result<QsdConditionOperator, QsdReadError> {
+fn decode_condition_operator(value: u8) -> Result<QsdConditionOperator, anyhow::Error> {
     match value {
         0 => Ok(QsdConditionOperator::Equals),
         1 => Ok(QsdConditionOperator::GreaterThan),
@@ -77,7 +52,7 @@ fn decode_condition_operator(value: u8) -> Result<QsdConditionOperator, QsdReadE
         3 => Ok(QsdConditionOperator::LessThan),
         4 => Ok(QsdConditionOperator::LessThanEqual),
         10 => Ok(QsdConditionOperator::NotEqual),
-        _ => Err(QsdReadError::InvalidValue),
+        invalid => Err(anyhow!("Invalid QsdConditionOperator {}", invalid)),
     }
 }
 
@@ -205,14 +180,14 @@ pub enum QsdRewardOperator {
     One,
 }
 
-fn decode_reward_operator(value: u8) -> Result<QsdRewardOperator, QsdReadError> {
+fn decode_reward_operator(value: u8) -> Result<QsdRewardOperator, anyhow::Error> {
     match value {
         5 => Ok(QsdRewardOperator::Set),
         6 => Ok(QsdRewardOperator::Add),
         7 => Ok(QsdRewardOperator::Subtract),
         8 => Ok(QsdRewardOperator::Zero),
         9 => Ok(QsdRewardOperator::One),
-        _ => Err(QsdReadError::InvalidValue),
+        invalid => Err(anyhow!("Invalid QsdRewardOperator {}", invalid)),
     }
 }
 
@@ -346,8 +321,10 @@ pub struct QsdFile {
     pub triggers: HashMap<String, QsdTrigger>,
 }
 
-impl QsdFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, QsdReadError> {
+impl RoseFile for QsdFile {
+    type ReadOptions = ();
+
+    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let _file_version = reader.read_u32()?;
         let group_count = reader.read_u32()?;
         let _filename = reader.read_u16_length_string()?;
@@ -401,7 +378,11 @@ impl QsdFile {
                             let mut variables = Vec::new();
                             for _ in 0..data_count {
                                 let ability_type = QsdAbilityType::new(reader.read_u32()? as usize)
-                                    .ok_or(QsdReadError::InvalidAbilityType)?;
+                                    .ok_or_else(|| {
+                                        anyhow!(
+                                            "Invalid QsdCondition::AbilityValue ability_type: 0"
+                                        )
+                                    })?;
                                 let value = reader.read_i32()?;
                                 let operator = decode_condition_operator(reader.read_u8()?)?;
                                 reader.skip(3); // padding
@@ -554,7 +535,12 @@ impl QsdFile {
                                 0 => QsdObjectType::Npc,
                                 1 => QsdObjectType::Event,
                                 2 => QsdObjectType::Owner,
-                                _ => return Err(QsdReadError::InvalidObjectType),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdCondition::ObjectZoneTime object_type {}",
+                                        invalid
+                                    ))
+                                }
                             };
                             reader.skip(3); // padding
                             let start_time = reader.read_u32()?;
@@ -619,7 +605,12 @@ impl QsdFile {
                             let object_type = match reader.read_u8()? {
                                 0 => QsdObjectType::Npc,
                                 1 => QsdObjectType::Event,
-                                _ => return Err(QsdReadError::InvalidObjectType),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdCondition::ObjectDistance object_type {}",
+                                        invalid
+                                    ))
+                                }
                             };
                             reader.skip(3); // padding
                             let distance = reader.read_u32()? as QsdDistance;
@@ -716,7 +707,12 @@ impl QsdFile {
                                 2 => QsdRewardQuestAction::ChangeSelectedIdKeepData(quest_id),
                                 3 => QsdRewardQuestAction::ChangeSelectedIdResetData(quest_id),
                                 4 => QsdRewardQuestAction::Select(quest_id),
-                                _ => return Err(QsdReadError::InvalidQuestAction),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdReward::Quest action {}",
+                                        invalid
+                                    ))
+                                }
                             };
                             reader.skip(3); // padding
 
@@ -724,7 +720,7 @@ impl QsdFile {
                         }
                         1 => {
                             let item_base1000 = QsdItemBase1000::new(reader.read_u32()?)
-                                .ok_or(QsdReadError::InvalidItemReference)?;
+                                .ok_or_else(|| anyhow!("Invalid QsdReward::Item item: 0"))?;
                             let add_or_remove = reader.read_u8()? != 0;
                             reader.skip(1); // padding
                             let count = reader.read_u16()? as usize;
@@ -765,7 +761,9 @@ impl QsdFile {
                             let mut variables = Vec::new();
                             for _ in 0..data_count {
                                 let ability_type = QsdAbilityType::new(reader.read_u32()? as usize)
-                                    .ok_or(QsdReadError::InvalidAbilityType)?;
+                                    .ok_or_else(|| {
+                                        anyhow!("Invalid QsdReward::AbilityValue ability_type: 0")
+                                    })?;
                                 let value = reader.read_i32()?;
                                 let operator = decode_reward_operator(reader.read_u8()?)?;
                                 reader.skip(3); // padding
@@ -804,13 +802,21 @@ impl QsdFile {
                                         QsdRewardCalculatedItem {
                                             equation,
                                             value,
-                                            item: QsdItemBase1000::new(item)
-                                                .ok_or(QsdReadError::InvalidItemReference)?,
+                                            item: QsdItemBase1000::new(item).ok_or_else(|| {
+                                                anyhow!(
+                                                    "Invalid QsdReward::CalculatedReward item: 0"
+                                                )
+                                            })?,
                                             gem,
                                         },
                                     ));
                                 }
-                                _ => return Err(QsdReadError::InvalidCalculatedRewardType),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdReward::CalculatedReward reward_type {}",
+                                        invalid
+                                    ))
+                                }
                             }
                         }
                         6 => {
@@ -858,7 +864,12 @@ impl QsdFile {
                                 1 => QsdRewardSpawnMonsterLocation::Npc,
                                 2 => QsdRewardSpawnMonsterLocation::Event,
                                 3 => QsdRewardSpawnMonsterLocation::Position(zone, Vec2 { x, y }),
-                                _ => return Err(QsdReadError::InvalidSpawnMonsterLocation),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdReward::SpawnMonster location {}",
+                                        invalid
+                                    ))
+                                }
                             };
 
                             rewards.push(QsdReward::SpawnMonster(QsdRewardSpawnMonster {
@@ -902,7 +913,12 @@ impl QsdFile {
                                 0 => QsdRewardNpcMessageType::Chat,
                                 1 => QsdRewardNpcMessageType::Shout,
                                 2 => QsdRewardNpcMessageType::Announce,
-                                _ => return Err(QsdReadError::InvalidMessageType),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdReward::NpcMessage message_type {}",
+                                        invalid
+                                    ))
+                                }
                             };
                             reader.skip(3); // padding
                             let string_id = reader.read_u32()? as QsdStringId;
@@ -981,7 +997,12 @@ impl QsdFile {
                                 0 => QsdRewardSetTeamNumberSource::Unique,
                                 1 => QsdRewardSetTeamNumberSource::Clan,
                                 2 => QsdRewardSetTeamNumberSource::Party,
-                                _ => return Err(QsdReadError::InvalidTeamNumberSource),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdReward::SetTeamNumber source {}",
+                                        invalid
+                                    ))
+                                }
                             };
                             reader.skip(3); // padding
 
@@ -999,7 +1020,12 @@ impl QsdFile {
                                 0 => QsdRewardMonsterSpawnState::Disabled,
                                 1 => QsdRewardMonsterSpawnState::Enabled,
                                 2 => QsdRewardMonsterSpawnState::Toggle,
-                                _ => return Err(QsdReadError::InvalidMonsterSpawnState),
+                                invalid => {
+                                    return Err(anyhow!(
+                                        "Invalid QsdReward::SetMonsterSpawnState state {}",
+                                        invalid
+                                    ))
+                                }
                             };
                             reader.skip(1); // padding
 

@@ -1,5 +1,5 @@
 use log::{debug, warn};
-use rose_file_readers::{stb_column, FileReader, QsdFile, StbFile, StbReadOptions, VfsIndex};
+use rose_file_readers::{stb_column, QsdFile, StbFile, StbReadOptions, VfsIndex};
 use std::collections::HashMap;
 
 use crate::data::{QuestData, QuestDatabase, WorldTicks};
@@ -50,11 +50,9 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
             continue;
         }
 
-        if let Some(qsd_file) = vfs.open_file(qsd_path) {
-            match QsdFile::read(FileReader::from(&qsd_file)) {
-                Ok(qsd) => triggers.extend(qsd.triggers),
-                Err(error) => warn!("Failed to parse {}, error: {:?}", qsd_path, error),
-            }
+        match vfs.read_file::<QsdFile, _>(qsd_path) {
+            Ok(qsd) => triggers.extend(qsd.triggers),
+            Err(error) => warn!("Failed to parse {}, error: {:?}", qsd_path, error),
         }
     }
 
