@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::reader::{FileReader, ReadError};
+use crate::{reader::RoseFileReader, RoseFile};
 
 pub struct NpcModelData {
     pub name: String,
@@ -17,22 +17,10 @@ pub struct ChrFile {
     pub npcs: HashMap<u16, NpcModelData>,
 }
 
-#[derive(Debug)]
-pub enum ChrReadError {
-    UnexpectedEof,
-}
+impl RoseFile for ChrFile {
+    type ReadOptions = ();
 
-impl From<ReadError> for ChrReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => ChrReadError::UnexpectedEof,
-        }
-    }
-}
-
-#[allow(dead_code)]
-impl ChrFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, ChrReadError> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let mesh_count = reader.read_u16()?;
         let mut mesh_files = Vec::new();
         for _ in 0..mesh_count {

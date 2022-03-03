@@ -1,8 +1,7 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use thiserror::Error;
 
-use crate::{reader::FileReader, types::Vec3, RoseFile};
+use crate::{reader::RoseFileReader, types::Vec3, RoseFile};
 
 #[derive(Default)]
 pub struct ZonFile {
@@ -33,12 +32,6 @@ pub enum ZonTileRotation {
     CounterClockwise90 = 6,
 }
 
-#[derive(Error, Debug)]
-pub enum ZonReadError {
-    #[error("Invalid tile rotation")]
-    InvalidTileRotation,
-}
-
 #[derive(FromPrimitive)]
 enum BlockType {
     ZoneInfo = 0,
@@ -60,7 +53,10 @@ pub struct ZonReadOptions {
 impl RoseFile for ZonFile {
     type ReadOptions = ZonReadOptions;
 
-    fn read(mut reader: FileReader, read_options: &ZonReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(
+        mut reader: RoseFileReader,
+        read_options: &ZonReadOptions,
+    ) -> Result<Self, anyhow::Error> {
         let mut event_positions = Vec::new();
         let mut grid_per_patch = 0.0;
         let mut grid_size = 0.0;
@@ -114,7 +110,7 @@ impl RoseFile for ZonFile {
                             let offset2 = reader.read_u32()?;
                             let blend = reader.read_u32()? != 0;
                             let rotation = FromPrimitive::from_u32(reader.read_u32()?)
-                                .ok_or(ZonReadError::InvalidTileRotation)?;
+                                .ok_or_else(|| anyhow::anyhow!("Invalid tile rotation"))?;
                             reader.skip(4);
                             tiles.push(ZonTile {
                                 layer1,

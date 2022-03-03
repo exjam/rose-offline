@@ -1,9 +1,8 @@
+use anyhow::anyhow;
 use core::mem::size_of;
 use std::{collections::HashMap, str};
 
-use thiserror::Error;
-
-use crate::{reader::FileReader, RoseFile};
+use crate::{reader::RoseFileReader, RoseFile};
 
 pub struct StbFile {
     rows: usize,
@@ -15,14 +14,6 @@ pub struct StbFile {
     row_keys: HashMap<String, usize>,
 }
 
-#[derive(Error, Debug)]
-pub enum StbReadError {
-    #[error("Invalid STB magic header")]
-    InvalidMagic,
-    #[error("Unsupported STB version")]
-    UnsupportedVersion,
-}
-
 #[derive(Default)]
 pub struct StbReadOptions {
     pub is_wide: bool,
@@ -32,10 +23,13 @@ pub struct StbReadOptions {
 impl RoseFile for StbFile {
     type ReadOptions = StbReadOptions;
 
-    fn read(mut reader: FileReader, read_options: &StbReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(
+        mut reader: RoseFileReader,
+        read_options: &StbReadOptions,
+    ) -> Result<Self, anyhow::Error> {
         let magic = reader.read_fixed_length_string(3)?;
         if magic != "STB" {
-            return Err(StbReadError::InvalidMagic.into());
+            return Err(anyhow!("Invalid STB magic header: {}", &magic));
         }
 
         if read_options.is_wide {
@@ -49,7 +43,7 @@ impl RoseFile for StbFile {
 #[allow(dead_code)]
 impl StbFile {
     fn read_data(
-        mut reader: FileReader,
+        mut reader: RoseFileReader,
         read_options: &StbReadOptions,
     ) -> Result<Self, anyhow::Error> {
         let version = {
@@ -59,7 +53,7 @@ impl StbFile {
             } else if version == b'1' {
                 1
             } else {
-                return Err(StbReadError::UnsupportedVersion.into());
+                return Err(anyhow!("Unsupported STB version: {}", version));
             }
         };
 

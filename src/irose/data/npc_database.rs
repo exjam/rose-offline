@@ -1,4 +1,4 @@
-use rose_file_readers::{stb_column, ChrFile, FileReader, StbFile, StlFile, VfsIndex, ZmoFile};
+use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 use std::{collections::HashMap, num::NonZeroUsize};
 
 use crate::data::{
@@ -94,8 +94,7 @@ impl StbEvent {
 }
 
 fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
-    let file = vfs.open_file(path)?;
-    let zmo = ZmoFile::read_server(FileReader::from(&file)).ok()?;
+    let zmo = vfs.read_file::<ZmoFile, _>(path).ok()?;
     Some(MotionFileData {
         path: path.to_string(),
         duration: zmo.get_duration(),
@@ -108,8 +107,9 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         .read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")
         .ok()?;
 
-    let file = vfs.open_file("3DDATA/NPC/LIST_NPC.CHR")?;
-    let model_data = ChrFile::read(FileReader::from(&file)).ok()?;
+    let model_data = vfs
+        .read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")
+        .ok()?;
 
     let data = StbNpc(
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")

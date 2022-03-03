@@ -2,7 +2,7 @@ use log::debug;
 use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
 use rose_file_readers::{
     stb_column, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
-    IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile, ZonReadError,
+    IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile,
 };
 use std::collections::HashMap;
 
@@ -63,12 +63,6 @@ pub enum LoadZoneError {
     ZonFileNotFound,
     ZonFileInvalid,
     IfoFileInvalid,
-}
-
-impl From<ZonReadError> for LoadZoneError {
-    fn from(_: ZonReadError) -> Self {
-        Self::ZonFileInvalid
-    }
 }
 
 impl From<&IfoMonsterSpawnPoint> for ZoneMonsterSpawnPoint {

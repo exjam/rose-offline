@@ -1,4 +1,4 @@
-use crate::{reader::FileReader, RoseFile};
+use crate::{reader::RoseFileReader, RoseFile};
 
 pub struct TilFile {
     pub width: u32,
@@ -14,11 +14,10 @@ impl TilFile {
     }
 }
 
-#[allow(dead_code)]
 impl RoseFile for TilFile {
     type ReadOptions = ();
 
-    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         let mut tiles = Vec::with_capacity((width * height) as usize);

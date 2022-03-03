@@ -6,7 +6,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
 
-use crate::{reader::FileReader, RoseFile};
+use crate::{reader::RoseFileReader, RoseFile};
 
 struct FileEntry {
     offset: usize,
@@ -37,11 +37,11 @@ pub enum VfsError {
     FileNotFound,
 }
 
-impl<'a> From<&'a VfsFile<'a>> for FileReader<'a> {
+impl<'a> From<&'a VfsFile<'a>> for RoseFileReader<'a> {
     fn from(file: &'a VfsFile<'a>) -> Self {
         match file {
-            VfsFile::Buffer(vec) => FileReader::from(vec),
-            VfsFile::View(buf) => FileReader::from(*buf),
+            VfsFile::Buffer(vec) => RoseFileReader::from(vec),
+            VfsFile::View(buf) => RoseFileReader::from(*buf),
         }
     }
 }
@@ -109,7 +109,7 @@ impl VfsIndex {
 
     pub fn load(path: &Path) -> Result<VfsIndex, std::io::Error> {
         let data = std::fs::read(path)?;
-        let mut reader = FileReader::from(&data);
+        let mut reader = RoseFileReader::from(&data);
 
         let mut index = VfsIndex {
             root_path: {
@@ -198,7 +198,7 @@ impl VfsIndex {
         path: P,
     ) -> Result<T, anyhow::Error> {
         if let Some(file) = self.open_file(path) {
-            RoseFile::read(FileReader::from(&file), &Default::default())
+            RoseFile::read(RoseFileReader::from(&file), &Default::default())
         } else {
             Err(VfsError::FileNotFound.into())
         }
@@ -210,7 +210,7 @@ impl VfsIndex {
         options: &T::ReadOptions,
     ) -> Result<T, anyhow::Error> {
         if let Some(file) = self.open_file(path) {
-            RoseFile::read(FileReader::from(&file), options)
+            RoseFile::read(RoseFileReader::from(&file), options)
         } else {
             Err(VfsError::FileNotFound.into())
         }

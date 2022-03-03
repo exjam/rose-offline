@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::{
-    reader::FileReader,
+    reader::RoseFileReader,
     types::{Quat4, Vec2, Vec3},
     RoseFile,
 };
@@ -20,7 +20,7 @@ pub struct IfoObject {
     pub scale: Vec3<f32>,
 }
 
-fn read_object(reader: &mut FileReader) -> anyhow::Result<IfoObject> {
+fn read_object(reader: &mut RoseFileReader) -> anyhow::Result<IfoObject> {
     let object_name = reader.read_u8_length_string()?;
     let warp_id = reader.read_u16()?;
     let event_id = reader.read_u16()?;
@@ -112,11 +112,13 @@ pub struct IfoReadOptions {
     pub skip_water_planes: bool,
 }
 
-#[allow(dead_code)]
 impl RoseFile for IfoFile {
     type ReadOptions = IfoReadOptions;
 
-    fn read(mut reader: FileReader, read_options: &IfoReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(
+        mut reader: RoseFileReader,
+        read_options: &IfoReadOptions,
+    ) -> Result<Self, anyhow::Error> {
         let mut monster_spawns = Vec::new();
         let mut npcs = Vec::new();
         let mut event_objects = Vec::new();

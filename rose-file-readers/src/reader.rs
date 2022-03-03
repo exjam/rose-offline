@@ -23,12 +23,12 @@ impl From<ReadError> for std::io::Error {
     }
 }
 
-pub struct FileReader<'a> {
+pub struct RoseFileReader<'a> {
     pub cursor: Cursor<&'a [u8]>,
     pub use_wide_strings: bool,
 }
 
-impl<'a> From<&'a Vec<u8>> for FileReader<'a> {
+impl<'a> From<&'a Vec<u8>> for RoseFileReader<'a> {
     fn from(vec: &'a Vec<u8>) -> Self {
         Self {
             cursor: Cursor::new(vec),
@@ -37,7 +37,7 @@ impl<'a> From<&'a Vec<u8>> for FileReader<'a> {
     }
 }
 
-impl<'a> From<&'a [u8]> for FileReader<'a> {
+impl<'a> From<&'a [u8]> for RoseFileReader<'a> {
     fn from(slice: &'a [u8]) -> Self {
         Self {
             cursor: Cursor::new(slice),
@@ -84,7 +84,7 @@ fn decode_string(mut bytes: &[u8], use_wide_strings: bool) -> Cow<'_, str> {
 }
 
 #[allow(dead_code)]
-impl<'a> FileReader<'a> {
+impl<'a> RoseFileReader<'a> {
     pub fn remaining(&self) -> usize {
         self.cursor.remaining()
     }

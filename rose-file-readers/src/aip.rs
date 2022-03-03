@@ -6,7 +6,7 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::{reader::FileReader, RoseFile};
+use crate::{reader::RoseFileReader, RoseFile};
 
 #[derive(Copy, Clone, Debug)]
 pub enum AipAbilityType {
@@ -273,7 +273,7 @@ pub enum AipReadError {
 impl RoseFile for AipFile {
     type ReadOptions = ();
 
-    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let num_triggers = reader.read_u32()?;
         let idle_trigger_interval = Duration::from_secs(reader.read_u32()? as u64);
         let damage_trigger_new_target_chance = reader.read_u32()?;

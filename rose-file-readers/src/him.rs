@@ -1,4 +1,4 @@
-use crate::{reader::FileReader, RoseFile};
+use crate::{reader::RoseFileReader, RoseFile};
 
 pub struct HimFile {
     pub width: u32,
@@ -17,7 +17,7 @@ impl HimFile {
 impl RoseFile for HimFile {
     type ReadOptions = ();
 
-    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let width = reader.read_u32()?;
         let height = reader.read_u32()?;
         reader.skip(8);

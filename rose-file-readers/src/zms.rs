@@ -1,4 +1,5 @@
-use crate::reader::{FileReader, ReadError};
+use crate::{reader::RoseFileReader, RoseFile};
+use anyhow::anyhow;
 use thiserror::Error;
 
 bitflags::bitflags! {
@@ -34,39 +35,30 @@ pub struct ZmsFile {
 
 #[derive(Error, Debug)]
 pub enum ZmsReadError {
-    #[error("Invalid ZMS magic header")]
-    InvalidMagic,
-    #[error("Unexpected end of file")]
-    UnexpectedEof,
-    #[error("Invalid ZMS format flags")]
-    InvalidFormat,
     #[error("Invalid bone index")]
     InvalidBoneIndex,
 }
 
-impl From<ReadError> for ZmsReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => ZmsReadError::UnexpectedEof,
-        }
-    }
-}
+impl RoseFile for ZmsFile {
+    type ReadOptions = ();
 
-impl ZmsFile {
-    pub fn read(mut reader: FileReader) -> Result<Self, ZmsReadError> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let magic = reader.read_null_terminated_string()?;
         if magic == "ZMS0006" {
             Self::read_version6(&mut reader)
         } else if magic == "ZMS0007" || magic == "ZMS0008" {
             Self::read_version8(&mut reader)
         } else {
-            Err(ZmsReadError::InvalidMagic)
+            Err(anyhow!("Invalid ZMS magic header: {}", magic))
         }
     }
+}
 
-    pub fn read_version6(reader: &mut FileReader) -> Result<Self, ZmsReadError> {
-        let format =
-            ZmsFormatFlags::from_bits(reader.read_u32()?).ok_or(ZmsReadError::InvalidFormat)?;
+impl ZmsFile {
+    fn read_version6(reader: &mut RoseFileReader) -> Result<Self, anyhow::Error> {
+        let format_bits = reader.read_u32()?;
+        let format = ZmsFormatFlags::from_bits(format_bits)
+            .ok_or_else(|| anyhow!("Invalid ZMS format bits: {:X}", format_bits))?;
         let _bb_min = reader.read_vector3_f32()?;
         let _bb_max = reader.read_vector3_f32()?;
 
@@ -80,7 +72,7 @@ impl ZmsFile {
         let vertex_count = reader.read_u32()? as usize;
 
         let read_vertex_f32x2 =
-            |vertex_count, reader: &mut FileReader| -> Result<Vec<[f32; 2]>, ZmsReadError> {
+            |vertex_count, reader: &mut RoseFileReader| -> Result<Vec<[f32; 2]>, anyhow::Error> {
                 let mut values = Vec::with_capacity(vertex_count);
                 for _ in 0..vertex_count {
                     let _vertex_id = reader.read_u32()?;
@@ -91,7 +83,7 @@ impl ZmsFile {
                 Ok(values)
             };
         let read_vertex_f32x3 =
-            |vertex_count, reader: &mut FileReader| -> Result<Vec<[f32; 3]>, ZmsReadError> {
+            |vertex_count, reader: &mut RoseFileReader| -> Result<Vec<[f32; 3]>, anyhow::Error> {
                 let mut values = Vec::with_capacity(vertex_count);
                 for _ in 0..vertex_count {
                     let _vertex_id = reader.read_u32()?;
@@ -101,7 +93,7 @@ impl ZmsFile {
                 Ok(values)
             };
         let read_vertex_f32x4 =
-            |vertex_count, reader: &mut FileReader| -> Result<Vec<[f32; 4]>, ZmsReadError> {
+            |vertex_count, reader: &mut RoseFileReader| -> Result<Vec<[f32; 4]>, anyhow::Error> {
                 let mut values = Vec::with_capacity(vertex_count);
                 for _ in 0..vertex_count {
                     let _vertex_id = reader.read_u32()?;
@@ -218,9 +210,10 @@ impl ZmsFile {
         })
     }
 
-    pub fn read_version8(reader: &mut FileReader) -> Result<Self, ZmsReadError> {
-        let format =
-            ZmsFormatFlags::from_bits(reader.read_u32()?).ok_or(ZmsReadError::InvalidFormat)?;
+    fn read_version8(reader: &mut RoseFileReader) -> Result<Self, anyhow::Error> {
+        let format_bits = reader.read_u32()?;
+        let format = ZmsFormatFlags::from_bits(format_bits)
+            .ok_or_else(|| anyhow!("Invalid ZMS format bits: {:X}", format_bits))?;
         let _bb_min = reader.read_vector3_f32()?;
         let _bb_max = reader.read_vector3_f32()?;
 

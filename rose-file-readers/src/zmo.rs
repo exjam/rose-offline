@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::reader::{FileReader, ReadError};
+use crate::{reader::RoseFileReader, RoseFile};
 
 pub struct ZmoFile {
     pub fps: usize,
@@ -9,32 +9,34 @@ pub struct ZmoFile {
     pub total_attack_frames: usize,
 }
 
-#[derive(Debug)]
-pub enum ZmoReadError {
-    InvalidMagic,
-    UnexpectedEof,
+#[derive(Default)]
+pub struct ZmoReadOptions {
+    pub skip_animation: bool,
 }
 
-impl From<ReadError> for ZmoReadError {
-    fn from(err: ReadError) -> Self {
-        match err {
-            ReadError::UnexpectedEof => ZmoReadError::UnexpectedEof,
-        }
+impl ZmoFile {
+    pub fn get_duration(&self) -> Duration {
+        Duration::from_nanos((self.num_frames as u64 * 1_000_000_000) / self.fps as u64)
     }
 }
 
-#[allow(dead_code)]
-impl ZmoFile {
-    pub fn read_server(mut reader: FileReader) -> Result<Self, ZmoReadError> {
+impl RoseFile for ZmoFile {
+    type ReadOptions = ZmoReadOptions;
+
+    fn read(
+        mut reader: RoseFileReader,
+        read_options: &ZmoReadOptions,
+    ) -> Result<Self, anyhow::Error> {
         let magic = reader.read_null_terminated_string()?;
         if magic != "ZMO0002" {
-            return Err(ZmoReadError::InvalidMagic);
+            return Err(anyhow::anyhow!("Invalid ZMO magic header: {}", magic));
         }
 
         let fps = reader.read_u32()? as usize;
         let num_frames = reader.read_u32()? as usize;
 
         // We do not need the actual animation data when reading for server
+        if read_options.skip_animation {}
 
         let mut frame_events = Vec::new();
         let mut total_attack_frames = 0;
@@ -64,9 +66,5 @@ impl ZmoFile {
             frame_events,
             total_attack_frames,
         })
-    }
-
-    pub fn get_duration(&self) -> Duration {
-        Duration::from_nanos((self.num_frames as u64 * 1_000_000_000) / self.fps as u64)
     }
 }

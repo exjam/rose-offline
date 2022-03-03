@@ -1,19 +1,10 @@
-#![allow(dead_code)]
-
+use anyhow::anyhow;
 use std::{
     collections::{hash_map::Keys, HashMap},
     str,
 };
-use thiserror::Error;
 
-use crate::{reader::FileReader, RoseFile};
-
-struct StlEntry {
-    pub text_offset: u32,
-    pub comment_offset: u32,
-    pub quest1_offset: u32,
-    pub quest2_offset: u32,
-}
+use crate::{reader::RoseFileReader, RoseFile};
 
 #[derive(Default)]
 struct StlLanguage {
@@ -23,6 +14,7 @@ struct StlLanguage {
     quest2: Vec<(u32, u32)>,
 }
 
+#[allow(dead_code)]
 pub struct StlFile {
     data: Vec<u8>,
     string_keys: HashMap<String, u32>,
@@ -46,12 +38,6 @@ pub struct StlQuestEntry<'a> {
     pub end_message: &'a str,
 }
 
-#[derive(Error, Debug)]
-pub enum StlReadError {
-    #[error("Invalid magic header")]
-    InvalidMagic,
-}
-
 enum StlType {
     Item,
     Normal,
@@ -61,7 +47,7 @@ enum StlType {
 impl RoseFile for StlFile {
     type ReadOptions = ();
 
-    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let stl_type_str = reader.read_variable_length_string()?;
         let stl_type = if stl_type_str == "ITST01" {
             StlType::Item
@@ -70,7 +56,7 @@ impl RoseFile for StlFile {
         } else if stl_type_str == "QEST01" {
             StlType::Quest
         } else {
-            return Err(StlReadError::InvalidMagic.into());
+            return Err(anyhow!("Invalid STL type: {}", stl_type_str));
         };
 
         let key_count = reader.read_u32()?;
@@ -86,15 +72,16 @@ impl RoseFile for StlFile {
         let language_count = reader.read_u32()?;
         let mut data = Vec::new();
 
-        let read_stl_entry =
-            |reader: &mut FileReader, data: &mut Vec<u8>| -> Result<(u32, u32), anyhow::Error> {
-                let text = reader.read_variable_length_string()?;
-                let text_bytes = text.as_bytes();
-                let text_bytes_length = text_bytes.len();
-                let text_offset = data.len();
-                data.extend_from_slice(text_bytes);
-                Ok((text_offset as u32, text_bytes_length as u32))
-            };
+        let read_stl_entry = |reader: &mut RoseFileReader,
+                              data: &mut Vec<u8>|
+         -> Result<(u32, u32), anyhow::Error> {
+            let text = reader.read_variable_length_string()?;
+            let text_bytes = text.as_bytes();
+            let text_bytes_length = text_bytes.len();
+            let text_offset = data.len();
+            data.extend_from_slice(text_bytes);
+            Ok((text_offset as u32, text_bytes_length as u32))
+        };
 
         let mut languages = Vec::new();
         for _ in 0..language_count {

@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{reader::FileReader, types::Vec2, RoseFile};
+use crate::{reader::RoseFileReader, types::Vec2, RoseFile};
 
 #[derive(Copy, Clone, Debug)]
 pub enum QsdVariableType {
@@ -324,7 +324,7 @@ pub struct QsdFile {
 impl RoseFile for QsdFile {
     type ReadOptions = ();
 
-    fn read(mut reader: FileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let _file_version = reader.read_u32()?;
         let group_count = reader.read_u32()?;
         let _filename = reader.read_u16_length_string()?;
