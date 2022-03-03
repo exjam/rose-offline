@@ -47,6 +47,24 @@ impl<'a> From<&'a VfsFile<'a>> for RoseFileReader<'a> {
 }
 
 #[derive(Debug, Hash, Clone)]
+pub struct VfsPathBuf {
+    path: PathBuf,
+}
+
+impl VfsPathBuf {
+    pub fn new(path: &str) -> Self {
+        VfsPathBuf {
+            path: VfsPath::normalise_path(path),
+        }
+    }
+
+    #[inline]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+#[derive(Debug, Hash, Clone)]
 pub struct VfsPath<'a> {
     path: Cow<'a, Path>,
 }
@@ -96,6 +114,14 @@ impl<'a> From<PathBuf> for VfsPath<'_> {
 
 impl<'a> From<&'a VfsPath<'a>> for VfsPath<'a> {
     fn from(path: &'a VfsPath<'a>) -> Self {
+        VfsPath {
+            path: Cow::Borrowed(&path.path),
+        }
+    }
+}
+
+impl<'a> From<&'a VfsPathBuf> for VfsPath<'a> {
+    fn from(path: &'a VfsPathBuf) -> Self {
         VfsPath {
             path: Cow::Borrowed(&path.path),
         }

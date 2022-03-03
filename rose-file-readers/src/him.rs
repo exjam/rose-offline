@@ -7,9 +7,9 @@ pub struct HimFile {
 }
 
 impl HimFile {
-    pub fn get_clamped(&self, x: usize, y: usize) -> f32 {
-        let x = usize::clamp(x, 0, self.width as usize - 1);
-        let y = usize::clamp(y, 0, self.height as usize - 1);
+    pub fn get_clamped(&self, x: i32, y: i32) -> f32 {
+        let x = i32::clamp(x, 0, self.width as i32 - 1) as usize;
+        let y = i32::clamp(y, 0, self.height as i32 - 1) as usize;
         self.heights[y * self.width as usize + x]
     }
 }
