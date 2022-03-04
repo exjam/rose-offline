@@ -9,13 +9,13 @@ use crate::{
     RoseFile,
 };
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ZscMaterialBlend {
     Normal,
     Lighten,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ZscMaterialGlow {
     Simple(Vec3<f32>),
     Light(Vec3<f32>),
@@ -24,7 +24,7 @@ pub enum ZscMaterialGlow {
     Alpha(Vec3<f32>),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ZscMaterial {
     pub path: VfsPathBuf,
     pub is_skin: bool,
@@ -39,7 +39,7 @@ pub struct ZscMaterial {
     pub glow: Option<ZscMaterialGlow>,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ZscCollisionShape {
     Sphere,
     AxisAlignedBoundingBox,
@@ -57,7 +57,7 @@ bitflags::bitflags! {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ZscObjectPart {
     pub mesh_id: u16,
     pub material_id: u16,
@@ -72,14 +72,14 @@ pub struct ZscObjectPart {
     pub animation_path: Option<VfsPathBuf>,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ZscEffectType {
     Normal,
     DayNight,
     LightContainer,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ZscObjectEffect {
     pub effect_id: u16,
     pub effect_type: ZscEffectType,
@@ -89,13 +89,13 @@ pub struct ZscObjectEffect {
     pub parent: Option<u16>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ZscObject {
     pub parts: Vec<ZscObjectPart>,
     pub effects: Vec<ZscObjectEffect>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct ZscFile {
     pub meshes: Vec<VfsPathBuf>,
     pub materials: Vec<ZscMaterial>,
