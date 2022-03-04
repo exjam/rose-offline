@@ -43,7 +43,7 @@ pub use til::TilFile;
 pub use vfs::{VfsFile, VfsIndex, VfsPath};
 pub use zmo::ZmoFile;
 pub use zms::{ZmsFile, ZmsReadError};
-pub use zon::{ZonFile, ZonTileRotation};
+pub use zon::{ZonFile, ZonReadOptions, ZonTile, ZonTileRotation};
 pub use zsc::{
     ZscCollisionFlags, ZscCollisionShape, ZscEffectType, ZscFile, ZscMaterial, ZscMaterialBlend,
     ZscMaterialGlow, ZscObject, ZscObjectEffect, ZscObjectPart,
