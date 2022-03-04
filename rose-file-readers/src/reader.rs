@@ -161,6 +161,7 @@ impl<'a> RoseFileReader<'a> {
         }
     }
 
+    #[allow(clippy::uninit_vec)]
     pub fn read_vec<T>(&mut self, elements: usize) -> Result<Vec<T>, ReadError> {
         let bytes_length = std::mem::size_of::<T>() * elements;
         if self.cursor.remaining() < bytes_length {
