@@ -5,13 +5,13 @@ use crate::{reader::RoseFileReader, RoseFile};
 pub struct NpcModelData {
     pub name: String,
     pub skeleton_index: u16,
-    pub mesh_ids: Vec<u16>,
+    pub model_ids: Vec<u16>,
     pub motion_ids: Vec<(u16, u16)>, // (action, index)
     pub effect_ids: Vec<(u16, u16)>, // (action, index)
 }
 
 pub struct ChrFile {
-    pub mesh_files: Vec<String>,
+    pub skeleton_files: Vec<String>,
     pub motion_files: Vec<String>,
     pub effect_files: Vec<String>,
     pub npcs: HashMap<u16, NpcModelData>,
@@ -21,10 +21,10 @@ impl RoseFile for ChrFile {
     type ReadOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
-        let mesh_count = reader.read_u16()?;
-        let mut mesh_files = Vec::new();
-        for _ in 0..mesh_count {
-            mesh_files.push(reader.read_null_terminated_string()?.to_string());
+        let skeleton_count = reader.read_u16()?;
+        let mut skeleton_files = Vec::new();
+        for _ in 0..skeleton_count {
+            skeleton_files.push(reader.read_null_terminated_string()?.to_string());
         }
 
         let motion_count = reader.read_u16()?;
@@ -50,9 +50,9 @@ impl RoseFile for ChrFile {
             let name = reader.read_null_terminated_string()?.to_string();
 
             let mesh_count = reader.read_u16()?;
-            let mut mesh_ids = Vec::new();
+            let mut model_ids = Vec::new();
             for _ in 0..mesh_count {
-                mesh_ids.push(reader.read_u16()?);
+                model_ids.push(reader.read_u16()?);
             }
 
             let motion_count = reader.read_u16()?;
@@ -76,7 +76,7 @@ impl RoseFile for ChrFile {
                 NpcModelData {
                     name,
                     skeleton_index,
-                    mesh_ids,
+                    model_ids,
                     motion_ids,
                     effect_ids,
                 },
@@ -84,7 +84,7 @@ impl RoseFile for ChrFile {
         }
 
         Ok(Self {
-            mesh_files,
+            skeleton_files,
             motion_files,
             effect_files,
             npcs,

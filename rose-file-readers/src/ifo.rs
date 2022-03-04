@@ -28,7 +28,7 @@ fn read_object(reader: &mut RoseFileReader) -> anyhow::Result<IfoObject> {
     let object_id = reader.read_u32()?;
     let minimap_pos_x = reader.read_u32()?;
     let minimap_pos_y = reader.read_u32()?;
-    let rotation = reader.read_quaternion_f32()?;
+    let rotation = reader.read_quat4_xyzw_f32()?;
     let position = reader.read_vector3_f32()?;
     let scale = reader.read_vector3_f32()?;
 

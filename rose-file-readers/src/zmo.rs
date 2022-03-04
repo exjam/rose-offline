@@ -1,6 +1,12 @@
 use std::time::Duration;
 
-use crate::{reader::RoseFileReader, RoseFile};
+use anyhow::bail;
+
+use crate::{
+    reader::RoseFileReader,
+    types::{Quat4, Vec2, Vec3},
+    RoseFile,
+};
 
 pub struct ZmoFile {
     pub fps: usize,
@@ -20,6 +26,20 @@ impl ZmoFile {
     }
 }
 
+pub enum ZmoChannel {
+    Empty,
+    Position(Vec<Vec3<f32>>),
+    Rotation(Vec<Quat4<f32>>),
+    Normal(Vec<Vec3<f32>>),
+    Alpha(Vec<f32>),
+    UV1(Vec<Vec2<f32>>),
+    UV2(Vec<Vec2<f32>>),
+    UV3(Vec<Vec2<f32>>),
+    UV4(Vec<Vec2<f32>>),
+    Texture(Vec<f32>),
+    Scale(Vec<f32>),
+}
+
 impl RoseFile for ZmoFile {
     type ReadOptions = ZmoReadOptions;
 
@@ -34,9 +54,56 @@ impl RoseFile for ZmoFile {
 
         let fps = reader.read_u32()? as usize;
         let num_frames = reader.read_u32()? as usize;
+        let mut channels = Vec::new();
 
-        // We do not need the actual animation data when reading for server
-        if read_options.skip_animation {}
+        if !read_options.skip_animation {
+            let channel_count = reader.read_u32()? as usize;
+            channels.reserve_exact(channel_count);
+            for _ in 0..channel_count {
+                let channel_type = reader.read_u32()?;
+                let channel_bone_index = reader.read_u32()?;
+                let channel = match channel_type {
+                    1 => ZmoChannel::Empty,
+                    2 => ZmoChannel::Position(Vec::with_capacity(num_frames)),
+                    4 => ZmoChannel::Rotation(Vec::with_capacity(num_frames)),
+                    8 => ZmoChannel::Normal(Vec::with_capacity(num_frames)),
+                    16 => ZmoChannel::Alpha(Vec::with_capacity(num_frames)),
+                    32 => ZmoChannel::UV1(Vec::with_capacity(num_frames)),
+                    64 => ZmoChannel::UV2(Vec::with_capacity(num_frames)),
+                    128 => ZmoChannel::UV3(Vec::with_capacity(num_frames)),
+                    256 => ZmoChannel::UV4(Vec::with_capacity(num_frames)),
+                    512 => ZmoChannel::Texture(Vec::with_capacity(num_frames)),
+                    1024 => ZmoChannel::Scale(Vec::with_capacity(num_frames)),
+                    invalid => bail!("Invalid ZMO channel type: {}", invalid),
+                };
+                channels.push((channel_bone_index, channel));
+            }
+
+            for _ in 0..num_frames {
+                for channel in channels.iter_mut() {
+                    match &mut channel.1 {
+                        ZmoChannel::Empty => {}
+                        ZmoChannel::Position(values) | ZmoChannel::Normal(values) => {
+                            values.push(reader.read_vector3_f32()?);
+                        }
+                        ZmoChannel::Rotation(values) => {
+                            values.push(reader.read_quat4_wxyz_f32()?);
+                        }
+                        ZmoChannel::UV1(values)
+                        | ZmoChannel::UV2(values)
+                        | ZmoChannel::UV3(values)
+                        | ZmoChannel::UV4(values) => {
+                            values.push(reader.read_vector2_f32()?);
+                        }
+                        ZmoChannel::Alpha(values)
+                        | ZmoChannel::Texture(values)
+                        | ZmoChannel::Scale(values) => {
+                            values.push(reader.read_f32()?);
+                        }
+                    }
+                }
+            }
+        }
 
         let mut frame_events = Vec::new();
         let mut total_attack_frames = 0;

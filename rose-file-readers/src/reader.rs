@@ -7,7 +7,7 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::types::{Quat4, Vec3, Vec4};
+use crate::types::{Quat4, Vec2, Vec3, Vec4};
 
 #[derive(Error, Debug)]
 pub enum ReadError {
@@ -181,6 +181,12 @@ impl<'a> RoseFileReader<'a> {
         }
     }
 
+    pub fn read_vector2_f32(&mut self) -> Result<Vec2<f32>, ReadError> {
+        let x = self.read_f32()?;
+        let y = self.read_f32()?;
+        Ok(Vec2 { x, y })
+    }
+
     pub fn read_vector3_f32(&mut self) -> Result<Vec3<f32>, ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
@@ -212,11 +218,19 @@ impl<'a> RoseFileReader<'a> {
         Ok(Vec4 { x, y, z, w })
     }
 
-    pub fn read_quaternion_f32(&mut self) -> Result<Quat4<f32>, ReadError> {
+    pub fn read_quat4_xyzw_f32(&mut self) -> Result<Quat4<f32>, ReadError> {
         let x = self.read_f32()?;
         let y = self.read_f32()?;
         let z = self.read_f32()?;
         let w = self.read_f32()?;
+        Ok(Quat4 { x, y, z, w })
+    }
+
+    pub fn read_quat4_wxyz_f32(&mut self) -> Result<Quat4<f32>, ReadError> {
+        let w = self.read_f32()?;
+        let x = self.read_f32()?;
+        let y = self.read_f32()?;
+        let z = self.read_f32()?;
         Ok(Quat4 { x, y, z, w })
     }
 
