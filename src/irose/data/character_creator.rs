@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{EquipmentItem, Item},
-        ItemReference, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
+        QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
     },
     game::{
         components::{
@@ -15,6 +15,7 @@ use crate::{
         },
         storage::character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
     },
+    irose::data::data_decoder::decode_item_base1000,
 };
 
 struct CharacterGenderData {
@@ -55,10 +56,9 @@ impl StbInitAvatar {
     pub fn get_equipment(&self, row: usize) -> Vec<EquipmentItem> {
         let mut items = Vec::new();
         for i in 6..=13 {
-            let item = self.0.try_get_int(row, i).unwrap_or(0) as u32;
-            if let Some(item) = ItemReference::from_base1000(item)
-                .ok()
-                .and_then(|item| EquipmentItem::new(&item))
+            let item = self.0.try_get_int(row, i).unwrap_or(0) as usize;
+            if let Some(item) =
+                decode_item_base1000(item).and_then(|item| EquipmentItem::new(&item))
             {
                 items.push(item);
             }
@@ -69,11 +69,8 @@ impl StbInitAvatar {
     fn get_inventory_equipment(&self, row: usize) -> Vec<Item> {
         let mut items = Vec::new();
         for i in 0..10 {
-            let item = self.0.try_get_int(row, 14 + i).unwrap_or(0) as u32;
-            if let Some(item) = ItemReference::from_base1000(item)
-                .ok()
-                .and_then(|item| Item::new(&item, 1))
-            {
+            let item = self.0.try_get_int(row, 14 + i).unwrap_or(0) as usize;
+            if let Some(item) = decode_item_base1000(item).and_then(|item| Item::new(&item, 1)) {
                 items.push(item);
             }
         }
@@ -83,11 +80,10 @@ impl StbInitAvatar {
     fn get_inventory_consumables(&self, row: usize) -> Vec<Item> {
         let mut items = Vec::new();
         for i in 0..5 {
-            let item = self.0.try_get_int(row, 24 + i * 2).unwrap_or(0) as u32;
+            let item = self.0.try_get_int(row, 24 + i * 2).unwrap_or(0) as usize;
             let quantity = self.0.try_get_int(row, 25 + i * 2).unwrap_or(0) as u32;
-            if let Some(item) = ItemReference::from_base1000(item)
-                .ok()
-                .and_then(|item| Item::new(&item, quantity))
+            if let Some(item) =
+                decode_item_base1000(item).and_then(|item| Item::new(&item, quantity))
             {
                 items.push(item);
             }
@@ -98,11 +94,10 @@ impl StbInitAvatar {
     fn get_inventory_materials(&self, row: usize) -> Vec<Item> {
         let mut items = Vec::new();
         for i in 0..5 {
-            let item = self.0.try_get_int(row, 34 + i * 2).unwrap_or(0) as u32;
+            let item = self.0.try_get_int(row, 34 + i * 2).unwrap_or(0) as usize;
             let quantity = self.0.try_get_int(row, 35 + i * 2).unwrap_or(0) as u32;
-            if let Some(item) = ItemReference::from_base1000(item)
-                .ok()
-                .and_then(|item| Item::new(&item, quantity))
+            if let Some(item) =
+                decode_item_base1000(item).and_then(|item| Item::new(&item, quantity))
             {
                 items.push(item);
             }

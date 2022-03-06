@@ -1,5 +1,4 @@
 use modular_bitfield::prelude::*;
-use num_traits::FromPrimitive;
 use std::convert::TryInto;
 
 use crate::{
@@ -11,6 +10,7 @@ use crate::{
         AmmoIndex, ClientEntityId, Equipment, EquipmentIndex, HotbarSlot, InventoryPageType,
         ItemSlot, Money, MoveMode, SkillSlot, StatusEffects, VehiclePartIndex,
     },
+    irose::data::decode_item_type,
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
 
@@ -140,7 +140,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
             return Ok(None);
         }
 
-        if let Some(item_type) = FromPrimitive::from_u8(item_header.item_type()) {
+        if let Some(item_type) = decode_item_type(item_header.item_type() as usize) {
             let item_reference = ItemReference::new(item_type, item_header.item_number() as usize);
 
             if item_type.is_stackable_item() {

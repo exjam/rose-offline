@@ -1,29 +1,30 @@
-use std::cmp::Ordering;
-
-use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 
 use crate::data::ItemReference;
 
 const MAX_STACKABLE_ITEM_QUANTITY: u32 = 999;
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, FromPrimitive, PartialEq)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 pub enum ItemType {
-    Face = 1,
-    Head = 2,
-    Body = 3,
-    Hands = 4,
-    Feet = 5,
-    Back = 6,
-    Jewellery = 7,
-    Weapon = 8,
-    SubWeapon = 9,
-    Consumable = 10,
-    Gem = 11,
-    Material = 12,
-    Quest = 13,
-    Vehicle = 14,
-    Money = 31,
+    Face,
+    Head,
+    Body,
+    Hands,
+    Feet,
+    Back,
+    Jewellery,
+    Weapon,
+    SubWeapon,
+    Consumable,
+    Gem,
+    Material,
+    Quest,
+    Vehicle,
+}
+
+pub trait ItemTypeDecoder {
+    fn decode_item_type(&self, from: usize) -> Option<ItemType>;
 }
 
 impl ItemType {
@@ -32,11 +33,6 @@ impl ItemType {
             self,
             ItemType::Consumable | ItemType::Gem | ItemType::Material | ItemType::Quest
         )
-    }
-
-    #[allow(dead_code)]
-    pub fn is_money(self) -> bool {
-        matches!(self, ItemType::Money)
     }
 
     #[allow(dead_code)]
@@ -61,8 +57,7 @@ impl ItemType {
     }
 }
 
-// TODO: The number mappings for this should move to irose stb loading code?
-#[derive(Copy, Clone, Debug, FromPrimitive)]
+#[derive(Copy, Clone, Debug)]
 pub enum ItemClass {
     Unknown = 0,
 

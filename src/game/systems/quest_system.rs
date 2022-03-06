@@ -24,7 +24,7 @@ use rose_file_readers::{
 use crate::{
     data::{
         item::{EquipmentItem, Item},
-        ItemReference, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
+        NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
     },
     game::{
         bundles::{
@@ -158,14 +158,19 @@ fn quest_condition_quest_switch(
 }
 
 fn quest_condition_quest_item(
+    quest_system_resources: &QuestSystemResources,
     quest_parameters: &QuestParameters,
     item_base1000: Option<QsdItemBase1000>,
     equipment_index: Option<QsdEquipmentIndex>,
     required_count: u32,
     operator: QsdConditionOperator,
 ) -> bool {
-    let item_reference = item_base1000
-        .and_then(|item_base1000| ItemReference::from_base1000(item_base1000.get()).ok());
+    let item_reference = item_base1000.and_then(|item_base1000| {
+        quest_system_resources
+            .game_data
+            .data_decoder
+            .decode_item_base1000(item_base1000.get() as usize)
+    });
 
     if let Some(equipment_index) = equipment_index {
         let equipment_index: Option<EquipmentIndex> =
@@ -217,6 +222,7 @@ fn quest_condition_quest_item(
 }
 
 fn quest_condition_quest_items(
+    quest_system_resources: &QuestSystemResources,
     quest_parameters: &QuestParameters,
     items: &[QsdConditionQuestItem],
 ) -> bool {
@@ -228,6 +234,7 @@ fn quest_condition_quest_items(
     } in items
     {
         if !quest_condition_quest_item(
+            quest_system_resources,
             quest_parameters,
             item,
             equipment_index,
@@ -242,11 +249,15 @@ fn quest_condition_quest_items(
 }
 
 fn quest_condition_ability_values(
+    quest_system_resources: &QuestSystemResources,
     quest_parameters: &QuestParameters,
     ability_values: &[(QsdAbilityType, QsdConditionOperator, i32)],
 ) -> bool {
     for &(ability_type, operator, compare_value) in ability_values {
-        let ability_type = FromPrimitive::from_usize(ability_type.get());
+        let ability_type = quest_system_resources
+            .game_data
+            .data_decoder
+            .decode_ability_type(ability_type.get());
         if ability_type.is_none() {
             return false;
         }
@@ -638,14 +649,16 @@ fn quest_trigger_check_conditions(
 ) -> bool {
     for condition in quest_trigger.conditions.iter() {
         let result = match *condition {
-            QsdCondition::AbilityValue(ref ability_values) => {
-                quest_condition_ability_values(quest_parameters, ability_values)
-            }
+            QsdCondition::AbilityValue(ref ability_values) => quest_condition_ability_values(
+                quest_system_resources,
+                quest_parameters,
+                ability_values,
+            ),
             QsdCondition::SelectQuest(quest_id) => {
                 quest_condition_select_quest(quest_parameters, quest_id)
             }
             QsdCondition::QuestItems(ref items) => {
-                quest_condition_quest_items(quest_parameters, items)
+                quest_condition_quest_items(quest_system_resources, quest_parameters, items)
             }
             QsdCondition::QuestSwitch(switch_id, value) => {
                 quest_condition_quest_switch(quest_parameters, switch_id, value)
@@ -855,13 +868,20 @@ fn quest_reward_calculated_item(
     reward_item_base1000: QsdItemBase1000,
     reward_gem_base1000: Option<QsdItemBase1000>,
 ) -> bool {
-    let reward_item = ItemReference::from_base1000(reward_item_base1000.get()).ok();
+    let reward_item = quest_system_resources
+        .game_data
+        .data_decoder
+        .decode_item_base1000(reward_item_base1000.get());
     if reward_item.is_none() {
         return false;
     }
     let reward_item = reward_item.unwrap();
-    let reward_gem = reward_gem_base1000
-        .and_then(|item_base1000| ItemReference::from_base1000(item_base1000.get()).ok());
+    let reward_gem = reward_gem_base1000.and_then(|item_base1000| {
+        quest_system_resources
+            .game_data
+            .data_decoder
+            .decode_item_base1000(item_base1000.get())
+    });
 
     let item = if reward_item.item_type.is_stackable_item() {
         let reward_value = quest_system_resources
@@ -1076,12 +1096,16 @@ fn quest_reward_quest_action(
 }
 
 fn quest_reward_add_item(
+    quest_system_resources: &QuestSystemResources,
     quest_system_parameters: &mut QuestSystemParameters,
     quest_parameters: &mut QuestParameters,
     item_base1000: QsdItemBase1000,
     quantity: usize,
 ) -> bool {
-    let item_reference = ItemReference::from_base1000(item_base1000.get()).ok();
+    let item_reference = quest_system_resources
+        .game_data
+        .data_decoder
+        .decode_item_base1000(item_base1000.get());
     if item_reference.is_none() {
         return false;
     }
@@ -1119,11 +1143,15 @@ fn quest_reward_add_item(
 }
 
 fn quest_reward_remove_item(
+    quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
     item_base1000: QsdItemBase1000,
     quantity: usize,
 ) -> bool {
-    let item_reference = ItemReference::from_base1000(item_base1000.get()).ok();
+    let item_reference = quest_system_resources
+        .game_data
+        .data_decoder
+        .decode_item_base1000(item_base1000.get());
     if item_reference.is_none() {
         return false;
     }
@@ -1271,12 +1299,16 @@ fn quest_reward_teleport(
 }
 
 fn quest_reward_ability_value(
+    quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
     reward_operator: QsdRewardOperator,
     ability_type: QsdAbilityType,
     value: i32,
 ) -> bool {
-    let ability_type = FromPrimitive::from_usize(ability_type.get());
+    let ability_type = quest_system_resources
+        .game_data
+        .data_decoder
+        .decode_ability_type(ability_type.get());
     if ability_type.is_none() {
         return false;
     }
@@ -1646,6 +1678,7 @@ fn quest_trigger_apply_rewards(
             QsdReward::AbilityValue(ref values) => {
                 for &(ability_type, reward_operator, value) in values {
                     quest_reward_ability_value(
+                        quest_system_resources,
                         quest_parameters,
                         reward_operator,
                         ability_type,
@@ -1654,11 +1687,15 @@ fn quest_trigger_apply_rewards(
                 }
                 true
             }
-            QsdReward::AddItem(_reward_target, item, quantity) => {
-                quest_reward_add_item(quest_system_parameters, quest_parameters, item, quantity)
-            }
+            QsdReward::AddItem(_reward_target, item, quantity) => quest_reward_add_item(
+                quest_system_resources,
+                quest_system_parameters,
+                quest_parameters,
+                item,
+                quantity,
+            ),
             QsdReward::RemoveItem(_reward_target, item, quantity) => {
-                quest_reward_remove_item(quest_parameters, item, quantity)
+                quest_reward_remove_item(quest_system_resources, quest_parameters, item, quantity)
             }
             QsdReward::AddSkill(skill_id) => {
                 quest_reward_add_skill(quest_system_resources, quest_parameters, skill_id).is_some()

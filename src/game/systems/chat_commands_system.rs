@@ -5,7 +5,6 @@ use bevy_ecs::{
 use clap::{Arg, PossibleValue};
 use lazy_static::lazy_static;
 use nalgebra::{Point2, Point3};
-use num_traits::FromPrimitive;
 use rand::prelude::SliceRandom;
 use std::{
     f32::consts::PI,
@@ -449,10 +448,17 @@ fn handle_chat_command(
             }
         }
         ("shop", arg_matches) => {
-            let item_type_id = arg_matches.value_of("item_type").unwrap().parse::<i32>()?;
-            let item_type: ItemType = FromPrimitive::from_i32(item_type_id).ok_or_else(|| {
-                ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_id))
-            })?;
+            let item_type_id = arg_matches
+                .value_of("item_type")
+                .unwrap()
+                .parse::<usize>()?;
+            let item_type: ItemType = chat_command_params
+                .game_data
+                .data_decoder
+                .decode_item_type(item_type_id)
+                .ok_or_else(|| {
+                    ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_id))
+                })?;
 
             let mut all_items: Vec<ItemReference> = chat_command_params
                 .game_data

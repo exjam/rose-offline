@@ -23,7 +23,7 @@ use rose_file_readers::{
 };
 
 use crate::{
-    data::{item::Item, Damage, ItemReference, MotionId, NpcId, SkillId, ZoneId},
+    data::{item::Item, Damage, MotionId, NpcId, SkillId, ZoneId},
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
         components::{
@@ -1328,7 +1328,12 @@ fn ai_action_drop_random_item(
 ) {
     if let Some(item) = items_base1000
         .choose(&mut rand::thread_rng())
-        .and_then(|item_base1000| ItemReference::from_base1000(*item_base1000).ok())
+        .and_then(|item_base1000| {
+            ai_system_resources
+                .game_data
+                .data_decoder
+                .decode_item_base1000(*item_base1000 as usize)
+        })
         .and_then(|item_reference| Item::new(&item_reference, 1))
     {
         ItemDropBundle::spawn(
@@ -1344,12 +1349,15 @@ fn ai_action_drop_random_item(
 
 fn ai_action_give_item_to_owner(
     ai_system_parameters: &mut AiSystemParameters,
+    ai_system_resources: &AiSystemResources,
     ai_parameters: &mut AiParameters,
     item_base1000: AipItemBase1000,
     quantity: usize,
 ) {
-    if let Some(item) = ItemReference::from_base1000(item_base1000)
-        .ok()
+    if let Some(item) = ai_system_resources
+        .game_data
+        .data_decoder
+        .decode_item_base1000(item_base1000 as usize)
         .and_then(|item_reference| Item::new(&item_reference, quantity as u32))
     {
         ai_system_parameters
@@ -1476,6 +1484,7 @@ fn npc_ai_do_actions(
             ),
             AipAction::GiveItemToOwner(item_base1000, quantity) => ai_action_give_item_to_owner(
                 ai_system_parameters,
+                ai_system_resources,
                 ai_parameters,
                 item_base1000,
                 quantity,

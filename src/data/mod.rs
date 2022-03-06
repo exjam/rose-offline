@@ -55,6 +55,7 @@ macro_rules! id_wrapper_impl {
 
 mod ability;
 mod ai_database;
+mod data_decoder;
 mod drop_table;
 mod item_database;
 mod motion_database;
@@ -70,6 +71,7 @@ pub mod item;
 
 pub use ability::{AbilityType, AbilityValueCalculator, Damage, PassiveRecoveryState};
 pub use ai_database::AiDatabase;
+pub use data_decoder::DataDecoder;
 pub use drop_table::DropTable;
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,

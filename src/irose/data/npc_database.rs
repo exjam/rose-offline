@@ -1,9 +1,12 @@
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 use std::{collections::HashMap, num::NonZeroUsize};
 
-use crate::data::{
-    ItemReference, MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId,
-    NpcStoreTabData, NpcStoreTabId,
+use crate::{
+    data::{
+        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcStoreTabData,
+        NpcStoreTabId,
+    },
+    irose::data::data_decoder::decode_item_base1000,
 };
 
 struct StbNpc(StbFile);
@@ -236,7 +239,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         let mut items = HashMap::new();
 
         for col in 2..data.columns() {
-            if let Ok(item) = ItemReference::from_base1000(data.get_int(id, col) as u32) {
+            if let Some(item) = decode_item_base1000(data.get_int(id, col) as usize) {
                 items.insert((col - 2) as u16, item);
             }
         }

@@ -1,7 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
 use arrayvec::ArrayVec;
-use num_traits::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{
@@ -15,32 +14,11 @@ pub struct ItemReference {
     pub item_number: usize,
 }
 
-pub enum ItemReferenceDecodeError {
-    Empty,
-    InvalidItemType,
-    InvalidItemNumber,
-}
-
 impl ItemReference {
     pub fn new(item_type: ItemType, item_number: usize) -> Self {
         Self {
             item_type,
             item_number,
-        }
-    }
-
-    pub fn from_base1000(value: u32) -> Result<Self, ItemReferenceDecodeError> {
-        if value == 0 {
-            Err(ItemReferenceDecodeError::Empty)
-        } else {
-            let item_type = FromPrimitive::from_u32(value / 1000)
-                .ok_or(ItemReferenceDecodeError::InvalidItemType)?;
-            let item_number = value % 1000;
-            if item_number == 0 {
-                Err(ItemReferenceDecodeError::InvalidItemNumber)
-            } else {
-                Ok(Self::new(item_type, item_number as usize))
-            }
         }
     }
 }

@@ -1,9 +1,8 @@
 use anyhow::anyhow;
 use log::warn;
-
 use std::{
     collections::HashMap,
-    num::{NonZeroU32, NonZeroU8, NonZeroUsize},
+    num::{NonZeroU8, NonZeroUsize},
     ops::RangeInclusive,
     time::Duration,
 };
@@ -75,7 +74,7 @@ pub type QsdTeamNumber = usize;
 pub type QsdServerChannelId = usize;
 pub type QsdEquationId = usize;
 pub type QsdStringId = usize;
-pub type QsdItemBase1000 = NonZeroU32;
+pub type QsdItemBase1000 = NonZeroUsize;
 
 #[derive(Copy, Clone, Debug)]
 pub enum QsdObjectType {
@@ -395,7 +394,7 @@ impl RoseFile for QsdFile {
                             let data_count = reader.read_u32()?;
                             let mut items = Vec::new();
                             for _ in 0..data_count {
-                                let item = QsdItemBase1000::new(reader.read_u32()?);
+                                let item = QsdItemBase1000::new(reader.read_u32()? as usize);
                                 let equipment_index =
                                     QsdEquipmentIndex::new(reader.read_u32()? as usize);
                                 let required_count = reader.read_u32()?;
@@ -719,8 +718,9 @@ impl RoseFile for QsdFile {
                             rewards.push(QsdReward::Quest(action));
                         }
                         1 => {
-                            let item_base1000 = QsdItemBase1000::new(reader.read_u32()?)
-                                .ok_or_else(|| anyhow!("Invalid QsdReward::Item item: 0"))?;
+                            let item_base1000 =
+                                QsdItemBase1000::new(reader.read_u32()? as usize)
+                                    .ok_or_else(|| anyhow!("Invalid QsdReward::Item item: 0"))?;
                             let add_or_remove = reader.read_u8()? != 0;
                             reader.skip(1); // padding
                             let count = reader.read_u16()? as usize;
@@ -777,14 +777,14 @@ impl RoseFile for QsdFile {
                             let equation = reader.read_u8()? as QsdEquationId;
                             reader.skip(2);
                             let value = reader.read_i32()?;
-                            let item = reader.read_u32()?;
+                            let item = reader.read_u32()? as usize;
                             let target = if reader.read_u8()? == 0 {
                                 QsdRewardTarget::Player
                             } else {
                                 QsdRewardTarget::Party
                             };
                             reader.skip(1);
-                            let gem = QsdItemBase1000::new(reader.read_u16()? as u32);
+                            let gem = QsdItemBase1000::new(reader.read_u16()? as u32 as usize);
 
                             match reward_type {
                                 0 => {

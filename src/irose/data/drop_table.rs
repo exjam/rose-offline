@@ -5,9 +5,10 @@ use std::sync::Arc;
 use crate::{
     data::{
         item::{EquipmentItem, Item, ItemType},
-        DropTable, ItemDatabase, ItemReference, NpcDatabase, NpcId, ZoneId,
+        DropTable, ItemDatabase, NpcDatabase, NpcId, ZoneId,
     },
     game::components::{DroppedItem, Money},
+    irose::data::data_decoder::decode_item_base1000,
 };
 
 pub struct DropTableData {
@@ -47,7 +48,7 @@ impl DropTable for DropTableData {
 
         let mut rng = rand::thread_rng();
         let drop_var = ((world_drop_item_rate as f32 + npc_drop_item_rate as f32
-            - rng.gen_range(1..=100) as f32
+            - rng.gen_range::<i32, _>(1..=100) as f32
             - (level_difference as f32 + 16.0) * 3.5
             - 10.0
             + character_drop_rate as f32)
@@ -83,7 +84,7 @@ impl DropTable for DropTableData {
                 .unwrap_or(0);
         }
 
-        let item_reference = ItemReference::from_base1000(drop_value as u32).ok()?;
+        let item_reference = decode_item_base1000(drop_value as usize)?;
         match item_reference.item_type {
             ItemType::Face
             | ItemType::Head
@@ -141,7 +142,8 @@ impl DropTable for DropTableData {
                 let durability = ((item_durability as f32
                     * (npc_level as f32 * 0.3 + npc_drop_item_rate as f32 * 2.0 + 320.0)
                     * 0.5)
-                    / rng.gen_range(201..=300) as f32) as i32;
+                    / rng.gen_range::<i32, _>(201..=300) as f32)
+                    as i32;
                 item.durability = durability.min(100).max(0) as u8;
 
                 let life = ((npc_drop_item_rate + 200) * 80) / rng.gen_range(31..=130);

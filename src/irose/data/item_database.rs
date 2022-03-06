@@ -1,5 +1,4 @@
 use arrayvec::ArrayVec;
-use num_traits::FromPrimitive;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
@@ -9,6 +8,8 @@ use crate::data::{
     ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
     SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
 };
+use crate::irose::data::data_decoder::{decode_ability_type, decode_item_class};
+
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
 
@@ -17,7 +18,7 @@ impl FromStr for ItemClass {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
+        decode_item_class(value as usize).ok_or(())
     }
 }
 
@@ -59,7 +60,7 @@ impl StbItem {
             let ability_type: Option<AbilityType> = self
                 .0
                 .try_get_int(id, 19 + i * 2)
-                .and_then(FromPrimitive::from_i32);
+                .and_then(|id| decode_ability_type(id as usize));
             let ability_value = self.0.try_get_int(id, 20 + i * 2);
 
             ability_type.map(|ability_type| {
@@ -88,7 +89,7 @@ impl StbItem {
             let ability_type: Option<AbilityType> = self
                 .0
                 .try_get_int(id, 24 + i * 3)
-                .and_then(FromPrimitive::from_i32);
+                .and_then(|id| decode_ability_type(id as usize));
             let ability_value = self.0.try_get_int(id, 25 + i * 3);
 
             ability_type.map(|ability_type| {
@@ -130,8 +131,10 @@ impl StbItem {
     stb_column! { 22, get_consumeable_confile_index, usize }
 
     pub fn get_consumeable_ability_requirement(&self, id: usize) -> Option<(AbilityType, i32)> {
-        let ability_type: Option<AbilityType> =
-            self.0.try_get_int(id, 17).and_then(FromPrimitive::from_i32);
+        let ability_type: Option<AbilityType> = self
+            .0
+            .try_get_int(id, 17)
+            .and_then(|id| decode_ability_type(id as usize));
         let ability_value = self.0.try_get_int(id, 18);
 
         ability_type.and_then(|ability_type| {
@@ -140,8 +143,10 @@ impl StbItem {
     }
 
     pub fn get_consumeable_add_ability(&self, id: usize) -> Option<(AbilityType, i32)> {
-        let ability_type: Option<AbilityType> =
-            self.0.try_get_int(id, 19).and_then(FromPrimitive::from_i32);
+        let ability_type: Option<AbilityType> = self
+            .0
+            .try_get_int(id, 19)
+            .and_then(|id| decode_ability_type(id as usize));
         let ability_value = self.0.try_get_int(id, 20);
 
         ability_type.and_then(|ability_type| {
@@ -176,7 +181,7 @@ impl StbItem {
             let ability_type: Option<AbilityType> = self
                 .0
                 .try_get_int(id, 16 + i * 2)
-                .and_then(FromPrimitive::from_i32);
+                .and_then(|id| decode_ability_type(id as usize));
             let ability_value = self.0.try_get_int(id, 17 + i * 2);
 
             ability_type.map(|ability_type| {

@@ -24,6 +24,7 @@ use crate::{
             PartyRequest, PickupItemDropContent, PickupItemDropError,
         },
     },
+    irose::data::encode_ability_type,
     irose::protocol::game::common_packets::{
         encode_ammo_index, PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId,
         PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
@@ -1139,8 +1140,9 @@ impl From<&PacketServerUpdateAbilityValue> for Packet {
         } else {
             ServerPackets::UpdateAbilityValueRewardSet
         };
+
         let mut writer = PacketWriter::new(command as u16);
-        writer.write_u16(packet.ability_type as u16);
+        writer.write_u16(encode_ability_type(packet.ability_type).unwrap_or(0) as u16);
         writer.write_i32(packet.value);
         writer.into()
     }

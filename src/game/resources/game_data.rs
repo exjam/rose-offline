@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        AbilityValueCalculator, AiDatabase, DropTable, ItemDatabase, MotionDatabase, NpcDatabase,
-        QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
+        AbilityValueCalculator, AiDatabase, DataDecoder, DropTable, ItemDatabase, MotionDatabase,
+        NpcDatabase, QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase,
+        ZoneDatabase,
     },
     game::storage::character::CharacterCreator,
 };
@@ -11,6 +12,7 @@ use crate::{
 pub struct GameData {
     pub character_creator: Box<dyn CharacterCreator + Send + Sync>,
     pub ability_value_calculator: Box<dyn AbilityValueCalculator + Send + Sync>,
+    pub data_decoder: Box<dyn DataDecoder + Send + Sync>,
     pub drop_table: Box<dyn DropTable + Send + Sync>,
     pub ai: Arc<AiDatabase>,
     pub items: Arc<ItemDatabase>,

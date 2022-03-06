@@ -28,12 +28,12 @@ pub fn get_ability_value_calculator(
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     npc_database: Arc<NpcDatabase>,
-) -> Option<Box<impl AbilityValueCalculator + Send + Sync>> {
-    Some(Box::new(AbilityValuesData {
+) -> Box<impl AbilityValueCalculator + Send + Sync> {
+    Box::new(AbilityValuesData {
         item_database,
         skill_database,
         npc_database,
-    }))
+    })
 }
 
 impl AbilityValueCalculator for AbilityValuesData {
