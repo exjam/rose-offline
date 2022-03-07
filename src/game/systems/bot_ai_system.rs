@@ -3,9 +3,8 @@ use rand::seq::SliceRandom;
 
 use crate::game::{
     components::{
-        BotAi, BotAiState, Command, CommandData, Destination, DroppedItem, Inventory,
-        InventoryPageType, ItemDrop, ItemSlot, NextCommand, Npc, Owner, Position, Team,
-        BOT_IDLE_CHECK_DURATION,
+        BotAi, BotAiState, Command, CommandData, DroppedItem, Inventory, InventoryPageType,
+        ItemDrop, ItemSlot, NextCommand, Npc, Owner, Position, Team, BOT_IDLE_CHECK_DURATION,
     },
     events::UseItemEvent,
     resources::{ClientEntityList, ServerTime},
@@ -23,10 +22,8 @@ pub fn bot_ai_system(
         &NextCommand,
         &Inventory,
         &Position,
-        &Owner,
         &Team,
     )>,
-    owner_query: Query<(&Position, Option<&Destination>)>,
     nearby_item_query: Query<(&ItemDrop, Option<&Owner>)>,
     nearby_enemy_query: Query<(Option<&Npc>, &Team)>,
     client_entity_list: Res<ClientEntityList>,
@@ -35,9 +32,7 @@ pub fn bot_ai_system(
     mut use_item_events: EventWriter<UseItemEvent>,
 ) {
     bot_query.for_each_mut(
-        |(entity, mut bot_ai, command, _next_command, inventory, position, owner, team)| {
-            let _owner_components = owner_query.get(owner.entity);
-
+        |(entity, mut bot_ai, command, _next_command, inventory, position, team)| {
             match command.command {
                 CommandData::Stop(_) => {
                     bot_ai.time_since_last_idle_check += server_time.delta;

@@ -22,9 +22,9 @@ use crate::{
             AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
             ClientEntitySector, ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase,
             GameClient, Inventory, Level, Money, MotionData, MoveMode, MoveSpeed, NextCommand,
-            Owner, PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList,
-            SkillPoints, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
-            UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+            PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints,
+            Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+            PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},
         messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
@@ -183,7 +183,6 @@ fn create_bot_entity(
     face: u8,
     hair: u8,
     position: Position,
-    owner: Entity,
 ) -> Option<Entity> {
     let mut bot_data = chat_command_params
         .game_data
@@ -229,7 +228,6 @@ fn create_bot_entity(
         .commands
         .spawn()
         .insert(BotAi::new(BotAiState::Farm))
-        .insert(Owner::new(owner))
         .insert_bundle(CharacterBundle {
             ability_values,
             basic_stats: bot_data.basic_stats,
@@ -278,7 +276,6 @@ fn create_random_bot_entities(
     num_bots: usize,
     spacing: f32,
     origin: Position,
-    owner: Entity,
 ) -> Vec<Entity> {
     let mut rng = rand::thread_rng();
     let genders = [0, 1];
@@ -301,7 +298,6 @@ fn create_random_bot_entities(
             *faces.choose(&mut rng).unwrap() as u8,
             *hair.choose(&mut rng).unwrap() as u8,
             bot_position,
-            owner,
         ) {
             chat_command_params
                 .bot_list
@@ -416,7 +412,6 @@ fn handle_chat_command(
                 num_bots,
                 15.0,
                 chat_command_user.position.clone(),
-                chat_command_user.entity,
             );
         }
         ("snowball_fight", arg_matches) => {
@@ -426,7 +421,6 @@ fn handle_chat_command(
                 num_bots,
                 15.0,
                 chat_command_user.position.clone(),
-                chat_command_user.entity,
             );
 
             for entity in bot_entities.into_iter() {
@@ -471,7 +465,6 @@ fn handle_chat_command(
                 num_bots,
                 30.0,
                 chat_command_user.position.clone(),
-                chat_command_user.entity,
             );
             let mut index = 0usize;
 
