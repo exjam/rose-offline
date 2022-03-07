@@ -52,7 +52,7 @@ impl RoseFile for ZmdFile {
                     x: 0.0,
                     y: 0.0,
                     z: 0.0,
-                    w: 0.0,
+                    w: 1.0,
                 }
             } else {
                 reader.read_quat4_wxyz_f32()?
