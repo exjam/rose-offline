@@ -4,7 +4,7 @@ use bevy_ecs::prelude::Entity;
 use nalgebra::Point2;
 
 use crate::{
-    data::{item::Item, SkillId},
+    data::{Item, SkillId},
     game::components::ItemSlot,
 };
 

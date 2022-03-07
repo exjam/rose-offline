@@ -1,10 +1,7 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
-use crate::data::{
-    item::{ItemClass, ItemType},
-    AbilityType, DataDecoder, ItemReference,
-};
+use crate::data::{AbilityType, DataDecoder, ItemClass, ItemReference, ItemType};
 
 #[derive(Copy, Clone, Debug, FromPrimitive, ToPrimitive)]
 pub enum IroseAbilityType {

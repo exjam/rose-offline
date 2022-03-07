@@ -12,10 +12,7 @@ use std::{
 };
 
 use crate::{
-    data::{
-        item::{Item, ItemType},
-        AbilityType, ItemReference, SkillId, ZoneId,
-    },
+    data::{AbilityType, Item, ItemReference, ItemType, SkillId, ZoneId},
     game::{
         bundles::{
             ability_values_add_value, ability_values_set_value, client_entity_join_zone,

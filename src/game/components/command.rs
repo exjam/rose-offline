@@ -4,7 +4,7 @@ use bevy_ecs::prelude::{Component, Entity};
 use nalgebra::{Point2, Point3};
 
 use crate::{
-    data::{item::Item, Damage, MotionId, SkillId},
+    data::{Damage, Item, MotionId, SkillId},
     game::components::{ItemSlot, MoveMode},
 };
 

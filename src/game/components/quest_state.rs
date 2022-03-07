@@ -2,10 +2,7 @@ use bevy_ecs::prelude::Component;
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{
-    item::{Item, ItemSlotBehaviour},
-    ItemReference, WorldTicks,
-};
+use crate::data::{Item, ItemReference, ItemSlotBehaviour, WorldTicks};
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ActiveQuest {

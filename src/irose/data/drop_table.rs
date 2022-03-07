@@ -3,10 +3,7 @@ use rose_file_readers::{StbFile, VfsIndex};
 use std::sync::Arc;
 
 use crate::{
-    data::{
-        item::{EquipmentItem, Item, ItemType},
-        DropTable, ItemDatabase, NpcDatabase, NpcId, ZoneId,
-    },
+    data::{DropTable, EquipmentItem, Item, ItemDatabase, ItemType, NpcDatabase, NpcId, ZoneId},
     game::components::{DroppedItem, Money},
     irose::data::data_decoder::decode_item_base1000,
 };

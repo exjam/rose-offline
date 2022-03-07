@@ -3,8 +3,7 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{
-    item::{EquipmentItem, ItemType, StackableItem},
-    ItemDatabase, ItemReference, WeaponItemData,
+    EquipmentItem, ItemDatabase, ItemReference, ItemType, StackableItem, WeaponItemData,
 };
 
 #[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]

@@ -3,8 +3,7 @@ use std::convert::TryInto;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item, StackableItem},
-        Damage, ItemReference, SkillPageType, StatusEffectType,
+        Damage, EquipmentItem, Item, ItemReference, SkillPageType, StackableItem, StatusEffectType,
     },
     game::components::{
         AmmoIndex, ClientEntityId, Equipment, EquipmentIndex, HotbarSlot, InventoryPageType,

@@ -6,8 +6,8 @@ use num_derive::FromPrimitive;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item, StackableItem},
-        AbilityType, Damage, ItemReference, MotionId, NpcId, SkillId, WorldTicks, ZoneId,
+        AbilityType, Damage, EquipmentItem, Item, ItemReference, MotionId, NpcId, SkillId,
+        StackableItem, WorldTicks, ZoneId,
     },
     game::{
         components::{

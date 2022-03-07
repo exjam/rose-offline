@@ -22,10 +22,7 @@ use rose_file_readers::{
 };
 
 use crate::{
-    data::{
-        item::{EquipmentItem, Item},
-        NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId,
-    },
+    data::{EquipmentItem, Item, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId},
     game::{
         bundles::{
             ability_values_add_value, ability_values_get_value, ability_values_set_value,

@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::Component;
 
 use crate::{
-    data::item::Item,
+    data::Item,
     game::components::{ItemSlot, Money},
 };
 

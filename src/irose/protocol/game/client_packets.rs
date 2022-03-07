@@ -8,7 +8,7 @@ use nalgebra::Point2;
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::{item::Item, MotionId, WarpGateId},
+    data::{Item, MotionId, WarpGateId},
     game::{
         components::{
             AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,

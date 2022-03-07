@@ -10,7 +10,7 @@ use std::{
 };
 
 use crate::data::{
-    item::ItemClass, AbilityType, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
+    AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
     SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
     SkillType, StatusEffectId, ZoneId,
 };

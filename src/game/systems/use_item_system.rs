@@ -8,10 +8,7 @@ use log::warn;
 use nalgebra::Point3;
 
 use crate::{
-    data::{
-        item::{ItemClass, ItemType},
-        AbilityType, SkillType,
-    },
+    data::{AbilityType, ItemClass, ItemType, SkillType},
     game::{
         bundles::{
             ability_values_add_value, ability_values_get_value, client_entity_teleport_zone,

@@ -57,6 +57,7 @@ mod ability;
 mod ai_database;
 mod data_decoder;
 mod drop_table;
+mod item;
 mod item_database;
 mod motion_database;
 mod npc_database;
@@ -67,12 +68,14 @@ mod warp_gate_database;
 mod world;
 mod zone_database;
 
-pub mod item;
-
 pub use ability::{AbilityType, AbilityValueCalculator, Damage, PassiveRecoveryState};
 pub use ai_database::AiDatabase;
 pub use data_decoder::DataDecoder;
 pub use drop_table::DropTable;
+pub use item::{
+    EquipmentItem, Item, ItemClass, ItemSlotBehaviour, ItemType, ItemWeaponType, StackError,
+    StackableItem, StackableSlotBehaviour,
+};
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
     GemItemData, HandsItemData, HeadItemData, ItemData, ItemDatabase, ItemGradeData, ItemReference,

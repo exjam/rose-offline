@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Entity;
 
-use crate::data::item::Item;
+use crate::data::Item;
 
 pub struct PersonalStoreEventListItems {
     pub store_entity: Entity,

@@ -23,7 +23,7 @@ use rose_file_readers::{
 };
 
 use crate::{
-    data::{item::Item, Damage, MotionId, NpcId, SkillId, ZoneId},
+    data::{Damage, Item, MotionId, NpcId, SkillId, ZoneId},
     game::{
         bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
         components::{

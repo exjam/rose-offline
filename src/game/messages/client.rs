@@ -2,7 +2,7 @@ use nalgebra::Point2;
 use tokio::sync::oneshot;
 
 use crate::{
-    data::{item::Item, MotionId, QuestTriggerHash, WarpGateId, WorldTicks},
+    data::{Item, MotionId, QuestTriggerHash, WarpGateId, WorldTicks},
     game::{
         components::{
             AmmoIndex, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,

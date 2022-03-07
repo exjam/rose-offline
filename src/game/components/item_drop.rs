@@ -1,4 +1,4 @@
-use crate::{data::item::Item, game::components::Money};
+use crate::{data::Item, game::components::Money};
 use bevy_ecs::prelude::Component;
 
 #[derive(Clone)]

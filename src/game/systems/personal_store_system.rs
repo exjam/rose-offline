@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::{EventReader, Query};
 
 use crate::{
-    data::item::ItemSlotBehaviour,
+    data::ItemSlotBehaviour,
     game::{
         components::{ClientEntity, ClientEntityId, GameClient, Inventory, Money, PersonalStore},
         events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},

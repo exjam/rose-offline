@@ -7,10 +7,7 @@ use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    data::{
-        item::{EquipmentItem, Item, ItemSlotBehaviour, ItemType, StackableItem},
-        ItemReference,
-    },
+    data::{EquipmentItem, Item, ItemReference, ItemSlotBehaviour, ItemType, StackableItem},
     game::components::{AmmoIndex, EquipmentIndex, VehiclePartIndex},
 };
 

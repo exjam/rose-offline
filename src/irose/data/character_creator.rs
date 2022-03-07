@@ -3,10 +3,7 @@ use rose_file_readers::{stb_column, StbFile, VfsIndex};
 use std::sync::Arc;
 
 use crate::{
-    data::{
-        item::{EquipmentItem, Item},
-        QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
-    },
+    data::{EquipmentItem, Item, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId},
     game::{
         components::{
             BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar,

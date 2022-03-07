@@ -4,10 +4,7 @@ use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
 use crate::{
-    data::{
-        item::{Item, ItemClass, StackableSlotBehaviour},
-        SkillActionMode,
-    },
+    data::{Item, ItemClass, SkillActionMode, StackableSlotBehaviour},
     game::{
         bundles::client_entity_leave_zone,
         components::{

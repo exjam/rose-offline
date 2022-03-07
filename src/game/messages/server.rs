@@ -4,8 +4,8 @@ use nalgebra::Point2;
 
 use crate::{
     data::{
-        item::{EquipmentItem, Item, StackableItem},
-        AbilityType, Damage, ItemReference, MotionId, NpcId, QuestTriggerHash, SkillId, ZoneId,
+        AbilityType, Damage, EquipmentItem, Item, ItemReference, MotionId, NpcId, QuestTriggerHash,
+        SkillId, StackableItem, ZoneId,
     },
     game::components::{
         AmmoIndex, BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,

@@ -4,8 +4,7 @@ use nalgebra::Point3;
 
 use crate::{
     data::{
-        item::{Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour},
-        VehicleItemPart,
+        Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour, VehicleItemPart,
     },
     game::{
         bundles::{

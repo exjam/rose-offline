@@ -4,7 +4,7 @@ use bevy_ecs::prelude::{Entity, EventReader, Mut, Query, Res};
 use log::warn;
 
 use crate::{
-    data::item::Item,
+    data::Item,
     game::{
         components::{
             AbilityValues, GameClient, Inventory, ItemSlot, Money, Npc, Position, UnionMembership,
