@@ -586,3 +586,22 @@ pub fn decode_item_type(id: usize) -> Option<ItemType> {
         IroseItemType::Vehicle => Some(ItemType::Vehicle),
     }
 }
+
+pub fn encode_item_type(id: ItemType) -> Option<usize> {
+    match id {
+        ItemType::Face => IroseItemType::Face.to_usize(),
+        ItemType::Head => IroseItemType::Head.to_usize(),
+        ItemType::Body => IroseItemType::Body.to_usize(),
+        ItemType::Hands => IroseItemType::Hands.to_usize(),
+        ItemType::Feet => IroseItemType::Feet.to_usize(),
+        ItemType::Back => IroseItemType::Back.to_usize(),
+        ItemType::Jewellery => IroseItemType::Jewellery.to_usize(),
+        ItemType::Weapon => IroseItemType::Weapon.to_usize(),
+        ItemType::SubWeapon => IroseItemType::SubWeapon.to_usize(),
+        ItemType::Consumable => IroseItemType::Consumable.to_usize(),
+        ItemType::Gem => IroseItemType::Gem.to_usize(),
+        ItemType::Material => IroseItemType::Material.to_usize(),
+        ItemType::Quest => IroseItemType::Quest.to_usize(),
+        ItemType::Vehicle => IroseItemType::Vehicle.to_usize(),
+    }
+}

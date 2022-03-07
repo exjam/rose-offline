@@ -9,7 +9,7 @@ use crate::{
         AmmoIndex, ClientEntityId, Equipment, EquipmentIndex, HotbarSlot, InventoryPageType,
         ItemSlot, Money, MoveMode, SkillSlot, StatusEffects, VehiclePartIndex,
     },
-    irose::data::decode_item_type,
+    irose::data::{decode_item_type, encode_item_type},
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
 
@@ -181,11 +181,15 @@ pub trait PacketWriteItems {
 impl PacketWriteItems for PacketWriter {
     fn write_equipment_ammo_part(&mut self, item: Option<&StackableItem>) {
         if let Some(item) = item {
-            let part = PacketEquipmentAmmoPart::new()
-                .with_item_number(item.item.item_number as u16)
-                .with_item_type(item.item.item_type as u8);
-            for b in part.into_bytes().iter() {
-                self.write_u8(*b);
+            if let Some(item_type) = encode_item_type(item.item.item_type) {
+                let part = PacketEquipmentAmmoPart::new()
+                    .with_item_number(item.item.item_number as u16)
+                    .with_item_type(item_type as u8);
+                for b in part.into_bytes().iter() {
+                    self.write_u8(*b);
+                }
+            } else {
+                self.write_u16(0);
             }
         } else {
             self.write_u16(0);
@@ -226,17 +230,22 @@ impl PacketWriteItems for PacketWriter {
     fn write_equipment_item_full(&mut self, equipment: Option<&EquipmentItem>) {
         match equipment {
             Some(equipment) => {
-                let item = PacketEquipmentItemFull::new()
-                    .with_item_type(equipment.item.item_type as u8)
-                    .with_item_number(equipment.item.item_number as u16)
-                    .with_is_crafted(equipment.is_crafted)
-                    .with_gem(equipment.gem)
-                    .with_durability(equipment.durability)
-                    .with_life(equipment.life)
-                    .with_has_socket(equipment.has_socket)
-                    .with_is_appraised(equipment.is_appraised)
-                    .with_grade(equipment.grade);
-                self.write_bytes(&item.into_bytes());
+                if let Some(item_type) = encode_item_type(equipment.item.item_type) {
+                    let item = PacketEquipmentItemFull::new()
+                        .with_item_type(item_type as u8)
+                        .with_item_number(equipment.item.item_number as u16)
+                        .with_is_crafted(equipment.is_crafted)
+                        .with_gem(equipment.gem)
+                        .with_durability(equipment.durability)
+                        .with_life(equipment.life)
+                        .with_has_socket(equipment.has_socket)
+                        .with_is_appraised(equipment.is_appraised)
+                        .with_grade(equipment.grade);
+                    self.write_bytes(&item.into_bytes());
+                } else {
+                    self.write_u16(0);
+                    self.write_u32(0);
+                }
             }
             _ => {
                 self.write_u16(0);
@@ -248,11 +257,16 @@ impl PacketWriteItems for PacketWriter {
     fn write_stackable_item_full(&mut self, stackable: Option<&StackableItem>) {
         match stackable {
             Some(stackable) => {
-                let item = PacketStackableItemFull::new()
-                    .with_item_type(stackable.item.item_type as u8)
-                    .with_item_number(stackable.item.item_number as u16)
-                    .with_quantity(stackable.quantity);
-                self.write_bytes(&item.into_bytes());
+                if let Some(item_type) = encode_item_type(stackable.item.item_type) {
+                    let item = PacketStackableItemFull::new()
+                        .with_item_type(item_type as u8)
+                        .with_item_number(stackable.item.item_number as u16)
+                        .with_quantity(stackable.quantity);
+                    self.write_bytes(&item.into_bytes());
+                } else {
+                    self.write_u16(0);
+                    self.write_u32(0);
+                }
             }
             _ => {
                 self.write_u16(0);

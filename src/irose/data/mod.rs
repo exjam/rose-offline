@@ -31,7 +31,7 @@ use status_effect_database::get_status_effect_database;
 use warp_gate_database::get_warp_gate_database;
 use zone_database::get_zone_database;
 
-pub use data_decoder::{decode_item_type, encode_ability_type};
+pub use data_decoder::{decode_item_type, encode_ability_type, encode_item_type};
 
 impl FromStr for AbilityType {
     type Err = ();
