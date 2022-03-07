@@ -77,6 +77,7 @@ pub enum ZscEffectType {
     Normal,
     DayNight,
     LightContainer,
+    Unknown(u16),
 }
 
 #[derive(Clone, Debug)]
@@ -278,7 +279,7 @@ impl RoseFile for ZscFile {
                     0 => ZscEffectType::Normal,
                     1 => ZscEffectType::DayNight,
                     2 => ZscEffectType::LightContainer,
-                    invalid => bail!("Unknown ZscEffectType {}", invalid),
+                    invalid => ZscEffectType::Unknown(invalid),
                 };
 
                 let mut position = None;
