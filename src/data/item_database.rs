@@ -292,7 +292,6 @@ impl ItemDatabase {
                 .vehicle
                 .get(&(item.item_number as u16))
                 .map(ItemData::Vehicle),
-            _ => None,
         }
     }
 
@@ -354,7 +353,6 @@ impl ItemDatabase {
                 .vehicle
                 .get(&(item.item_number as u16))
                 .map(|x| &x.item_data),
-            _ => None,
         }
     }
 
@@ -485,7 +483,6 @@ impl ItemDatabase {
                     .keys()
                     .map(|id| ItemReference::new(ItemType::Vehicle, *id as usize)),
             ),
-            _ => panic!("Invalid ItemType"),
         }
     }
 }

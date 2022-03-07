@@ -769,7 +769,6 @@ impl AbilityValueCalculator for AbilityValuesData {
                         + 0.5) as i32,
                 )
             }
-            _ => None,
         }
     }
 
@@ -844,7 +843,6 @@ impl AbilityValueCalculator for AbilityValuesData {
                         / 180000.0) as i32,
                 )
             }
-            _ => None,
         }
     }
 

@@ -86,7 +86,6 @@ impl InventoryPageType {
             ItemType::Consumable => InventoryPageType::Consumables,
             ItemType::Gem | ItemType::Material | ItemType::Quest => InventoryPageType::Materials,
             ItemType::Vehicle => InventoryPageType::Vehicles,
-            _ => panic!("Unexpected item_type in InventoryPageType"),
         }
     }
 }

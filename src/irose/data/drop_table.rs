@@ -180,7 +180,6 @@ impl DropTable for DropTableData {
                         / (drop_var + 4)) as u32;
                 Item::new(&item_reference, quantity.min(10)).map(DroppedItem::Item)
             }
-            _ => None,
         }
     }
 }
