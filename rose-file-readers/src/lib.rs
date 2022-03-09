@@ -41,7 +41,7 @@ pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry};
 pub use til::TilFile;
-pub use vfs::{VfsFile, VfsIndex, VfsPath};
+pub use vfs::{VfsFile, VfsIndex, VfsPath, VfsPathBuf};
 pub use zmd::ZmdFile;
 pub use zmo::ZmoFile;
 pub use zms::{ZmsFile, ZmsReadError};
