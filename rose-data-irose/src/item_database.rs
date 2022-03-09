@@ -394,6 +394,24 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
         }
     }
 
+    log::debug!(
+        "Loaded {} items",
+        face.len()
+            + head.len()
+            + body.len()
+            + hands.len()
+            + feet.len()
+            + back.len()
+            + jewellery.len()
+            + weapon.len()
+            + subweapon.len()
+            + consumable.len()
+            + gem.len()
+            + material.len()
+            + quest.len()
+            + vehicle.len()
+            + item_grades.len()
+    );
     Some(ItemDatabase::new(
         face,
         head,

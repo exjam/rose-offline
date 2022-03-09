@@ -18,6 +18,13 @@ use character_creator::get_character_creator;
 use drop_table::get_drop_table;
 
 pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&Path>) -> GameData {
+    log::info!(
+        "Loading irose game data from {}",
+        &data_idx_path
+            .unwrap_or_else(|| data_extracted_path.unwrap())
+            .to_string_lossy()
+    );
+
     let vfs_index =
         VfsIndex::with_paths(data_idx_path, data_extracted_path).expect("Failed to initialise VFS");
 
