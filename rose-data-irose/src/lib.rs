@@ -18,7 +18,7 @@ pub use quest_database::get_quest_database;
 pub use skill_database::get_skill_database;
 pub use status_effect_database::get_status_effect_database;
 pub use warp_gate_database::get_warp_gate_database;
-pub use zone_database::get_zone_database;
+pub use zone_database::{get_zone_database, get_zone_list};
 
 pub use data_decoder::{
     decode_ammo_index, decode_equipment_index, decode_item_base1000, decode_item_type,

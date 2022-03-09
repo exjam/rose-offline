@@ -66,6 +66,7 @@ mod status_effect_database;
 mod warp_gate_database;
 mod world;
 mod zone_database;
+mod zone_list;
 
 pub use ability::AbilityType;
 pub use ai_database::AiDatabase;
@@ -102,3 +103,4 @@ pub use world::{
 pub use zone_database::{
     ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneMonsterSpawnPoint, ZoneNpcSpawn,
 };
+pub use zone_list::{ZoneList, ZoneListEntry};
