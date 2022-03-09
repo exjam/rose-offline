@@ -1,9 +1,8 @@
 use bevy_ecs::prelude::Component;
 
-use crate::{
-    data::Item,
-    game::components::{ItemSlot, Money},
-};
+use rose_data::Item;
+
+use crate::game::components::{ItemSlot, Money};
 
 pub const PERSONAL_STORE_ITEM_SLOTS: usize = 30;
 

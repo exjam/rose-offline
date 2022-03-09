@@ -1,14 +1,15 @@
-use std::time::Duration;
-
 use modular_bitfield::prelude::*;
 use nalgebra::Point2;
 use num_derive::FromPrimitive;
+use std::time::Duration;
+
+use rose_data::{
+    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
+    SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
+};
 
 use crate::{
-    data::{
-        AbilityType, AmmoIndex, Damage, EquipmentIndex, EquipmentItem, Item, ItemReference,
-        MotionId, NpcId, SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
-    },
+    data::Damage,
     game::{
         components::{
             BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,

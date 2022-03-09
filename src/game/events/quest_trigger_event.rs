@@ -1,5 +1,6 @@
-use crate::data::QuestTriggerHash;
 use bevy_ecs::prelude::Entity;
+
+use rose_data::QuestTriggerHash;
 
 pub struct QuestTriggerEvent {
     pub trigger_entity: Entity,

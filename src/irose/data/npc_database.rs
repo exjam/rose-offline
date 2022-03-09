@@ -1,13 +1,12 @@
-use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 use std::{collections::HashMap, num::NonZeroUsize};
 
-use crate::{
-    data::{
-        MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcStoreTabData,
-        NpcStoreTabId,
-    },
-    irose::data::data_decoder::decode_item_base1000,
+use rose_data::{
+    MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcStoreTabData,
+    NpcStoreTabId,
 };
+use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
+
+use crate::irose::data::data_decoder::decode_item_base1000;
 
 struct StbNpc(StbFile);
 

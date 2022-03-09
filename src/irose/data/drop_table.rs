@@ -2,8 +2,10 @@ use rand::Rng;
 use rose_file_readers::{StbFile, VfsIndex};
 use std::sync::Arc;
 
+use rose_data::{EquipmentItem, Item, ItemDatabase, ItemType, NpcDatabase, NpcId, ZoneId};
+
 use crate::{
-    data::{DropTable, EquipmentItem, Item, ItemDatabase, ItemType, NpcDatabase, NpcId, ZoneId},
+    data::DropTable,
     game::components::{DroppedItem, Money},
     irose::data::data_decoder::decode_item_base1000,
 };

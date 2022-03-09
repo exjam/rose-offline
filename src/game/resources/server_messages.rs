@@ -1,9 +1,8 @@
-use crate::{
-    data::ZoneId,
-    game::{
-        components::{ClientEntity, ClientEntityId},
-        messages::server::ServerMessage,
-    },
+use rose_data::ZoneId;
+
+use crate::game::{
+    components::{ClientEntity, ClientEntityId},
+    messages::server::ServerMessage,
 };
 
 pub struct GlobalMessage {

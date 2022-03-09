@@ -1,7 +1,6 @@
-use crate::{
-    data::{NpcId, ZoneId},
-    game::components::DroppedItem,
-};
+use rose_data::{NpcId, ZoneId};
+
+use crate::game::components::DroppedItem;
 
 pub trait DropTable {
     fn get_drop(

@@ -1,3 +1,4 @@
+use nalgebra::{distance, Point2, Point3};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::Iter, HashMap},
@@ -5,9 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use nalgebra::{distance, Point2, Point3};
-
-use crate::data::npc_database::{NpcConversationId, NpcId};
+use crate::{NpcConversationId, NpcId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct ZoneId(pub NonZeroU16);

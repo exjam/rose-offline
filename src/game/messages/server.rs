@@ -2,11 +2,13 @@ use std::time::Duration;
 
 use nalgebra::Point2;
 
+use rose_data::{
+    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
+    QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, ZoneId,
+};
+
 use crate::{
-    data::{
-        AbilityType, AmmoIndex, Damage, EquipmentIndex, EquipmentItem, Item, ItemReference,
-        MotionId, NpcId, QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, ZoneId,
-    },
+    data::Damage,
     game::components::{
         BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command, Destination,
         DroppedItem, Equipment, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,

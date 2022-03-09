@@ -2,7 +2,7 @@ use log::{debug, warn};
 use rose_file_readers::{AipFile, StbFile, StbReadOptions, VfsIndex};
 use std::collections::HashMap;
 
-use crate::data::AiDatabase;
+use rose_data::AiDatabase;
 
 pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
     let ai_s_stb = vfs

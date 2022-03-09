@@ -1,19 +1,16 @@
-use std::num::NonZeroUsize;
-
 use bevy_ecs::prelude::Mut;
 use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
+use std::num::NonZeroUsize;
 
-use crate::{
-    data::AbilityType,
-    game::{
-        components::{
-            AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory,
-            Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership,
-            MAX_STAMINA,
-        },
-        messages::server::{ServerMessage, UpdateAbilityValue},
+use rose_data::AbilityType;
+
+use crate::game::{
+    components::{
+        AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory, Level,
+        Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership, MAX_STAMINA,
     },
+    messages::server::{ServerMessage, UpdateAbilityValue},
 };
 
 fn add_value<T: Saturating + Copy + 'static, U: Signed + AsPrimitive<T>>(

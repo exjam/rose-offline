@@ -1,8 +1,7 @@
+use bevy_ecs::prelude::Entity;
 use std::collections::HashMap;
 
-use bevy_ecs::prelude::Entity;
-
-use crate::data::{NpcId, ZoneId};
+use rose_data::{NpcId, ZoneId};
 
 #[derive(Hash, PartialEq, Eq)]
 struct EventObjectKey {

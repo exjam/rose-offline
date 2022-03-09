@@ -1,6 +1,8 @@
 use bevy_ecs::prelude::Component;
 
-use crate::{data::StatusEffectType, game::components::StatusEffects};
+use rose_data::StatusEffectType;
+
+use crate::game::components::StatusEffects;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum DamageCategory {

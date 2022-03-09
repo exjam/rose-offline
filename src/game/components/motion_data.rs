@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
 
-use crate::data::{
+use rose_data::{
     MotionCharacterAction, MotionDatabase, MotionFileData, MotionId, NpcData, NpcMotionAction,
 };
 

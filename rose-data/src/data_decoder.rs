@@ -1,4 +1,4 @@
-use crate::data::{
+use crate::{
     AbilityType, AmmoIndex, EquipmentIndex, ItemClass, ItemReference, ItemType, VehiclePartIndex,
 };
 
@@ -7,6 +7,7 @@ pub trait DataDecoder {
     fn decode_ability_type(&self, id: usize) -> Option<AbilityType>;
     fn decode_item_type(&self, id: usize) -> Option<ItemType>;
     fn decode_item_class(&self, id: usize) -> Option<ItemClass>;
+
     fn decode_equipment_index(&self, id: usize) -> Option<EquipmentIndex>;
     fn decode_vehicle_part_index(&self, id: usize) -> Option<VehiclePartIndex>;
     fn decode_ammo_index(&self, id: usize) -> Option<AmmoIndex>;

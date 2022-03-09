@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::data::{ItemReference, MotionFileData, MotionId};
+use crate::{ItemReference, MotionFileData, MotionId};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NpcId(NonZeroU16);

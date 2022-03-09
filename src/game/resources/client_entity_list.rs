@@ -1,13 +1,11 @@
-use std::collections::HashMap;
-
 use bevy_ecs::prelude::Entity;
 use bitvec::prelude::*;
 use nalgebra::{Point2, Point3, Vector2};
+use std::collections::HashMap;
 
-use crate::{
-    data::{ZoneData, ZoneDatabase, ZoneId},
-    game::components::{ClientEntity, ClientEntityId, ClientEntitySector, ClientEntityType},
-};
+use rose_data::{ZoneData, ZoneDatabase, ZoneId};
+
+use crate::game::components::{ClientEntity, ClientEntityId, ClientEntitySector, ClientEntityType};
 
 const MAX_CLIENT_ENTITY_ID: usize = 4096;
 

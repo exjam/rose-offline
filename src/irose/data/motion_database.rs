@@ -1,7 +1,7 @@
-use rose_file_readers::{StbFile, VfsIndex, ZmoFile};
 use std::collections::HashMap;
 
-use crate::data::{MotionDatabase, MotionFileData};
+use rose_data::{MotionDatabase, MotionFileData};
+use rose_file_readers::{StbFile, VfsIndex, ZmoFile};
 
 fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
     let zmo = vfs.read_file::<ZmoFile, _>(path).ok()?;

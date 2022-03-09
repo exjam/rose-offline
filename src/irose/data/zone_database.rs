@@ -1,14 +1,14 @@
 use log::debug;
 use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
+use std::collections::HashMap;
+
+use rose_data::{
+    NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId,
+    ZoneMonsterSpawnPoint, ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
+};
 use rose_file_readers::{
     stb_column, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
     IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile,
-};
-use std::collections::HashMap;
-
-use crate::data::{
-    NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId,
-    ZoneMonsterSpawnPoint, ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
 };
 
 const MIN_SECTOR_SIZE: u32 = 5000;
@@ -63,32 +63,6 @@ pub enum LoadZoneError {
     ZonFileNotFound,
     ZonFileInvalid,
     IfoFileInvalid,
-}
-
-impl From<&IfoMonsterSpawnPoint> for ZoneMonsterSpawnPoint {
-    fn from(spawn: &IfoMonsterSpawnPoint) -> Self {
-        let transform_spawn_list = |spawn_list: &Vec<IfoMonsterSpawn>| {
-            spawn_list
-                .iter()
-                .map(|&IfoMonsterSpawn { id, count }| {
-                    (NpcId::new(id as u16).unwrap(), count as usize)
-                })
-                .collect()
-        };
-        Self {
-            position: Point3::new(
-                spawn.object.position.x,
-                spawn.object.position.y,
-                spawn.object.position.z,
-            ),
-            basic_spawns: transform_spawn_list(&spawn.basic_spawns),
-            tactic_spawns: transform_spawn_list(&spawn.tactic_spawns),
-            interval: spawn.interval,
-            limit_count: spawn.limit_count,
-            range: spawn.range,
-            tactic_points: spawn.tactic_points,
-        }
-    }
 }
 
 fn create_monster_spawn(

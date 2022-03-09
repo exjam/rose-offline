@@ -1,7 +1,7 @@
 use std::collections::{hash_map::Iter, HashMap};
 use std::str::FromStr;
 
-use crate::data::ZoneId;
+use crate::ZoneId;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WarpGateId(u16);

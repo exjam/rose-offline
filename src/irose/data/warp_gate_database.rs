@@ -1,8 +1,8 @@
 use log::debug;
-use rose_file_readers::{stb_column, StbFile, VfsIndex};
 use std::collections::HashMap;
 
-use crate::data::{WarpGateData, WarpGateDatabase, WarpGateId, ZoneId};
+use rose_data::{WarpGateData, WarpGateDatabase, WarpGateId, ZoneId};
+use rose_file_readers::{stb_column, StbFile, VfsIndex};
 
 pub struct StbWarp(pub StbFile);
 

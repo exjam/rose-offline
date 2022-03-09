@@ -1,12 +1,11 @@
 use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
-use crate::{
-    data::NpcId,
-    game::{
-        bundles::MonsterBundle,
-        components::{MonsterSpawnPoint, Position, SpawnOrigin, Team},
-        resources::{ClientEntityList, GameData, ServerTime, ZoneList},
-    },
+use rose_data::NpcId;
+
+use crate::game::{
+    bundles::MonsterBundle,
+    components::{MonsterSpawnPoint, Position, SpawnOrigin, Team},
+    resources::{ClientEntityList, GameData, ServerTime, ZoneList},
 };
 
 pub fn monster_spawn_system(

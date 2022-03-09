@@ -4,8 +4,9 @@ use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 use tokio::sync::oneshot;
 
+use rose_data::QuestTriggerHash;
+
 use crate::{
-    data::QuestTriggerHash,
     game::messages::{
         client::{
             Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, JoinZoneRequest,

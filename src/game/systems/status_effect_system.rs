@@ -1,13 +1,14 @@
-use std::time::Duration;
-
 use bevy_ecs::{
     entity::Entity,
     event::EventWriter,
     prelude::{Query, Res, ResMut},
 };
+use std::time::Duration;
+
+use rose_data::StatusEffectType;
 
 use crate::{
-    data::{Damage, StatusEffectType},
+    data::Damage,
     game::{
         components::{
             AbilityValues, ActiveStatusEffectRegen, ClientEntity, HealthPoints, ManaPoints,

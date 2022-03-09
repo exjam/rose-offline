@@ -1,26 +1,19 @@
 use arrayvec::ArrayVec;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
-use crate::data::{
+use crate::irose::data::data_decoder::decode_ability_type;
+use rose_data::{
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
     FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemClass, ItemDatabase, ItemGradeData,
     JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId, SubWeaponItemData,
     VehicleItemData, VehicleItemPart, WeaponItemData,
 };
-use crate::irose::data::data_decoder::{decode_ability_type, decode_item_class};
+
+use crate::irose::data::data_decoder::IroseItemClass;
 
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
-
-impl FromStr for ItemClass {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        decode_item_class(value as usize).ok_or(())
-    }
-}
 
 #[allow(dead_code)]
 impl StbItem {
@@ -28,7 +21,7 @@ impl StbItem {
         self.0.rows()
     }
 
-    stb_column! { 4, get_item_class, ItemClass }
+    stb_column! { 4, get_item_class, IroseItemClass }
     stb_column! { 5, get_base_price, u32 }
     stb_column! { 6, get_price_rate, u32 }
     stb_column! { 7, get_weight, u32 }
@@ -252,7 +245,11 @@ fn load_base_item(
             .get_text_string(1, data.0.get(id, data.0.columns() - 1))
             .unwrap_or("")
             .to_string(),
-        class: data.get_item_class(id).unwrap_or(ItemClass::Unknown),
+        class: data
+            .get_item_class(id)
+            .unwrap_or(IroseItemClass::Unknown)
+            .try_into()
+            .unwrap_or(ItemClass::Unknown),
         base_price: data.get_base_price(id).unwrap_or(0),
         price_rate: data.get_price_rate(id).unwrap_or(0),
         weight: data.get_weight(id).unwrap_or(0),

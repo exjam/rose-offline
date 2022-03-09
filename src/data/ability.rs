@@ -1,9 +1,8 @@
-use crate::{
-    data::{item::Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData},
-    game::components::{
-        AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
-        StatusEffects,
-    },
+use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData};
+
+use crate::game::components::{
+    AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
+    StatusEffects,
 };
 
 #[derive(Copy, Clone, Debug)]

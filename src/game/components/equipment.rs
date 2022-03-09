@@ -2,7 +2,7 @@ use bevy_ecs::prelude::Component;
 use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{
+use rose_data::{
     AmmoIndex, EquipmentIndex, EquipmentItem, ItemDatabase, ItemReference, ItemType, StackableItem,
     VehiclePartIndex, WeaponItemData,
 };

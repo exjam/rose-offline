@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::data::WorldTicks;
+use rose_data::WorldTicks;
 
 pub struct WorldTime {
     pub ticks: WorldTicks,

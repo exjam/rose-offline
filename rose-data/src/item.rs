@@ -2,7 +2,7 @@ use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-use crate::data::{ItemClass, ItemReference, ItemType};
+use crate::{ItemClass, ItemReference, ItemType};
 
 const MAX_STACKABLE_ITEM_QUANTITY: u32 = 999;
 

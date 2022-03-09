@@ -1,10 +1,9 @@
-use std::time::{Duration, Instant};
-
 use bevy_ecs::prelude::Component;
 use enum_map::EnumMap;
 use log::warn;
+use std::time::{Duration, Instant};
 
-use crate::data::{StatusEffectData, StatusEffectId, StatusEffectType};
+use rose_data::{StatusEffectData, StatusEffectId, StatusEffectType};
 
 #[derive(Clone)]
 pub struct ActiveStatusEffect {

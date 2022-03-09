@@ -1,7 +1,8 @@
-use rose_file_readers::VfsIndex;
-use std::{path::Path, str::FromStr, sync::Arc};
+use std::{path::Path, sync::Arc};
 
-use crate::{data::AbilityType, game::GameData};
+use rose_file_readers::VfsIndex;
+
+use crate::game::GameData;
 
 mod ability_values;
 mod ai_database;
@@ -36,15 +37,6 @@ pub use data_decoder::{
     encode_ability_type, encode_ammo_index, encode_equipment_index, encode_item_type,
     encode_vehicle_part_index,
 };
-
-impl FromStr for AbilityType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        data_decoder::decode_ability_type(value as usize).ok_or(())
-    }
-}
 
 pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&Path>) -> GameData {
     let vfs_index =

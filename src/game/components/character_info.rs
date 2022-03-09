@@ -2,7 +2,7 @@ use bevy_ecs::prelude::Component;
 use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 
-use crate::data::ZoneId;
+use rose_data::ZoneId;
 
 pub type CharacterUniqueId = u32;
 

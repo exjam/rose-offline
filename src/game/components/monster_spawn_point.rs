@@ -1,7 +1,7 @@
+use bevy_ecs::prelude::Component;
 use std::time::Duration;
 
-use crate::data::{NpcId, ZoneMonsterSpawnPoint};
-use bevy_ecs::prelude::Component;
+use rose_data::{NpcId, ZoneMonsterSpawnPoint};
 
 #[derive(Component)]
 pub struct MonsterSpawnPoint {

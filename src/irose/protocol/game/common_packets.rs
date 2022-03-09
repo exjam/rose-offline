@@ -1,11 +1,13 @@
 use modular_bitfield::prelude::*;
 use std::convert::TryInto;
 
+use rose_data::{
+    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, SkillPageType, StackableItem,
+    StatusEffectType, VehiclePartIndex,
+};
+
 use crate::{
-    data::{
-        AmmoIndex, Damage, EquipmentIndex, EquipmentItem, Item, ItemReference, SkillPageType,
-        StackableItem, StatusEffectType, VehiclePartIndex,
-    },
+    data::Damage,
     game::components::{
         ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
         SkillSlot, StatusEffects,

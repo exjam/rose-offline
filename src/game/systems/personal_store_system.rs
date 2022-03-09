@@ -1,15 +1,13 @@
 use bevy_ecs::prelude::{EventReader, Query};
 
-use crate::{
-    data::ItemSlotBehaviour,
-    game::{
-        components::{ClientEntity, ClientEntityId, GameClient, Inventory, Money, PersonalStore},
-        events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},
-        messages::server::{
-            PersonalStoreItemList, PersonalStoreTransactionCancelled,
-            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-            PersonalStoreTransactionSuccess, ServerMessage,
-        },
+use rose_data::ItemSlotBehaviour;
+
+use crate::game::{
+    components::{ClientEntity, ClientEntityId, GameClient, Inventory, Money, PersonalStore},
+    events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},
+    messages::server::{
+        PersonalStoreItemList, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
+        PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess, ServerMessage,
     },
 };
 

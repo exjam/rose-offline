@@ -1,10 +1,11 @@
-use std::time::Duration;
-
 use bevy_ecs::prelude::{Component, Entity};
 use nalgebra::{Point2, Point3};
+use std::time::Duration;
+
+use rose_data::{Item, MotionId, SkillId};
 
 use crate::{
-    data::{Damage, Item, MotionId, SkillId},
+    data::Damage,
     game::components::{ItemSlot, MoveMode},
 };
 

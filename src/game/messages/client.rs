@@ -1,20 +1,19 @@
 use nalgebra::Point2;
 use tokio::sync::oneshot;
 
-use crate::{
-    data::{
-        AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
-        WorldTicks,
+use rose_data::{
+    AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
+    WorldTicks,
+};
+
+use crate::game::{
+    components::{
+        BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, CharacterUniqueId,
+        ClientEntityId, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
+        ItemSlot, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, SkillSlot,
+        Stamina, StatPoints, Team, UnionMembership,
     },
-    game::{
-        components::{
-            BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, CharacterUniqueId,
-            ClientEntityId, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-            Inventory, ItemSlot, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints,
-            SkillSlot, Stamina, StatPoints, Team, UnionMembership,
-        },
-        storage::character::CharacterStorage,
-    },
+    storage::character::CharacterStorage,
 };
 
 #[derive(Debug)]

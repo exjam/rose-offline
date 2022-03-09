@@ -1,13 +1,11 @@
 use bevy_ecs::prelude::Mut;
 
-use crate::{
-    data::{SkillData, SkillDatabase, SkillId},
-    game::{
-        components::{GameClient, SkillList, SkillPoints, SkillSlot},
-        messages::server::{
-            LearnSkillError, LearnSkillSuccess, LevelUpSkillError, LevelUpSkillResult,
-            ServerMessage,
-        },
+use rose_data::{SkillData, SkillDatabase, SkillId};
+
+use crate::game::{
+    components::{GameClient, SkillList, SkillPoints, SkillSlot},
+    messages::server::{
+        LearnSkillError, LearnSkillSuccess, LevelUpSkillError, LevelUpSkillResult, ServerMessage,
     },
 };
 

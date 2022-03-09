@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
 
-use crate::data::NpcId;
+use rose_data::NpcId;
 
 #[derive(Component, Clone)]
 pub struct Npc {

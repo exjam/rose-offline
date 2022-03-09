@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
 
-use crate::data::ZoneId;
+use rose_data::ZoneId;
 
 #[derive(Clone, Debug)]
 pub enum ClientEntityType {

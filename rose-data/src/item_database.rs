@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 
-use crate::data::{AbilityType, SkillId, StatusEffectId};
+use crate::{AbilityType, SkillId, StatusEffectId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ItemReference {
@@ -362,6 +362,7 @@ pub struct ItemDatabase {
 
 #[allow(dead_code)]
 impl ItemDatabase {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         face: HashMap<u16, FaceItemData>,
         head: HashMap<u16, HeadItemData>,

@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use rose_data::{
+    AiDatabase, DataDecoder, ItemDatabase, MotionDatabase, NpcDatabase, QuestDatabase,
+    SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
+};
+
 use crate::{
-    data::{
-        AbilityValueCalculator, AiDatabase, DataDecoder, DropTable, ItemDatabase, MotionDatabase,
-        NpcDatabase, QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase,
-        ZoneDatabase,
-    },
+    data::{AbilityValueCalculator, DropTable},
     game::storage::character::CharacterCreator,
 };
 

@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{SkillData, SkillId, SkillPageType};
+use rose_data::{SkillData, SkillId, SkillPageType};
 
 const SKILL_PAGE_SIZE: usize = 30;
 

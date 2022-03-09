@@ -1,8 +1,8 @@
 use log::{debug, warn};
-use rose_file_readers::{stb_column, QsdFile, StbFile, StbReadOptions, VfsIndex};
 use std::collections::HashMap;
 
-use crate::data::{QuestData, QuestDatabase, WorldTicks};
+use rose_data::{QuestData, QuestDatabase, WorldTicks};
+use rose_file_readers::{stb_column, QsdFile, StbFile, StbReadOptions, VfsIndex};
 
 struct StbQuest(StbFile);
 

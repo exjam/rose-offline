@@ -1,41 +1,21 @@
 use arrayvec::ArrayVec;
 use log::debug;
-use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
-use std::{collections::HashMap, str::FromStr};
+use std::collections::HashMap;
 
-use crate::{
-    data::{
-        StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
-        StatusEffectType,
-    },
-    irose::data::data_decoder::{decode_status_effect_cleared_by_type, decode_status_effect_type},
+use rose_data::{
+    StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
 };
+use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
-impl FromStr for StatusEffectClearedByType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<usize>().map_err(|_| ())?;
-        decode_status_effect_cleared_by_type(value).ok_or(())
-    }
-}
-
-impl FromStr for StatusEffectType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<usize>().map_err(|_| ())?;
-        decode_status_effect_type(value).ok_or(())
-    }
-}
+use crate::irose::data::data_decoder::{IroseStatusEffectClearedByType, IroseStatusEffectType};
 
 struct StbStatus(StbFile);
 
 #[allow(dead_code)]
 impl StbStatus {
-    stb_column! { 1, get_status_effect_type, StatusEffectType }
+    stb_column! { 1, get_status_effect_type, IroseStatusEffectType }
     stb_column! { 2, get_can_be_reapplied, bool }
-    stb_column! { 3, get_cleared_by_type, StatusEffectClearedByType }
+    stb_column! { 3, get_cleared_by_type, IroseStatusEffectClearedByType }
     stb_column! { 4, get_apply_arg, i32 }
     stb_column! { (5..=8).step_by(2), get_apply_status_effect_id, [Option<StatusEffectId>; 2] }
     stb_column! { (5..=8).skip(1).step_by(2), get_apply_status_effect_value, [Option<i32>; 2] }
@@ -63,7 +43,9 @@ impl StbStatus {
 
 fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<StatusEffectData> {
     let id = StatusEffectId::new(row as u16)?;
-    let status_effect_type = data.get_status_effect_type(row)?;
+    let status_effect_type = data
+        .get_status_effect_type(row)
+        .and_then(|x| x.try_into().ok())?;
 
     Some(StatusEffectData {
         id,
@@ -76,6 +58,7 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
         can_be_reapplied: data.get_can_be_reapplied(row).unwrap_or(false),
         cleared_by_type: data
             .get_cleared_by_type(row)
+            .and_then(|x| x.try_into().ok())
             .unwrap_or(StatusEffectClearedByType::ClearGood),
         apply_status_effects: data.get_apply_status_effects(row),
         apply_per_second_value: data.get_apply_status_effect_value(row)[0].unwrap_or(0),

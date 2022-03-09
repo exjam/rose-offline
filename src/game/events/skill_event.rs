@@ -1,12 +1,10 @@
-use std::time::Instant;
-
 use bevy_ecs::prelude::Entity;
 use nalgebra::Point2;
+use std::time::Instant;
 
-use crate::{
-    data::{Item, SkillId},
-    game::components::ItemSlot,
-};
+use rose_data::{Item, SkillId};
+
+use crate::game::components::ItemSlot;
 
 #[derive(Clone)]
 pub enum SkillEventTarget {

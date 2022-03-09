@@ -1,7 +1,8 @@
 use num_derive::FromPrimitive;
 
+use rose_data::{EquipmentIndex, EquipmentItem};
+
 use crate::{
-    data::{EquipmentIndex, EquipmentItem},
     game::messages::client::CharacterListItem,
     protocol::{Packet, PacketWriter},
 };

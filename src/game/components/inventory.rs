@@ -6,7 +6,7 @@ use std::{
 use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
-use crate::data::{
+use rose_data::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemSlotBehaviour, ItemType,
     StackableItem, VehiclePartIndex,
 };

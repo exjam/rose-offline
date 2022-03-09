@@ -1,75 +1,24 @@
 use arrayvec::ArrayVec;
 use log::debug;
-use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{
     collections::HashMap,
     num::{NonZeroU32, NonZeroUsize},
-    str::FromStr,
     time::Duration,
 };
 
-use crate::{
-    data::{
-        AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
-        SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
-        SkillType, StatusEffectId, ZoneId,
-    },
-    irose::data::data_decoder::{
-        decode_skill_action_mode, decode_skill_target_filter, decode_skill_type,
-    },
+use rose_data::{
+    AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
+    SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
+    StatusEffectId, ZoneId,
+};
+use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
+
+use super::data_decoder::{
+    decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillPageType,
+    IroseSkillTargetFilter, IroseSkillType,
 };
 
 pub struct StbSkill(pub StbFile);
-
-impl FromStr for SkillActionMode {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<usize>().map_err(|_| ())?;
-        decode_skill_action_mode(value).ok_or(())
-    }
-}
-
-impl FromStr for SkillCooldownGroup {
-    type Err = <NonZeroUsize as std::str::FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(SkillCooldownGroup(s.parse::<NonZeroUsize>()?))
-    }
-}
-
-impl FromStr for SkillType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<usize>().map_err(|_| ())?;
-        decode_skill_type(value).ok_or(())
-    }
-}
-
-impl FromStr for SkillTargetFilter {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<usize>().map_err(|_| ())?;
-        decode_skill_target_filter(value).ok_or(())
-    }
-}
-
-impl FromStr for SkillPageType {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        match value {
-            0 => Ok(SkillPageType::Basic),
-            1 => Ok(SkillPageType::Active),
-            2 => Ok(SkillPageType::Passive),
-            3 => Ok(SkillPageType::Clan),
-            _ => Err(()),
-        }
-    }
-}
 
 #[allow(dead_code)]
 impl StbSkill {
@@ -80,11 +29,11 @@ impl StbSkill {
     stb_column! { 1, get_base_skill_id, SkillId }
     stb_column! { 2, get_skill_level, u32 }
     stb_column! { 3, get_learn_skill_points, u32 }
-    stb_column! { 4, get_page, SkillPageType }
-    stb_column! { 5, get_skill_type, SkillType }
+    stb_column! { 4, get_page, IroseSkillPageType }
+    stb_column! { 5, get_skill_type, IroseSkillType }
     stb_column! { 6, get_cast_range, u32 }
     stb_column! { 6, get_require_planet_index, NonZeroUsize }
-    stb_column! { 7, get_target_filter, SkillTargetFilter }
+    stb_column! { 7, get_target_filter, IroseSkillTargetFilter }
     stb_column! { 8, get_scope, u32 }
     stb_column! { 9, get_power, u32 }
     stb_column! { 9, get_item_make_number, u32 }
@@ -95,11 +44,12 @@ impl StbSkill {
     stb_column! { 14, get_status_effect_duration_ms, i32 }
     stb_column! { 15, get_damage_type, i32 }
 
-    stb_column! { (16..=19).step_by(2), get_use_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (16..=19).step_by(2), get_use_ability_type, [Option<IroseAbilityType>; 2] }
     stb_column! { (17..=19).step_by(2), get_use_ability_value, [Option<i32>; 2] }
 
     pub fn get_use_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
         self.get_use_ability_type(id)
+            .map(|x| x.and_then(|x| x.try_into().ok()))
             .iter()
             .zip(self.get_use_ability_value(id).iter())
             .filter(|(a, b)| a.is_some() && b.is_some())
@@ -112,7 +62,7 @@ impl StbSkill {
     stb_column! { 22, get_warp_zone_xpos, i32 }
     stb_column! { 23, get_warp_zone_ypos, i32 }
 
-    stb_column! { (21..=26).step_by(3), get_add_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (21..=26).step_by(3), get_add_ability_type, [Option<IroseAbilityType>; 2] }
     stb_column! { (22..=26).step_by(3), get_add_ability_value, [i32; 2] }
     stb_column! { (23..=26).step_by(3), get_add_ability_rate, [i32; 2] }
 
@@ -123,21 +73,38 @@ impl StbSkill {
         let ability_rates = self.get_add_ability_rate(id);
 
         for (index, skill_add_ability) in result.iter_mut().enumerate() {
-            *skill_add_ability = ability_types[index].map(|ability_type| SkillAddAbility {
-                ability_type,
-                rate: ability_rates[index],
-                value: ability_values[index],
+            *skill_add_ability = ability_types[index].and_then(|x| {
+                x.try_into().ok().map(|ability_type| SkillAddAbility {
+                    ability_type,
+                    rate: ability_rates[index],
+                    value: ability_values[index],
+                })
             });
         }
 
         result
     }
 
-    stb_column! { 27, get_cooldown_group, SkillCooldownGroup }
+    stb_column! { 27, get_cooldown_group, NonZeroUsize }
     stb_column! { 28, get_summon_pet_npc_id, NpcId }
-    stb_column! { 29, get_action_mode, SkillActionMode }
+    stb_column! { 29, get_action_mode, IroseSkillActionMode }
 
-    stb_column! { 30..=34, get_required_weapon_class, ArrayVec<ItemClass, 5> }
+    pub fn get_required_weapon_class(&self, row: usize) -> ArrayVec<ItemClass, 5> {
+        let mut result = ArrayVec::<_, 5>::new();
+
+        for column in 30..=34 {
+            if let Some(value) = self
+                .0
+                .try_get_int(row, column)
+                .and_then(|x| decode_item_class(x as usize))
+            {
+                result.push(value);
+            }
+        }
+
+        result
+    }
+
     stb_column! { 35, get_required_job_set_index, NonZeroUsize }
     stb_column! { 36..=38, get_required_union, ArrayVec<NonZeroUsize, 3> }
 
@@ -153,11 +120,12 @@ impl StbSkill {
             .collect()
     }
 
-    stb_column! { (45..=48).step_by(2), get_required_ability_type, [Option<AbilityType>; 2] }
+    stb_column! { (45..=48).step_by(2), get_required_ability_type, [Option<IroseAbilityType>; 2] }
     stb_column! { (46..=48).step_by(2), get_required_ability_value, [Option<i32>; 2] }
 
     pub fn get_required_abilities(&self, id: usize) -> ArrayVec<(AbilityType, i32), 2> {
         self.get_required_ability_type(id)
+            .map(|x| x.and_then(|x| <AbilityType>::try_from(x).ok()))
             .iter()
             .zip(self.get_required_ability_value(id).iter())
             .filter(|(a, b)| a.is_some() && b.is_some())
@@ -200,7 +168,7 @@ impl StbSkill {
         let duration =
             Duration::from_millis(self.get_cooldown_time_5ms(id).unwrap_or(0) as u64 * 200);
         match self.get_cooldown_group(id) {
-            Some(group) => SkillCooldown::Group(group, duration),
+            Some(group) => SkillCooldown::Group(SkillCooldownGroup(group), duration),
             None => SkillCooldown::Skill(duration),
         }
     }
@@ -209,7 +177,7 @@ impl StbSkill {
 fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
     let skill_id = SkillId::new(id as u16)?;
     let icon_number = data.get_icon_number(id).filter(|icon| *icon != 0)?;
-    let skill_type = data.get_skill_type(id)?;
+    let skill_type = data.get_skill_type(id).and_then(|x| x.try_into().ok())?;
 
     Some(SkillData {
         id: skill_id,
@@ -218,7 +186,10 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
             .unwrap_or("")
             .to_string(),
         base_skill_id: data.get_base_skill_id(id),
-        action_mode: data.get_action_mode(id).unwrap_or(SkillActionMode::Stop),
+        action_mode: data
+            .get_action_mode(id)
+            .and_then(|x| x.try_into().ok())
+            .unwrap_or(SkillActionMode::Stop),
         action_motion_id: data.get_action_motion_id(id),
         action_motion_speed: data
             .get_action_motion_speed(id)
@@ -245,7 +216,10 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         item_make_number: data.get_item_make_number(id).unwrap_or(0),
         level: data.get_skill_level(id).unwrap_or(1),
         learn_money_cost: data.get_learn_money_cost(id).unwrap_or(0),
-        page: data.get_page(id).unwrap_or(SkillPageType::Basic),
+        page: data
+            .get_page(id)
+            .and_then(|x| x.try_into().ok())
+            .unwrap_or(SkillPageType::Basic),
         learn_point_cost: data.get_learn_skill_points(id).unwrap_or(0),
         power: data.get_power(id).unwrap_or(0),
         required_ability: data.get_required_abilities(id),
@@ -264,6 +238,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         summon_npc_id: data.get_summon_pet_npc_id(id),
         target_filter: data
             .get_target_filter(id)
+            .and_then(|x| x.try_into().ok())
             .unwrap_or(SkillTargetFilter::OnlySelf),
         use_ability: data.get_use_abilities(id),
         warp_zone_id: data.get_warp_zone_id(id),

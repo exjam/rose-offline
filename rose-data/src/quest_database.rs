@@ -1,5 +1,6 @@
-use crate::data::WorldTicks;
 use std::{collections::HashMap, num::Wrapping};
+
+use crate::WorldTicks;
 
 pub use rose_file_readers::QsdTrigger as QuestTrigger;
 

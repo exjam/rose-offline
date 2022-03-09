@@ -1,22 +1,20 @@
-use std::collections::HashSet;
-
 use bevy_ecs::prelude::{Entity, EventReader, Mut, Query, Res};
 use log::warn;
+use std::collections::HashSet;
 
-use crate::{
-    data::Item,
-    game::{
-        components::{
-            AbilityValues, GameClient, Inventory, ItemSlot, Money, Npc, Position, UnionMembership,
-        },
-        events::NpcStoreEvent,
-        messages::{
-            client::NpcStoreBuyItem,
-            server::{NpcStoreTransactionError, ServerMessage},
-        },
-        resources::WorldRates,
-        GameData,
+use rose_data::Item;
+
+use crate::game::{
+    components::{
+        AbilityValues, GameClient, Inventory, ItemSlot, Money, Npc, Position, UnionMembership,
     },
+    events::NpcStoreEvent,
+    messages::{
+        client::NpcStoreBuyItem,
+        server::{NpcStoreTransactionError, ServerMessage},
+    },
+    resources::WorldRates,
+    GameData,
 };
 
 pub const NPC_STORE_TRANSACTION_MAX_DISTANCE: f32 = 6000.0;

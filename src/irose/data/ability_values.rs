@@ -3,12 +3,14 @@ use log::error;
 use rand::Rng;
 use std::sync::Arc;
 
+use rose_data::{
+    AbilityType, AmmoIndex, EquipmentIndex, Item, ItemClass, ItemDatabase, ItemReference, ItemType,
+    ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
+    VehiclePartIndex,
+};
+
 use crate::{
-    data::{
-        AbilityType, AbilityValueCalculator, AmmoIndex, Damage, EquipmentIndex, Item, ItemClass,
-        ItemDatabase, ItemReference, ItemType, ItemWeaponType, NpcDatabase, NpcId,
-        PassiveRecoveryState, SkillAddAbility, SkillData, SkillDatabase, SkillId, VehiclePartIndex,
-    },
+    data::{AbilityValueCalculator, Damage, PassiveRecoveryState},
     game::components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
         Equipment, EquipmentItemDatabase, Level, SkillList, StatusEffects,

@@ -1,9 +1,12 @@
 use nalgebra::Point3;
-use rose_file_readers::{stb_column, StbFile, VfsIndex};
 use std::sync::Arc;
 
+use rose_data::{
+    EquipmentItem, Item, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
+};
+use rose_file_readers::{stb_column, StbFile, VfsIndex};
+
 use crate::{
-    data::{EquipmentItem, Item, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId},
     game::{
         components::{
             BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar,

@@ -1,13 +1,38 @@
+use std::str::FromStr;
+
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
-use crate::data::{
+use rose_data::{
     AbilityType, AmmoIndex, DataDecoder, EquipmentIndex, ItemClass, ItemReference, ItemType,
-    SkillActionMode, SkillTargetFilter, SkillType, StatusEffectClearedByType, StatusEffectType,
-    VehiclePartIndex,
+    SkillActionMode, SkillPageType, SkillTargetFilter, SkillType, StatusEffectClearedByType,
+    StatusEffectType, VehiclePartIndex,
 };
 
-#[derive(FromPrimitive, ToPrimitive)]
+macro_rules! impl_conversions {
+    (
+        $irose_class:ident, $common_class:ident, $decode_fn:ident
+    ) => {
+        impl FromStr for $irose_class {
+            type Err = ();
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let value = s.parse::<usize>().map_err(|_| ())?;
+                FromPrimitive::from_usize(value).ok_or(())
+            }
+        }
+
+        impl TryFrom<$irose_class> for $common_class {
+            type Error = ();
+
+            fn try_from(value: $irose_class) -> Result<Self, Self::Error> {
+                $decode_fn(value as usize).ok_or(())
+            }
+        }
+    };
+}
+
+#[derive(Copy, Clone, FromPrimitive, ToPrimitive)]
 pub enum IroseAbilityType {
     Gender = 2,
     Birthstone = 3,
@@ -115,6 +140,7 @@ pub enum IroseAbilityType {
     PassiveShieldDefence = 102,
     PassiveImmunity = 103,
 }
+impl_conversions!(IroseAbilityType, AbilityType, decode_ability_type);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseItemClass {
@@ -218,6 +244,7 @@ pub enum IroseItemClass {
     CartAccessory = 551,
     CastleGearWeapon = 552,
 }
+impl_conversions!(IroseItemClass, ItemClass, decode_item_class);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseItemType {
@@ -236,6 +263,7 @@ pub enum IroseItemType {
     Quest = 13,
     Vehicle = 14,
 }
+impl_conversions!(IroseItemType, ItemType, decode_item_type);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseEquipmentIndex {
@@ -251,6 +279,7 @@ pub enum IroseEquipmentIndex {
     Ring = 10,
     Earring = 11,
 }
+impl_conversions!(IroseEquipmentIndex, EquipmentIndex, decode_equipment_index);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseVehiclePartIndex {
@@ -260,6 +289,11 @@ pub enum IroseVehiclePartIndex {
     Ability = 3,
     Arms = 4,
 }
+impl_conversions!(
+    IroseVehiclePartIndex,
+    VehiclePartIndex,
+    decode_vehicle_part_index
+);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseAmmoIndex {
@@ -267,6 +301,7 @@ pub enum IroseAmmoIndex {
     Bullet = 1,
     Throw = 2,
 }
+impl_conversions!(IroseAmmoIndex, AmmoIndex, decode_ammo_index);
 
 #[derive(FromPrimitive)]
 pub enum IroseStatusEffectType {
@@ -306,6 +341,11 @@ pub enum IroseStatusEffectType {
     Taunt = 34,
     Revive = 35,
 }
+impl_conversions!(
+    IroseStatusEffectType,
+    StatusEffectType,
+    decode_status_effect_type
+);
 
 #[derive(FromPrimitive)]
 pub enum IroseStatusEffectClearedByType {
@@ -313,6 +353,11 @@ pub enum IroseStatusEffectClearedByType {
     ClearBad = 1,
     ClearNone = 2,
 }
+impl_conversions!(
+    IroseStatusEffectClearedByType,
+    StatusEffectClearedByType,
+    decode_status_effect_cleared_by_type
+);
 
 #[derive(FromPrimitive)]
 pub enum IroseSkillActionMode {
@@ -320,6 +365,11 @@ pub enum IroseSkillActionMode {
     Attack = 1,
     Restore = 2,
 }
+impl_conversions!(
+    IroseSkillActionMode,
+    SkillActionMode,
+    decode_skill_action_mode
+);
 
 #[derive(FromPrimitive)]
 pub enum IroseSkillTargetFilter {
@@ -335,6 +385,20 @@ pub enum IroseSkillTargetFilter {
     DeadAlliedCharacter = 9,
     EnemyMonster = 10,
 }
+impl_conversions!(
+    IroseSkillTargetFilter,
+    SkillTargetFilter,
+    decode_skill_target_filter
+);
+
+#[derive(FromPrimitive)]
+pub enum IroseSkillPageType {
+    Basic = 0,
+    Active = 1,
+    Passive = 2,
+    Clan = 3,
+}
+impl_conversions!(IroseSkillPageType, SkillPageType, decode_skill_page_type);
 
 #[derive(FromPrimitive)]
 pub enum IroseSkillType {
@@ -359,6 +423,7 @@ pub enum IroseSkillType {
     SelfAndTarget = 19,
     Resurrection = 20,
 }
+impl_conversions!(IroseSkillType, SkillType, decode_skill_type);
 
 struct IroseDataDecoder {}
 
@@ -885,6 +950,14 @@ pub fn decode_skill_target_filter(id: usize) -> Option<SkillTargetFilter> {
     }
 }
 
+pub fn decode_skill_page_type(id: usize) -> Option<SkillPageType> {
+    match FromPrimitive::from_usize(id)? {
+        IroseSkillPageType::Basic => Some(SkillPageType::Basic),
+        IroseSkillPageType::Active => Some(SkillPageType::Active),
+        IroseSkillPageType::Passive => Some(SkillPageType::Passive),
+        IroseSkillPageType::Clan => Some(SkillPageType::Clan),
+    }
+}
 pub fn decode_skill_type(id: usize) -> Option<SkillType> {
     match FromPrimitive::from_usize(id)? {
         IroseSkillType::BasicAction => Some(SkillType::BasicAction),

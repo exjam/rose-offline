@@ -1,5 +1,8 @@
-use crate::data::{Damage, SkillId};
 use bevy_ecs::prelude::Entity;
+
+use rose_data::SkillId;
+
+use crate::data::Damage;
 
 pub struct DamageEventAttack {
     pub attacker: Entity,
