@@ -1,8 +1,8 @@
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::EquipmentItem,
-    game::{components::EquipmentIndex, messages::client::CharacterListItem},
+    data::{EquipmentIndex, EquipmentItem},
+    game::messages::client::CharacterListItem,
     protocol::{Packet, PacketWriter},
 };
 

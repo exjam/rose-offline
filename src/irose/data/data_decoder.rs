@@ -1,9 +1,13 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
-use crate::data::{AbilityType, DataDecoder, ItemClass, ItemReference, ItemType};
+use crate::data::{
+    AbilityType, AmmoIndex, DataDecoder, EquipmentIndex, ItemClass, ItemReference, ItemType,
+    SkillActionMode, SkillTargetFilter, SkillType, StatusEffectClearedByType, StatusEffectType,
+    VehiclePartIndex,
+};
 
-#[derive(Copy, Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseAbilityType {
     Gender = 2,
     Birthstone = 3,
@@ -112,7 +116,7 @@ pub enum IroseAbilityType {
     PassiveImmunity = 103,
 }
 
-#[derive(Copy, Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseItemClass {
     Unknown = 0,
 
@@ -215,7 +219,7 @@ pub enum IroseItemClass {
     CastleGearWeapon = 552,
 }
 
-#[derive(Copy, Clone, Debug, FromPrimitive, ToPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseItemType {
     Face = 1,
     Head = 2,
@@ -233,6 +237,129 @@ pub enum IroseItemType {
     Vehicle = 14,
 }
 
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum IroseEquipmentIndex {
+    Face = 1,
+    Head = 2,
+    Body = 3,
+    Back = 4,
+    Hands = 5,
+    Feet = 6,
+    WeaponRight = 7,
+    WeaponLeft = 8,
+    Necklace = 9,
+    Ring = 10,
+    Earring = 11,
+}
+
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum IroseVehiclePartIndex {
+    Body = 0,
+    Engine = 1,
+    Leg = 2,
+    Ability = 3,
+    Arms = 4,
+}
+
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum IroseAmmoIndex {
+    Arrow = 0,
+    Bullet = 1,
+    Throw = 2,
+}
+
+#[derive(FromPrimitive)]
+pub enum IroseStatusEffectType {
+    IncreaseHp = 1,
+    IncreaseMp = 2,
+    Poisoned = 3,
+    IncreaseMaxHp = 4,
+    IncreaseMaxMp = 5,
+    IncreaseMoveSpeed = 6,
+    DecreaseMoveSpeed = 7,
+    IncreaseAttackSpeed = 8,
+    DecreaseAttackSpeed = 9,
+    IncreaseAttackPower = 10,
+    DecreaseAttackPower = 11,
+    IncreaseDefence = 12,
+    DecreaseDefence = 13,
+    IncreaseResistance = 14,
+    DecreaseResistance = 15,
+    IncreaseHit = 16,
+    DecreaseHit = 17,
+    IncreaseCritical = 18,
+    DecreaseCritical = 19,
+    IncreaseAvoid = 20,
+    DecreaseAvoid = 21,
+    Dumb = 22,
+    Sleep = 23,
+    Fainting = 24,
+    Disguise = 25,
+    Transparent = 26,
+    ShieldDamage = 27,
+    AdditionalDamageRate = 28,
+    DecreaseLifeTime = 29,
+    ClearGood = 30,
+    ClearBad = 31,
+    ClearAll = 32,
+    ClearInvisible = 33,
+    Taunt = 34,
+    Revive = 35,
+}
+
+#[derive(FromPrimitive)]
+pub enum IroseStatusEffectClearedByType {
+    ClearGood = 0,
+    ClearBad = 1,
+    ClearNone = 2,
+}
+
+#[derive(FromPrimitive)]
+pub enum IroseSkillActionMode {
+    Stop = 0,
+    Attack = 1,
+    Restore = 2,
+}
+
+#[derive(FromPrimitive)]
+pub enum IroseSkillTargetFilter {
+    OnlySelf = 0,
+    Group = 1,
+    Guild = 2,
+    Allied = 3,
+    Monster = 4,
+    Enemy = 5,
+    EnemyCharacter = 6,
+    Character = 7,
+    CharacterOrMonster = 8,
+    DeadAlliedCharacter = 9,
+    EnemyMonster = 10,
+}
+
+#[derive(FromPrimitive)]
+pub enum IroseSkillType {
+    BasicAction = 1,
+    CreateWindow = 2,
+    Immediate = 3,
+    EnforceWeapon = 4,
+    EnforceBullet = 5,
+    FireBullet = 6,
+    AreaTarget = 7,
+    SelfBoundDuration = 8,
+    TargetBoundDuration = 9,
+    SelfBound = 10,
+    TargetBound = 11,
+    SelfStateDuration = 12,
+    TargetStateDuration = 13,
+    SummonPet = 14,
+    Passive = 15,
+    Emote = 16,
+    SelfDamage = 17,
+    Warp = 18,
+    SelfAndTarget = 19,
+    Resurrection = 20,
+}
+
 struct IroseDataDecoder {}
 
 impl DataDecoder for IroseDataDecoder {
@@ -248,8 +375,20 @@ impl DataDecoder for IroseDataDecoder {
         decode_item_class(id)
     }
 
-    fn decode_item_base1000(&self, value: usize) -> Option<ItemReference> {
-        decode_item_base1000(value)
+    fn decode_item_base1000(&self, id: usize) -> Option<ItemReference> {
+        decode_item_base1000(id)
+    }
+
+    fn decode_equipment_index(&self, id: usize) -> Option<EquipmentIndex> {
+        decode_equipment_index(id)
+    }
+
+    fn decode_vehicle_part_index(&self, id: usize) -> Option<VehiclePartIndex> {
+        decode_vehicle_part_index(id)
+    }
+
+    fn decode_ammo_index(&self, id: usize) -> Option<AmmoIndex> {
+        decode_ammo_index(id)
     }
 }
 
@@ -257,12 +396,12 @@ pub fn get_data_decoder() -> Box<impl DataDecoder + Send + Sync> {
     Box::new(IroseDataDecoder {})
 }
 
-pub fn decode_item_base1000(value: usize) -> Option<ItemReference> {
-    if value == 0 {
+pub fn decode_item_base1000(id: usize) -> Option<ItemReference> {
+    if id == 0 {
         None
     } else {
-        let item_type = decode_item_type(value / 1000)?;
-        let item_number = value % 1000;
+        let item_type = decode_item_type(id / 1000)?;
+        let item_number = id % 1000;
         if item_number == 0 {
             None
         } else {
@@ -603,5 +742,170 @@ pub fn encode_item_type(id: ItemType) -> Option<usize> {
         ItemType::Material => IroseItemType::Material.to_usize(),
         ItemType::Quest => IroseItemType::Quest.to_usize(),
         ItemType::Vehicle => IroseItemType::Vehicle.to_usize(),
+    }
+}
+
+pub fn decode_equipment_index(id: usize) -> Option<EquipmentIndex> {
+    match FromPrimitive::from_usize(id)? {
+        IroseEquipmentIndex::Face => Some(EquipmentIndex::Face),
+        IroseEquipmentIndex::Head => Some(EquipmentIndex::Head),
+        IroseEquipmentIndex::Body => Some(EquipmentIndex::Body),
+        IroseEquipmentIndex::Back => Some(EquipmentIndex::Back),
+        IroseEquipmentIndex::Hands => Some(EquipmentIndex::Hands),
+        IroseEquipmentIndex::Feet => Some(EquipmentIndex::Feet),
+        IroseEquipmentIndex::WeaponRight => Some(EquipmentIndex::WeaponRight),
+        IroseEquipmentIndex::WeaponLeft => Some(EquipmentIndex::WeaponLeft),
+        IroseEquipmentIndex::Necklace => Some(EquipmentIndex::Necklace),
+        IroseEquipmentIndex::Ring => Some(EquipmentIndex::Ring),
+        IroseEquipmentIndex::Earring => Some(EquipmentIndex::Earring),
+    }
+}
+
+pub fn decode_vehicle_part_index(id: usize) -> Option<VehiclePartIndex> {
+    match FromPrimitive::from_usize(id)? {
+        IroseVehiclePartIndex::Body => Some(VehiclePartIndex::Body),
+        IroseVehiclePartIndex::Engine => Some(VehiclePartIndex::Engine),
+        IroseVehiclePartIndex::Leg => Some(VehiclePartIndex::Leg),
+        IroseVehiclePartIndex::Ability => Some(VehiclePartIndex::Ability),
+        IroseVehiclePartIndex::Arms => Some(VehiclePartIndex::Arms),
+    }
+}
+
+pub fn decode_ammo_index(id: usize) -> Option<AmmoIndex> {
+    match FromPrimitive::from_usize(id)? {
+        IroseAmmoIndex::Arrow => Some(AmmoIndex::Arrow),
+        IroseAmmoIndex::Bullet => Some(AmmoIndex::Bullet),
+        IroseAmmoIndex::Throw => Some(AmmoIndex::Throw),
+    }
+}
+
+pub fn encode_equipment_index(id: EquipmentIndex) -> Option<usize> {
+    match id {
+        EquipmentIndex::Face => IroseEquipmentIndex::Face.to_usize(),
+        EquipmentIndex::Head => IroseEquipmentIndex::Head.to_usize(),
+        EquipmentIndex::Body => IroseEquipmentIndex::Body.to_usize(),
+        EquipmentIndex::Back => IroseEquipmentIndex::Back.to_usize(),
+        EquipmentIndex::Hands => IroseEquipmentIndex::Hands.to_usize(),
+        EquipmentIndex::Feet => IroseEquipmentIndex::Feet.to_usize(),
+        EquipmentIndex::WeaponRight => IroseEquipmentIndex::WeaponRight.to_usize(),
+        EquipmentIndex::WeaponLeft => IroseEquipmentIndex::WeaponLeft.to_usize(),
+        EquipmentIndex::Necklace => IroseEquipmentIndex::Necklace.to_usize(),
+        EquipmentIndex::Ring => IroseEquipmentIndex::Ring.to_usize(),
+        EquipmentIndex::Earring => IroseEquipmentIndex::Earring.to_usize(),
+    }
+}
+
+pub fn encode_vehicle_part_index(id: VehiclePartIndex) -> Option<usize> {
+    match id {
+        VehiclePartIndex::Body => IroseVehiclePartIndex::Body.to_usize(),
+        VehiclePartIndex::Engine => IroseVehiclePartIndex::Engine.to_usize(),
+        VehiclePartIndex::Leg => IroseVehiclePartIndex::Leg.to_usize(),
+        VehiclePartIndex::Ability => IroseVehiclePartIndex::Ability.to_usize(),
+        VehiclePartIndex::Arms => IroseVehiclePartIndex::Arms.to_usize(),
+    }
+}
+
+pub fn encode_ammo_index(id: AmmoIndex) -> Option<usize> {
+    match id {
+        AmmoIndex::Arrow => IroseAmmoIndex::Arrow.to_usize(),
+        AmmoIndex::Bullet => IroseAmmoIndex::Bullet.to_usize(),
+        AmmoIndex::Throw => IroseAmmoIndex::Throw.to_usize(),
+    }
+}
+
+pub fn decode_status_effect_type(id: usize) -> Option<StatusEffectType> {
+    match FromPrimitive::from_usize(id)? {
+        IroseStatusEffectType::IncreaseHp => Some(StatusEffectType::IncreaseHp),
+        IroseStatusEffectType::IncreaseMp => Some(StatusEffectType::IncreaseMp),
+        IroseStatusEffectType::Poisoned => Some(StatusEffectType::Poisoned),
+        IroseStatusEffectType::IncreaseMaxHp => Some(StatusEffectType::IncreaseMaxHp),
+        IroseStatusEffectType::IncreaseMaxMp => Some(StatusEffectType::IncreaseMaxMp),
+        IroseStatusEffectType::IncreaseMoveSpeed => Some(StatusEffectType::IncreaseMoveSpeed),
+        IroseStatusEffectType::DecreaseMoveSpeed => Some(StatusEffectType::DecreaseMoveSpeed),
+        IroseStatusEffectType::IncreaseAttackSpeed => Some(StatusEffectType::IncreaseAttackSpeed),
+        IroseStatusEffectType::DecreaseAttackSpeed => Some(StatusEffectType::DecreaseAttackSpeed),
+        IroseStatusEffectType::IncreaseAttackPower => Some(StatusEffectType::IncreaseAttackPower),
+        IroseStatusEffectType::DecreaseAttackPower => Some(StatusEffectType::DecreaseAttackPower),
+        IroseStatusEffectType::IncreaseDefence => Some(StatusEffectType::IncreaseDefence),
+        IroseStatusEffectType::DecreaseDefence => Some(StatusEffectType::DecreaseDefence),
+        IroseStatusEffectType::IncreaseResistance => Some(StatusEffectType::IncreaseResistance),
+        IroseStatusEffectType::DecreaseResistance => Some(StatusEffectType::DecreaseResistance),
+        IroseStatusEffectType::IncreaseHit => Some(StatusEffectType::IncreaseHit),
+        IroseStatusEffectType::DecreaseHit => Some(StatusEffectType::DecreaseHit),
+        IroseStatusEffectType::IncreaseCritical => Some(StatusEffectType::IncreaseCritical),
+        IroseStatusEffectType::DecreaseCritical => Some(StatusEffectType::DecreaseCritical),
+        IroseStatusEffectType::IncreaseAvoid => Some(StatusEffectType::IncreaseAvoid),
+        IroseStatusEffectType::DecreaseAvoid => Some(StatusEffectType::DecreaseAvoid),
+        IroseStatusEffectType::Dumb => Some(StatusEffectType::Dumb),
+        IroseStatusEffectType::Sleep => Some(StatusEffectType::Sleep),
+        IroseStatusEffectType::Fainting => Some(StatusEffectType::Fainting),
+        IroseStatusEffectType::Disguise => Some(StatusEffectType::Disguise),
+        IroseStatusEffectType::Transparent => Some(StatusEffectType::Transparent),
+        IroseStatusEffectType::ShieldDamage => Some(StatusEffectType::ShieldDamage),
+        IroseStatusEffectType::AdditionalDamageRate => Some(StatusEffectType::AdditionalDamageRate),
+        IroseStatusEffectType::DecreaseLifeTime => Some(StatusEffectType::DecreaseLifeTime),
+        IroseStatusEffectType::ClearGood => Some(StatusEffectType::ClearGood),
+        IroseStatusEffectType::ClearBad => Some(StatusEffectType::ClearBad),
+        IroseStatusEffectType::ClearAll => Some(StatusEffectType::ClearAll),
+        IroseStatusEffectType::ClearInvisible => Some(StatusEffectType::ClearInvisible),
+        IroseStatusEffectType::Taunt => Some(StatusEffectType::Taunt),
+        IroseStatusEffectType::Revive => Some(StatusEffectType::Revive),
+    }
+}
+
+pub fn decode_status_effect_cleared_by_type(id: usize) -> Option<StatusEffectClearedByType> {
+    match FromPrimitive::from_usize(id)? {
+        IroseStatusEffectClearedByType::ClearGood => Some(StatusEffectClearedByType::ClearGood),
+        IroseStatusEffectClearedByType::ClearBad => Some(StatusEffectClearedByType::ClearBad),
+        IroseStatusEffectClearedByType::ClearNone => Some(StatusEffectClearedByType::ClearNone),
+    }
+}
+
+pub fn decode_skill_action_mode(id: usize) -> Option<SkillActionMode> {
+    match FromPrimitive::from_usize(id)? {
+        IroseSkillActionMode::Stop => Some(SkillActionMode::Stop),
+        IroseSkillActionMode::Attack => Some(SkillActionMode::Attack),
+        IroseSkillActionMode::Restore => Some(SkillActionMode::Restore),
+    }
+}
+
+pub fn decode_skill_target_filter(id: usize) -> Option<SkillTargetFilter> {
+    match FromPrimitive::from_usize(id)? {
+        IroseSkillTargetFilter::OnlySelf => Some(SkillTargetFilter::OnlySelf),
+        IroseSkillTargetFilter::Group => Some(SkillTargetFilter::Group),
+        IroseSkillTargetFilter::Guild => Some(SkillTargetFilter::Guild),
+        IroseSkillTargetFilter::Allied => Some(SkillTargetFilter::Allied),
+        IroseSkillTargetFilter::Monster => Some(SkillTargetFilter::Monster),
+        IroseSkillTargetFilter::Enemy => Some(SkillTargetFilter::Enemy),
+        IroseSkillTargetFilter::EnemyCharacter => Some(SkillTargetFilter::EnemyCharacter),
+        IroseSkillTargetFilter::Character => Some(SkillTargetFilter::Character),
+        IroseSkillTargetFilter::CharacterOrMonster => Some(SkillTargetFilter::CharacterOrMonster),
+        IroseSkillTargetFilter::DeadAlliedCharacter => Some(SkillTargetFilter::DeadAlliedCharacter),
+        IroseSkillTargetFilter::EnemyMonster => Some(SkillTargetFilter::EnemyMonster),
+    }
+}
+
+pub fn decode_skill_type(id: usize) -> Option<SkillType> {
+    match FromPrimitive::from_usize(id)? {
+        IroseSkillType::BasicAction => Some(SkillType::BasicAction),
+        IroseSkillType::CreateWindow => Some(SkillType::CreateWindow),
+        IroseSkillType::Immediate => Some(SkillType::Immediate),
+        IroseSkillType::EnforceWeapon => Some(SkillType::EnforceWeapon),
+        IroseSkillType::EnforceBullet => Some(SkillType::EnforceBullet),
+        IroseSkillType::FireBullet => Some(SkillType::FireBullet),
+        IroseSkillType::AreaTarget => Some(SkillType::AreaTarget),
+        IroseSkillType::SelfBoundDuration => Some(SkillType::SelfBoundDuration),
+        IroseSkillType::TargetBoundDuration => Some(SkillType::TargetBoundDuration),
+        IroseSkillType::SelfBound => Some(SkillType::SelfBound),
+        IroseSkillType::TargetBound => Some(SkillType::TargetBound),
+        IroseSkillType::SelfStateDuration => Some(SkillType::SelfStateDuration),
+        IroseSkillType::TargetStateDuration => Some(SkillType::TargetStateDuration),
+        IroseSkillType::SummonPet => Some(SkillType::SummonPet),
+        IroseSkillType::Passive => Some(SkillType::Passive),
+        IroseSkillType::Emote => Some(SkillType::Emote),
+        IroseSkillType::SelfDamage => Some(SkillType::SelfDamage),
+        IroseSkillType::Warp => Some(SkillType::Warp),
+        IroseSkillType::SelfAndTarget => Some(SkillType::SelfAndTarget),
+        IroseSkillType::Resurrection => Some(SkillType::Resurrection),
     }
 }

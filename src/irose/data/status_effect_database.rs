@@ -1,20 +1,22 @@
 use arrayvec::ArrayVec;
 use log::debug;
-use num_traits::FromPrimitive;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, str::FromStr};
 
-use crate::data::{
-    StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
-    StatusEffectType,
+use crate::{
+    data::{
+        StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
+        StatusEffectType,
+    },
+    irose::data::data_decoder::{decode_status_effect_cleared_by_type, decode_status_effect_type},
 };
 
 impl FromStr for StatusEffectClearedByType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
+        let value = s.parse::<usize>().map_err(|_| ())?;
+        decode_status_effect_cleared_by_type(value).ok_or(())
     }
 }
 
@@ -22,8 +24,8 @@ impl FromStr for StatusEffectType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
+        let value = s.parse::<usize>().map_err(|_| ())?;
+        decode_status_effect_type(value).ok_or(())
     }
 }
 

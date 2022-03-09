@@ -4,7 +4,8 @@ use nalgebra::Point3;
 
 use crate::{
     data::{
-        Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour, VehicleItemPart,
+        EquipmentIndex, Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour,
+        VehicleItemPart, VehiclePartIndex,
     },
     game::{
         bundles::{
@@ -14,11 +15,11 @@ use crate::{
         components::{
             AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
             ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
-            CommandSit, DroppedItem, Equipment, EquipmentIndex, EquipmentItemDatabase,
-            ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level,
-            ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party, PartyMember,
-            PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints,
-            StatPoints, StatusEffects, StatusEffectsRegen, Team, VehiclePartIndex, WorldClient,
+            CommandSit, DroppedItem, Equipment, EquipmentItemDatabase, ExperiencePoints,
+            GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints, Money,
+            MotionData, MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership,
+            PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints, StatPoints,
+            StatusEffects, StatusEffectsRegen, Team, WorldClient,
         },
         events::{
             ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,

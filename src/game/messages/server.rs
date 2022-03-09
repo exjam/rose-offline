@@ -4,15 +4,14 @@ use nalgebra::Point2;
 
 use crate::{
     data::{
-        AbilityType, Damage, EquipmentItem, Item, ItemReference, MotionId, NpcId, QuestTriggerHash,
-        SkillId, StackableItem, ZoneId,
+        AbilityType, AmmoIndex, Damage, EquipmentIndex, EquipmentItem, Item, ItemReference,
+        MotionId, NpcId, QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, ZoneId,
     },
     game::components::{
-        AmmoIndex, BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
-        Destination, DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints,
-        ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection,
-        Position, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
-        VehiclePartIndex,
+        BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command, Destination,
+        DroppedItem, Equipment, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,
+        MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot, Stamina,
+        StatPoints, StatusEffects, Team,
     },
 };
 

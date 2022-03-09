@@ -5,14 +5,13 @@ use std::sync::Arc;
 
 use crate::{
     data::{
-        AbilityType, AbilityValueCalculator, Damage, Item, ItemClass, ItemDatabase, ItemReference,
-        ItemType, ItemWeaponType, NpcDatabase, NpcId, PassiveRecoveryState, SkillAddAbility,
-        SkillData, SkillDatabase, SkillId,
+        AbilityType, AbilityValueCalculator, AmmoIndex, Damage, EquipmentIndex, Item, ItemClass,
+        ItemDatabase, ItemReference, ItemType, ItemWeaponType, NpcDatabase, NpcId,
+        PassiveRecoveryState, SkillAddAbility, SkillData, SkillDatabase, SkillId, VehiclePartIndex,
     },
     game::components::{
-        AbilityValues, AmmoIndex, BasicStatType, BasicStats, CharacterInfo, DamageCategory,
-        DamageType, Equipment, EquipmentIndex, EquipmentItemDatabase, Level, SkillList,
-        StatusEffects, VehiclePartIndex,
+        AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
+        Equipment, EquipmentItemDatabase, Level, SkillList, StatusEffects,
     },
 };
 
@@ -1250,7 +1249,7 @@ fn calculate_equipment_ability_values(
 ) -> EquipmentAbilityValue {
     let mut result = EquipmentAbilityValue::new();
 
-    for item in equipment.equipped_items.iter().filter_map(|x| x.as_ref()) {
+    for item in equipment.iter_equipped_items() {
         if item.is_appraised || item.has_socket {
             if let Some(item_data) = item_database.get_gem_item(item.gem as usize) {
                 for (ability, value) in item_data.gem_add_ability.iter() {
@@ -1276,7 +1275,7 @@ fn calculate_vehicle_ability_values(
 ) -> EquipmentAbilityValue {
     let mut result = EquipmentAbilityValue::new();
 
-    for item in equipment.equipped_vehicle.iter().filter_map(|x| x.as_ref()) {
+    for item in equipment.iter_equipped_vehicles() {
         if item.is_appraised || item.has_socket {
             if let Some(item_data) = item_database.get_gem_item(item.gem as usize) {
                 for (ability, value) in item_data.gem_add_ability.iter() {
@@ -1798,12 +1797,7 @@ fn calculate_defence(
 ) -> i32 {
     let mut item_defence = 0;
 
-    for item in equipment
-        .equipped_items
-        .iter()
-        .filter_map(|x| x.as_ref())
-        .filter(|x| x.life > 0)
-    {
+    for item in equipment.iter_equipped_items().filter(|item| item.life > 0) {
         if let Some(item_data) = item_database.get_base_item(item.into()) {
             if item_data.defence > 0 {
                 let grade_defence = item_database
@@ -1854,12 +1848,7 @@ fn calculate_resistance(
 ) -> i32 {
     let mut item_resistance = 0;
 
-    for item in equipment
-        .equipped_items
-        .iter()
-        .filter_map(|x| x.as_ref())
-        .filter(|x| x.life > 0)
-    {
+    for item in equipment.iter_equipped_items().filter(|item| item.life > 0) {
         if let Some(item_data) = item_database.get_base_item(item.into()) {
             if item_data.resistance > 0 {
                 let grade_resistance = item_database
@@ -1928,12 +1917,7 @@ fn calculate_avoid(
 
     // Count grade on all items which have defence stat > 0
     let mut equipment_total_grade = 0;
-    for item in equipment
-        .equipped_items
-        .iter()
-        .filter_map(|x| x.as_ref())
-        .filter(|x| x.life > 0)
-    {
+    for item in equipment.iter_equipped_items().filter(|item| item.life > 0) {
         if let Some(item_data) = item_database.get_base_item(item.into()) {
             if item_data.defence > 0 {
                 equipment_total_grade += item.grade as i32;

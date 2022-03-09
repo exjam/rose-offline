@@ -4,16 +4,15 @@ use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
 use nalgebra::Point3;
 
 use crate::{
-    data::{Item, ItemClass, SkillActionMode, StackableSlotBehaviour},
+    data::{AmmoIndex, EquipmentIndex, Item, ItemClass, SkillActionMode, StackableSlotBehaviour},
     game::{
         bundles::client_entity_leave_zone,
         components::{
-            AbilityValues, AmmoIndex, ClientEntity, ClientEntitySector, ClientEntityType, Command,
+            AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command,
             CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandEmote,
             CommandMove, CommandPickupItemDrop, CommandSit, CommandStop, Destination, DroppedItem,
-            Equipment, EquipmentIndex, GameClient, HealthPoints, Inventory, ItemDrop, ItemSlot,
-            MotionData, MoveMode, MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position,
-            Target,
+            Equipment, GameClient, HealthPoints, Inventory, ItemDrop, ItemSlot, MotionData,
+            MoveMode, MoveSpeed, NextCommand, Npc, Owner, PersonalStore, Position, Target,
         },
         events::{DamageEvent, SkillEvent, SkillEventTarget},
         messages::server::{

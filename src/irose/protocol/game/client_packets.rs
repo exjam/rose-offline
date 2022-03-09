@@ -8,22 +8,20 @@ use nalgebra::Point2;
 use num_derive::FromPrimitive;
 
 use crate::{
-    data::{Item, MotionId, WarpGateId},
+    data::{AmmoIndex, EquipmentIndex, Item, MotionId, VehiclePartIndex, WarpGateId},
     game::{
-        components::{
-            AmmoIndex, BasicStatType, ClientEntityId, EquipmentIndex, HotbarSlot, ItemSlot,
-            SkillSlot, VehiclePartIndex,
-        },
+        components::{BasicStatType, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot},
         messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
     },
-    irose::protocol::game::common_packets::{
-        decode_ammo_index, decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot,
-        PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
+    irose::{
+        data::decode_ammo_index,
+        protocol::game::common_packets::{
+            decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
+            PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
+        },
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };
-
-use super::common_packets::PacketReadVehiclePartIndex;
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {

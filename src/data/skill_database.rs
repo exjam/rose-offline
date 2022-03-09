@@ -1,5 +1,4 @@
 use arrayvec::ArrayVec;
-use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -30,50 +29,50 @@ pub struct SkillAddAbility {
     pub value: i32,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug)]
 pub enum SkillActionMode {
-    Stop = 0,
-    Attack = 1,
-    Restore = 2,
+    Stop,
+    Attack,
+    Restore,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug)]
 pub enum SkillTargetFilter {
-    OnlySelf = 0,
-    Group = 1,
-    Guild = 2,
-    Allied = 3,
-    Monster = 4,
-    Enemy = 5,
-    EnemyCharacter = 6,
-    Character = 7,
-    CharacterOrMonster = 8,
-    DeadAlliedCharacter = 9,
-    EnemyMonster = 10,
+    OnlySelf,
+    Group,
+    Guild,
+    Allied,
+    Monster,
+    Enemy,
+    EnemyCharacter,
+    Character,
+    CharacterOrMonster,
+    DeadAlliedCharacter,
+    EnemyMonster,
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug)]
 pub enum SkillType {
-    BasicAction = 1,
-    CreateWindow = 2,
-    Immediate = 3,
-    EnforceWeapon = 4,
-    EnforceBullet = 5,
-    FireBullet = 6,
-    AreaTarget = 7,
-    SelfBoundDuration = 8,
-    TargetBoundDuration = 9,
-    SelfBound = 10,
-    TargetBound = 11,
-    SelfStateDuration = 12,
-    TargetStateDuration = 13,
-    SummonPet = 14,
-    Passive = 15,
-    Emote = 16,
-    SelfDamage = 17,
-    Warp = 18,
-    SelfAndTarget = 19,
-    Resurrection = 20,
+    BasicAction,
+    CreateWindow,
+    Immediate,
+    EnforceWeapon,
+    EnforceBullet,
+    FireBullet,
+    AreaTarget,
+    SelfBoundDuration,
+    TargetBoundDuration,
+    SelfBound,
+    TargetBound,
+    SelfStateDuration,
+    TargetStateDuration,
+    SummonPet,
+    Passive,
+    Emote,
+    SelfDamage,
+    Warp,
+    SelfAndTarget,
+    Resurrection,
 }
 
 impl SkillType {

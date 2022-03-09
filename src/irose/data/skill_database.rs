@@ -1,6 +1,5 @@
 use arrayvec::ArrayVec;
 use log::debug;
-use num_traits::FromPrimitive;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{
     collections::HashMap,
@@ -9,10 +8,15 @@ use std::{
     time::Duration,
 };
 
-use crate::data::{
-    AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
-    SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
-    SkillType, StatusEffectId, ZoneId,
+use crate::{
+    data::{
+        AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
+        SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
+        SkillType, StatusEffectId, ZoneId,
+    },
+    irose::data::data_decoder::{
+        decode_skill_action_mode, decode_skill_target_filter, decode_skill_type,
+    },
 };
 
 pub struct StbSkill(pub StbFile);
@@ -21,8 +25,8 @@ impl FromStr for SkillActionMode {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
+        let value = s.parse::<usize>().map_err(|_| ())?;
+        decode_skill_action_mode(value).ok_or(())
     }
 }
 
@@ -38,8 +42,8 @@ impl FromStr for SkillType {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
+        let value = s.parse::<usize>().map_err(|_| ())?;
+        decode_skill_type(value).ok_or(())
     }
 }
 
@@ -47,8 +51,8 @@ impl FromStr for SkillTargetFilter {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let value = s.parse::<u32>().map_err(|_| ())?;
-        FromPrimitive::from_u32(value).ok_or(())
+        let value = s.parse::<usize>().map_err(|_| ())?;
+        decode_skill_target_filter(value).ok_or(())
     }
 }
 

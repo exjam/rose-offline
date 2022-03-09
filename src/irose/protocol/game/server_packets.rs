@@ -6,17 +6,17 @@ use num_derive::FromPrimitive;
 
 use crate::{
     data::{
-        AbilityType, Damage, EquipmentItem, Item, ItemReference, MotionId, NpcId, SkillId,
-        StackableItem, WorldTicks, ZoneId,
+        AbilityType, AmmoIndex, Damage, EquipmentIndex, EquipmentItem, Item, ItemReference,
+        MotionId, NpcId, SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
     },
     game::{
         components::{
-            AmmoIndex, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId,
-            Command, CommandCastSkill, CommandCastSkillTarget, CommandData, Destination,
-            DroppedItem, Equipment, EquipmentIndex, ExperiencePoints, HealthPoints, Hotbar,
-            HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
-            NpcStandingDirection, Position, QuestState, SkillList, SkillPage, SkillPoints,
-            SkillSlot, Stamina, StatPoints, StatusEffects, Team, UnionMembership, VehiclePartIndex,
+            BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
+            CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
+            Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
+            Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position,
+            QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints,
+            StatusEffects, Team, UnionMembership,
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, LevelUpSkillError,
@@ -24,12 +24,14 @@ use crate::{
             PartyRequest, PickupItemDropContent, PickupItemDropError,
         },
     },
-    irose::data::encode_ability_type,
-    irose::protocol::game::common_packets::{
-        encode_ammo_index, PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId,
-        PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
-        PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
-        PacketWriteVehiclePartIndex,
+    irose::{
+        data::{encode_ability_type, encode_ammo_index},
+        protocol::game::common_packets::{
+            PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId,
+            PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot,
+            PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
+            PacketWriteVehiclePartIndex,
+        },
     },
     protocol::{Packet, PacketWriter},
 };
@@ -262,8 +264,21 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
         let equipment = packet.equipment;
         writer.write_i64(inventory.money.0);
 
-        for item in &equipment.equipped_items {
-            writer.write_equipment_item_full(item.as_ref());
+        writer.write_equipment_item_full(None); // Empty item for equipment index 0
+        for index in [
+            EquipmentIndex::Face,
+            EquipmentIndex::Head,
+            EquipmentIndex::Body,
+            EquipmentIndex::Back,
+            EquipmentIndex::Hands,
+            EquipmentIndex::Feet,
+            EquipmentIndex::WeaponRight,
+            EquipmentIndex::WeaponLeft,
+            EquipmentIndex::Necklace,
+            EquipmentIndex::Ring,
+            EquipmentIndex::Earring,
+        ] {
+            writer.write_equipment_item_full(equipment.get_equipment_item(index));
         }
 
         for item in &inventory.equipment.slots {
@@ -282,12 +297,17 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
             writer.write_item_full(item.as_ref());
         }
 
-        for item in &equipment.equipped_ammo {
-            writer.write_stackable_item_full(item.as_ref());
+        for index in [AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
+            writer.write_stackable_item_full(equipment.get_ammo_item(index));
         }
 
-        for item in &equipment.equipped_vehicle {
-            writer.write_equipment_item_full(item.as_ref());
+        for index in [
+            VehiclePartIndex::Body,
+            VehiclePartIndex::Engine,
+            VehiclePartIndex::Leg,
+            VehiclePartIndex::Ability,
+        ] {
+            writer.write_equipment_item_full(equipment.get_vehicle_item(index));
         }
 
         writer.into()
@@ -801,7 +821,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
             VehiclePartIndex::Body,
             VehiclePartIndex::Engine,
             VehiclePartIndex::Leg,
-            VehiclePartIndex::Arms,
+            VehiclePartIndex::Ability,
         ] {
             writer.write_equipment_item_part(packet.equipment.get_vehicle_item(*index));
         }
@@ -934,7 +954,7 @@ impl From<&PacketServerUpdateAmmo> for Packet {
                     .map(|item| item.item.item_number)
                     .unwrap_or(0) as u16,
             )
-            .with_item_type(encode_ammo_index(packet.ammo_index) as u8);
+            .with_item_type(encode_ammo_index(packet.ammo_index).unwrap_or(0) as u8);
         for b in part.into_bytes().iter() {
             writer.write_u8(*b);
         }

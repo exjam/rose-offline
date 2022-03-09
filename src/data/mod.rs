@@ -73,8 +73,8 @@ pub use ai_database::AiDatabase;
 pub use data_decoder::DataDecoder;
 pub use drop_table::DropTable;
 pub use item::{
-    EquipmentItem, Item, ItemClass, ItemSlotBehaviour, ItemType, ItemWeaponType, StackError,
-    StackableItem, StackableSlotBehaviour,
+    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemClass, ItemSlotBehaviour, ItemType,
+    ItemWeaponType, StackError, StackableItem, StackableSlotBehaviour, VehiclePartIndex,
 };
 pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,

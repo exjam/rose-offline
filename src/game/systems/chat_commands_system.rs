@@ -12,7 +12,7 @@ use std::{
 };
 
 use crate::{
-    data::{AbilityType, Item, ItemReference, ItemType, SkillId, ZoneId},
+    data::{AbilityType, EquipmentIndex, Item, ItemReference, ItemType, SkillId, ZoneId},
     game::{
         bundles::{
             ability_values_add_value, ability_values_set_value, client_entity_join_zone,
@@ -20,10 +20,10 @@ use crate::{
         },
         components::{
             AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
-            ClientEntitySector, ClientEntityType, Command, EquipmentIndex, EquipmentItemDatabase,
-            GameClient, Inventory, Level, Money, MotionData, MoveMode, MoveSpeed, NextCommand,
-            PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints,
-            Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+            ClientEntitySector, ClientEntityType, Command, EquipmentItemDatabase, GameClient,
+            Inventory, Level, Money, MotionData, MoveMode, MoveSpeed, NextCommand, PartyMembership,
+            PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints, Stamina,
+            StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
             PERSONAL_STORE_ITEM_SLOTS,
         },
         events::{ChatCommandEvent, RewardXpEvent},

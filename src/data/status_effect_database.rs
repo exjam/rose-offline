@@ -1,51 +1,49 @@
-use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
-
 use arrayvec::ArrayVec;
 use enum_map::Enum;
-use num_derive::FromPrimitive;
+use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub struct StatusEffectId(NonZeroU16);
 
 id_wrapper_impl!(StatusEffectId, NonZeroU16, u16);
 
-#[derive(Copy, Clone, Debug, Enum, FromPrimitive)]
+#[derive(Copy, Clone, Debug, Enum)]
 pub enum StatusEffectType {
-    IncreaseHp = 1,
-    IncreaseMp = 2,
-    Poisoned = 3,
-    IncreaseMaxHp = 4,
-    IncreaseMaxMp = 5,
-    IncreaseMoveSpeed = 6,
-    DecreaseMoveSpeed = 7,
-    IncreaseAttackSpeed = 8,
-    DecreaseAttackSpeed = 9,
-    IncreaseAttackPower = 10,
-    DecreaseAttackPower = 11,
-    IncreaseDefence = 12,
-    DecreaseDefence = 13,
-    IncreaseResistance = 14,
-    DecreaseResistance = 15,
-    IncreaseHit = 16,
-    DecreaseHit = 17,
-    IncreaseCritical = 18,
-    DecreaseCritical = 19,
-    IncreaseAvoid = 20,
-    DecreaseAvoid = 21,
-    Dumb = 22,
-    Sleep = 23,
-    Fainting = 24,
-    Disguise = 25,
-    Transparent = 26,
-    ShieldDamage = 27,
-    AdditionalDamageRate = 28,
-    DecreaseLifeTime = 29,
-    ClearGood = 30,
-    ClearBad = 31,
-    ClearAll = 32,
-    ClearInvisible = 33,
-    Taunt = 34,
-    Revive = 35,
+    IncreaseHp,
+    IncreaseMp,
+    Poisoned,
+    IncreaseMaxHp,
+    IncreaseMaxMp,
+    IncreaseMoveSpeed,
+    DecreaseMoveSpeed,
+    IncreaseAttackSpeed,
+    DecreaseAttackSpeed,
+    IncreaseAttackPower,
+    DecreaseAttackPower,
+    IncreaseDefence,
+    DecreaseDefence,
+    IncreaseResistance,
+    DecreaseResistance,
+    IncreaseHit,
+    DecreaseHit,
+    IncreaseCritical,
+    DecreaseCritical,
+    IncreaseAvoid,
+    DecreaseAvoid,
+    Dumb,
+    Sleep,
+    Fainting,
+    Disguise,
+    Transparent,
+    ShieldDamage,
+    AdditionalDamageRate,
+    DecreaseLifeTime,
+    ClearGood,
+    ClearBad,
+    ClearAll,
+    ClearInvisible,
+    Taunt,
+    Revive,
 }
 
 #[allow(dead_code)]
@@ -89,16 +87,16 @@ impl StatusEffectType {
     }
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug)]
 pub enum StatusEffectClearedByType {
     // This status effect is cleared by ClearGood
-    ClearGood = 0,
+    ClearGood,
 
     // This status effect is cleared by ClearBad
-    ClearBad = 1,
+    ClearBad,
 
     // Cannot be cleared
-    ClearNone = 2,
+    ClearNone,
 }
 
 #[derive(Debug)]

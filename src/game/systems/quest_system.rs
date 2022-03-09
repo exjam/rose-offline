@@ -7,7 +7,6 @@ use bevy_ecs::{
 use chrono::{Datelike, Timelike};
 use log::warn;
 use nalgebra::{Point2, Point3};
-use num_traits::FromPrimitive;
 use rand::Rng;
 
 use rose_file_readers::{
@@ -30,10 +29,10 @@ use crate::{
         },
         components::{
             AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity,
-            ClientEntitySector, Equipment, EquipmentIndex, ExperiencePoints, GameClient,
-            HealthPoints, Inventory, Level, ManaPoints, Money, MoveSpeed, Npc, ObjectVariables,
-            Party, PartyMembership, Position, QuestState, SkillList, SkillPoints, SpawnOrigin,
-            Stamina, StatPoints, Team, UnionMembership,
+            ClientEntitySector, Equipment, ExperiencePoints, GameClient, HealthPoints, Inventory,
+            Level, ManaPoints, Money, MoveSpeed, Npc, ObjectVariables, Party, PartyMembership,
+            Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, Team,
+            UnionMembership,
         },
         events::{QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
         messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
@@ -170,8 +169,10 @@ fn quest_condition_quest_item(
     });
 
     if let Some(equipment_index) = equipment_index {
-        let equipment_index: Option<EquipmentIndex> =
-            FromPrimitive::from_usize(equipment_index.get());
+        let equipment_index = quest_system_resources
+            .game_data
+            .data_decoder
+            .decode_equipment_index(equipment_index.get());
         if let (Some(equipment), Some(equipment_index)) =
             (quest_parameters.source.equipment.as_ref(), equipment_index)
         {

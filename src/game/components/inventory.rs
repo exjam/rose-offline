@@ -6,9 +6,9 @@ use std::{
 use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    data::{EquipmentItem, Item, ItemReference, ItemSlotBehaviour, ItemType, StackableItem},
-    game::components::{AmmoIndex, EquipmentIndex, VehiclePartIndex},
+use crate::data::{
+    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemSlotBehaviour, ItemType,
+    StackableItem, VehiclePartIndex,
 };
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;

@@ -1,3 +1,4 @@
+use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -21,10 +22,6 @@ pub enum ItemType {
     Material,
     Quest,
     Vehicle,
-}
-
-pub trait ItemTypeDecoder {
-    fn decode_item_type(&self, from: usize) -> Option<ItemType>;
 }
 
 impl ItemType {
@@ -55,6 +52,37 @@ impl ItemType {
                 | ItemType::Vehicle
         )
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Enum, Serialize, Deserialize)]
+pub enum EquipmentIndex {
+    Face,
+    Head,
+    Body,
+    Back,
+    Hands,
+    Feet,
+    WeaponRight,
+    WeaponLeft,
+    Necklace,
+    Ring,
+    Earring,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Enum, Serialize, Deserialize)]
+pub enum VehiclePartIndex {
+    Body,
+    Engine,
+    Leg,
+    Ability,
+    Arms,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Enum, Serialize, Deserialize)]
+pub enum AmmoIndex {
+    Arrow,
+    Bullet,
+    Throw,
 }
 
 #[derive(Copy, Clone, Debug)]

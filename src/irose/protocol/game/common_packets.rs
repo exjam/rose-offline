@@ -3,13 +3,17 @@ use std::convert::TryInto;
 
 use crate::{
     data::{
-        Damage, EquipmentItem, Item, ItemReference, SkillPageType, StackableItem, StatusEffectType,
+        AmmoIndex, Damage, EquipmentIndex, EquipmentItem, Item, ItemReference, SkillPageType,
+        StackableItem, StatusEffectType, VehiclePartIndex,
     },
     game::components::{
-        AmmoIndex, ClientEntityId, Equipment, EquipmentIndex, HotbarSlot, InventoryPageType,
-        ItemSlot, Money, MoveMode, SkillSlot, StatusEffects, VehiclePartIndex,
+        ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
+        SkillSlot, StatusEffects,
     },
-    irose::data::{decode_item_type, encode_item_type},
+    irose::data::{
+        decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
+        encode_equipment_index, encode_item_type, encode_vehicle_part_index,
+    },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
 
@@ -320,56 +324,6 @@ pub trait PacketWriteEquipmentIndex {
     fn write_equipment_index_u16(&mut self, equipment_index: EquipmentIndex);
 }
 
-pub fn decode_ammo_index(index: usize) -> Option<AmmoIndex> {
-    match index {
-        0 => Some(AmmoIndex::Arrow),
-        1 => Some(AmmoIndex::Bullet),
-        2 => Some(AmmoIndex::Throw),
-        _ => None,
-    }
-}
-
-pub fn decode_equipment_index(index: usize) -> Option<EquipmentIndex> {
-    match index {
-        1 => Some(EquipmentIndex::Face),
-        2 => Some(EquipmentIndex::Head),
-        3 => Some(EquipmentIndex::Body),
-        4 => Some(EquipmentIndex::Back),
-        5 => Some(EquipmentIndex::Hands),
-        6 => Some(EquipmentIndex::Feet),
-        7 => Some(EquipmentIndex::WeaponRight),
-        8 => Some(EquipmentIndex::WeaponLeft),
-        9 => Some(EquipmentIndex::Necklace),
-        10 => Some(EquipmentIndex::Ring),
-        11 => Some(EquipmentIndex::Earring),
-        _ => None,
-    }
-}
-
-pub fn encode_ammo_index(index: AmmoIndex) -> usize {
-    match index {
-        AmmoIndex::Arrow => 0,
-        AmmoIndex::Bullet => 1,
-        AmmoIndex::Throw => 2,
-    }
-}
-
-fn encode_equipment_index(index: EquipmentIndex) -> usize {
-    match index {
-        EquipmentIndex::Face => 1,
-        EquipmentIndex::Head => 2,
-        EquipmentIndex::Body => 3,
-        EquipmentIndex::Back => 4,
-        EquipmentIndex::Hands => 5,
-        EquipmentIndex::Feet => 6,
-        EquipmentIndex::WeaponRight => 7,
-        EquipmentIndex::WeaponLeft => 8,
-        EquipmentIndex::Necklace => 9,
-        EquipmentIndex::Ring => 10,
-        EquipmentIndex::Earring => 11,
-    }
-}
-
 impl<'a> PacketReadEquipmentIndex for PacketReader<'a> {
     fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, ProtocolError> {
         decode_equipment_index(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
@@ -378,7 +332,7 @@ impl<'a> PacketReadEquipmentIndex for PacketReader<'a> {
 
 impl PacketWriteEquipmentIndex for PacketWriter {
     fn write_equipment_index_u16(&mut self, equipment_index: EquipmentIndex) {
-        self.write_u16(encode_equipment_index(equipment_index) as u16)
+        self.write_u16(encode_equipment_index(equipment_index).unwrap_or(0) as u16)
     }
 }
 
@@ -390,27 +344,6 @@ pub trait PacketWriteVehiclePartIndex {
     fn write_vehicle_part_index_u16(&mut self, vehicle_part_index: VehiclePartIndex);
 }
 
-fn decode_vehicle_part_index(index: usize) -> Option<VehiclePartIndex> {
-    match index {
-        0 => Some(VehiclePartIndex::Body),
-        1 => Some(VehiclePartIndex::Engine),
-        2 => Some(VehiclePartIndex::Leg),
-        3 => Some(VehiclePartIndex::Ability),
-        4 => Some(VehiclePartIndex::Arms),
-        _ => None,
-    }
-}
-
-fn encode_vehicle_part_index(index: VehiclePartIndex) -> usize {
-    match index {
-        VehiclePartIndex::Body => 0,
-        VehiclePartIndex::Engine => 1,
-        VehiclePartIndex::Leg => 2,
-        VehiclePartIndex::Ability => 3,
-        VehiclePartIndex::Arms => 4,
-    }
-}
-
 impl<'a> PacketReadVehiclePartIndex for PacketReader<'a> {
     fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, ProtocolError> {
         decode_vehicle_part_index(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
@@ -419,7 +352,7 @@ impl<'a> PacketReadVehiclePartIndex for PacketReader<'a> {
 
 impl PacketWriteVehiclePartIndex for PacketWriter {
     fn write_vehicle_part_index_u16(&mut self, vehicle_part_index: VehiclePartIndex) {
-        self.write_u16(encode_vehicle_part_index(vehicle_part_index) as u16)
+        self.write_u16(encode_vehicle_part_index(vehicle_part_index).unwrap_or(0) as u16)
     }
 }
 
@@ -452,13 +385,7 @@ pub fn decode_item_slot(index: usize) -> Option<ItemSlot> {
     } else if (AMMO_START_INDEX..AMMO_END_INDEX).contains(&index) {
         decode_ammo_index(index - AMMO_START_INDEX).map(ItemSlot::Ammo)
     } else if (VEHICLE_START_INDEX..VEHICLE_END_INDEX).contains(&index) {
-        match index - VEHICLE_START_INDEX {
-            0 => Some(ItemSlot::Vehicle(VehiclePartIndex::Body)),
-            1 => Some(ItemSlot::Vehicle(VehiclePartIndex::Engine)),
-            2 => Some(ItemSlot::Vehicle(VehiclePartIndex::Leg)),
-            3 => Some(ItemSlot::Vehicle(VehiclePartIndex::Ability)),
-            _ => None,
-        }
+        decode_vehicle_part_index(index - AMMO_START_INDEX).map(ItemSlot::Vehicle)
     } else {
         None
     }
@@ -466,7 +393,9 @@ pub fn decode_item_slot(index: usize) -> Option<ItemSlot> {
 
 fn encode_item_slot(slot: ItemSlot) -> usize {
     match slot {
-        ItemSlot::Equipment(equipment_index) => encode_equipment_index(equipment_index),
+        ItemSlot::Equipment(equipment_index) => {
+            encode_equipment_index(equipment_index).unwrap_or(0)
+        }
         ItemSlot::Inventory(page_type, index) => match page_type {
             InventoryPageType::Equipment => INVENTORY_START_INDEX + index,
             InventoryPageType::Consumables => INVENTORY_START_INDEX + INVENTORY_PAGE_SIZE + index,

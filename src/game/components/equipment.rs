@@ -1,47 +1,17 @@
 use bevy_ecs::prelude::Component;
-use num_derive::FromPrimitive;
+use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};
 
 use crate::data::{
-    EquipmentItem, ItemDatabase, ItemReference, ItemType, StackableItem, WeaponItemData,
+    AmmoIndex, EquipmentIndex, EquipmentItem, ItemDatabase, ItemReference, ItemType, StackableItem,
+    VehiclePartIndex, WeaponItemData,
 };
-
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]
-pub enum EquipmentIndex {
-    Face = 1,
-    Head = 2,
-    Body = 3,
-    Back = 4,
-    Hands = 5,
-    Feet = 6,
-    WeaponRight = 7,
-    WeaponLeft = 8,
-    Necklace = 9,
-    Ring = 10,
-    Earring = 11,
-}
-
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]
-pub enum VehiclePartIndex {
-    Body = 0,
-    Engine = 1,
-    Leg = 2,
-    Ability = 3,
-    Arms = 4,
-}
-
-#[derive(Clone, Copy, Debug, FromPrimitive, PartialEq, Eq, Hash)]
-pub enum AmmoIndex {
-    Arrow = 0,
-    Bullet = 1,
-    Throw = 2,
-}
 
 #[derive(Component, Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Equipment {
-    pub equipped_items: [Option<EquipmentItem>; EquipmentIndex::Earring as usize + 1],
-    pub equipped_vehicle: [Option<EquipmentItem>; VehiclePartIndex::Arms as usize + 1],
-    pub equipped_ammo: [Option<StackableItem>; AmmoIndex::Throw as usize + 1],
+    pub equipped_items: EnumMap<EquipmentIndex, Option<EquipmentItem>>,
+    pub equipped_vehicle: EnumMap<VehiclePartIndex, Option<EquipmentItem>>,
+    pub equipped_ammo: EnumMap<AmmoIndex, Option<StackableItem>>,
 }
 
 pub trait EquipmentItemReference {
@@ -83,27 +53,27 @@ impl Equipment {
     }
 
     pub fn get_equipment_item(&self, index: EquipmentIndex) -> Option<&EquipmentItem> {
-        self.equipped_items[index as usize].as_ref()
+        self.equipped_items[index].as_ref()
     }
 
     pub fn get_vehicle_item(&self, index: VehiclePartIndex) -> Option<&EquipmentItem> {
-        self.equipped_vehicle[index as usize].as_ref()
+        self.equipped_vehicle[index].as_ref()
     }
 
     pub fn get_ammo_item(&self, index: AmmoIndex) -> Option<&StackableItem> {
-        self.equipped_ammo[index as usize].as_ref()
+        self.equipped_ammo[index].as_ref()
     }
 
     pub fn get_ammo_slot_mut(&mut self, index: AmmoIndex) -> &mut Option<StackableItem> {
-        &mut self.equipped_ammo[index as usize]
+        &mut self.equipped_ammo[index]
     }
 
     pub fn get_equipment_slot_mut(&mut self, index: EquipmentIndex) -> &mut Option<EquipmentItem> {
-        &mut self.equipped_items[index as usize]
+        &mut self.equipped_items[index]
     }
 
     pub fn get_vehicle_slot_mut(&mut self, index: VehiclePartIndex) -> &mut Option<EquipmentItem> {
-        &mut self.equipped_vehicle[index as usize]
+        &mut self.equipped_vehicle[index]
     }
 
     pub fn equip_item(
@@ -128,8 +98,8 @@ impl Equipment {
             _ => return Err(item),
         };
 
-        let previous = self.equipped_items[equipment_index as usize].take();
-        self.equipped_items[equipment_index as usize] = Some(item);
+        let previous = self.equipped_items[equipment_index].take();
+        self.equipped_items[equipment_index] = Some(item);
         Ok((equipment_index, previous))
     }
 
@@ -157,15 +127,21 @@ impl Equipment {
         (updated_slots, remaining_items)
     }
 
-    pub fn iter_items(&self) -> impl Iterator<Item = &Option<EquipmentItem>> {
-        self.equipped_items.iter()
+    pub fn iter_equipped_items(&self) -> impl Iterator<Item = &EquipmentItem> {
+        self.equipped_items
+            .iter()
+            .filter_map(|(_, slot)| slot.as_ref())
     }
 
-    pub fn iter_vehicles(&self) -> impl Iterator<Item = &Option<EquipmentItem>> {
-        self.equipped_vehicle.iter()
+    pub fn iter_equipped_vehicles(&self) -> impl Iterator<Item = &EquipmentItem> {
+        self.equipped_vehicle
+            .iter()
+            .filter_map(|(_, slot)| slot.as_ref())
     }
 
-    pub fn iter_ammo(&self) -> impl Iterator<Item = &Option<StackableItem>> {
-        self.equipped_ammo.iter()
+    pub fn iter_equipped_ammo(&self) -> impl Iterator<Item = &StackableItem> {
+        self.equipped_ammo
+            .iter()
+            .filter_map(|(_, slot)| slot.as_ref())
     }
 }

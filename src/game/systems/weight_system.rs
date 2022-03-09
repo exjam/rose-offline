@@ -25,7 +25,7 @@ pub fn weight_system(
                 * item.get_quantity();
         }
 
-        for item in equipment.iter_items().filter_map(|slot| slot.as_ref()) {
+        for item in equipment.iter_equipped_items() {
             weight += game_data
                 .items
                 .get_base_item(item.item)
@@ -33,7 +33,7 @@ pub fn weight_system(
                 .unwrap_or(0);
         }
 
-        for item in equipment.iter_vehicles().filter_map(|slot| slot.as_ref()) {
+        for item in equipment.iter_equipped_vehicles() {
             weight += game_data
                 .items
                 .get_base_item(item.item)
@@ -41,7 +41,7 @@ pub fn weight_system(
                 .unwrap_or(0);
         }
 
-        for item in equipment.iter_ammo().filter_map(|slot| slot.as_ref()) {
+        for item in equipment.iter_equipped_ammo() {
             weight += game_data
                 .items
                 .get_base_item(item.item)
