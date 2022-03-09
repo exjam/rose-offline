@@ -22,21 +22,21 @@ pub fn startup_zones_system(
     game_data: Res<GameData>,
     mut zone_list: ResMut<ZoneList>,
 ) {
-    for (&zone_id, zone_data) in game_data.zones.iter() {
+    for zone_data in game_data.zones.iter() {
         // Add to zone list
-        zone_list.add_zone(zone_id);
+        zone_list.add_zone(zone_data.id);
 
         // Create the Event Object entities
         for event_object in zone_data.event_objects.iter() {
             let entity = commands
                 .spawn()
                 .insert(EventObject::new(event_object.event_id))
-                .insert(Position::new(event_object.position, zone_id))
+                .insert(Position::new(event_object.position, zone_data.id))
                 .insert(ObjectVariables::new(EVENT_OBJECT_VARIABLES_COUNT))
                 .id();
 
             zone_list.add_event_object(
-                zone_id,
+                zone_data.id,
                 event_object.event_id,
                 event_object.map_chunk_x,
                 event_object.map_chunk_y,
@@ -53,7 +53,7 @@ pub fn startup_zones_system(
                         warn!(
                             "Invalid monster spawn {} in zone {}",
                             npc.get(),
-                            zone_id.get()
+                            zone_data.id.get()
                         );
                     }
                 }
@@ -64,7 +64,7 @@ pub fn startup_zones_system(
                         warn!(
                             "Invalid monster spawn {} in zone {}",
                             npc.get(),
-                            zone_id.get()
+                            zone_data.id.get()
                         );
                     }
                 }
@@ -72,7 +72,7 @@ pub fn startup_zones_system(
                 commands
                     .spawn()
                     .insert(MonsterSpawnPoint::from(spawn))
-                    .insert(Position::new(spawn.position, zone_id));
+                    .insert(Position::new(spawn.position, zone_data.id));
             }
         }
 
@@ -93,7 +93,7 @@ pub fn startup_zones_system(
                     warn!(
                         "Tried to spawn invalid npc id {} for zone {}",
                         npc.npc_id.get(),
-                        zone_id.get()
+                        zone_data.id.get()
                     );
                     continue;
                 }
@@ -110,7 +110,7 @@ pub fn startup_zones_system(
                     .filter(|ai_file_index| *ai_file_index != 0)
                     .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
-                let position = Position::new(npc.position, zone_id);
+                let position = Position::new(npc.position, zone_data.id);
                 let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
                 let level = Level::new(ability_values.get_level() as u32);
                 let health_points = HealthPoints::new(ability_values.get_max_health());

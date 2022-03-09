@@ -313,8 +313,8 @@ pub struct ClientEntityList {
 impl ClientEntityList {
     pub fn new(zone_database: &ZoneDatabase) -> Self {
         let mut zones = HashMap::new();
-        for (id, zone) in zone_database.iter() {
-            zones.insert(*id, ClientEntityZone::new(zone));
+        for zone in zone_database.iter() {
+            zones.insert(zone.id, ClientEntityZone::new(zone));
         }
         Self { zones }
     }

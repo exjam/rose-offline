@@ -1,10 +1,6 @@
 use nalgebra::{distance, Point2, Point3};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{hash_map::Iter, HashMap},
-    num::NonZeroU16,
-    str::FromStr,
-};
+use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
 use crate::{NpcConversationId, NpcId};
 
@@ -76,19 +72,22 @@ impl ZoneData {
 }
 
 pub struct ZoneDatabase {
-    zones: HashMap<ZoneId, ZoneData>,
+    zones: Vec<Option<ZoneData>>,
 }
 
 impl ZoneDatabase {
-    pub fn new(zones: HashMap<ZoneId, ZoneData>) -> Self {
+    pub fn new(zones: Vec<Option<ZoneData>>) -> Self {
         Self { zones }
     }
 
-    pub fn iter(&self) -> Iter<'_, ZoneId, ZoneData> {
-        self.zones.iter()
+    pub fn iter(&self) -> impl Iterator<Item = &ZoneData> {
+        self.zones.iter().filter_map(|zone_data| zone_data.as_ref())
     }
 
     pub fn get_zone(&self, id: ZoneId) -> Option<&ZoneData> {
-        self.zones.get(&id)
+        match self.zones.get(id.get() as usize) {
+            Some(inner) => inner.as_ref(),
+            None => None,
+        }
     }
 }

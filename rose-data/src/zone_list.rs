@@ -1,5 +1,4 @@
 use rose_file_readers::VfsPathBuf;
-use std::collections::{hash_map::Iter, HashMap};
 
 use crate::ZoneId;
 
@@ -12,19 +11,24 @@ pub struct ZoneListEntry {
 }
 
 pub struct ZoneList {
-    pub zones: HashMap<ZoneId, ZoneListEntry>,
+    zones: Vec<Option<ZoneListEntry>>,
 }
 
 impl ZoneList {
-    pub fn new(zones: HashMap<ZoneId, ZoneListEntry>) -> Self {
+    pub fn new(zones: Vec<Option<ZoneListEntry>>) -> Self {
         Self { zones }
     }
 
-    pub fn iter(&self) -> Iter<'_, ZoneId, ZoneListEntry> {
-        self.zones.iter()
+    pub fn iter(&self) -> impl Iterator<Item = &ZoneListEntry> {
+        self.zones
+            .iter()
+            .filter_map(|zone_list_entry| zone_list_entry.as_ref())
     }
 
     pub fn get_zone(&self, id: ZoneId) -> Option<&ZoneListEntry> {
-        self.zones.get(&id)
+        match self.zones.get(id.get() as usize) {
+            Some(inner) => inner.as_ref(),
+            None => None,
+        }
     }
 }

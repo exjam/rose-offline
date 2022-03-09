@@ -1,6 +1,5 @@
 use log::debug;
 use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
-use std::collections::HashMap;
 
 use rose_data::{
     NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneList,
@@ -320,16 +319,10 @@ pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")
             .ok()?,
     );
-    let mut zones = HashMap::new();
+    let mut zones = Vec::with_capacity(data.rows());
+    zones.push(None); // Zone ID 0
     for id in 1..data.rows() {
-        let zone_file = data.get_zone_file(id);
-        if zone_file.is_none() {
-            continue;
-        }
-
-        if let Ok(zone_data) = load_zone(vfs, &data, &stl, id) {
-            zones.insert(ZoneId::new(id as u16).unwrap(), zone_data);
-        }
+        zones.push(load_zone(vfs, &data, &stl, id).ok());
     }
 
     Some(ZoneDatabase::new(zones))
@@ -360,16 +353,10 @@ pub fn get_zone_list(vfs: &VfsIndex) -> Option<ZoneList> {
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")
             .ok()?,
     );
-    let mut zones = HashMap::new();
+    let mut zones = Vec::with_capacity(data.rows());
+    zones.push(None); // Zone ID 0
     for id in 1..data.rows() {
-        let zone_file = data.get_zone_file(id);
-        if zone_file.is_none() {
-            continue;
-        }
-
-        if let Ok(zone_list_entry) = load_zone_list_entry(&data, &stl, id) {
-            zones.insert(ZoneId::new(id as u16).unwrap(), zone_list_entry);
-        }
+        zones.push(load_zone_list_entry(&data, &stl, id).ok());
     }
 
     Some(ZoneList::new(zones))
