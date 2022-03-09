@@ -8,7 +8,7 @@ use rose_data::{
 };
 use rose_file_readers::{
     stb_column, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
-    IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile,
+    IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, ZonFile, ZonReadOptions,
 };
 
 const MIN_SECTOR_SIZE: u32 = 5000;
@@ -61,8 +61,6 @@ pub enum LoadZoneError {
     NotExists,
     ZonFileInvalidPath,
     ZonFileNotFound,
-    ZonFileInvalid,
-    IfoFileInvalid,
 }
 
 fn create_monster_spawn(
@@ -143,18 +141,26 @@ fn load_zone(
         .ok_or(LoadZoneError::ZonFileInvalidPath)?;
 
     let zon_file: ZonFile = vfs
-        .read_file(&zone_file)
+        .read_file_with(
+            &zone_file,
+            &ZonReadOptions {
+                skip_zone_info: false,
+                skip_event_positions: false,
+                skip_textures: true,
+                skip_tiles: true,
+            },
+        )
         .map_err(|_| LoadZoneError::ZonFileNotFound)?;
 
     let mut monster_spawns = Vec::new();
     let mut npcs = Vec::new();
     let mut event_objects = Vec::new();
-    let mut ifo_count = 0;
 
-    let mut min_x = None;
-    let mut min_y = None;
-    let mut max_x = None;
-    let mut max_y = None;
+    let mut num_blocks = 0;
+    let mut min_block_x = None;
+    let mut min_block_y = None;
+    let mut max_block_x = None;
+    let mut max_block_y = None;
 
     let objects_offset = Vector3::new(
         (64.0 / 2.0) * (zon_file.grid_size * zon_file.grid_per_patch * 16.0)
@@ -170,10 +176,11 @@ fn load_zone(
         skip_water_planes: true,
         ..Default::default()
     };
-    for y in 0..64u32 {
-        for x in 0..64u32 {
+
+    for block_y in 0..64u32 {
+        for block_x in 0..64u32 {
             if let Ok(ifo_file) = vfs.read_file_with::<IfoFile, _>(
-                zone_base_directory.join(format!("{}_{}.IFO", x, y)),
+                zone_base_directory.join(format!("{}_{}.IFO", block_x, block_y)),
                 &ifo_read_options,
             ) {
                 monster_spawns.extend(
@@ -189,26 +196,35 @@ fn load_zone(
                         .map(|x| create_npc_spawn(x, objects_offset)),
                 );
                 event_objects.extend(ifo_file.event_objects.iter().map(|event_object| {
-                    create_event_object(event_object, objects_offset, x as i32, y as i32)
+                    create_event_object(
+                        event_object,
+                        objects_offset,
+                        block_x as i32,
+                        block_y as i32,
+                    )
                 }));
-                ifo_count += 1;
+                num_blocks += 1;
 
-                min_x = Some(min_x.map_or(x, |value| u32::min(value, x)));
-                min_y = Some(min_y.map_or(y, |value| u32::min(value, y)));
-                max_x = Some(max_x.map_or(x, |value| u32::max(value, x)));
-                max_y = Some(max_y.map_or(y, |value| u32::max(value, y)));
+                min_block_x = Some(min_block_x.map_or(block_x, |value| u32::min(value, block_x)));
+                min_block_y = Some(min_block_y.map_or(block_y, |value| u32::min(value, block_y)));
+                max_block_x = Some(max_block_x.map_or(block_x, |value| u32::max(value, block_x)));
+                max_block_y = Some(max_block_y.map_or(block_y, |value| u32::max(value, block_y)));
             }
         }
     }
 
-    if min_x.is_none() || min_y.is_none() || max_x.is_none() || max_y.is_none() {
+    if min_block_x.is_none()
+        || min_block_y.is_none()
+        || max_block_x.is_none()
+        || max_block_y.is_none()
+    {
         return Err(LoadZoneError::NotExists);
     }
 
-    let min_x = min_x.unwrap();
-    let min_y = min_y.unwrap() - 1; // Map grows in negative y
-    let max_x = max_x.unwrap() + 1; // Map grows in positive x
-    let max_y = max_y.unwrap();
+    let min_x = min_block_x.unwrap();
+    let min_y = min_block_y.unwrap() - 1; // Map grows in negative y
+    let max_x = max_block_x.unwrap() + 1; // Map grows in positive x
+    let max_y = max_block_y.unwrap();
 
     let sector_size = data
         .get_zone_sector_size(id)
@@ -244,7 +260,7 @@ fn load_zone(
         "Loaded zone {} {} blocks: {}, spawns: {}, npcs: {}, sectors ({}, {}), start: {}",
         id,
         name,
-        ifo_count,
+        num_blocks,
         monster_spawns.len(),
         npcs.len(),
         num_sectors_x,

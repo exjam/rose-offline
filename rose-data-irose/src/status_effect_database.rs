@@ -7,7 +7,7 @@ use rose_data::{
 };
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
-use crate::irose::data::data_decoder::{IroseStatusEffectClearedByType, IroseStatusEffectType};
+use crate::data_decoder::{IroseStatusEffectClearedByType, IroseStatusEffectType};
 
 struct StbStatus(StbFile);
 

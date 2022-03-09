@@ -7,18 +7,16 @@ use num_derive::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, VehiclePartIndex, WarpGateId};
+use rose_data_irose::decode_ammo_index;
 
 use crate::{
     game::{
         components::{BasicStatType, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot},
         messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
     },
-    irose::{
-        data::decode_ammo_index,
-        protocol::game::common_packets::{
-            decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-            PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
-        },
+    irose::protocol::game::common_packets::{
+        decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
+        PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
     },
     protocol::{Packet, PacketReader, ProtocolError},
 };

@@ -2,7 +2,6 @@ use arrayvec::ArrayVec;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::{collections::HashMap, time::Duration};
 
-use crate::irose::data::data_decoder::decode_ability_type;
 use rose_data::{
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
     FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemClass, ItemDatabase, ItemGradeData,
@@ -10,7 +9,7 @@ use rose_data::{
     VehicleItemData, VehicleItemPart, WeaponItemData,
 };
 
-use crate::irose::data::data_decoder::IroseItemClass;
+use crate::data_decoder::{decode_ability_type, IroseItemClass};
 
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);

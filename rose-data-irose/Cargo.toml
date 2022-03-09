@@ -1,0 +1,14 @@
+[package]
+name = "rose-data-irose"
+version = "0.1.0"
+authors = ["James Benton <james.benton2@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+arrayvec = "0.7"
+log = "0.4"
+nalgebra = { version = "0.25", features = ["serde-serialize"] }
+num-derive = "0.3"
+num-traits = "0.2"
+rose-data = { path = "../rose-data" }
+rose-file-readers = { path = "../rose-file-readers" }

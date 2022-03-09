@@ -4,18 +4,16 @@ use std::sync::Arc;
 use rose_data::{
     EquipmentItem, Item, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
 };
+use rose_data_irose::decode_item_base1000;
 use rose_file_readers::{stb_column, StbFile, VfsIndex};
 
-use crate::{
-    game::{
-        components::{
-            BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar,
-            Inventory, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina,
-            StatPoints, UnionMembership,
-        },
-        storage::character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
+use crate::game::{
+    components::{
+        BasicStats, CharacterInfo, Equipment, ExperiencePoints, HealthPoints, Hotbar, Inventory,
+        Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
+        UnionMembership,
     },
-    irose::data::data_decoder::decode_item_base1000,
+    storage::character::{CharacterCreator, CharacterCreatorError, CharacterStorage},
 };
 
 struct CharacterGenderData {

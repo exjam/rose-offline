@@ -349,9 +349,9 @@ impl_conversions!(
 
 #[derive(FromPrimitive)]
 pub enum IroseStatusEffectClearedByType {
-    ClearGood = 0,
-    ClearBad = 1,
-    ClearNone = 2,
+    Good = 0,
+    Bad = 1,
+    None = 2,
 }
 impl_conversions!(
     IroseStatusEffectClearedByType,
@@ -920,9 +920,9 @@ pub fn decode_status_effect_type(id: usize) -> Option<StatusEffectType> {
 
 pub fn decode_status_effect_cleared_by_type(id: usize) -> Option<StatusEffectClearedByType> {
     match FromPrimitive::from_usize(id)? {
-        IroseStatusEffectClearedByType::ClearGood => Some(StatusEffectClearedByType::ClearGood),
-        IroseStatusEffectClearedByType::ClearBad => Some(StatusEffectClearedByType::ClearBad),
-        IroseStatusEffectClearedByType::ClearNone => Some(StatusEffectClearedByType::ClearNone),
+        IroseStatusEffectClearedByType::Good => Some(StatusEffectClearedByType::ClearGood),
+        IroseStatusEffectClearedByType::Bad => Some(StatusEffectClearedByType::ClearBad),
+        IroseStatusEffectClearedByType::None => Some(StatusEffectClearedByType::ClearNone),
     }
 }
 

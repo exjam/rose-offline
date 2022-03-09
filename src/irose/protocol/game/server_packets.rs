@@ -7,6 +7,7 @@ use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
     SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
+use rose_data_irose::{encode_ability_type, encode_ammo_index};
 
 use crate::{
     data::Damage,
@@ -25,14 +26,10 @@ use crate::{
             PartyRequest, PickupItemDropContent, PickupItemDropError,
         },
     },
-    irose::{
-        data::{encode_ability_type, encode_ammo_index},
-        protocol::game::common_packets::{
-            PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId,
-            PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot,
-            PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
-            PacketWriteVehiclePartIndex,
-        },
+    irose::protocol::game::common_packets::{
+        PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
+        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
+        PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
     },
     protocol::{Packet, PacketWriter},
 };

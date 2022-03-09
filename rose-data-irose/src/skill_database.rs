@@ -13,7 +13,7 @@ use rose_data::{
 };
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
-use super::data_decoder::{
+use crate::data_decoder::{
     decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillPageType,
     IroseSkillTargetFilter, IroseSkillType,
 };

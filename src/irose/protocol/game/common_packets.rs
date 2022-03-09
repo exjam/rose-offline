@@ -5,16 +5,16 @@ use rose_data::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, SkillPageType, StackableItem,
     StatusEffectType, VehiclePartIndex,
 };
+use rose_data_irose::{
+    decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
+    encode_equipment_index, encode_item_type, encode_vehicle_part_index,
+};
 
 use crate::{
     data::Damage,
     game::components::{
         ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
         SkillSlot, StatusEffects,
-    },
-    irose::data::{
-        decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
-        encode_equipment_index, encode_item_type, encode_vehicle_part_index,
     },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };

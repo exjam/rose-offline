@@ -6,7 +6,7 @@ use rose_data::{
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 
-use crate::irose::data::data_decoder::decode_item_base1000;
+use crate::data_decoder::decode_item_base1000;
 
 struct StbNpc(StbFile);
 
