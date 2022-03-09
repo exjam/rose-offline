@@ -83,7 +83,7 @@ pub use item_database::{
 pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData, MotionId};
 pub use npc_database::{
     NpcConversationData, NpcConversationId, NpcData, NpcDatabase, NpcId, NpcMotionAction,
-    NpcStoreTabData, NpcStoreTabId,
+    NpcMotionId, NpcStoreTabData, NpcStoreTabId,
 };
 pub use quest_database::{QuestData, QuestDatabase, QuestTrigger, QuestTriggerHash};
 pub use skill_database::{

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, num::NonZeroUsize};
 
 use rose_data::{
-    MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcStoreTabData,
+    MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcMotionId, NpcStoreTabData,
     NpcStoreTabId,
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
@@ -118,6 +118,13 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
             .ok()?,
     );
 
+    let mut motions = HashMap::new();
+    for (motion_id, path) in model_data.motion_files.iter().enumerate() {
+        if let Some(motion_file_data) = load_zmo(vfs, path) {
+            motions.insert(motion_id as u16, motion_file_data);
+        }
+    }
+
     let mut npcs = HashMap::new();
     for id in 1..data.rows() {
         let npc_model_data = model_data.npcs.get(&(id as u16));
@@ -132,18 +139,14 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         let mut motion_data = HashMap::new();
         if let Some(npc_model_data) = npc_model_data {
             for &(action_id, motion_id) in npc_model_data.motion_ids.iter() {
-                if let Some(file) = model_data
-                    .motion_files
-                    .get(motion_id as usize)
-                    .and_then(|path| load_zmo(vfs, path.as_str()))
-                {
-                    motion_data.insert(action_id, file);
+                if let Some(motion_file_data) = motions.get(&motion_id) {
+                    motion_data.insert(NpcMotionId::new(action_id), motion_file_data.clone());
                 }
             }
         }
 
         npcs.insert(
-            id as u16,
+            NpcId::new(id as u16).unwrap(),
             NpcData {
                 name: npc_string_id
                     .and_then(|string_id| stl.get_text_string(1, string_id))
@@ -229,7 +232,7 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         .read_file::<StbFile, _>("3DDATA/STB/LIST_SELL.STB")
         .ok()?;
     let mut store_tabs = HashMap::new();
-    for id in 0..data.rows() {
+    for id in 1..data.rows() {
         let tab_string_id = data.get(id, 1);
         let name = stl
             .get_text_string(1, tab_string_id)
@@ -244,9 +247,19 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         }
 
         if !items.is_empty() {
-            store_tabs.insert(id as u16, NpcStoreTabData { name, items });
+            store_tabs.insert(
+                NpcStoreTabId::new(id as u16).unwrap(),
+                NpcStoreTabData { name, items },
+            );
         }
     }
 
+    log::debug!(
+        "Loaded {} NPCs, {} motions, {} conversations, {} stores",
+        npcs.len(),
+        motions.len(),
+        conversation_files.len(),
+        store_tabs.len()
+    );
     Some(NpcDatabase::new(npcs, conversation_files, store_tabs))
 }

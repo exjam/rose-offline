@@ -4,7 +4,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{ItemReference, MotionFileData, MotionId};
+use crate::{ItemReference, MotionFileData};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub struct NpcId(NonZeroU16);
@@ -20,6 +20,11 @@ id_wrapper_impl!(NpcConversationId, String);
 pub struct NpcStoreTabId(NonZeroU16);
 
 id_wrapper_impl!(NpcStoreTabId, NonZeroU16, u16);
+
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+pub struct NpcMotionId(u16);
+
+id_wrapper_impl!(NpcMotionId, u16);
 
 pub enum NpcMotionAction {
     Stop = 0,
@@ -79,7 +84,7 @@ pub struct NpcData {
     pub create_sound_index: u32,
     pub death_quest_trigger_name: String,
     pub npc_height: i32,
-    pub motion_data: HashMap<u16, MotionFileData>,
+    pub motion_data: HashMap<NpcMotionId, MotionFileData>,
 }
 
 pub struct NpcConversationData {
@@ -96,16 +101,16 @@ pub struct NpcStoreTabData {
 }
 
 pub struct NpcDatabase {
-    npcs: HashMap<u16, NpcData>,
+    npcs: HashMap<NpcId, NpcData>,
     conversation_files: HashMap<String, NpcConversationData>,
-    store_tabs: HashMap<u16, NpcStoreTabData>,
+    store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
 }
 
 impl NpcDatabase {
     pub fn new(
-        npcs: HashMap<u16, NpcData>,
+        npcs: HashMap<NpcId, NpcData>,
         conversation_files: HashMap<String, NpcConversationData>,
-        store_tabs: HashMap<u16, NpcStoreTabData>,
+        store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
     ) -> Self {
         Self {
             npcs,
@@ -115,19 +120,19 @@ impl NpcDatabase {
     }
 
     pub fn get_npc(&self, id: NpcId) -> Option<&NpcData> {
-        self.npcs.get(&(id.get() as u16))
+        self.npcs.get(&id)
     }
 
     pub fn get_conversation(&self, key: &NpcConversationId) -> Option<&NpcConversationData> {
         self.conversation_files.get(&key.0)
     }
 
-    pub fn get_npc_motion(&self, id: NpcId, motion_id: MotionId) -> Option<&MotionFileData> {
+    pub fn get_motion(&self, id: NpcId, motion_id: NpcMotionId) -> Option<&MotionFileData> {
         let npc_data = self.get_npc(id)?;
-        npc_data.motion_data.get(&motion_id.get())
+        npc_data.motion_data.get(&motion_id)
     }
 
     pub fn get_store_tab(&self, id: NpcStoreTabId) -> Option<&NpcStoreTabData> {
-        self.store_tabs.get(&(id.get() as u16))
+        self.store_tabs.get(&id)
     }
 }

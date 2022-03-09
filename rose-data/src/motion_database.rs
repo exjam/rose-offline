@@ -1,6 +1,6 @@
 use std::{collections::HashMap, str::FromStr, time::Duration};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MotionId(u16);
 
 id_wrapper_impl!(MotionId, u16);

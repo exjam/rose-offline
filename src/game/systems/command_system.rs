@@ -3,7 +3,8 @@ use nalgebra::Point3;
 use std::time::Duration;
 
 use rose_data::{
-    AmmoIndex, EquipmentIndex, Item, ItemClass, SkillActionMode, StackableSlotBehaviour,
+    AmmoIndex, EquipmentIndex, Item, ItemClass, NpcMotionId, SkillActionMode,
+    StackableSlotBehaviour,
 };
 
 use crate::game::{
@@ -762,7 +763,9 @@ pub fn command_system(
                                 .or(skill_data.casting_motion_id)
                                 .and_then(|motion_id| {
                                     if let Some(npc) = npc {
-                                        game_data.npcs.get_npc_motion(npc.id, motion_id)
+                                        game_data
+                                            .npcs
+                                            .get_motion(npc.id, NpcMotionId::new(motion_id.get()))
                                     } else {
                                         game_data.motions.find_first_character_motion(motion_id)
                                     }
@@ -775,7 +778,9 @@ pub fn command_system(
                                 .or(skill_data.action_motion_id)
                                 .and_then(|motion_id| {
                                     if let Some(npc) = npc {
-                                        game_data.npcs.get_npc_motion(npc.id, motion_id)
+                                        game_data
+                                            .npcs
+                                            .get_motion(npc.id, NpcMotionId::new(motion_id.get()))
                                     } else {
                                         game_data.motions.find_first_character_motion(motion_id)
                                     }
@@ -911,7 +916,9 @@ pub fn command_system(
                 }
                 CommandData::Emote(CommandEmote { motion_id, is_stop }) => {
                     let motion_data = if let Some(npc) = npc {
-                        game_data.npcs.get_npc_motion(npc.id, *motion_id)
+                        game_data
+                            .npcs
+                            .get_motion(npc.id, NpcMotionId::new(motion_id.get()))
                     } else {
                         game_data.motions.find_first_character_motion(*motion_id)
                     };

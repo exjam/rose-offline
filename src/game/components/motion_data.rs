@@ -2,6 +2,7 @@ use bevy_ecs::prelude::Component;
 
 use rose_data::{
     MotionCharacterAction, MotionDatabase, MotionFileData, MotionId, NpcData, NpcMotionAction,
+    NpcMotionId,
 };
 
 #[derive(Default)]
@@ -51,7 +52,12 @@ pub enum MotionData {
 
 impl MotionData {
     pub fn from_npc(npc_data: &NpcData) -> Self {
-        let get_motion = |action| npc_data.motion_data.get(&(action as u16)).cloned();
+        let get_motion = |action| {
+            npc_data
+                .motion_data
+                .get(&NpcMotionId::new(action as u16))
+                .cloned()
+        };
 
         Self::Npc(MotionDataNpc {
             stop: get_motion(NpcMotionAction::Stop),
