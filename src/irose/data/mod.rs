@@ -1,5 +1,6 @@
 use std::{path::Path, sync::Arc};
 
+use rose_data::NpcDatabaseOptions;
 use rose_data_irose::{
     get_ai_database, get_data_decoder, get_item_database, get_motion_database, get_npc_database,
     get_quest_database, get_skill_database, get_status_effect_database, get_warp_gate_database,
@@ -30,7 +31,15 @@ pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&
 
     let item_database =
         Arc::new(get_item_database(&vfs_index).expect("Failed to load item database"));
-    let npc_database = Arc::new(get_npc_database(&vfs_index).expect("Failed to load npc database"));
+    let npc_database = Arc::new(
+        get_npc_database(
+            &vfs_index,
+            &NpcDatabaseOptions {
+                load_motion_file_data: true,
+            },
+        )
+        .expect("Failed to load npc database"),
+    );
     let skill_database =
         Arc::new(get_skill_database(&vfs_index).expect("Failed to load skill database"));
     let zone_database =

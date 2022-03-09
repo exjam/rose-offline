@@ -100,6 +100,10 @@ pub struct NpcStoreTabData {
     pub items: HashMap<u16, ItemReference>,
 }
 
+pub struct NpcDatabaseOptions {
+    pub load_motion_file_data: bool,
+}
+
 pub struct NpcDatabase {
     npcs: HashMap<NpcId, NpcData>,
     conversation_files: HashMap<String, NpcConversationData>,

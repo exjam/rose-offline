@@ -1,8 +1,8 @@
 use std::{collections::HashMap, num::NonZeroUsize};
 
 use rose_data::{
-    MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcId, NpcMotionId, NpcStoreTabData,
-    NpcStoreTabId,
+    MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcDatabaseOptions, NpcId,
+    NpcMotionId, NpcStoreTabData, NpcStoreTabId,
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 
@@ -104,14 +104,19 @@ fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
     })
 }
 
-pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
+pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<NpcDatabase> {
     let stl = vfs
         .read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")
         .ok()?;
 
-    let model_data = vfs
-        .read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")
-        .ok()?;
+    let model_data = if options.load_motion_file_data {
+        Some(
+            vfs.read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")
+                .ok()?,
+        )
+    } else {
+        None
+    };
 
     let data = StbNpc(
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")
@@ -119,15 +124,19 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
     );
 
     let mut motions = HashMap::new();
-    for (motion_id, path) in model_data.motion_files.iter().enumerate() {
-        if let Some(motion_file_data) = load_zmo(vfs, path) {
-            motions.insert(motion_id as u16, motion_file_data);
+    if let Some(model_data) = model_data.as_ref() {
+        for (motion_id, path) in model_data.motion_files.iter().enumerate() {
+            if let Some(motion_file_data) = load_zmo(vfs, path) {
+                motions.insert(motion_id as u16, motion_file_data);
+            }
         }
     }
 
     let mut npcs = HashMap::new();
     for id in 1..data.rows() {
-        let npc_model_data = model_data.npcs.get(&(id as u16));
+        let npc_model_data = model_data
+            .as_ref()
+            .and_then(|model_data| model_data.npcs.get(&(id as u16)));
         let npc_string_id = data.get_string_id(id);
         let ai_file_index = data.get_ai_file_index(id).unwrap_or(0);
 
@@ -137,10 +146,12 @@ pub fn get_npc_database(vfs: &VfsIndex) -> Option<NpcDatabase> {
         }
 
         let mut motion_data = HashMap::new();
-        if let Some(npc_model_data) = npc_model_data {
-            for &(action_id, motion_id) in npc_model_data.motion_ids.iter() {
-                if let Some(motion_file_data) = motions.get(&motion_id) {
-                    motion_data.insert(NpcMotionId::new(action_id), motion_file_data.clone());
+        if options.load_motion_file_data {
+            if let Some(npc_model_data) = npc_model_data {
+                for &(action_id, motion_id) in npc_model_data.motion_ids.iter() {
+                    if let Some(motion_file_data) = motions.get(&motion_id) {
+                        motion_data.insert(NpcMotionId::new(action_id), motion_file_data.clone());
+                    }
                 }
             }
         }
