@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use crate::data::{item::ItemClass, AbilityType, MotionId, NpcId, StatusEffectId, ZoneId};
+use crate::data::{AbilityType, ItemClass, MotionId, NpcId, StatusEffectId, ZoneId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct SkillId(NonZeroU16);

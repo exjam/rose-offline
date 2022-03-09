@@ -1,12 +1,8 @@
-use std::{collections::HashMap, time::Duration};
-
 use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, time::Duration};
 
-use crate::data::{
-    item::{ItemClass, ItemType},
-    AbilityType, SkillId, StatusEffectId,
-};
+use crate::data::{AbilityType, SkillId, StatusEffectId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ItemReference {
@@ -20,6 +16,175 @@ impl ItemReference {
             item_type,
             item_number,
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+pub enum ItemType {
+    Face,
+    Head,
+    Body,
+    Hands,
+    Feet,
+    Back,
+    Jewellery,
+    Weapon,
+    SubWeapon,
+    Consumable,
+    Gem,
+    Material,
+    Quest,
+    Vehicle,
+}
+
+impl ItemType {
+    pub fn is_stackable_item(self) -> bool {
+        matches!(
+            self,
+            ItemType::Consumable | ItemType::Gem | ItemType::Material | ItemType::Quest
+        )
+    }
+
+    #[allow(dead_code)]
+    pub fn is_quest_item(self) -> bool {
+        matches!(self, ItemType::Quest)
+    }
+
+    pub fn is_equipment_item(self) -> bool {
+        matches!(
+            self,
+            ItemType::Face
+                | ItemType::Head
+                | ItemType::Body
+                | ItemType::Hands
+                | ItemType::Feet
+                | ItemType::Back
+                | ItemType::Jewellery
+                | ItemType::Weapon
+                | ItemType::SubWeapon
+                | ItemType::Vehicle
+        )
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum ItemClass {
+    Unknown,
+
+    FaceMask,
+    FaceGlasses,
+    FaceEtc,
+
+    Helmet,
+    MagicHat,
+    Hat,
+    HairAccessory,
+
+    CombatUniform,
+    MagicClothes,
+    CasualClothes,
+
+    Gauntlet,
+    MagicGlove,
+    Glove,
+
+    Boots,
+    MagicBoots,
+    Shoes,
+
+    BackArmor,
+    Bag,
+    Wings,
+    ArrowBox,
+    BulletBox,
+    ShellBox,
+
+    Ring,
+    Necklace,
+    Earring,
+
+    OneHandedSword,
+    OneHandedBlunt,
+
+    TwoHandedSword,
+    Spear,
+    TwoHandedAxe,
+
+    Bow,
+    Gun,
+    Launcher,
+
+    MagicStaff,
+    MagicWand,
+
+    Katar,
+    DualSwords,
+    DualGuns,
+
+    Shield,
+    SupportTool,
+
+    Crossbow,
+
+    Medicine,
+    Food,
+    MagicItem,
+    SkillBook,
+    RepairTool,
+    QuestScroll,
+    EngineFuel,
+    AutomaticConsumption,
+    TimeCoupon,
+
+    Jewel,
+    WorkOfArt,
+
+    Metal,
+    OtherworldlyMetal,
+    StoneMaterial,
+    WoodenMaterial,
+    Leather,
+    Cloth,
+    RefiningMaterial,
+    Chemicals,
+    Material,
+    GatheredGoods,
+
+    Arrow,
+    Bullet,
+    Shell,
+
+    QuestItems,
+    Certification,
+
+    CartBody,
+    CastleGearBody,
+
+    CartEngine,
+    CastleGearEngine,
+
+    CartWheels,
+    CastleGearLeg,
+
+    CartAccessory,
+    CastleGearWeapon,
+}
+
+impl ItemClass {
+    pub fn is_two_handed_weapon(&self) -> bool {
+        matches!(
+            *self,
+            ItemClass::TwoHandedSword
+                | ItemClass::Spear
+                | ItemClass::TwoHandedAxe
+                | ItemClass::Bow
+                | ItemClass::Gun
+                | ItemClass::Launcher
+                | ItemClass::MagicStaff
+                | ItemClass::Katar
+                | ItemClass::DualSwords
+                | ItemClass::DualGuns
+        )
     }
 }
 
