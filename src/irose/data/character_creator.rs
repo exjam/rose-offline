@@ -1,4 +1,6 @@
+use enum_map::EnumMap;
 use nalgebra::Point3;
+use rose_game_common::components::CharacterGender;
 use std::sync::Arc;
 
 use rose_data::{
@@ -24,7 +26,7 @@ struct CharacterGenderData {
 
 struct CharacterCreatorData {
     skill_database: Arc<SkillDatabase>,
-    gender_data: Vec<CharacterGenderData>,
+    gender_data: EnumMap<CharacterGender, CharacterGenderData>,
     skills: Vec<SkillId>,
     start_position: Position,
     revive_position: Position,
@@ -115,15 +117,12 @@ impl CharacterCreator for CharacterCreatorData {
     fn create(
         &self,
         name: String,
-        gender: u8,
+        gender: CharacterGender,
         birth_stone: u8,
         face: u8,
         hair: u8,
     ) -> Result<CharacterStorage, CharacterCreatorError> {
-        let gender_data = self
-            .gender_data
-            .get(gender as usize)
-            .ok_or(CharacterCreatorError::InvalidGender)?;
+        let gender_data = &self.gender_data[gender];
 
         // TODO: For now we just make a hash of name to use as unique id
         let unique_id = QuestTriggerHash::from(name.as_str()).hash;
@@ -133,6 +132,7 @@ impl CharacterCreator for CharacterCreatorData {
                 name,
                 unique_id,
                 gender,
+                race: 0,
                 birth_stone,
                 job: 0,
                 face,
@@ -179,11 +179,11 @@ impl CharacterCreator for CharacterCreatorData {
         Ok(character)
     }
 
-    fn get_basic_stats(&self, gender: u8) -> Result<BasicStats, CharacterCreatorError> {
-        let gender_data = self
-            .gender_data
-            .get(gender as usize)
-            .ok_or(CharacterCreatorError::InvalidGender)?;
+    fn get_basic_stats(
+        &self,
+        gender: CharacterGender,
+    ) -> Result<BasicStats, CharacterCreatorError> {
+        let gender_data = &self.gender_data[gender];
         Ok(gender_data.basic_stats.clone())
     }
 }
@@ -209,13 +209,10 @@ pub fn get_character_creator(
         vfs.read_file::<StbFile, _>("3DDATA/STB/INIT_AVATAR.STB")
             .ok()?,
     );
-    let mut gender_data = Vec::new();
-    for id in 0..data.0.rows() {
-        if let Some(gender) = load_gender(&data, id) {
-            gender_data.insert(id, gender);
-        }
-    }
-
+    let gender_data = EnumMap::from_array([
+        load_gender(&data, 0).unwrap(),
+        load_gender(&data, 1).unwrap(),
+    ]);
     let skills = vec![
         SkillId::new(11).unwrap(), // Sit
         SkillId::new(12).unwrap(), // Pick Up

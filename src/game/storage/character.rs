@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf};
 
+use rose_game_common::components::CharacterGender;
+
 use crate::game::{
     components::{
         BasicStats, CharacterDeleteTime, CharacterInfo, Equipment, ExperiencePoints, HealthPoints,
@@ -76,13 +78,14 @@ pub trait CharacterCreator {
     fn create(
         &self,
         name: String,
-        gender: u8,
+        gender: CharacterGender,
         birth_stone: u8,
         face: u8,
         hair: u8,
     ) -> Result<CharacterStorage, CharacterCreatorError>;
 
-    fn get_basic_stats(&self, gender: u8) -> Result<BasicStats, CharacterCreatorError>;
+    fn get_basic_stats(&self, gender: CharacterGender)
+        -> Result<BasicStats, CharacterCreatorError>;
 }
 
 impl CharacterStorage {

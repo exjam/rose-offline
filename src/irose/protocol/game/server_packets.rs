@@ -26,10 +26,11 @@ use crate::{
             PartyRequest, PickupItemDropContent, PickupItemDropError,
         },
     },
-    irose::protocol::game::common_packets::{
-        PacketEquipmentAmmoPart, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
-        PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
-        PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    irose::protocol::common_packets::{
+        PacketEquipmentAmmoPart, PacketWriteCharacterGender, PacketWriteDamage,
+        PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot,
+        PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
+        PacketWriteVehiclePartIndex,
     },
     protocol::{Packet, PacketWriter},
 };
@@ -160,7 +161,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
     fn from(packet: &'a PacketServerSelectCharacter<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SelectCharacter as u16);
         let character_info = packet.character_info;
-        writer.write_u8(character_info.gender);
+        writer.write_character_gender_u8(character_info.gender);
         writer.write_u16(packet.position.zone_id.get() as u16);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
@@ -799,7 +800,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_status_effects_flags_u32(packet.status_effects);
-        writer.write_u8(packet.character_info.gender);
+        writer.write_character_gender_u8(packet.character_info.gender);
         writer.write_u16(packet.move_speed.speed as u16);
         writer.write_u16(packet.passive_attack_speed as u16);
         writer.write_u8(0); // TODO: Weight rate

@@ -10,7 +10,7 @@ mod status_effects;
 
 pub use ability_values::{AbilityValues, DamageCategory, DamageType};
 pub use basic_stats::{BasicStatType, BasicStats};
-pub use character_info::{CharacterInfo, CharacterUniqueId};
+pub use character_info::{CharacterGender, CharacterInfo, CharacterUniqueId};
 pub use equipment::{Equipment, EquipmentItemDatabase, EquipmentItemReference};
 pub use inventory::{Inventory, InventoryError, InventoryPage, InventoryPageType, ItemSlot, Money};
 pub use item_drop::{DroppedItem, ItemDrop};

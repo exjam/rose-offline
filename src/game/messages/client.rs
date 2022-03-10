@@ -5,6 +5,7 @@ use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
     WorldTicks,
 };
+use rose_game_common::components::CharacterGender;
 
 use crate::game::{
     components::{
@@ -121,7 +122,7 @@ pub enum CreateCharacterError {
 
 #[derive(Debug)]
 pub struct CreateCharacter {
-    pub gender: u8,
+    pub gender: CharacterGender,
     pub birth_stone: u8,
     pub hair: u8,
     pub face: u8,

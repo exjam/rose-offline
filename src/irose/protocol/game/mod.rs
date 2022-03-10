@@ -28,8 +28,6 @@ use crate::{
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
 };
 
-mod common_packets;
-
 mod client_packets;
 mod server_packets;
 

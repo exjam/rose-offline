@@ -4,11 +4,12 @@ use rose_data::{
     MotionCharacterAction, MotionDatabase, MotionFileData, MotionId, NpcData, NpcMotionAction,
     NpcMotionId,
 };
+use rose_game_common::components::CharacterGender;
 
 #[derive(Default)]
 pub struct MotionDataCharacter {
     pub weapon_motion_type: usize,
-    pub gender: usize,
+    pub gender_index: usize,
     pub attack1: Option<MotionFileData>,
     pub attack2: Option<MotionFileData>,
     pub attack3: Option<MotionFileData>,
@@ -77,17 +78,25 @@ impl MotionData {
     pub fn from_character(
         motion_database: &MotionDatabase,
         weapon_motion_type: usize,
-        gender: usize,
+        gender: CharacterGender,
     ) -> Self {
+        let gender_index = match gender {
+            CharacterGender::Male => 0,
+            CharacterGender::Female => 1,
+        };
         let get_motion = |action| {
             motion_database
-                .get_character_motion(MotionId::new(action as u16), weapon_motion_type, gender)
+                .get_character_motion(
+                    MotionId::new(action as u16),
+                    weapon_motion_type,
+                    gender_index,
+                )
                 .cloned()
         };
 
         Self::Character(MotionDataCharacter {
             weapon_motion_type,
-            gender,
+            gender_index,
             attack1: get_motion(MotionCharacterAction::Attack),
             attack2: get_motion(MotionCharacterAction::Attack2),
             attack3: get_motion(MotionCharacterAction::Attack3),

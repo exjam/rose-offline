@@ -9,7 +9,7 @@ use rose_data_irose::{
     decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
     encode_equipment_index, encode_item_type, encode_vehicle_part_index,
 };
-use rose_game_common::data::Damage;
+use rose_game_common::{components::CharacterGender, data::Damage};
 
 use crate::{
     game::components::{
@@ -65,6 +65,33 @@ impl PacketWriteHotbarSlot for PacketWriter {
             .with_slot_type(slot_type)
             .with_index(index);
         self.write_bytes(&slot.into_bytes());
+    }
+}
+
+pub trait PacketReadCharacterGender {
+    fn read_character_gender_u8(&mut self) -> Result<CharacterGender, ProtocolError>;
+}
+
+impl<'a> PacketReadCharacterGender for PacketReader<'a> {
+    fn read_character_gender_u8(&mut self) -> Result<CharacterGender, ProtocolError> {
+        match self.read_u8()? {
+            0 => Ok(CharacterGender::Male),
+            1 => Ok(CharacterGender::Female),
+            _ => Err(ProtocolError::InvalidPacket),
+        }
+    }
+}
+
+pub trait PacketWriteCharacterGender {
+    fn write_character_gender_u8(&mut self, gender: CharacterGender);
+}
+
+impl PacketWriteCharacterGender for PacketWriter {
+    fn write_character_gender_u8(&mut self, gender: CharacterGender) {
+        match gender {
+            CharacterGender::Male => self.write_u8(0),
+            CharacterGender::Female => self.write_u8(1),
+        }
     }
 }
 

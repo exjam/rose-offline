@@ -12,6 +12,7 @@ use std::{
 };
 
 use rose_data::{AbilityType, EquipmentIndex, Item, ItemReference, ItemType, SkillId, ZoneId};
+use rose_game_common::components::CharacterGender;
 
 use crate::game::{
     bundles::{
@@ -177,7 +178,7 @@ impl From<ParseFloatError> for ChatCommandError {
 fn create_bot_entity(
     chat_command_params: &mut ChatCommandParams,
     name: String,
-    gender: u8,
+    gender: CharacterGender,
     face: u8,
     hair: u8,
     position: Position,
@@ -215,7 +216,7 @@ fn create_bot_entity(
     let motion_data = MotionData::from_character(
         chat_command_params.game_data.motions.as_ref(),
         weapon_motion_type,
-        bot_data.info.gender as usize,
+        bot_data.info.gender,
     );
 
     bot_data.position = position.clone();
@@ -276,7 +277,7 @@ fn create_random_bot_entities(
     origin: Position,
 ) -> Vec<Entity> {
     let mut rng = rand::thread_rng();
-    let genders = [0, 1];
+    let genders = [CharacterGender::Male, CharacterGender::Female];
     let faces = [1, 8, 15, 22, 29, 36, 43];
     let hair = [0, 5, 10, 15, 20];
 
@@ -292,7 +293,7 @@ fn create_random_bot_entities(
         if let Some(bot_entity) = create_bot_entity(
             chat_command_params,
             format!("Friend {}", chat_command_params.bot_list.len() as usize),
-            *genders.choose(&mut rng).unwrap() as u8,
+            *genders.choose(&mut rng).unwrap(),
             *faces.choose(&mut rng).unwrap() as u8,
             *hair.choose(&mut rng).unwrap() as u8,
             bot_position,

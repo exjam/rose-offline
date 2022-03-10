@@ -132,7 +132,7 @@ fn handle_game_connection_request(
     let motion_data = MotionData::from_character(
         game_data.motions.as_ref(),
         weapon_motion_type,
-        character.info.gender as usize,
+        character.info.gender,
     );
 
     let move_mode = MoveMode::Run;

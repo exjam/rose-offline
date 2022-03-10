@@ -4,6 +4,7 @@ use num_traits::{AsPrimitive, Saturating, Signed};
 use std::num::NonZeroUsize;
 
 use rose_data::AbilityType;
+use rose_game_common::components::CharacterGender;
 
 use crate::game::{
     components::{
@@ -41,8 +42,11 @@ pub fn ability_values_get_value(
     union_membership: Option<&UnionMembership>,
 ) -> Option<i32> {
     match ability_type {
-        AbilityType::Gender => character_info.map(|x| (x.gender % 2) as i32),
-        AbilityType::Race => character_info.map(|x| (x.gender / 2) as i32),
+        AbilityType::Gender => character_info.map(|x| match x.gender {
+            CharacterGender::Male => 0,
+            CharacterGender::Female => 1,
+        }),
+        AbilityType::Race => character_info.map(|x| (x.race / 2) as i32),
         AbilityType::Birthstone => character_info.map(|x| x.birth_stone as i32),
         AbilityType::Class => character_info.map(|x| x.job as i32),
         AbilityType::Rank => character_info.map(|x| x.rank as i32),
@@ -331,7 +335,11 @@ pub fn ability_values_set_value(
     let result = match ability_type {
         AbilityType::Gender => {
             if let Some(character_info) = character_info.as_mut() {
-                character_info.gender = value as u8;
+                if value == 0 {
+                    character_info.gender = CharacterGender::Male;
+                } else {
+                    character_info.gender = CharacterGender::Female;
+                }
             }
 
             true

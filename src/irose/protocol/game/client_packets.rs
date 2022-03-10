@@ -14,7 +14,7 @@ use crate::{
         components::{BasicStatType, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot},
         messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
     },
-    irose::protocol::game::common_packets::{
+    irose::protocol::common_packets::{
         decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
         PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
     },

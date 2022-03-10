@@ -1,7 +1,12 @@
 use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 
-use crate::protocol::{Packet, PacketReader, ProtocolError};
+use rose_game_common::components::CharacterGender;
+
+use crate::{
+    irose::protocol::common_packets::PacketReadCharacterGender,
+    protocol::{Packet, PacketReader, ProtocolError},
+};
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -53,7 +58,7 @@ impl TryFrom<&Packet> for PacketClientCharacterList {
 
 #[derive(Debug)]
 pub struct PacketClientCreateCharacter<'a> {
-    pub gender: u8,
+    pub gender: CharacterGender,
     pub birth_stone: u8,
     pub hair: u8,
     pub face: u8,
@@ -69,7 +74,7 @@ impl<'a> TryFrom<&'a Packet> for PacketClientCreateCharacter<'a> {
             return Err(ProtocolError::InvalidPacket);
         }
         let mut reader = PacketReader::from(packet);
-        let gender = reader.read_u8()?;
+        let gender = reader.read_character_gender_u8()?;
         let birth_stone = reader.read_u8()?;
         let hair = reader.read_u8()?;
         let face = reader.read_u8()?;

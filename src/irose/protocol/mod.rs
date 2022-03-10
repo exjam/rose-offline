@@ -6,6 +6,7 @@ use packet_codec::PacketCodec;
 use crate::game::messages::control::ClientType;
 use crate::protocol::Protocol;
 
+mod common_packets;
 mod game;
 mod login;
 mod world;
