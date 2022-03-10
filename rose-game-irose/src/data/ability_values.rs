@@ -8,13 +8,12 @@ use rose_data::{
     ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
     VehiclePartIndex,
 };
-
-use crate::{
-    data::{AbilityValueCalculator, Damage, PassiveRecoveryState},
-    game::components::{
+use rose_game_common::{
+    components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
         Equipment, EquipmentItemDatabase, Level, SkillList, StatusEffects,
     },
+    data::{AbilityValueCalculator, Damage, PassiveRecoveryState},
 };
 
 const MAX_BASIC_STAT_VALUE: i32 = 300;

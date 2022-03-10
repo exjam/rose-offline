@@ -21,24 +21,20 @@ use rose_file_readers::{
     AipNpcId, AipOperatorType, AipResultOperator, AipSkillId, AipSkillTarget, AipSpawnNpcOrigin,
     AipTrigger, AipVariableType, AipZoneId,
 };
+use rose_game_common::data::Damage;
 
-use crate::{
-    data::Damage,
-    game::{
-        bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
-        components::{
-            AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command,
-            CommandData, CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints, Level,
-            MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position,
-            SpawnOrigin, StatusEffects, Target, Team,
-        },
-        events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
-        messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
-        resources::{
-            ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
-        },
-        GameData,
+use crate::game::{
+    bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
+    components::{
+        AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command, CommandData,
+        CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints, Level, MonsterSpawnPoint,
+        MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin,
+        StatusEffects, Target, Team,
     },
+    events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
+    messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
+    resources::{ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList},
+    GameData,
 };
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);

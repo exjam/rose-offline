@@ -3,11 +3,9 @@ use nalgebra::{Point2, Point3};
 use std::time::Duration;
 
 use rose_data::{Item, MotionId, SkillId};
+use rose_game_common::data::Damage;
 
-use crate::{
-    data::Damage,
-    game::components::{ItemSlot, MoveMode},
-};
+use crate::game::components::{ItemSlot, MoveMode};
 
 #[derive(Clone)]
 pub struct CommandMove {

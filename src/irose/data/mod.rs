@@ -7,16 +7,12 @@ use rose_data_irose::{
     get_zone_database,
 };
 use rose_file_readers::VfsIndex;
+use rose_game_irose::data::{get_ability_value_calculator, get_drop_table};
 
 use crate::game::GameData;
 
-mod ability_values;
 mod character_creator;
-mod drop_table;
-
-use ability_values::get_ability_value_calculator;
 use character_creator::get_character_creator;
-use drop_table::get_drop_table;
 
 pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&Path>) -> GameData {
     log::info!(

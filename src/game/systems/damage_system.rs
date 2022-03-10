@@ -1,17 +1,15 @@
 use std::time::Duration;
 
 use bevy_ecs::prelude::{Commands, EventReader, Query, Res, ResMut};
+use rose_game_common::data::Damage;
 
-use crate::{
-    data::Damage,
-    game::{
-        components::{
-            ClientEntity, Command, DamageSource, DamageSources, HealthPoints, MotionData, NpcAi,
-        },
-        events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged},
-        messages::server::{DamageEntity, ServerMessage},
-        resources::{ServerMessages, ServerTime},
+use crate::game::{
+    components::{
+        ClientEntity, Command, DamageSource, DamageSources, HealthPoints, MotionData, NpcAi,
     },
+    events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged},
+    messages::server::{DamageEntity, ServerMessage},
+    resources::{ServerMessages, ServerTime},
 };
 
 pub fn damage_system(

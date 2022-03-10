@@ -8,9 +8,9 @@ use rose_data::{
     SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
 use rose_data_irose::{encode_ability_type, encode_ammo_index};
+use rose_game_common::data::Damage;
 
 use crate::{
-    data::Damage,
     game::{
         components::{
             BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,

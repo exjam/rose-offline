@@ -1,0 +1,16 @@
+[package]
+name = "rose-game-common"
+version = "0.1.0"
+authors = ["James Benton <james.benton2@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+bevy_ecs = { version = "0.6" }
+enum-map = { version = "2.0", features = ["serde"] }
+log = "0.4"
+nalgebra = { version = "0.25", features = ["serde-serialize"] }
+rose-data = { path = "../rose-data" }
+serde = { version = "1.0", features = ["derive"] }
+
+[profile.dev.package."*"]
+opt-level = 3

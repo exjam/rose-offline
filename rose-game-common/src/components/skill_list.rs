@@ -55,6 +55,12 @@ pub struct SkillList {
     pub clan: SkillPage,
 }
 
+impl Default for SkillList {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SkillList {
     pub fn new() -> Self {
         Self {

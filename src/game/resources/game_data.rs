@@ -4,11 +4,9 @@ use rose_data::{
     AiDatabase, DataDecoder, ItemDatabase, MotionDatabase, NpcDatabase, QuestDatabase,
     SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
 };
+use rose_game_common::data::{AbilityValueCalculator, DropTable};
 
-use crate::{
-    data::{AbilityValueCalculator, DropTable},
-    game::storage::character::CharacterCreator,
-};
+use crate::game::storage::character::CharacterCreator;
 
 pub struct GameData {
     pub character_creator: Box<dyn CharacterCreator + Send + Sync>,

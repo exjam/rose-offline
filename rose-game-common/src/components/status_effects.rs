@@ -1,6 +1,5 @@
 use bevy_ecs::prelude::Component;
 use enum_map::EnumMap;
-use log::warn;
 use std::time::{Duration, Instant};
 
 use rose_data::{StatusEffectData, StatusEffectId, StatusEffectType};
@@ -12,7 +11,7 @@ pub struct ActiveStatusEffect {
     pub expire_time: Instant,
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 pub struct StatusEffects {
     pub active: EnumMap<StatusEffectType, Option<ActiveStatusEffect>>,
 }
@@ -27,7 +26,7 @@ pub struct ActiveStatusEffectRegen {
 
 // This is stored in a separate component as it must change every tick, and we want
 // Changed<StatusEffects> to only be triggered when effects have been added / removed
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Default)]
 pub struct StatusEffectsRegen {
     pub regens: EnumMap<StatusEffectType, Option<ActiveStatusEffectRegen>>,
     pub per_second_tick_counter: Duration,
@@ -35,18 +34,13 @@ pub struct StatusEffectsRegen {
 
 impl StatusEffectsRegen {
     pub fn new() -> Self {
-        Self {
-            regens: Default::default(),
-            per_second_tick_counter: Duration::from_secs(0),
-        }
+        Self::default()
     }
 }
 
 impl StatusEffects {
     pub fn new() -> Self {
-        Self {
-            active: Default::default(),
-        }
+        Self::default()
     }
 
     pub fn can_apply(&self, status_effect_data: &StatusEffectData, value: i32) -> bool {
@@ -71,7 +65,7 @@ impl StatusEffects {
             | StatusEffectType::ClearAll
             | StatusEffectType::ClearInvisible
             | StatusEffectType::DecreaseLifeTime => {
-                warn!(
+                log::warn!(
                     "Unimplemented apply_status_effect for type {:?}",
                     status_effect_type
                 );

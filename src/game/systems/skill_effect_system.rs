@@ -10,23 +10,21 @@ use rose_data::{
     AbilityType, SkillData, SkillTargetFilter, SkillType, StatusEffectClearedByType,
     StatusEffectType,
 };
+use rose_game_common::data::Damage;
 
-use crate::{
-    data::Damage,
-    game::{
-        bundles::{ability_values_get_value, MonsterBundle},
-        components::{
-            AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
-            GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, Npc, Position,
-            SkillList, SpawnOrigin, StatusEffects, Team,
-        },
-        events::{DamageEvent, SkillEvent, SkillEventTarget},
-        messages::server::{
-            ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseInventoryItem,
-        },
-        resources::{ClientEntityList, ServerMessages, ServerTime},
-        GameData,
+use crate::game::{
+    bundles::{ability_values_get_value, MonsterBundle},
+    components::{
+        AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
+        GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, Npc, Position,
+        SkillList, SpawnOrigin, StatusEffects, Team,
     },
+    events::{DamageEvent, SkillEvent, SkillEventTarget},
+    messages::server::{
+        ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseInventoryItem,
+    },
+    resources::{ClientEntityList, ServerMessages, ServerTime},
+    GameData,
 };
 
 #[allow(dead_code)]

@@ -1,8 +1,9 @@
 use rose_data::{NpcId, ZoneId};
 
-use crate::game::components::DroppedItem;
+use crate::components::DroppedItem;
 
 pub trait DropTable {
+    #[allow(clippy::too_many_arguments)]
     fn get_drop(
         &self,
         world_drop_item_rate: i32,

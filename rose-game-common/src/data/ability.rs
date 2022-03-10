@@ -1,6 +1,6 @@
 use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData};
 
-use crate::game::components::{
+use crate::components::{
     AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
     StatusEffects,
 };
@@ -86,6 +86,7 @@ pub trait AbilityValueCalculator {
     fn calculate_levelup_reward_skill_points(&self, level: u32) -> u32;
     fn calculate_levelup_reward_stat_points(&self, level: u32) -> u32;
 
+    #[allow(clippy::too_many_arguments)]
     fn calculate_reward_value(
         &self,
         equation_id: usize,

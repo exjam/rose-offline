@@ -6,19 +6,17 @@ use bevy_ecs::{
 use std::time::Duration;
 
 use rose_data::StatusEffectType;
+use rose_game_common::data::Damage;
 
-use crate::{
-    data::Damage,
-    game::{
-        components::{
-            AbilityValues, ActiveStatusEffectRegen, ClientEntity, HealthPoints, ManaPoints,
-            StatusEffects, StatusEffectsRegen,
-        },
-        events::DamageEvent,
-        messages::server::{ServerMessage, UpdateStatusEffects},
-        resources::{ServerMessages, ServerTime},
-        GameData,
+use crate::game::{
+    components::{
+        AbilityValues, ActiveStatusEffectRegen, ClientEntity, HealthPoints, ManaPoints,
+        StatusEffects, StatusEffectsRegen,
     },
+    events::DamageEvent,
+    messages::server::{ServerMessage, UpdateStatusEffects},
+    resources::{ServerMessages, ServerTime},
+    GameData,
 };
 
 fn update_status_effect_regen(

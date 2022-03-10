@@ -1,14 +1,12 @@
 use std::time::Duration;
 
 use bevy_ecs::prelude::{Query, Res};
+use rose_game_common::data::PassiveRecoveryState;
 
-use crate::{
-    data::PassiveRecoveryState,
-    game::{
-        components::{AbilityValues, Command, HealthPoints, ManaPoints, PassiveRecoveryTime},
-        resources::ServerTime,
-        GameData,
-    },
+use crate::game::{
+    components::{AbilityValues, Command, HealthPoints, ManaPoints, PassiveRecoveryTime},
+    resources::ServerTime,
+    GameData,
 };
 
 const RECOVERY_INTERVAL: Duration = Duration::from_secs(4);

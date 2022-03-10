@@ -6,7 +6,6 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::type_complexity)]
 
-mod data;
 mod game;
 mod irose;
 mod protocol;

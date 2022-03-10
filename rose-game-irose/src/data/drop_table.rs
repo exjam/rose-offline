@@ -4,10 +4,9 @@ use std::sync::Arc;
 
 use rose_data::{EquipmentItem, Item, ItemDatabase, ItemType, NpcDatabase, NpcId, ZoneId};
 use rose_data_irose::decode_item_base1000;
-
-use crate::{
+use rose_game_common::{
+    components::{DroppedItem, Money},
     data::DropTable,
-    game::components::{DroppedItem, Money},
 };
 
 pub struct DropTableData {

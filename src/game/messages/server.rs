@@ -6,15 +6,13 @@ use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
     QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, ZoneId,
 };
+use rose_game_common::data::Damage;
 
-use crate::{
-    data::Damage,
-    game::components::{
-        BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command, Destination,
-        DroppedItem, Equipment, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,
-        MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot, Stamina,
-        StatPoints, StatusEffects, Team,
-    },
+use crate::game::components::{
+    BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command, Destination,
+    DroppedItem, Equipment, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,
+    MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot, Stamina,
+    StatPoints, StatusEffects, Team,
 };
 
 #[derive(Clone)]

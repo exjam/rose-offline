@@ -2,7 +2,7 @@ use bevy_ecs::prelude::Component;
 
 use rose_data::Item;
 
-use crate::game::components::Money;
+use crate::components::Money;
 
 #[derive(Clone)]
 pub enum DroppedItem {

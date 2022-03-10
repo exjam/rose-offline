@@ -35,15 +35,19 @@ sha2 = "0.10"
 shellwords = "1.1"
 tempfile = "3.3"
 tokio = { version = "1.17", features = ["full"] }
-rose-file-readers = { path = "rose-file-readers" }
 rose-data = { path = "rose-data" }
 rose-data-irose = { path = "rose-data-irose" }
+rose-file-readers = { path = "rose-file-readers" }
+rose-game-common = { path = "rose-game-common" }
+rose-game-irose = { path = "rose-game-irose" }
 
 [workspace]
 members = [
     "rose-data",
     "rose-data-irose",
     "rose-file-readers",
+    "rose-game-common",
+    "rose-game-irose",
 ]
 
 [profile.dev.package."*"]

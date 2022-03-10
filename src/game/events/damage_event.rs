@@ -1,8 +1,7 @@
 use bevy_ecs::prelude::Entity;
 
 use rose_data::SkillId;
-
-use crate::data::Damage;
+use rose_game_common::data::Damage;
 
 pub struct DamageEventAttack {
     pub attacker: Entity,

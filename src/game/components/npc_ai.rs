@@ -1,8 +1,7 @@
+use bevy_ecs::prelude::{Component, Entity};
 use std::time::Duration;
 
-use bevy_ecs::prelude::{Component, Entity};
-
-use crate::data::Damage;
+use rose_game_common::data::Damage;
 
 #[derive(Component)]
 pub struct NpcAi {

@@ -1,10 +1,9 @@
+use bevy_ecs::prelude::Component;
+use serde::{Deserialize, Serialize};
 use std::{
     convert::TryFrom,
     ops::{Add, Sub},
 };
-
-use bevy_ecs::prelude::Component;
-use serde::{Deserialize, Serialize};
 
 use rose_data::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemSlotBehaviour, ItemType,
@@ -234,6 +233,10 @@ impl Default for Inventory {
     }
 }
 
+pub enum InventoryError {
+    NotEnoughMoney,
+}
+
 #[allow(dead_code)]
 impl Inventory {
     pub fn new() -> Self {
@@ -253,12 +256,12 @@ impl Inventory {
         }
     }
 
-    pub fn try_take_money(&mut self, money: Money) -> Result<Money, ()> {
+    pub fn try_take_money(&mut self, money: Money) -> Result<Money, InventoryError> {
         if self.money >= money {
             self.money = self.money - money;
             Ok(money)
         } else {
-            Err(())
+            Err(InventoryError::NotEnoughMoney)
         }
     }
 
