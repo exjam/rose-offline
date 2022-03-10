@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
-use std::{collections::HashMap, time::Duration};
+use std::time::Duration;
 
 use rose_data::{
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
@@ -340,24 +340,24 @@ fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Vehicle
 
 macro_rules! load_items {
     ($vfs:ident, $path:literal, $stl_path:literal, load_base_item, $item_data_type:ident) => {{
-        let mut items: HashMap<u16, $item_data_type> = HashMap::new();
         let stl = $vfs.read_file::<StlFile, _>($stl_path).ok()?;
         let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
+        let mut items: Vec<Option<$item_data_type>> = Vec::with_capacity(data.rows());
         for id in 0..data.rows() {
             if let Some(item) = load_base_item(&data, &stl, id, true) {
-                items.insert(id as u16, $item_data_type { item_data: item });
+                items.push(Some($item_data_type { item_data: item }));
+            } else {
+                items.push(None);
             }
         }
         items
     }};
     ($vfs:ident, $path:literal, $stl_path:literal, $load_item_fn:ident, $item_data_type:ident) => {{
-        let mut items: HashMap<u16, $item_data_type> = HashMap::new();
         let stl = $vfs.read_file::<StlFile, _>($stl_path).ok()?;
         let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
+        let mut items: Vec<Option<$item_data_type>> = Vec::with_capacity(data.rows());
         for id in 0..data.rows() {
-            if let Some(item) = $load_item_fn(&data, &stl, id) {
-                items.insert(id as u16, item);
-            }
+            items.push($load_item_fn(&data, &stl, id));
         }
         items
     }};

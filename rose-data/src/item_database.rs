@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::Duration};
+use std::time::Duration;
 
 use crate::{AbilityType, SkillId, StatusEffectId};
 
@@ -343,20 +343,20 @@ pub enum ItemData<'a> {
 }
 
 pub struct ItemDatabase {
-    face: HashMap<u16, FaceItemData>,
-    head: HashMap<u16, HeadItemData>,
-    body: HashMap<u16, BodyItemData>,
-    hands: HashMap<u16, HandsItemData>,
-    feet: HashMap<u16, FeetItemData>,
-    back: HashMap<u16, BackItemData>,
-    jewellery: HashMap<u16, JewelleryItemData>,
-    weapon: HashMap<u16, WeaponItemData>,
-    subweapon: HashMap<u16, SubWeaponItemData>,
-    consumable: HashMap<u16, ConsumableItemData>,
-    gem: HashMap<u16, GemItemData>,
-    material: HashMap<u16, MaterialItemData>,
-    quest: HashMap<u16, QuestItemData>,
-    vehicle: HashMap<u16, VehicleItemData>,
+    face: Vec<Option<FaceItemData>>,
+    head: Vec<Option<HeadItemData>>,
+    body: Vec<Option<BodyItemData>>,
+    hands: Vec<Option<HandsItemData>>,
+    feet: Vec<Option<FeetItemData>>,
+    back: Vec<Option<BackItemData>>,
+    jewellery: Vec<Option<JewelleryItemData>>,
+    weapon: Vec<Option<WeaponItemData>>,
+    subweapon: Vec<Option<SubWeaponItemData>>,
+    consumable: Vec<Option<ConsumableItemData>>,
+    gem: Vec<Option<GemItemData>>,
+    material: Vec<Option<MaterialItemData>>,
+    quest: Vec<Option<QuestItemData>>,
+    vehicle: Vec<Option<VehicleItemData>>,
     item_grades: Vec<ItemGradeData>,
 }
 
@@ -364,20 +364,20 @@ pub struct ItemDatabase {
 impl ItemDatabase {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        face: HashMap<u16, FaceItemData>,
-        head: HashMap<u16, HeadItemData>,
-        body: HashMap<u16, BodyItemData>,
-        hands: HashMap<u16, HandsItemData>,
-        feet: HashMap<u16, FeetItemData>,
-        back: HashMap<u16, BackItemData>,
-        jewellery: HashMap<u16, JewelleryItemData>,
-        weapon: HashMap<u16, WeaponItemData>,
-        subweapon: HashMap<u16, SubWeaponItemData>,
-        consumable: HashMap<u16, ConsumableItemData>,
-        gem: HashMap<u16, GemItemData>,
-        material: HashMap<u16, MaterialItemData>,
-        quest: HashMap<u16, QuestItemData>,
-        vehicle: HashMap<u16, VehicleItemData>,
+        face: Vec<Option<FaceItemData>>,
+        head: Vec<Option<HeadItemData>>,
+        body: Vec<Option<BodyItemData>>,
+        hands: Vec<Option<HandsItemData>>,
+        feet: Vec<Option<FeetItemData>>,
+        back: Vec<Option<BackItemData>>,
+        jewellery: Vec<Option<JewelleryItemData>>,
+        weapon: Vec<Option<WeaponItemData>>,
+        subweapon: Vec<Option<SubWeaponItemData>>,
+        consumable: Vec<Option<ConsumableItemData>>,
+        gem: Vec<Option<GemItemData>>,
+        material: Vec<Option<MaterialItemData>>,
+        quest: Vec<Option<QuestItemData>>,
+        vehicle: Vec<Option<VehicleItemData>>,
         item_grades: Vec<ItemGradeData>,
     ) -> Self {
         Self {
@@ -407,56 +407,73 @@ impl ItemDatabase {
         match item.item_type {
             ItemType::Face => self
                 .face
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Face),
             ItemType::Head => self
                 .head
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Head),
             ItemType::Body => self
                 .body
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Body),
             ItemType::Hands => self
                 .hands
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Hands),
             ItemType::Feet => self
                 .feet
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Feet),
             ItemType::Back => self
                 .back
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Back),
             ItemType::Jewellery => self
                 .jewellery
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Jewellery),
             ItemType::Weapon => self
                 .weapon
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Weapon),
             ItemType::SubWeapon => self
                 .subweapon
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::SubWeapon),
             ItemType::Consumable => self
                 .consumable
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Consumable),
-            ItemType::Gem => self.gem.get(&(item.item_number as u16)).map(ItemData::Gem),
+            ItemType::Gem => self
+                .gem
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
+                .map(ItemData::Gem),
             ItemType::Material => self
                 .material
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Material),
             ItemType::Quest => self
                 .quest
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Quest),
             ItemType::Vehicle => self
                 .vehicle
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(ItemData::Vehicle),
         }
     }
@@ -465,113 +482,127 @@ impl ItemDatabase {
         match item.item_type {
             ItemType::Face => self
                 .face
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Head => self
                 .head
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Body => self
                 .body
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Hands => self
                 .hands
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Feet => self
                 .feet
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Back => self
                 .back
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Jewellery => self
                 .jewellery
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Weapon => self
                 .weapon
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::SubWeapon => self
                 .subweapon
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Consumable => self
                 .consumable
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Gem => self
                 .gem
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Material => self
                 .material
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Quest => self
                 .quest
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
             ItemType::Vehicle => self
                 .vehicle
-                .get(&(item.item_number as u16))
+                .get(item.item_number)
+                .and_then(|x| x.as_ref())
                 .map(|x| &x.item_data),
         }
     }
 
     pub fn get_face_item(&self, id: usize) -> Option<&FaceItemData> {
-        self.face.get(&(id as u16))
+        self.face.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_head_item(&self, id: usize) -> Option<&HeadItemData> {
-        self.head.get(&(id as u16))
+        self.head.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_body_item(&self, id: usize) -> Option<&BodyItemData> {
-        self.body.get(&(id as u16))
+        self.body.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_hands_item(&self, id: usize) -> Option<&HandsItemData> {
-        self.hands.get(&(id as u16))
+        self.hands.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_feet_item(&self, id: usize) -> Option<&FeetItemData> {
-        self.feet.get(&(id as u16))
+        self.feet.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_back_item(&self, id: usize) -> Option<&BackItemData> {
-        self.back.get(&(id as u16))
+        self.back.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_jewellery_item(&self, id: usize) -> Option<&JewelleryItemData> {
-        self.jewellery.get(&(id as u16))
+        self.jewellery.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_weapon_item(&self, id: usize) -> Option<&WeaponItemData> {
-        self.weapon.get(&(id as u16))
+        self.weapon.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_consumable_item(&self, id: usize) -> Option<&ConsumableItemData> {
-        self.consumable.get(&(id as u16))
+        self.consumable.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_gem_item(&self, id: usize) -> Option<&GemItemData> {
-        self.gem.get(&(id as u16))
+        self.gem.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_material_item(&self, id: usize) -> Option<&MaterialItemData> {
-        self.material.get(&(id as u16))
+        self.material.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_quest_item(&self, id: usize) -> Option<&QuestItemData> {
-        self.quest.get(&(id as u16))
+        self.quest.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_vehicle_item(&self, id: usize) -> Option<&VehicleItemData> {
-        self.vehicle.get(&(id as u16))
+        self.vehicle.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn iter_items(
@@ -579,76 +610,102 @@ impl ItemDatabase {
         item_type: ItemType,
     ) -> Box<dyn std::iter::Iterator<Item = ItemReference> + '_> {
         match item_type {
-            ItemType::Face => Box::new(
-                self.face
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Face, *id as usize)),
-            ),
-            ItemType::Head => Box::new(
-                self.head
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Head, *id as usize)),
-            ),
-            ItemType::Body => Box::new(
-                self.body
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Body, *id as usize)),
-            ),
-            ItemType::Hands => Box::new(
-                self.hands
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Hands, *id as usize)),
-            ),
-            ItemType::Feet => Box::new(
-                self.feet
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Feet, *id as usize)),
-            ),
-            ItemType::Back => Box::new(
-                self.back
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Back, *id as usize)),
-            ),
-            ItemType::Jewellery => Box::new(
-                self.jewellery
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Jewellery, *id as usize)),
-            ),
-            ItemType::Weapon => Box::new(
-                self.weapon
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Weapon, *id as usize)),
-            ),
-            ItemType::SubWeapon => Box::new(
-                self.subweapon
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::SubWeapon, *id as usize)),
-            ),
-            ItemType::Consumable => Box::new(
-                self.consumable
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Consumable, *id as usize)),
-            ),
-            ItemType::Gem => Box::new(
-                self.gem
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Gem, *id as usize)),
-            ),
-            ItemType::Material => Box::new(
-                self.material
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Material, *id as usize)),
-            ),
-            ItemType::Quest => Box::new(
-                self.quest
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Quest, *id as usize)),
-            ),
-            ItemType::Vehicle => Box::new(
-                self.vehicle
-                    .keys()
-                    .map(|id| ItemReference::new(ItemType::Vehicle, *id as usize)),
-            ),
+            ItemType::Face => {
+                Box::new(self.face.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Face, id))
+                }))
+            }
+            ItemType::Head => {
+                Box::new(self.head.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Head, id))
+                }))
+            }
+            ItemType::Body => {
+                Box::new(self.body.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Body, id))
+                }))
+            }
+            ItemType::Hands => {
+                Box::new(self.hands.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Hands, id))
+                }))
+            }
+            ItemType::Feet => {
+                Box::new(self.feet.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Feet, id))
+                }))
+            }
+            ItemType::Back => {
+                Box::new(self.back.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Back, id))
+                }))
+            }
+            ItemType::Jewellery => Box::new(self.jewellery.iter().enumerate().filter_map(
+                |(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Jewellery, id))
+                },
+            )),
+            ItemType::Weapon => Box::new(self.weapon.iter().enumerate().filter_map(
+                |(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Weapon, id))
+                },
+            )),
+            ItemType::SubWeapon => Box::new(self.subweapon.iter().enumerate().filter_map(
+                |(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::SubWeapon, id))
+                },
+            )),
+            ItemType::Consumable => Box::new(self.consumable.iter().enumerate().filter_map(
+                |(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Consumable, id))
+                },
+            )),
+            ItemType::Gem => Box::new(self.gem.iter().enumerate().filter_map(|(id, item_data)| {
+                item_data
+                    .as_ref()
+                    .map(|_| ItemReference::new(ItemType::Gem, id))
+            })),
+            ItemType::Material => Box::new(self.material.iter().enumerate().filter_map(
+                |(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Material, id))
+                },
+            )),
+            ItemType::Quest => {
+                Box::new(self.quest.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Quest, id))
+                }))
+            }
+            ItemType::Vehicle => Box::new(self.vehicle.iter().enumerate().filter_map(
+                |(id, item_data)| {
+                    item_data
+                        .as_ref()
+                        .map(|_| ItemReference::new(ItemType::Vehicle, id))
+                },
+            )),
         }
     }
 }
