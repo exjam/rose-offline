@@ -11,3 +11,9 @@ impl SkillPoints {
         Self { points: 0 }
     }
 }
+
+impl Default for SkillPoints {
+    fn default() -> Self {
+        Self::new()
+    }
+}

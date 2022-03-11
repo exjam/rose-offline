@@ -556,7 +556,7 @@ impl GameClient {
             ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
                 entity_id,
                 ref npc,
-                ref direction,
+                direction,
                 ref position,
                 ref team,
                 ref health,

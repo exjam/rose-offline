@@ -256,7 +256,7 @@ pub fn client_entity_visibility_system(
                                         .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
                                             entity_id: spawn_client_entity.id,
                                             npc: spawn_npc.clone(),
-                                            direction: spawn_direction.clone(),
+                                            direction: spawn_direction.direction,
                                             position: spawn_position.clone(),
                                             team: spawn_team.clone(),
                                             health: *spawn_health,

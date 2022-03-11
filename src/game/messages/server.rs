@@ -6,15 +6,18 @@ use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
     QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
-use rose_game_common::{components::CharacterDeleteTime, data::Damage};
-
-use crate::game::components::{
-    BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
-    Destination, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-    Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection,
-    Position, QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects,
-    Team, UnionMembership,
+use rose_game_common::{
+    components::{
+        BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, CharacterUniqueId,
+        ClientEntityId, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
+        Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position,
+        QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
+        UnionMembership,
+    },
+    data::Damage,
 };
+
+use crate::game::components::{Command, Destination};
 
 #[derive(Clone)]
 pub enum ConnectionRequestError {
@@ -244,7 +247,7 @@ pub struct SpawnEntityCharacter {
 pub struct SpawnEntityNpc {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
-    pub direction: NpcStandingDirection,
+    pub direction: f32,
     pub position: Position,
     pub team: Team,
     pub health: HealthPoints,

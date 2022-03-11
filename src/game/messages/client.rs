@@ -3,10 +3,9 @@ use nalgebra::Point2;
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
 };
-use rose_game_common::components::CharacterGender;
-
-use crate::game::components::{
-    BasicStatType, CharacterUniqueId, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot,
+use rose_game_common::components::{
+    BasicStatType, CharacterGender, CharacterUniqueId, ClientEntityId, HotbarSlot, ItemSlot,
+    SkillSlot,
 };
 
 #[derive(Debug)]

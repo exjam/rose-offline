@@ -13,3 +13,9 @@ impl Stamina {
         Self { stamina: 0 }
     }
 }
+
+impl Default for Stamina {
+    fn default() -> Self {
+        Self::new()
+    }
+}

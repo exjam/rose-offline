@@ -11,3 +11,9 @@ impl StatPoints {
         Self { points: 0 }
     }
 }
+
+impl Default for StatPoints {
+    fn default() -> Self {
+        Self::new()
+    }
+}

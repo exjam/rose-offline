@@ -11,3 +11,9 @@ impl ExperiencePoints {
         Self { xp: 0 }
     }
 }
+
+impl Default for ExperiencePoints {
+    fn default() -> Self {
+        Self::new()
+    }
+}

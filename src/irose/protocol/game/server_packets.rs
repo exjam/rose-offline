@@ -16,9 +16,9 @@ use crate::{
             BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
             CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
             Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
-            Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position,
-            QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints,
-            StatusEffects, Team, UnionMembership,
+            Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList,
+            SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
+            UnionMembership,
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, LevelUpSkillError,
@@ -700,7 +700,7 @@ impl<'a> From<&'a PacketServerSpawnEntityItemDrop<'a>> for Packet {
 pub struct PacketServerSpawnEntityNpc<'a> {
     pub entity_id: ClientEntityId,
     pub npc: &'a Npc,
-    pub direction: &'a NpcStandingDirection,
+    pub direction: f32,
     pub position: &'a Position,
     pub team: &'a Team,
     pub destination: Option<&'a Destination>,
@@ -727,7 +727,7 @@ impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
         writer.write_status_effects_flags_u32(packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
         writer.write_u16(packet.npc.quest_index);
-        writer.write_f32(packet.direction.direction);
+        writer.write_f32(packet.direction);
         writer.write_u16(0); // event status
         writer.write_status_effects_values(packet.status_effects);
         writer.into()
