@@ -9,6 +9,7 @@ use rose_data::{
 };
 use rose_data_irose::{encode_ability_type, encode_ammo_index};
 use rose_game_common::{data::Damage, messages::server::ActiveStatusEffects};
+use rose_network_common::{Packet, PacketWriter};
 
 use crate::{
     game::{
@@ -31,7 +32,6 @@ use crate::{
         PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
         PacketWriteVehiclePartIndex,
     },
-    protocol::{Packet, PacketWriter},
 };
 
 #[derive(FromPrimitive)]

@@ -3,6 +3,8 @@ use log::warn;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
+use rose_network_common::{Packet, PacketError};
+
 use crate::{
     game::messages::{
         client::{
@@ -13,7 +15,7 @@ use crate::{
             DeleteCharacterResponse, ServerMessage,
         },
     },
-    protocol::{Client, Packet, ProtocolClient, ProtocolError},
+    protocol::{Client, ProtocolClient, ProtocolClientError},
 };
 
 mod client_packets;
@@ -42,7 +44,7 @@ impl WorldClient {
         &mut self,
         client: &mut Client<'_>,
         packet: Packet,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<(), anyhow::Error> {
         match self.state {
             WorldClientState::WaitingConnectRequest => {
                 match FromPrimitive::from_u16(packet.command) {
@@ -55,7 +57,7 @@ impl WorldClient {
                                 password_md5: String::from(request.password_md5),
                             }))?;
                     }
-                    _ => return Err(ProtocolError::InvalidPacket),
+                    _ => return Err(PacketError::InvalidPacket.into()),
                 }
             }
             WorldClientState::Connected => match FromPrimitive::from_u16(packet.command) {
@@ -67,26 +69,6 @@ impl WorldClient {
                             login_token: request.login_token,
                             password_md5: String::from(request.password_md5),
                         }))?;
-                    let packet = match client
-                        .server_message_rx
-                        .recv()
-                        .await
-                        .ok_or(ProtocolError::IscError)?
-                    {
-                        ServerMessage::ConnectionResponse(Ok(result)) => {
-                            Packet::from(&PacketConnectionReply {
-                                result: ConnectResult::Ok,
-                                packet_sequence_id: result.packet_sequence_id,
-                                pay_flags: 0xff,
-                            })
-                        }
-                        _ => Packet::from(&PacketConnectionReply {
-                            result: ConnectResult::Failed,
-                            packet_sequence_id: 0,
-                            pay_flags: 0,
-                        }),
-                    };
-                    client.connection.write_packet(packet).await?;
                 }
                 Some(ClientPackets::CharacterListRequest) => {
                     client
@@ -139,7 +121,7 @@ impl WorldClient {
         &mut self,
         client: &mut Client<'_>,
         message: ServerMessage,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<(), anyhow::Error> {
         match message {
             ServerMessage::ConnectionResponse(message) => {
                 let packet = match message {
@@ -178,7 +160,7 @@ impl WorldClient {
                         }))
                         .await?;
                 }
-                Err(_) => return Err(ProtocolError::InvalidPacket),
+                Err(_) => return Err(PacketError::InvalidPacket.into()),
             },
             ServerMessage::CharacterList(characters) => {
                 client
@@ -252,7 +234,7 @@ impl WorldClient {
 
 #[async_trait]
 impl ProtocolClient for WorldClient {
-    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError> {
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
         loop {
             tokio::select! {
                 packet = client.connection.read_packet() => {
@@ -269,7 +251,7 @@ impl ProtocolClient for WorldClient {
                     if let Some(message) = server_message {
                         self.handle_server_message(client, message).await?;
                     } else {
-                        return Err(ProtocolError::ServerInitiatedDisconnect);
+                        return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
                     }
                 }
             };

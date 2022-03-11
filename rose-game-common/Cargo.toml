@@ -12,6 +12,3 @@ log = "0.4"
 nalgebra = { version = "0.25", features = ["serde-serialize"] }
 rose-data = { path = "../rose-data" }
 serde = { version = "1.0", features = ["derive"] }
-
-[profile.dev.package."*"]
-opt-level = 3

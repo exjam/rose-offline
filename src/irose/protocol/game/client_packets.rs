@@ -8,6 +8,7 @@ use std::convert::{TryFrom, TryInto};
 
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, VehiclePartIndex, WarpGateId};
 use rose_data_irose::decode_ammo_index;
+use rose_network_common::{Packet, PacketError, PacketReader};
 
 use crate::{
     game::{
@@ -18,7 +19,6 @@ use crate::{
         decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
         PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
     },
-    protocol::{Packet, PacketReader, ProtocolError},
 };
 
 #[derive(FromPrimitive)]
@@ -63,11 +63,11 @@ pub struct PacketClientConnectRequest<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientConnectRequest<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ConnectRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -87,11 +87,11 @@ pub struct PacketClientJoinZone {
 }
 
 impl TryFrom<&Packet> for PacketClientJoinZone {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::JoinZone as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -110,11 +110,11 @@ pub struct PacketClientMove {
 }
 
 impl TryFrom<&Packet> for PacketClientMove {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::Move as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -141,11 +141,11 @@ pub struct PacketClientAttack {
 }
 
 impl TryFrom<&Packet> for PacketClientAttack {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::Attack as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -160,11 +160,11 @@ pub struct PacketClientChat<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientChat<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::Chat as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -180,11 +180,11 @@ pub struct PacketClientSetHotbarSlot {
 }
 
 impl TryFrom<&Packet> for PacketClientSetHotbarSlot {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::SetHotbarSlot as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -200,11 +200,11 @@ pub struct PacketClientChangeEquipment {
 }
 
 impl TryFrom<&Packet> for PacketClientChangeEquipment {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ChangeEquipment as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -222,11 +222,11 @@ pub struct PacketClientChangeVehiclePart {
 }
 
 impl TryFrom<&Packet> for PacketClientChangeVehiclePart {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ChangeVehiclePart as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -244,11 +244,11 @@ pub struct PacketClientIncreaseBasicStat {
 }
 
 impl TryFrom<&Packet> for PacketClientIncreaseBasicStat {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::IncreaseBasicStat as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -259,7 +259,7 @@ impl TryFrom<&Packet> for PacketClientIncreaseBasicStat {
             3 => BasicStatType::Concentration,
             4 => BasicStatType::Charm,
             5 => BasicStatType::Sense,
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => return Err(PacketError::InvalidPacket),
         };
         Ok(PacketClientIncreaseBasicStat { basic_stat_type })
     }
@@ -271,11 +271,11 @@ pub struct PacketClientPickupItemDrop {
 }
 
 impl TryFrom<&Packet> for PacketClientPickupItemDrop {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::PickupItemDrop as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -289,18 +289,18 @@ pub struct PacketClientReviveRequest {
 }
 
 impl TryFrom<&Packet> for PacketClientReviveRequest {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ReviveRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
         let revive_request_type = match reader.read_u8()? {
             1 => ReviveRequestType::RevivePosition,
             2 => ReviveRequestType::SavePosition,
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => return Err(PacketError::InvalidPacket),
         };
 
         Ok(PacketClientReviveRequest {
@@ -321,18 +321,18 @@ pub struct PacketClientQuestRequest {
 }
 
 impl TryFrom<&Packet> for PacketClientQuestRequest {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::QuestRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
         let request_type = match reader.read_u8()? {
             2 => PacketClientQuestRequestType::DeleteQuest,
             3 => PacketClientQuestRequestType::DoTrigger,
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => return Err(PacketError::InvalidPacket),
         };
         let quest_slot = reader.read_u8()?;
         let quest_id = reader.read_u32()?;
@@ -351,11 +351,11 @@ pub struct PacketClientPersonalStoreListItems {
 }
 
 impl TryFrom<&Packet> for PacketClientPersonalStoreListItems {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::PersonalStoreListItems as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -372,11 +372,11 @@ pub struct PacketClientPersonalStoreBuyItem {
 }
 
 impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::PersonalStoreBuyItem as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -387,9 +387,7 @@ impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
         let _item_count = reader.read_u8()?;
 
         let store_slot_index = reader.read_u8()? as usize;
-        let buy_item = reader
-            .read_item_full()?
-            .ok_or(ProtocolError::InvalidPacket)?;
+        let buy_item = reader.read_item_full()?.ok_or(PacketError::InvalidPacket)?;
 
         Ok(PacketClientPersonalStoreBuyItem {
             store_entity_id,
@@ -406,16 +404,16 @@ pub enum PacketClientDropItemFromInventory {
 }
 
 impl TryFrom<&Packet> for PacketClientDropItemFromInventory {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::DropItemFromInventory as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
         // A value of 0 for inventory_index is interpreted to mean dropping money.
-        // PacketReader::read_item_slot_u8 returns ProtocolError for value 0 but in this case it is interpreted to mean dropping money.
+        // PacketReader::read_item_slot_u8 returns PacketError for value 0 but in this case it is interpreted to mean dropping money.
         let inventory_index = reader.read_item_slot_u8();
         let quantity = reader.read_u32()?;
         match inventory_index {
@@ -432,11 +430,11 @@ pub struct PacketClientUseItem {
 }
 
 impl TryFrom<&Packet> for PacketClientUseItem {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::UseItem as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -456,11 +454,11 @@ pub struct PacketClientLevelUpSkill {
 }
 
 impl TryFrom<&Packet> for PacketClientLevelUpSkill {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::LevelUpSkill as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -477,11 +475,11 @@ pub struct PacketClientCastSkillSelf {
 }
 
 impl TryFrom<&Packet> for PacketClientCastSkillSelf {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::CastSkillSelf as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -498,11 +496,11 @@ pub struct PacketClientCastSkillTargetEntity {
 }
 
 impl TryFrom<&Packet> for PacketClientCastSkillTargetEntity {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::CastSkillTargetEntity as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -523,11 +521,11 @@ pub struct PacketClientCastSkillTargetPosition {
 }
 
 impl TryFrom<&Packet> for PacketClientCastSkillTargetPosition {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::CastSkillTargetPosition as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -557,11 +555,11 @@ pub struct PacketClientNpcStoreTransaction {
 }
 
 impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::NpcStoreTransaction as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
         let mut reader = PacketReader::from(packet);
 
@@ -613,11 +611,11 @@ pub struct PacketClientChangeAmmo {
 }
 
 impl TryFrom<&Packet> for PacketClientChangeAmmo {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ChangeAmmo as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -625,7 +623,7 @@ impl TryFrom<&Packet> for PacketClientChangeAmmo {
         let change_ammo = ChangeAmmoBits::from_bytes(bytes[0..2].try_into().unwrap());
         let item_slot = decode_item_slot(change_ammo.item_slot() as usize);
         let ammo_index = decode_ammo_index(change_ammo.ammo_index() as usize)
-            .ok_or(ProtocolError::InvalidPacket)?;
+            .ok_or(PacketError::InvalidPacket)?;
 
         Ok(PacketClientChangeAmmo {
             ammo_index,
@@ -645,11 +643,11 @@ pub struct PacketClientMoveToggle {
 }
 
 impl TryFrom<&Packet> for PacketClientMoveToggle {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::MoveToggle as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -657,7 +655,7 @@ impl TryFrom<&Packet> for PacketClientMoveToggle {
             0 => PacketClientMoveToggleType::Run,
             1 => PacketClientMoveToggleType::Sit,
             2 => PacketClientMoveToggleType::Drive,
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => return Err(PacketError::InvalidPacket),
         };
 
         Ok(PacketClientMoveToggle { toggle_type })
@@ -671,11 +669,11 @@ pub struct PacketClientEmote {
 }
 
 impl TryFrom<&Packet> for PacketClientEmote {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::Emote as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -692,11 +690,11 @@ pub struct PacketClientWarpGateRequest {
 }
 
 impl TryFrom<&Packet> for PacketClientWarpGateRequest {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::WarpGateRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -711,11 +709,11 @@ pub struct PacketClientPartyRequest {
 }
 
 impl TryFrom<&Packet> for PacketClientPartyRequest {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::PartyRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -725,7 +723,7 @@ impl TryFrom<&Packet> for PacketClientPartyRequest {
             2 => PartyRequest::Leave,
             3 => PartyRequest::ChangeOwner(ClientEntityId(reader.read_u16()? as usize)),
             0x81 => PartyRequest::Kick(reader.read_u32()?),
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => return Err(PacketError::InvalidPacket),
         };
         Ok(PacketClientPartyRequest { request })
     }
@@ -737,11 +735,11 @@ pub struct PacketClientPartyReply {
 }
 
 impl TryFrom<&Packet> for PacketClientPartyReply {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::PartyReply as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -749,7 +747,7 @@ impl TryFrom<&Packet> for PacketClientPartyReply {
             1 => PartyReply::Busy(ClientEntityId(reader.read_u16()? as usize)),
             2 | 3 => PartyReply::Accept(ClientEntityId(reader.read_u16()? as usize)),
             4 => PartyReply::Reject(ClientEntityId(reader.read_u16()? as usize)),
-            _ => return Err(ProtocolError::InvalidPacket),
+            _ => return Err(PacketError::InvalidPacket),
         };
         Ok(PacketClientPartyReply { reply })
     }

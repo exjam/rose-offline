@@ -16,6 +16,3 @@ memmap = "0.7"
 num-derive = "0.3"
 num-traits = "0.2"
 thiserror = "1.0"
-
-[profile.dev.package."*"]
-opt-level = 3

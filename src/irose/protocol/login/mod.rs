@@ -2,6 +2,8 @@ use async_trait::async_trait;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
+use rose_network_common::{Packet, PacketError};
+
 use crate::{
     game::messages::{
         client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
@@ -10,7 +12,7 @@ use crate::{
             ServerMessage,
         },
     },
-    protocol::{Client, Packet, ProtocolClient, ProtocolError},
+    protocol::{Client, ProtocolClient, ProtocolClientError},
 };
 
 mod client_packets;
@@ -41,7 +43,7 @@ impl LoginClient {
         &mut self,
         client: &mut Client<'_>,
         packet: Packet,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<(), anyhow::Error> {
         match self.state {
             LoginClientState::WaitingConnectRequest => {
                 match FromPrimitive::from_u16(packet.command) {
@@ -53,7 +55,7 @@ impl LoginClient {
                                 password_md5: String::new(),
                             }))?;
                     }
-                    _ => return Err(ProtocolError::InvalidPacket),
+                    _ => return Err(PacketError::InvalidPacket.into()),
                 }
             }
             LoginClientState::WaitingLogin => match FromPrimitive::from_u16(packet.command) {
@@ -66,7 +68,7 @@ impl LoginClient {
                             password_md5: String::from(login_request.password_md5),
                         }))?;
                 }
-                _ => return Err(ProtocolError::InvalidPacket),
+                _ => return Err(PacketError::InvalidPacket.into()),
             },
             LoginClientState::Connected => match FromPrimitive::from_u16(packet.command) {
                 Some(ClientPackets::ChannelList) => {
@@ -84,9 +86,9 @@ impl LoginClient {
                             channel_id: select_server.channel_id,
                         }))?;
                 }
-                _ => return Err(ProtocolError::InvalidPacket),
+                _ => return Err(PacketError::InvalidPacket.into()),
             },
-            LoginClientState::SelectedServer => return Err(ProtocolError::InvalidPacket),
+            LoginClientState::SelectedServer => return Err(PacketError::InvalidPacket.into()),
         }
 
         Ok(())
@@ -96,7 +98,7 @@ impl LoginClient {
         &mut self,
         client: &mut Client<'_>,
         message: ServerMessage,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<(), anyhow::Error> {
         match message {
             ServerMessage::ConnectionResponse(response) => {
                 let packet = match response {
@@ -204,7 +206,7 @@ impl LoginClient {
 
 #[async_trait]
 impl ProtocolClient for LoginClient {
-    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError> {
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
         loop {
             tokio::select! {
                 packet = client.connection.read_packet() => {
@@ -221,7 +223,7 @@ impl ProtocolClient for LoginClient {
                     if let Some(message) = server_message {
                         self.handle_server_message(client, message).await?;
                     } else {
-                        return Err(ProtocolError::ServerInitiatedDisconnect);
+                        return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
                     }
                 }
             };

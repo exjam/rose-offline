@@ -1,0 +1,10 @@
+[package]
+name = "rose-network-irose"
+version = "0.1.0"
+authors = ["James Benton <james.benton2@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+bytes = "1.1"
+modular-bitfield = "0.11"
+rose-network-common = { path = "../rose-network-common" }

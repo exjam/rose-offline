@@ -1,48 +1,10 @@
-#[derive(Debug)]
-pub enum ProtocolError {
-    Disconnect,
-    IscError,
-    InvalidPacket,
-    ServerInitiatedDisconnect,
-}
-
-impl From<tokio::sync::oneshot::error::RecvError> for ProtocolError {
-    fn from(_: tokio::sync::oneshot::error::RecvError) -> ProtocolError {
-        ProtocolError::IscError
-    }
-}
-
-impl From<crossbeam_channel::SendError<crate::game::messages::client::ClientMessage>>
-    for ProtocolError
-{
-    fn from(
-        _: crossbeam_channel::SendError<crate::game::messages::client::ClientMessage>,
-    ) -> ProtocolError {
-        ProtocolError::IscError
-    }
-}
-
-impl From<crossbeam_channel::SendError<crate::game::messages::control::ControlMessage>>
-    for ProtocolError
-{
-    fn from(
-        _: crossbeam_channel::SendError<crate::game::messages::control::ControlMessage>,
-    ) -> ProtocolError {
-        ProtocolError::IscError
-    }
-}
-
-mod packet;
-pub use packet::Packet;
-pub use packet::PacketCodec;
-pub use packet::PacketReader;
-pub use packet::PacketWriter;
-
-mod connection;
-use connection::Connection;
-
-use crate::game::messages::{client::ClientMessage, control::ClientType, server::ServerMessage};
 use async_trait::async_trait;
+use thiserror::Error;
+
+use rose_game_common::messages::{client::ClientMessage, server::ServerMessage};
+use rose_network_common::{Connection, PacketCodec};
+
+use crate::game::messages::control::ClientType;
 
 pub struct Client<'a> {
     pub entity: bevy_ecs::prelude::Entity,
@@ -51,14 +13,20 @@ pub struct Client<'a> {
     pub server_message_rx: tokio::sync::mpsc::UnboundedReceiver<ServerMessage>,
 }
 
+#[derive(Debug, Error)]
+pub enum ProtocolClientError {
+    #[error("server initiated disconnect")]
+    ServerInitiatedDisconnect,
+}
+
 #[async_trait]
 pub trait ProtocolClient {
-    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError>;
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error>;
 }
 
 pub struct Protocol {
     pub client_type: ClientType,
-    pub packet_codec: Box<dyn packet::PacketCodec + Send + Sync>,
+    pub packet_codec: Box<dyn PacketCodec + Send + Sync>,
     pub create_client: fn() -> Box<dyn ProtocolClient + Send + Sync>,
 }
 

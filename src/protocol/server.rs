@@ -9,14 +9,14 @@ use tokio::{
 
 use crate::{
     game::messages::{control::ControlMessage, server::ServerMessage},
-    protocol::{Client, Connection, Protocol, ProtocolError},
+    protocol::{Client, Connection, Protocol},
 };
 
 async fn run_connection(
     stream: TcpStream,
     protocol: &Protocol,
     control_message_tx: crossbeam_channel::Sender<ControlMessage>,
-) -> Result<(), ProtocolError> {
+) -> Result<(), anyhow::Error> {
     let (client_message_tx, client_message_rx) = crossbeam_channel::unbounded();
     let (server_message_tx, server_message_rx) =
         tokio::sync::mpsc::unbounded_channel::<ServerMessage>();
@@ -59,7 +59,7 @@ impl LoginServer {
         listener: TcpListener,
         protocol: Arc<Protocol>,
         control_message_tx: crossbeam_channel::Sender<ControlMessage>,
-    ) -> Result<LoginServer, ProtocolError> {
+    ) -> Result<LoginServer, anyhow::Error> {
         Ok(LoginServer {
             listener,
             protocol,
@@ -104,7 +104,7 @@ impl WorldServer {
         listener: TcpListener,
         protocol: Arc<Protocol>,
         control_message_tx: crossbeam_channel::Sender<ControlMessage>,
-    ) -> Result<WorldServer, ProtocolError> {
+    ) -> Result<WorldServer, anyhow::Error> {
         let (response_tx, response_rx) = oneshot::channel();
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddWorldServer {
@@ -176,7 +176,7 @@ impl GameServer {
         listener: TcpListener,
         protocol: Arc<Protocol>,
         control_message_tx: crossbeam_channel::Sender<ControlMessage>,
-    ) -> Result<GameServer, ProtocolError> {
+    ) -> Result<GameServer, anyhow::Error> {
         let (response_tx, response_rx) = oneshot::channel();
         let local_addr = listener.local_addr().unwrap();
         control_message_tx.send(ControlMessage::AddGameServer {

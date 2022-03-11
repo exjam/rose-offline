@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 arrayvec = "0.7"
+anyhow = "1.0"
 async-trait = "0.1"
 bevy_ecs = { version = "0.6" }
 bitvec = { version = "1.0", features = ["serde"] }
@@ -34,12 +35,15 @@ simplelog = "0.11"
 sha2 = "0.10"
 shellwords = "1.1"
 tempfile = "3.3"
+thiserror = "1.0"
 tokio = { version = "1.17", features = ["full"] }
 rose-data = { path = "rose-data" }
 rose-data-irose = { path = "rose-data-irose" }
 rose-file-readers = { path = "rose-file-readers" }
 rose-game-common = { path = "rose-game-common" }
 rose-game-irose = { path = "rose-game-irose" }
+rose-network-common = { path = "rose-network-common" }
+rose-network-irose = { path = "rose-network-irose" }
 
 [workspace]
 members = [
@@ -48,6 +52,8 @@ members = [
     "rose-file-readers",
     "rose-game-common",
     "rose-game-irose",
+    "rose-network-common",
+    "rose-network-irose",
 ]
 
 [profile.dev.package."*"]

@@ -1,4 +1,4 @@
-use crate::protocol::{Packet, PacketWriter};
+use rose_network_common::{Packet, PacketWriter};
 
 pub enum ServerPackets {
     ChannelList = 0x704,

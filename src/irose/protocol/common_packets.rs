@@ -12,13 +12,10 @@ use rose_data_irose::{
 use rose_game_common::{
     components::CharacterGender, data::Damage, messages::server::ActiveStatusEffects,
 };
+use rose_network_common::{PacketError, PacketReader, PacketWriter};
 
-use crate::{
-    game::components::{
-        ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
-        SkillSlot,
-    },
-    protocol::{PacketReader, PacketWriter, ProtocolError},
+use crate::game::components::{
+    ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot,
 };
 
 #[bitfield]
@@ -29,11 +26,11 @@ pub struct PacketHotbarSlot {
 }
 
 pub trait PacketReadHotbarSlot {
-    fn read_hotbar_slot(&mut self) -> Result<Option<HotbarSlot>, ProtocolError>;
+    fn read_hotbar_slot(&mut self) -> Result<Option<HotbarSlot>, PacketError>;
 }
 
 impl<'a> PacketReadHotbarSlot for PacketReader<'a> {
-    fn read_hotbar_slot(&mut self) -> Result<Option<HotbarSlot>, ProtocolError> {
+    fn read_hotbar_slot(&mut self) -> Result<Option<HotbarSlot>, PacketError> {
         let slot =
             PacketHotbarSlot::from_bytes(self.read_fixed_length_bytes(2)?.try_into().unwrap());
         match slot.slot_type() {
@@ -71,15 +68,15 @@ impl PacketWriteHotbarSlot for PacketWriter {
 }
 
 pub trait PacketReadCharacterGender {
-    fn read_character_gender_u8(&mut self) -> Result<CharacterGender, ProtocolError>;
+    fn read_character_gender_u8(&mut self) -> Result<CharacterGender, PacketError>;
 }
 
 impl<'a> PacketReadCharacterGender for PacketReader<'a> {
-    fn read_character_gender_u8(&mut self) -> Result<CharacterGender, ProtocolError> {
+    fn read_character_gender_u8(&mut self) -> Result<CharacterGender, PacketError> {
         match self.read_u8()? {
             0 => Ok(CharacterGender::Male),
             1 => Ok(CharacterGender::Female),
-            _ => Err(ProtocolError::InvalidPacket),
+            _ => Err(PacketError::InvalidPacket),
         }
     }
 }
@@ -162,11 +159,11 @@ pub struct PacketStackableItemFull {
 }
 
 pub trait PacketReadItems {
-    fn read_item_full(&mut self) -> Result<Option<Item>, ProtocolError>;
+    fn read_item_full(&mut self) -> Result<Option<Item>, PacketError>;
 }
 
 impl<'a> PacketReadItems for PacketReader<'a> {
-    fn read_item_full(&mut self) -> Result<Option<Item>, ProtocolError> {
+    fn read_item_full(&mut self) -> Result<Option<Item>, PacketError> {
         let item_bytes = self.read_fixed_length_bytes(6)?;
         let item_header = PacketFullItemHeader::from_bytes(item_bytes[0..2].try_into().unwrap());
         let item_number = item_header.item_number();
@@ -348,7 +345,7 @@ const VEHICLE_START_INDEX: usize = AMMO_END_INDEX;
 const VEHICLE_END_INDEX: usize = VEHICLE_START_INDEX + 4;
 
 pub trait PacketReadEquipmentIndex {
-    fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, ProtocolError>;
+    fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, PacketError>;
 }
 
 pub trait PacketWriteEquipmentIndex {
@@ -356,8 +353,8 @@ pub trait PacketWriteEquipmentIndex {
 }
 
 impl<'a> PacketReadEquipmentIndex for PacketReader<'a> {
-    fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, ProtocolError> {
-        decode_equipment_index(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
+    fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, PacketError> {
+        decode_equipment_index(self.read_u16()? as usize).ok_or(PacketError::InvalidPacket)
     }
 }
 
@@ -368,7 +365,7 @@ impl PacketWriteEquipmentIndex for PacketWriter {
 }
 
 pub trait PacketReadVehiclePartIndex {
-    fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, ProtocolError>;
+    fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, PacketError>;
 }
 
 pub trait PacketWriteVehiclePartIndex {
@@ -376,8 +373,8 @@ pub trait PacketWriteVehiclePartIndex {
 }
 
 impl<'a> PacketReadVehiclePartIndex for PacketReader<'a> {
-    fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, ProtocolError> {
-        decode_vehicle_part_index(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
+    fn read_vehicle_part_index_u16(&mut self) -> Result<VehiclePartIndex, PacketError> {
+        decode_vehicle_part_index(self.read_u16()? as usize).ok_or(PacketError::InvalidPacket)
     }
 }
 
@@ -388,8 +385,8 @@ impl PacketWriteVehiclePartIndex for PacketWriter {
 }
 
 pub trait PacketReadItemSlot {
-    fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError>;
-    fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError>;
+    fn read_item_slot_u8(&mut self) -> Result<ItemSlot, PacketError>;
+    fn read_item_slot_u16(&mut self) -> Result<ItemSlot, PacketError>;
 }
 
 pub trait PacketWriteItemSlot {
@@ -445,12 +442,12 @@ fn encode_item_slot(slot: ItemSlot) -> usize {
 }
 
 impl<'a> PacketReadItemSlot for PacketReader<'a> {
-    fn read_item_slot_u8(&mut self) -> Result<ItemSlot, ProtocolError> {
-        decode_item_slot(self.read_u8()? as usize).ok_or(ProtocolError::InvalidPacket)
+    fn read_item_slot_u8(&mut self) -> Result<ItemSlot, PacketError> {
+        decode_item_slot(self.read_u8()? as usize).ok_or(PacketError::InvalidPacket)
     }
 
-    fn read_item_slot_u16(&mut self) -> Result<ItemSlot, ProtocolError> {
-        decode_item_slot(self.read_u16()? as usize).ok_or(ProtocolError::InvalidPacket)
+    fn read_item_slot_u16(&mut self) -> Result<ItemSlot, PacketError> {
+        decode_item_slot(self.read_u16()? as usize).ok_or(PacketError::InvalidPacket)
     }
 }
 
@@ -465,20 +462,20 @@ impl PacketWriteItemSlot for PacketWriter {
 }
 
 pub trait PacketReadSkillSlot {
-    fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, ProtocolError>;
+    fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, PacketError>;
 }
 
 pub trait PacketWriteSkillSlot {
     fn write_skill_slot_u8(&mut self, slot: SkillSlot);
 }
 
-fn skill_slot_from_index(index: usize) -> Result<SkillSlot, ProtocolError> {
+fn skill_slot_from_index(index: usize) -> Result<SkillSlot, PacketError> {
     match index {
         0..=29 => Ok(SkillSlot(SkillPageType::Basic, index)),
         30..=59 => Ok(SkillSlot(SkillPageType::Active, index - 30)),
         60..=89 => Ok(SkillSlot(SkillPageType::Passive, index - 60)),
         90..=119 => Ok(SkillSlot(SkillPageType::Clan, index - 90)),
-        _ => Err(ProtocolError::InvalidPacket),
+        _ => Err(PacketError::InvalidPacket),
     }
 }
 
@@ -492,7 +489,7 @@ fn skill_slot_to_index(slot: SkillSlot) -> usize {
 }
 
 impl<'a> PacketReadSkillSlot for PacketReader<'a> {
-    fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, ProtocolError> {
+    fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, PacketError> {
         skill_slot_from_index(self.read_u8()? as usize)
     }
 }

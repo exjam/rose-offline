@@ -11,6 +11,3 @@ rose-data = { path = "../rose-data" }
 rose-data-irose = { path = "../rose-data-irose" }
 rose-file-readers = { path = "../rose-file-readers" }
 rose-game-common = { path = "../rose-game-common" }
-
-[profile.dev.package."*"]
-opt-level = 3

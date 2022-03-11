@@ -1,7 +1,7 @@
 use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 
-use crate::protocol::{Packet, PacketReader, ProtocolError};
+use rose_network_common::{Packet, PacketError, PacketReader};
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -18,11 +18,11 @@ pub struct PacketClientLoginRequest<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientLoginRequest<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::LoginRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -42,11 +42,11 @@ pub struct PacketClientChannelList {
 }
 
 impl TryFrom<&Packet> for PacketClientChannelList {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ChannelList as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -63,11 +63,11 @@ pub struct PacketClientSelectServer {
 }
 
 impl TryFrom<&Packet> for PacketClientSelectServer {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::SelectServer as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);

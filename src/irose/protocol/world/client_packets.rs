@@ -2,11 +2,9 @@ use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 
 use rose_game_common::components::CharacterGender;
+use rose_network_common::{Packet, PacketError, PacketReader};
 
-use crate::{
-    irose::protocol::common_packets::PacketReadCharacterGender,
-    protocol::{Packet, PacketReader, ProtocolError},
-};
+use crate::irose::protocol::common_packets::PacketReadCharacterGender;
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -24,11 +22,11 @@ pub struct PacketClientConnectRequest<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientConnectRequest<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::ConnectRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         let mut reader = PacketReader::from(packet);
@@ -45,11 +43,11 @@ impl<'a> TryFrom<&'a Packet> for PacketClientConnectRequest<'a> {
 pub struct PacketClientCharacterList {}
 
 impl TryFrom<&Packet> for PacketClientCharacterList {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::CharacterListRequest as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
 
         Ok(PacketClientCharacterList {})
@@ -67,11 +65,11 @@ pub struct PacketClientCreateCharacter<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientCreateCharacter<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::CreateCharacter as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
         let mut reader = PacketReader::from(packet);
         let gender = reader.read_character_gender_u8()?;
@@ -100,11 +98,11 @@ pub struct PacketClientDeleteCharacter<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientDeleteCharacter<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::DeleteCharacter as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
         let mut reader = PacketReader::from(packet);
         let slot = reader.read_u8()?;
@@ -125,11 +123,11 @@ pub struct PacketClientSelectCharacter<'a> {
 }
 
 impl<'a> TryFrom<&'a Packet> for PacketClientSelectCharacter<'a> {
-    type Error = ProtocolError;
+    type Error = PacketError;
 
     fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
         if packet.command != ClientPackets::SelectCharacter as u16 {
-            return Err(ProtocolError::InvalidPacket);
+            return Err(PacketError::InvalidPacket);
         }
         let mut reader = PacketReader::from(packet);
         let slot = reader.read_u8()?;

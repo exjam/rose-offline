@@ -3,6 +3,7 @@
 use bytes::{Buf, BytesMut};
 use modular_bitfield::prelude::*;
 use std::convert::TryInto;
+use std::marker::PhantomData;
 use std::num::Wrapping;
 
 pub const IROSE_112_TABLE: [u8; 256] = [
@@ -132,7 +133,7 @@ pub struct Head {
 
 #[bitfield]
 #[derive(Clone, Copy)]
-struct HeadDecrypted {
+pub struct HeadDecrypted {
     add_buffer_len1: B3,
     add_buffer_len2: B3,
     add_buffer_len3: B3,
@@ -151,7 +152,7 @@ struct HeadDecrypted {
 }
 
 #[bitfield]
-struct HeadCryptedServer {
+pub struct HeadCryptedServer {
     add_buffer_len2: B3,
     add_table_value1: B3,
     command3: B3,
@@ -172,7 +173,7 @@ struct HeadCryptedServer {
 #[allow(dead_code)]
 #[bitfield]
 #[derive(Clone, Copy)]
-struct HeadCryptedClient {
+pub struct HeadCryptedClient {
     command2: B3,
     add_table_value2: B3,
     add_buffer_len1: B3,
@@ -190,8 +191,31 @@ struct HeadCryptedClient {
     add_buffer_len4: B2,
 }
 
-impl HeadCryptedServer {
-    pub fn encode_main(&mut self, head: &Head) {
+pub trait EncodeHead {
+    fn from_header_bytes(bytes: [u8; 5]) -> Self;
+    fn into_header_bytes(self) -> [u8; 5];
+
+    fn encode_main(&mut self, head: &Head);
+    fn encode_final(&mut self, head: &Head);
+}
+
+pub trait DecodeHead {
+    fn from_header_bytes(bytes: [u8; 5]) -> Self;
+
+    fn decode_main(&self, head: &mut Head);
+    fn decode_final(&self, head: &mut Head);
+}
+
+impl EncodeHead for HeadCryptedServer {
+    fn from_header_bytes(bytes: [u8; 5]) -> Self {
+        Self::from_bytes(bytes)
+    }
+
+    fn into_header_bytes(self) -> [u8; 5] {
+        self.into_bytes()
+    }
+
+    fn encode_main(&mut self, head: &Head) {
         let b = HeadDecrypted::from_bytes(head.into_bytes());
         self.set_add_buffer_len1(b.add_buffer_len1());
         self.set_add_buffer_len2(b.add_buffer_len2());
@@ -215,42 +239,123 @@ impl HeadCryptedServer {
     }
 }
 
-impl Head {
-    fn decode_client_main(&mut self, b: &HeadCryptedClient) {
-        let mut a = HeadDecrypted::from_bytes(self.into_bytes());
-        a.set_add_buffer_len1(b.add_buffer_len1());
-        a.set_add_buffer_len2(b.add_buffer_len2());
-        a.set_add_buffer_len3(b.add_buffer_len3());
-        a.set_add_buffer_len4(b.add_buffer_len4());
-        a.set_command1(b.command1());
-        a.set_command2(b.command2());
-        a.set_command3(b.command3());
-        a.set_command4(b.command4());
-        a.set_encrypt_value1(b.encrypt_value1());
-        a.set_encrypt_add_value1(b.encrypt_add_value1());
-        a.set_encrypt_add_value2(b.encrypt_add_value2());
-        *self = Head::from_bytes(a.into_bytes());
+impl EncodeHead for HeadCryptedClient {
+    fn from_header_bytes(bytes: [u8; 5]) -> Self {
+        Self::from_bytes(bytes)
     }
 
-    fn decode_client_final(&mut self, b: &HeadCryptedClient) {
-        let mut a = HeadDecrypted::from_bytes(self.into_bytes());
-        a.set_add_table_value1(b.add_table_value1());
-        a.set_add_table_value2(b.add_table_value2());
-        a.set_add_table_value3(b.add_table_value3());
-        a.set_add_table_value4(b.add_table_value4());
-        *self = Head::from_bytes(a.into_bytes());
+    fn into_header_bytes(self) -> [u8; 5] {
+        self.into_bytes()
+    }
+
+    fn encode_main(&mut self, head: &Head) {
+        let b = HeadDecrypted::from_bytes(head.into_bytes());
+        self.set_add_buffer_len1(b.add_buffer_len1());
+        self.set_add_buffer_len2(b.add_buffer_len2());
+        self.set_add_buffer_len3(b.add_buffer_len3());
+        self.set_add_buffer_len4(b.add_buffer_len4());
+        self.set_command1(b.command1());
+        self.set_command2(b.command2());
+        self.set_command3(b.command3());
+        self.set_command4(b.command4());
+        self.set_encrypt_value1(b.encrypt_value1());
+        self.set_encrypt_add_value1(b.encrypt_add_value1());
+        self.set_encrypt_add_value2(b.encrypt_add_value2());
+    }
+
+    fn encode_final(&mut self, head: &Head) {
+        let b = HeadDecrypted::from_bytes(head.into_bytes());
+        self.set_add_table_value1(b.add_table_value1());
+        self.set_add_table_value2(b.add_table_value2());
+        self.set_add_table_value3(b.add_table_value3());
+        self.set_add_table_value4(b.add_table_value4());
     }
 }
 
-pub struct PacketCodec {
+impl DecodeHead for HeadCryptedServer {
+    fn from_header_bytes(bytes: [u8; 5]) -> Self {
+        Self::from_bytes(bytes)
+    }
+
+    fn decode_main(&self, head: &mut Head) {
+        let mut a = HeadDecrypted::from_bytes(head.into_bytes());
+        a.set_add_buffer_len1(self.add_buffer_len1());
+        a.set_add_buffer_len2(self.add_buffer_len2());
+        a.set_add_buffer_len3(self.add_buffer_len3());
+        a.set_add_buffer_len4(self.add_buffer_len4());
+        a.set_command1(self.command1());
+        a.set_command2(self.command2());
+        a.set_command3(self.command3());
+        a.set_command4(self.command4());
+        a.set_encrypt_value1(self.encrypt_value1());
+        a.set_encrypt_add_value1(self.encrypt_add_value1());
+        a.set_encrypt_add_value2(self.encrypt_add_value2());
+        *head = Head::from_bytes(a.into_bytes());
+    }
+
+    fn decode_final(&self, head: &mut Head) {
+        let mut a = HeadDecrypted::from_bytes(head.into_bytes());
+        a.set_add_table_value1(self.add_table_value1());
+        a.set_add_table_value2(self.add_table_value2());
+        a.set_add_table_value3(self.add_table_value3());
+        a.set_add_table_value4(self.add_table_value4());
+        *head = Head::from_bytes(a.into_bytes());
+    }
+}
+
+impl DecodeHead for HeadCryptedClient {
+    fn from_header_bytes(bytes: [u8; 5]) -> Self {
+        Self::from_bytes(bytes)
+    }
+
+    fn decode_main(&self, head: &mut Head) {
+        let mut a = HeadDecrypted::from_bytes(head.into_bytes());
+        a.set_add_buffer_len1(self.add_buffer_len1());
+        a.set_add_buffer_len2(self.add_buffer_len2());
+        a.set_add_buffer_len3(self.add_buffer_len3());
+        a.set_add_buffer_len4(self.add_buffer_len4());
+        a.set_command1(self.command1());
+        a.set_command2(self.command2());
+        a.set_command3(self.command3());
+        a.set_command4(self.command4());
+        a.set_encrypt_value1(self.encrypt_value1());
+        a.set_encrypt_add_value1(self.encrypt_add_value1());
+        a.set_encrypt_add_value2(self.encrypt_add_value2());
+        *head = Head::from_bytes(a.into_bytes());
+    }
+
+    fn decode_final(&self, head: &mut Head) {
+        let mut a = HeadDecrypted::from_bytes(head.into_bytes());
+        a.set_add_table_value1(self.add_table_value1());
+        a.set_add_table_value2(self.add_table_value2());
+        a.set_add_table_value3(self.add_table_value3());
+        a.set_add_table_value4(self.add_table_value4());
+        *head = Head::from_bytes(a.into_bytes());
+    }
+}
+
+pub struct PacketCodec<D, E>
+where
+    D: DecodeHead,
+    E: EncodeHead,
+{
     seed: u32,
     crc_table: &'static [u8; 256],
     table: [u32; 16 * 2048],
     index: [u16; 512],
+    phantom_decode: PhantomData<D>,
+    phantom_encode: PhantomData<E>,
 }
 
-impl PacketCodec {
-    pub fn default(crc_table: &'static [u8; 256]) -> PacketCodec {
+pub type ServerPacketCodec = PacketCodec<HeadCryptedClient, HeadCryptedServer>;
+pub type ClientPacketCodec = PacketCodec<HeadCryptedServer, HeadCryptedClient>;
+
+impl<D, E> PacketCodec<D, E>
+where
+    D: DecodeHead,
+    E: EncodeHead,
+{
+    pub fn default(crc_table: &'static [u8; 256]) -> PacketCodec<D, E> {
         let mut seed = Random::new(0x0042D266u32);
         let seed_types: Vec<SeedType> = (0..16).map(get_seed_type).collect();
         let mut crypt = PacketCodec {
@@ -258,13 +363,15 @@ impl PacketCodec {
             crc_table,
             table: [0u32; 16 * 2048],
             index: [0u16; 512],
+            phantom_decode: PhantomData,
+            phantom_encode: PhantomData,
         };
         seed_table(&mut crypt.table, &mut seed, &seed_types);
         seed_index(&mut crypt.index, &mut seed, SeedType::AC);
         crypt
     }
 
-    pub fn init(crc_table: &'static [u8; 256], init_seed: u32) -> PacketCodec {
+    pub fn init(crc_table: &'static [u8; 256], init_seed: u32) -> PacketCodec<D, E> {
         let mut seed = Random::new(Random::new(init_seed).next_my());
         let seed_types: Vec<SeedType> = (0..17)
             .map(|_| get_seed_type(seed.next_bc() & 0xFF))
@@ -274,6 +381,8 @@ impl PacketCodec {
             crc_table,
             table: [0u32; 16 * 2048],
             index: [0u16; 512],
+            phantom_decode: PhantomData,
+            phantom_encode: PhantomData,
         };
         seed_table(&mut crypt.table, &mut seed, &seed_types);
         seed_index(&mut crypt.index, &mut seed, seed_types[16]);
@@ -281,12 +390,16 @@ impl PacketCodec {
     }
 }
 
-impl crate::protocol::PacketCodec for PacketCodec {
+impl<D, E> rose_network_common::PacketCodec for PacketCodec<D, E>
+where
+    D: DecodeHead,
+    E: EncodeHead,
+{
     fn get_seed(&self) -> u32 {
         self.seed
     }
 
-    fn encrypt_server(&self, buffer: &mut BytesMut) {
+    fn encrypt_packet(&self, buffer: &mut BytesMut) {
         let add_table_value = 1u16;
         let encrypt_add_value = 1u8;
         let size = (&buffer[0..2]).get_u16_le();
@@ -297,9 +410,9 @@ impl crate::protocol::PacketCodec for PacketCodec {
             .with_add_buffer_len(size)
             .with_command((&buffer[2..4]).get_u16_le());
 
-        let mut head_server = HeadCryptedServer::from_bytes(buffer[0..5].try_into().unwrap());
+        let mut head_server = E::from_header_bytes(buffer[0..5].try_into().unwrap());
         head_server.encode_main(&head);
-        (&mut buffer[0..5]).copy_from_slice(&head_server.into_bytes());
+        (&mut buffer[0..5]).copy_from_slice(&head_server.into_header_bytes());
 
         let mut checksum = 0u8;
         let head_bytes = head.into_bytes();
@@ -317,30 +430,27 @@ impl crate::protocol::PacketCodec for PacketCodec {
 
         buffer[5] = checksum;
 
-        let mut head_server = HeadCryptedServer::from_bytes(buffer[0..5].try_into().unwrap());
+        let mut head_server = E::from_header_bytes(buffer[0..5].try_into().unwrap());
         head_server.encode_final(&head);
-        (&mut buffer[0..5]).copy_from_slice(&head_server.into_bytes());
+        (&mut buffer[0..5]).copy_from_slice(&head_server.into_header_bytes());
     }
 
-    fn decrypt_client_header(&self, buffer: &mut BytesMut) -> usize {
+    fn decrypt_packet_header(&self, buffer: &mut BytesMut) -> usize {
         let mut head = Head::new();
-        head.decode_client_final(&HeadCryptedClient::from_bytes(
-            buffer[0..5].try_into().unwrap(),
-        ));
+        D::from_header_bytes(buffer[0..5].try_into().unwrap()).decode_final(&mut head);
         let add_table_value = head.add_table_value();
 
         for i in 0..5 {
             buffer[i] ^= self.table[i * 2048 + add_table_value as usize] as u8;
         }
 
-        head.decode_client_main(&HeadCryptedClient::from_bytes(
-            buffer[0..5].try_into().unwrap(),
-        ));
+        D::from_header_bytes(buffer[0..5].try_into().unwrap()).decode_main(&mut head);
+
         (&mut buffer[0..5]).copy_from_slice(&head.into_bytes());
         head.add_buffer_len() as usize
     }
 
-    fn decrypt_client_body(&self, buffer: &mut BytesMut) -> bool {
+    fn decrypt_packet_body(&self, buffer: &mut BytesMut) -> bool {
         let head = Head::from_bytes(buffer[0..5].try_into().unwrap());
         let mut checksum: u8 = 0;
         for i in 0..5 {

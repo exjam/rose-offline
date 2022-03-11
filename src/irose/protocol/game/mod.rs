@@ -4,6 +4,7 @@ use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
 use rose_data::QuestTriggerHash;
+use rose_network_common::{Packet, PacketError};
 
 use crate::{
     game::messages::{
@@ -23,7 +24,7 @@ use crate::{
             UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
         },
     },
-    protocol::{Client, Packet, ProtocolClient, ProtocolError},
+    protocol::{Client, ProtocolClient, ProtocolClientError},
 };
 
 mod client_packets;
@@ -52,7 +53,7 @@ impl GameClient {
         &mut self,
         client: &mut Client<'_>,
         packet: Packet,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<(), anyhow::Error> {
         match self.state {
             GameClientState::WaitingConnectRequest => {
                 match FromPrimitive::from_u16(packet.command) {
@@ -67,11 +68,13 @@ impl GameClient {
                                 },
                             ))?;
                     }
-                    _ => return Err(ProtocolError::InvalidPacket),
+                    _ => return Err(PacketError::InvalidPacket.into()),
                 }
             }
             GameClientState::Connected => match FromPrimitive::from_u16(packet.command) {
-                Some(ClientPackets::ConnectRequest) => return Err(ProtocolError::InvalidPacket),
+                Some(ClientPackets::ConnectRequest) => {
+                    return Err(PacketError::InvalidPacket.into())
+                }
                 Some(ClientPackets::JoinZone) => {
                     let _request = PacketClientJoinZone::try_from(&packet)?;
                     client
@@ -329,7 +332,7 @@ impl GameClient {
         &mut self,
         client: &mut Client<'_>,
         message: ServerMessage,
-    ) -> Result<(), ProtocolError> {
+    ) -> Result<(), anyhow::Error> {
         match message {
             ServerMessage::GameConnectionResponse(response) => {
                 match response {
@@ -802,7 +805,7 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerLogoutResult { result }))
                     .await?;
                 if result.is_ok() {
-                    return Err(ProtocolError::ServerInitiatedDisconnect);
+                    return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
                 }
             }
             ServerMessage::QuestTriggerResult(QuestTriggerResult {
@@ -1209,7 +1212,7 @@ impl GameClient {
 
 #[async_trait]
 impl ProtocolClient for GameClient {
-    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError> {
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
         loop {
             tokio::select! {
                 packet = client.connection.read_packet() => {
@@ -1226,7 +1229,7 @@ impl ProtocolClient for GameClient {
                     if let Some(message) = server_message {
                         self.handle_server_message(client, message).await?;
                     } else {
-                        return Err(ProtocolError::ServerInitiatedDisconnect);
+                        return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
                     }
                 }
             };

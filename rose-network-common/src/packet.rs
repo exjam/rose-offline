@@ -1,14 +1,22 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::io::Cursor;
 use std::str;
+use thiserror::Error;
 
-use crate::protocol::ProtocolError;
+#[derive(Debug, Error)]
+pub enum PacketError {
+    #[error("unexpected end of packet")]
+    UnexpectedEof,
+
+    #[error("invalid packet")]
+    InvalidPacket,
+}
 
 pub trait PacketCodec {
     fn get_seed(&self) -> u32;
-    fn decrypt_client_header(&self, buffer: &mut BytesMut) -> usize;
-    fn decrypt_client_body(&self, buffer: &mut BytesMut) -> bool;
-    fn encrypt_server(&self, buffer: &mut BytesMut);
+    fn decrypt_packet_header(&self, buffer: &mut BytesMut) -> usize;
+    fn decrypt_packet_body(&self, buffer: &mut BytesMut) -> bool;
+    fn encrypt_packet(&self, buffer: &mut BytesMut);
 }
 
 #[derive(Debug)]
@@ -39,41 +47,41 @@ impl<'a> From<&'a Packet> for PacketReader<'a> {
 }
 
 impl<'a> PacketReader<'a> {
-    pub fn read_u8(&mut self) -> Result<u8, ProtocolError> {
+    pub fn read_u8(&mut self) -> Result<u8, PacketError> {
         if self.cursor.remaining() < 1 {
-            Err(ProtocolError::InvalidPacket)
+            Err(PacketError::UnexpectedEof)
         } else {
             Ok(self.cursor.get_u8())
         }
     }
 
-    pub fn read_u16(&mut self) -> Result<u16, ProtocolError> {
+    pub fn read_u16(&mut self) -> Result<u16, PacketError> {
         if self.cursor.remaining() < 2 {
-            Err(ProtocolError::InvalidPacket)
+            Err(PacketError::UnexpectedEof)
         } else {
             Ok(self.cursor.get_u16_le())
         }
     }
 
-    pub fn read_u32(&mut self) -> Result<u32, ProtocolError> {
+    pub fn read_u32(&mut self) -> Result<u32, PacketError> {
         if self.cursor.remaining() < 4 {
-            Err(ProtocolError::InvalidPacket)
+            Err(PacketError::UnexpectedEof)
         } else {
             Ok(self.cursor.get_u32_le())
         }
     }
 
-    pub fn read_f32(&mut self) -> Result<f32, ProtocolError> {
+    pub fn read_f32(&mut self) -> Result<f32, PacketError> {
         if self.cursor.remaining() < 4 {
-            Err(ProtocolError::InvalidPacket)
+            Err(PacketError::UnexpectedEof)
         } else {
             Ok(self.cursor.get_f32_le())
         }
     }
 
-    pub fn read_fixed_length_bytes(&mut self, length: usize) -> Result<&'a [u8], ProtocolError> {
+    pub fn read_fixed_length_bytes(&mut self, length: usize) -> Result<&'a [u8], PacketError> {
         if self.cursor.remaining() < length {
-            Err(ProtocolError::InvalidPacket)
+            Err(PacketError::UnexpectedEof)
         } else {
             let start = self.cursor.position() as usize;
             let end = start + length;
@@ -82,7 +90,7 @@ impl<'a> PacketReader<'a> {
         }
     }
 
-    pub fn read_null_terminated_bytes(&mut self) -> Result<&'a [u8], ProtocolError> {
+    pub fn read_null_terminated_bytes(&mut self) -> Result<&'a [u8], PacketError> {
         let start = self.cursor.position() as usize;
         let end = self.cursor.get_ref().as_ref().len();
 
@@ -93,20 +101,20 @@ impl<'a> PacketReader<'a> {
             }
         }
 
-        Err(ProtocolError::InvalidPacket)
+        Err(PacketError::UnexpectedEof)
     }
 
-    pub fn read_fixed_length_utf8(&mut self, length: usize) -> Result<&'a str, ProtocolError> {
+    pub fn read_fixed_length_utf8(&mut self, length: usize) -> Result<&'a str, PacketError> {
         match str::from_utf8(self.read_fixed_length_bytes(length)?) {
             Ok(s) => Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => Err(ProtocolError::InvalidPacket),
+            Err(_) => Err(PacketError::UnexpectedEof),
         }
     }
 
-    pub fn read_null_terminated_utf8(&mut self) -> Result<&'a str, ProtocolError> {
+    pub fn read_null_terminated_utf8(&mut self) -> Result<&'a str, PacketError> {
         match str::from_utf8(self.read_null_terminated_bytes()?) {
             Ok(s) => Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => Err(ProtocolError::InvalidPacket),
+            Err(_) => Err(PacketError::UnexpectedEof),
         }
     }
 }

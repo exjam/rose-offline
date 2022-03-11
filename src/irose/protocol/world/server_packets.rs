@@ -1,11 +1,11 @@
 use num_derive::FromPrimitive;
 
 use rose_data::{EquipmentIndex, EquipmentItem};
+use rose_network_common::{Packet, PacketWriter};
 
 use crate::{
     game::messages::server::CharacterListItem,
     irose::protocol::common_packets::PacketWriteCharacterGender,
-    protocol::{Packet, PacketWriter},
 };
 
 #[derive(FromPrimitive)]
