@@ -67,6 +67,11 @@ impl<'a> Connection<'a> {
                 // Read packet into size, command, data
                 let size = self.buffer.get_u16_le() as usize;
                 let command = self.buffer.get_u16_le();
+
+                if size < 6 {
+                    return Err(ConnectionError::DecryptBodyFailed.into());
+                }
+
                 self.buffer.advance(2);
                 let data: Bytes = self.buffer.split_to(size - 6).into();
 
