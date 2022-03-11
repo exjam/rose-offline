@@ -13,21 +13,21 @@ use rose_game_common::messages::{
 use rose_network_common::{Packet, PacketError};
 use rose_network_irose::{world_client_packets::*, world_server_packets::*};
 
-use crate::protocol::{Client, ProtocolClient, ProtocolClientError};
+use crate::protocol::{Client, ProtocolServer, ProtocolServerError};
 
-pub enum WorldClientState {
+pub enum WorldServerState {
     WaitingConnectRequest,
     Connected,
 }
 
-pub struct WorldClient {
-    state: WorldClientState,
+pub struct WorldServer {
+    state: WorldServerState,
 }
 
-impl WorldClient {
+impl WorldServer {
     pub fn new() -> Self {
         Self {
-            state: WorldClientState::WaitingConnectRequest,
+            state: WorldServerState::WaitingConnectRequest,
         }
     }
 
@@ -37,7 +37,7 @@ impl WorldClient {
         packet: Packet,
     ) -> Result<(), anyhow::Error> {
         match self.state {
-            WorldClientState::WaitingConnectRequest => {
+            WorldServerState::WaitingConnectRequest => {
                 match FromPrimitive::from_u16(packet.command) {
                     Some(ClientPackets::ConnectRequest) => {
                         let request = PacketClientConnectRequest::try_from(&packet)?;
@@ -51,7 +51,7 @@ impl WorldClient {
                     _ => return Err(PacketError::InvalidPacket.into()),
                 }
             }
-            WorldClientState::Connected => match FromPrimitive::from_u16(packet.command) {
+            WorldServerState::Connected => match FromPrimitive::from_u16(packet.command) {
                 Some(ClientPackets::ConnectRequest) => {
                     let request = PacketClientConnectRequest::try_from(&packet)?;
                     client
@@ -117,7 +117,7 @@ impl WorldClient {
             ServerMessage::ConnectionResponse(message) => {
                 let packet = match message {
                     Ok(result) => {
-                        self.state = WorldClientState::Connected;
+                        self.state = WorldServerState::Connected;
 
                         Packet::from(&PacketConnectionReply {
                             result: ConnectResult::Ok,
@@ -224,7 +224,7 @@ impl WorldClient {
 }
 
 #[async_trait]
-impl ProtocolClient for WorldClient {
+impl ProtocolServer for WorldServer {
     async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
         loop {
             tokio::select! {
@@ -242,7 +242,7 @@ impl ProtocolClient for WorldClient {
                     if let Some(message) = server_message {
                         self.handle_server_message(client, message).await?;
                     } else {
-                        return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
+                        return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
                     }
                 }
             };

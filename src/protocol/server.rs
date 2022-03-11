@@ -36,7 +36,7 @@ async fn run_connection(
         client_message_tx,
         server_message_rx,
     };
-    let result = (protocol.create_client)().run_client(&mut client).await;
+    let result = (protocol.create_server)().run_client(&mut client).await;
 
     control_message_tx
         .send(ControlMessage::RemoveClient {

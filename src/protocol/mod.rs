@@ -14,20 +14,20 @@ pub struct Client<'a> {
 }
 
 #[derive(Debug, Error)]
-pub enum ProtocolClientError {
+pub enum ProtocolServerError {
     #[error("server initiated disconnect")]
     ServerInitiatedDisconnect,
 }
 
 #[async_trait]
-pub trait ProtocolClient {
+pub trait ProtocolServer {
     async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error>;
 }
 
 pub struct Protocol {
     pub client_type: ClientType,
     pub packet_codec: Box<dyn PacketCodec + Send + Sync>,
-    pub create_client: fn() -> Box<dyn ProtocolClient + Send + Sync>,
+    pub create_server: fn() -> Box<dyn ProtocolServer + Send + Sync>,
 }
 
 pub mod server;

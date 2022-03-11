@@ -24,21 +24,21 @@ use rose_game_common::messages::{
 use rose_network_common::{Packet, PacketError};
 use rose_network_irose::{game_client_packets::*, game_server_packets::*};
 
-use crate::protocol::{Client, ProtocolClient, ProtocolClientError};
+use crate::protocol::{Client, ProtocolServer, ProtocolServerError};
 
-pub enum GameClientState {
+pub enum GameServerState {
     WaitingConnectRequest,
     Connected,
 }
 
-pub struct GameClient {
-    state: GameClientState,
+pub struct GameServer {
+    state: GameServerState,
 }
 
-impl GameClient {
+impl GameServer {
     pub fn new() -> Self {
         Self {
-            state: GameClientState::WaitingConnectRequest,
+            state: GameServerState::WaitingConnectRequest,
         }
     }
 
@@ -48,7 +48,7 @@ impl GameClient {
         packet: Packet,
     ) -> Result<(), anyhow::Error> {
         match self.state {
-            GameClientState::WaitingConnectRequest => {
+            GameServerState::WaitingConnectRequest => {
                 match FromPrimitive::from_u16(packet.command) {
                     Some(ClientPackets::ConnectRequest) => {
                         let request = PacketClientConnectRequest::try_from(&packet)?;
@@ -64,7 +64,7 @@ impl GameClient {
                     _ => return Err(PacketError::InvalidPacket.into()),
                 }
             }
-            GameClientState::Connected => match FromPrimitive::from_u16(packet.command) {
+            GameServerState::Connected => match FromPrimitive::from_u16(packet.command) {
                 Some(ClientPackets::ConnectRequest) => {
                     return Err(PacketError::InvalidPacket.into())
                 }
@@ -330,7 +330,7 @@ impl GameClient {
             ServerMessage::GameConnectionResponse(response) => {
                 match response {
                     Ok(response) => {
-                        self.state = GameClientState::Connected;
+                        self.state = GameServerState::Connected;
 
                         client
                             .connection
@@ -798,7 +798,7 @@ impl GameClient {
                     .write_packet(Packet::from(&PacketServerLogoutResult { result }))
                     .await?;
                 if result.is_ok() {
-                    return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
+                    return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
                 }
             }
             ServerMessage::QuestTriggerResult(QuestTriggerResult {
@@ -1204,7 +1204,7 @@ impl GameClient {
 }
 
 #[async_trait]
-impl ProtocolClient for GameClient {
+impl ProtocolServer for GameServer {
     async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
         loop {
             tokio::select! {
@@ -1222,7 +1222,7 @@ impl ProtocolClient for GameClient {
                     if let Some(message) = server_message {
                         self.handle_server_message(client, message).await?;
                     } else {
-                        return Err(ProtocolClientError::ServerInitiatedDisconnect.into());
+                        return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
                     }
                 }
             };

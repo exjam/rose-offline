@@ -2,23 +2,21 @@ use std::sync::Arc;
 
 use rose_network_irose::{ServerPacketCodec, IROSE_112_TABLE};
 
-use crate::game::messages::control::ClientType;
-use crate::protocol::Protocol;
+use crate::{game::messages::control::ClientType, protocol::Protocol};
 
-mod common_packets;
-mod game;
-mod login;
-mod world;
+mod game_server;
+mod login_server;
+mod world_server;
 
-use self::game::GameClient;
-use self::login::LoginClient;
-use self::world::WorldClient;
+use game_server::GameServer;
+use login_server::LoginServer;
+use world_server::WorldServer;
 
 pub fn login_protocol() -> Arc<Protocol> {
     Arc::new(Protocol {
         client_type: ClientType::Login,
         packet_codec: Box::new(ServerPacketCodec::default(&IROSE_112_TABLE)),
-        create_client: || Box::new(LoginClient::new()),
+        create_server: || Box::new(LoginServer::new()),
     })
 }
 
@@ -27,7 +25,7 @@ pub fn world_protocol() -> Arc<Protocol> {
     Arc::new(Protocol {
         client_type: ClientType::World,
         packet_codec: Box::new(ServerPacketCodec::init(&IROSE_112_TABLE, packet_codec_seed)),
-        create_client: || Box::new(WorldClient::new()),
+        create_server: || Box::new(WorldServer::new()),
     })
 }
 
@@ -36,6 +34,6 @@ pub fn game_protocol() -> Arc<Protocol> {
     Arc::new(Protocol {
         client_type: ClientType::Game,
         packet_codec: Box::new(ServerPacketCodec::init(&IROSE_112_TABLE, packet_codec_seed)),
-        create_client: || Box::new(GameClient::new()),
+        create_server: || Box::new(GameServer::new()),
     })
 }
