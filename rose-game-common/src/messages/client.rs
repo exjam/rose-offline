@@ -9,7 +9,7 @@ use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct ConnectionRequest {
     pub login_token: u32,
     pub password_md5: String,
