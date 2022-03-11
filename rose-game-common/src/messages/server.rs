@@ -1,37 +1,38 @@
-use std::time::Duration;
-
+use enum_map::EnumMap;
 use nalgebra::Point2;
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
-    QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
+    QuestTriggerHash, SkillId, StackableItem, StatusEffectType, VehiclePartIndex, WorldTicks,
+    ZoneId,
 };
-use rose_game_common::{
+
+use crate::{
     components::{
-        BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, CharacterUniqueId,
-        ClientEntityId, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-        Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position,
-        QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
-        UnionMembership,
+        ActiveStatusEffect, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
+        CharacterUniqueId, ClientEntityId, Command, Destination, DroppedItem, Equipment,
+        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
+        Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList, SkillPoints, SkillSlot,
+        Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
 };
 
-use crate::game::components::{Command, Destination};
-
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ConnectionRequestError {
     Failed,
     InvalidToken,
     InvalidPassword,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConnectionResponse {
     pub packet_sequence_id: u32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LoginError {
     Failed,
     InvalidAccount,
@@ -39,29 +40,29 @@ pub enum LoginError {
     AlreadyLoggedIn,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LoginResponse {
     pub server_list: Vec<(u32, String)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChannelListError {
     InvalidServerId(usize),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ChannelList {
     pub server_id: usize,
     pub channels: Vec<(u8, String)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum JoinServerError {
     InvalidServerId,
     InvalidChannelId,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct JoinServerResponse {
     pub login_token: u32,
     pub packet_codec_seed: u32,
@@ -69,7 +70,7 @@ pub struct JoinServerResponse {
     pub port: u16,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CharacterListItem {
     pub info: CharacterInfo,
     pub level: Level,
@@ -77,7 +78,7 @@ pub struct CharacterListItem {
     pub equipment: Equipment,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CreateCharacterError {
     Failed,
     AlreadyExists,
@@ -85,28 +86,28 @@ pub enum CreateCharacterError {
     NoMoreSlots,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateCharacterResponse {
     pub character_slot: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum DeleteCharacterError {
     Failed(String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DeleteCharacterResponse {
     pub name: String,
     pub delete_time: Option<CharacterDeleteTime>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SelectCharacterError {
     Failed,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GameConnectionResponse {
     pub packet_sequence_id: u32,
     pub character_info: CharacterInfo,
@@ -127,7 +128,7 @@ pub struct GameConnectionResponse {
     pub stamina: Stamina,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct JoinZoneResponse {
     pub entity_id: ClientEntityId,
     pub level: Level,
@@ -138,25 +139,25 @@ pub struct JoinZoneResponse {
     pub world_ticks: WorldTicks,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LocalChat {
     pub entity_id: ClientEntityId,
     pub text: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ShoutChat {
     pub name: String,
     pub text: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnnounceChat {
     pub name: Option<String>,
     pub text: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AttackEntity {
     pub entity_id: ClientEntityId,
     pub target_entity_id: ClientEntityId,
@@ -166,7 +167,7 @@ pub struct AttackEntity {
     pub z: u16,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MoveEntity {
     pub entity_id: ClientEntityId,
     pub target_entity_id: Option<ClientEntityId>,
@@ -177,26 +178,26 @@ pub struct MoveEntity {
     pub move_mode: Option<MoveMode>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PickupItemDropError {
     NotExist,
     NoPermission,
     InventoryFull,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PickupItemDropContent {
     Item(ItemSlot, Item),
     Money(Money),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PickupItemDropResult {
     pub item_entity_id: ClientEntityId,
     pub result: Result<PickupItemDropContent, PickupItemDropError>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct RemoveEntities {
     pub entity_ids: Vec<ClientEntityId>,
 }
@@ -215,7 +216,7 @@ impl RemoveEntities {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityItemDrop {
     pub entity_id: ClientEntityId,
     pub dropped_item: DroppedItem,
@@ -224,7 +225,9 @@ pub struct SpawnEntityItemDrop {
     pub owner_entity_id: Option<ClientEntityId>,
 }
 
-#[derive(Clone)]
+pub type ActiveStatusEffects = EnumMap<StatusEffectType, Option<ActiveStatusEffect>>;
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityCharacter {
     pub character_info: CharacterInfo,
     pub command: Command,
@@ -237,13 +240,13 @@ pub struct SpawnEntityCharacter {
     pub move_speed: MoveSpeed,
     pub passive_attack_speed: i32,
     pub position: Position,
-    pub status_effects: StatusEffects,
+    pub status_effects: ActiveStatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
     pub personal_store_info: Option<(i32, String)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityNpc {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
@@ -255,10 +258,10 @@ pub struct SpawnEntityNpc {
     pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
-    pub status_effects: StatusEffects,
+    pub status_effects: ActiveStatusEffects,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityMonster {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
@@ -269,10 +272,10 @@ pub struct SpawnEntityMonster {
     pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
-    pub status_effects: StatusEffects,
+    pub status_effects: ActiveStatusEffects,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StopMoveEntity {
     pub entity_id: ClientEntityId,
     pub x: f32,
@@ -280,7 +283,7 @@ pub struct StopMoveEntity {
     pub z: u16,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct DamageEntity {
     pub attacker_entity_id: ClientEntityId,
     pub defender_entity_id: ClientEntityId,
@@ -289,13 +292,13 @@ pub struct DamageEntity {
     pub from_skill: Option<(SkillId, i32)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Whisper {
     pub from: String,
     pub text: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Teleport {
     pub entity_id: ClientEntityId,
     pub zone_id: ZoneId,
@@ -305,48 +308,48 @@ pub struct Teleport {
     pub ride_mode: u8,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum UpdateAbilityValue {
     RewardAdd(AbilityType, i32),
     RewardSet(AbilityType, i32),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateBasicStat {
     pub basic_stat_type: BasicStatType,
     pub value: i32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateEquipment {
     pub entity_id: ClientEntityId,
     pub equipment_index: EquipmentIndex,
     pub item: Option<EquipmentItem>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateVehiclePart {
     pub entity_id: ClientEntityId,
     pub vehicle_part_index: VehiclePartIndex,
     pub item: Option<EquipmentItem>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateStatusEffects {
     pub entity_id: ClientEntityId,
-    pub status_effects: StatusEffects,
+    pub status_effects: ActiveStatusEffects,
     pub updated_hp: Option<HealthPoints>,
     pub updated_mp: Option<ManaPoints>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateSpeed {
     pub entity_id: ClientEntityId,
     pub run_speed: i32,
     pub passive_attack_speed: i32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateLevel {
     pub entity_id: ClientEntityId,
     pub level: Level,
@@ -355,25 +358,25 @@ pub struct UpdateLevel {
     pub skill_points: SkillPoints,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateXpStamina {
     pub xp: u64,
     pub stamina: u32,
     pub source_entity_id: Option<ClientEntityId>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LogoutReply {
     pub result: Result<(), Duration>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QuestTriggerResult {
     pub success: bool,
     pub trigger_hash: QuestTriggerHash,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QuestDeleteResult {
     pub success: bool,
     pub slot: usize,
@@ -381,7 +384,7 @@ pub struct QuestDeleteResult {
 }
 
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum LearnSkillError {
     AlreadyLearnt,
     JobRequirement,
@@ -392,7 +395,7 @@ pub enum LearnSkillError {
     SkillPointRequirement,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LearnSkillSuccess {
     pub skill_slot: SkillSlot,
     pub skill_id: Option<SkillId>,
@@ -400,7 +403,7 @@ pub struct LearnSkillSuccess {
 }
 
 #[allow(dead_code)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum LevelUpSkillError {
     Failed,
     SkillPointRequirement,
@@ -410,13 +413,13 @@ pub enum LevelUpSkillError {
     MoneyRequirement,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LevelUpSkillResult {
     pub result: Result<(SkillSlot, SkillId), LevelUpSkillError>,
     pub updated_skill_points: SkillPoints,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OpenPersonalStore {
     pub entity_id: ClientEntityId,
     pub skin: i32,
@@ -424,7 +427,7 @@ pub struct OpenPersonalStore {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PersonalStoreTransactionResult {
     Cancelled(PersonalStoreTransactionCancelled),
     SoldOut(PersonalStoreTransactionSoldOut),
@@ -433,19 +436,19 @@ pub enum PersonalStoreTransactionResult {
     SoldToStore(PersonalStoreTransactionSuccess),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonalStoreTransactionCancelled {
     pub store_entity_id: ClientEntityId,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonalStoreTransactionSoldOut {
     pub store_entity_id: ClientEntityId,
     pub store_slot_index: usize,
     pub item: Option<Item>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonalStoreTransactionSuccess {
     pub store_entity_id: ClientEntityId,
     pub store_slot_index: usize,
@@ -455,33 +458,33 @@ pub struct PersonalStoreTransactionSuccess {
     pub inventory_item: Option<Item>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PersonalStoreItemList {
     pub sell_items: Vec<(u8, Item, Money)>,
     pub buy_items: Vec<(u8, Item, Money)>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UseItem {
     pub entity_id: ClientEntityId,
     pub item: ItemReference,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UseInventoryItem {
     pub entity_id: ClientEntityId,
     pub item: ItemReference,
     pub inventory_slot: ItemSlot,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CastSkillSelf {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
     pub cast_motion_id: Option<MotionId>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CastSkillTargetEntity {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
@@ -491,7 +494,7 @@ pub struct CastSkillTargetEntity {
     pub cast_motion_id: Option<MotionId>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CastSkillTargetPosition {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
@@ -499,7 +502,7 @@ pub struct CastSkillTargetPosition {
     pub cast_motion_id: Option<MotionId>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ApplySkillEffect {
     pub entity_id: ClientEntityId,
     pub caster_entity_id: ClientEntityId,
@@ -509,7 +512,7 @@ pub struct ApplySkillEffect {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CancelCastingSkillReason {
     NeedAbility,
     NeedTarget,
@@ -517,7 +520,7 @@ pub enum CancelCastingSkillReason {
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum NpcStoreTransactionError {
     PriceDifference,
     NpcNotFound,
@@ -527,27 +530,27 @@ pub enum NpcStoreTransactionError {
     NotEnoughUnionPoints,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MoveToggle {
     pub entity_id: ClientEntityId,
     pub move_mode: MoveMode,
     pub run_speed: Option<i32>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UseEmote {
     pub entity_id: ClientEntityId,
     pub motion_id: MotionId,
     pub is_stop: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PartyRequest {
     Create(ClientEntityId),
     Invite(ClientEntityId),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PartyReply {
     AcceptCreate(ClientEntityId),
     AcceptInvite(ClientEntityId),
@@ -555,13 +558,13 @@ pub enum PartyReply {
     DeleteParty,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartyMemberInfoOnline {
     pub character_id: CharacterUniqueId,
     pub name: String,
     pub entity_id: ClientEntityId,
     pub health_points: HealthPoints,
-    pub status_effects: StatusEffects,
+    pub status_effects: ActiveStatusEffects,
     pub max_health: i32,
     pub concentration: i32,
     pub health_recovery: i32,
@@ -569,13 +572,14 @@ pub struct PartyMemberInfoOnline {
     pub stamina: Stamina,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartyMemberInfoOffline {
     pub character_id: CharacterUniqueId,
     pub name: String,
 }
 
-#[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PartyMemberInfo {
     Online(PartyMemberInfoOnline),
     Offline(PartyMemberInfoOffline),
@@ -590,19 +594,19 @@ impl PartyMemberInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartyMemberList {
     pub owner_character_id: CharacterUniqueId,
     pub members: Vec<PartyMemberInfo>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartyMemberLeave {
     pub leaver_character_id: CharacterUniqueId,
     pub owner_character_id: CharacterUniqueId,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
     ConnectionResponse(Result<ConnectionResponse, ConnectionRequestError>),
     LoginResponse(Result<LoginResponse, LoginError>),
@@ -612,7 +616,7 @@ pub enum ServerMessage {
     CreateCharacter(Result<CreateCharacterResponse, CreateCharacterError>),
     DeleteCharacter(Result<DeleteCharacterResponse, DeleteCharacterError>),
     SelectCharacter(Result<JoinServerResponse, SelectCharacterError>),
-    GameConnectionResponse(Result<GameConnectionResponse, ConnectionRequestError>),
+    GameConnectionResponse(Result<Box<GameConnectionResponse>, ConnectionRequestError>),
     JoinZone(JoinZoneResponse),
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),

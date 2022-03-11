@@ -1,22 +1,23 @@
 use bevy_ecs::prelude::Component;
 use enum_map::EnumMap;
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
 use rose_data::{StatusEffectData, StatusEffectId, StatusEffectType};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActiveStatusEffect {
     pub id: StatusEffectId,
     pub value: i32,
-    pub expire_time: Instant,
 }
 
-#[derive(Component, Clone, Default)]
+#[derive(Component, Clone, Default, Debug)]
 pub struct StatusEffects {
     pub active: EnumMap<StatusEffectType, Option<ActiveStatusEffect>>,
+    pub expire_times: EnumMap<StatusEffectType, Option<Instant>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ActiveStatusEffectRegen {
     pub total_value: i32,
     pub value_per_second: i32,
@@ -75,8 +76,8 @@ impl StatusEffects {
                 self.active[status_effect_type] = Some(ActiveStatusEffect {
                     id: status_effect_data.id,
                     value,
-                    expire_time,
                 });
+                self.expire_times[status_effect_type] = Some(expire_time);
                 true
             }
         }
@@ -89,8 +90,9 @@ impl StatusEffects {
         self.active[status_effect_data.status_effect_type] = Some(ActiveStatusEffect {
             id: status_effect_data.id,
             value: 0,
-            expire_time: Instant::now() + Duration::from_secs(10000000),
         });
+        self.expire_times[status_effect_data.status_effect_type] =
+            Some(Instant::now() + Duration::from_secs(10000000));
         true
     }
 

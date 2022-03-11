@@ -1,13 +1,14 @@
 use arrayvec::ArrayVec;
 use enum_map::Enum;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct StatusEffectId(NonZeroU16);
 
 id_wrapper_impl!(StatusEffectId, NonZeroU16, u16);
 
-#[derive(Copy, Clone, Debug, Enum)]
+#[derive(Copy, Clone, Debug, Enum, Serialize, Deserialize)]
 pub enum StatusEffectType {
     IncreaseHp,
     IncreaseMp,
@@ -87,7 +88,7 @@ impl StatusEffectType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum StatusEffectClearedByType {
     // This status effect is cleared by ClearGood
     ClearGood,

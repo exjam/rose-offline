@@ -140,7 +140,7 @@ pub fn client_entity_visibility_system(
                                                 move_speed: *spawn_move_speed,
                                                 passive_attack_speed: spawn_ability_values
                                                     .passive_attack_speed,
-                                                status_effects: spawn_status_effects.clone(),
+                                                status_effects: spawn_status_effects.active.clone(),
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
                                                 personal_store_info: spawn_personal_store.map(
@@ -223,7 +223,7 @@ pub fn client_entity_visibility_system(
                                                 command: spawn_command.clone(),
                                                 target_entity_id,
                                                 move_mode: *spawn_move_mode,
-                                                status_effects: spawn_status_effects.clone(),
+                                                status_effects: spawn_status_effects.active.clone(),
                                             },
                                         ))
                                         .ok();
@@ -264,7 +264,7 @@ pub fn client_entity_visibility_system(
                                             command: spawn_command.clone(),
                                             target_entity_id,
                                             move_mode: *spawn_move_mode,
-                                            status_effects: spawn_status_effects.clone(),
+                                            status_effects: spawn_status_effects.active.clone(),
                                         }))
                                         .ok();
                                 }

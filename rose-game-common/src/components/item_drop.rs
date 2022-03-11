@@ -1,10 +1,11 @@
 use bevy_ecs::prelude::Component;
+use serde::{Deserialize, Serialize};
 
 use rose_data::Item;
 
 use crate::components::Money;
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum DroppedItem {
     Item(Item),
     Money(Money),

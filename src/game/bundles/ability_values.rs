@@ -4,12 +4,12 @@ use num_traits::{AsPrimitive, Saturating, Signed};
 use std::num::NonZeroUsize;
 
 use rose_data::AbilityType;
-use rose_game_common::components::CharacterGender;
 
 use crate::game::{
     components::{
-        AbilityValues, BasicStats, CharacterInfo, ExperiencePoints, GameClient, Inventory, Level,
-        Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team, UnionMembership, MAX_STAMINA,
+        AbilityValues, BasicStats, CharacterGender, CharacterInfo, ExperiencePoints, GameClient,
+        Inventory, Level, Money, MoveSpeed, SkillPoints, Stamina, StatPoints, Team,
+        UnionMembership, MAX_STAMINA,
     },
     messages::server::{ServerMessage, UpdateAbilityValue},
 };

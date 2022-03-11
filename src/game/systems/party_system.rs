@@ -138,7 +138,7 @@ fn get_online_party_member_info(
         name: character_info.name.clone(),
         entity_id: client_entity.id,
         health_points: *health_points,
-        status_effects: status_effects.clone(),
+        status_effects: status_effects.active.clone(),
         max_health: ability_values.get_max_health(),
         concentration: ability_values.get_concentration(),
         health_recovery: ability_values.get_additional_health_recovery(), // TODO: ??

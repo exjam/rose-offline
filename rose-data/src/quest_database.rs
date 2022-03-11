@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, num::Wrapping};
 
 use crate::WorldTicks;
@@ -8,7 +9,7 @@ pub struct QuestData {
     pub time_limit: Option<WorldTicks>,
 }
 
-#[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Hash, Eq, PartialEq, Debug, Serialize, Deserialize)]
 pub struct QuestTriggerHash {
     pub hash: u32,
 }

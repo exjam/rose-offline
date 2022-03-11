@@ -3,6 +3,7 @@ use bevy_ecs::{
     event::EventWriter,
     prelude::{Query, Res, ResMut},
 };
+use enum_map::EnumMap;
 use std::time::Duration;
 
 use rose_data::StatusEffectType;
@@ -60,7 +61,7 @@ pub fn status_effect_system(
         mut status_effects_regen,
     ) in query.iter_mut()
     {
-        let mut status_effects_expired = false;
+        let mut expired_status_effects: EnumMap<StatusEffectType, bool> = Default::default();
         let apply_per_second_effect = {
             status_effects_regen.per_second_tick_counter += server_time.delta;
             if status_effects_regen.per_second_tick_counter > Duration::from_secs(1) {
@@ -86,10 +87,9 @@ pub fn status_effect_system(
                             let max_hp = ability_values.get_max_health();
                             health_points.hp = i32::min(health_points.hp + regen, max_hp);
 
-                            // Expire status effect if hp has reached max
+                            // Expire when reach max hp
                             if health_points.hp == max_hp {
-                                status_effect_regen.applied_value = status_effect_regen.total_value;
-                                status_effects_expired = true;
+                                expired_status_effects[status_effect_type] = true;
                             }
                         }
                     }
@@ -106,11 +106,9 @@ pub fn status_effect_system(
                                 let max_mp = ability_values.get_max_mana();
                                 mana_points.mp = i32::min(mana_points.mp + regen, max_mp);
 
-                                // Expire status effect if hp has reached max
+                                // Expire when reach max mp
                                 if mana_points.mp == max_mp {
-                                    status_effect_regen.applied_value =
-                                        status_effect_regen.total_value;
-                                    status_effects_expired = true;
+                                    expired_status_effects[status_effect_type] = true;
                                 }
                             }
                         }
@@ -150,39 +148,52 @@ pub fn status_effect_system(
                     _ => {}
                 }
 
-                if status_effect.expire_time <= server_time.now {
-                    status_effects_expired = true;
+                // Check if expire time has been reached
+                if let Some(expire_time) = status_effects.expire_times[status_effect_type] {
+                    if expire_time <= server_time.now {
+                        expired_status_effects[status_effect_type] = true;
+                    }
                 }
             }
         }
 
-        if status_effects_expired {
+        // Check if any regen has expired
+        for (status_effect_type, regen_slot) in status_effects_regen.regens.iter() {
+            if let Some(regen) = regen_slot.as_ref() {
+                if regen.applied_value == regen.total_value {
+                    expired_status_effects[status_effect_type] = true;
+                }
+            }
+        }
+
+        if expired_status_effects.iter().any(|(_, expired)| *expired) {
             // Remove expired status effects
             let mut cleared_hp = false;
             let mut cleared_mp = false;
 
-            for (status_effect_type, status_effect_slot) in status_effects.active.iter_mut() {
-                if let Some(status_effect) = status_effect_slot {
-                    let regen_slot = &mut status_effects_regen.regens[status_effect_type];
-                    let regen_expired = regen_slot
-                        .as_ref()
-                        .map(|regen| regen.applied_value == regen.total_value)
-                        .unwrap_or(false);
-
-                    if status_effect.expire_time <= server_time.now || regen_expired {
-                        *status_effect_slot = None;
-                        *regen_slot = None;
-
-                        match status_effect_type {
-                            StatusEffectType::IncreaseHp | StatusEffectType::IncreaseMaxHp => {
-                                cleared_hp = true
-                            }
-                            StatusEffectType::IncreaseMp | StatusEffectType::IncreaseMaxMp => {
-                                cleared_mp = true
-                            }
-                            _ => {}
+            for expired_status_effect_type in
+                expired_status_effects
+                    .iter()
+                    .filter_map(|(status_effect_type, expired)| {
+                        if *expired {
+                            Some(status_effect_type)
+                        } else {
+                            None
                         }
+                    })
+            {
+                status_effects.active[expired_status_effect_type] = None;
+                status_effects.expire_times[expired_status_effect_type] = None;
+                status_effects_regen.regens[expired_status_effect_type] = None;
+
+                match expired_status_effect_type {
+                    StatusEffectType::IncreaseHp | StatusEffectType::IncreaseMaxHp => {
+                        cleared_hp = true
                     }
+                    StatusEffectType::IncreaseMp | StatusEffectType::IncreaseMaxMp => {
+                        cleared_mp = true
+                    }
+                    _ => {}
                 }
             }
 
@@ -231,7 +242,7 @@ pub fn status_effect_system(
                 client_entity,
                 ServerMessage::UpdateStatusEffects(UpdateStatusEffects {
                     entity_id: client_entity.id,
-                    status_effects: status_effects.clone(),
+                    status_effects: status_effects.active.clone(),
                     updated_hp,
                     updated_mp,
                 }),

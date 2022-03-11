@@ -1,9 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::collections::{hash_map::Iter, HashMap};
 use std::str::FromStr;
 
 use crate::ZoneId;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct WarpGateId(u16);
 
 id_wrapper_impl!(WarpGateId, u16);

@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     num::{NonZeroU16, NonZeroUsize},
@@ -6,7 +7,7 @@ use std::{
 
 use crate::{ItemReference, MotionFileData};
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpcId(NonZeroU16);
 
 id_wrapper_impl!(NpcId, NonZeroU16, u16);

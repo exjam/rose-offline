@@ -2,7 +2,7 @@ use bevy_ecs::prelude::Component;
 use crossbeam_channel::Receiver;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::game::messages::{client::ClientMessage, server::ServerMessage};
+use rose_game_common::messages::{client::ClientMessage, server::ServerMessage};
 
 #[derive(Component)]
 pub struct LoginClient {

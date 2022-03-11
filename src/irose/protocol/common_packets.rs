@@ -9,12 +9,14 @@ use rose_data_irose::{
     decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
     encode_equipment_index, encode_item_type, encode_vehicle_part_index,
 };
-use rose_game_common::{components::CharacterGender, data::Damage};
+use rose_game_common::{
+    components::CharacterGender, data::Damage, messages::server::ActiveStatusEffects,
+};
 
 use crate::{
     game::components::{
         ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode,
-        SkillSlot, StatusEffects,
+        SkillSlot,
     },
     protocol::{PacketReader, PacketWriter, ProtocolError},
 };
@@ -525,8 +527,8 @@ impl PacketWriteMoveMode for PacketWriter {
 }
 
 pub trait PacketWriteStatusEffects {
-    fn write_status_effects_flags_u32(&mut self, status_effects: &StatusEffects);
-    fn write_status_effects_values(&mut self, status_effects: &StatusEffects);
+    fn write_status_effects_flags_u32(&mut self, status_effects: &ActiveStatusEffects);
+    fn write_status_effects_values(&mut self, status_effects: &ActiveStatusEffects);
 }
 
 fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
@@ -566,11 +568,20 @@ fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
     }
 }
 
+fn get_status_effect_value(
+    status_effects: &ActiveStatusEffects,
+    status_effect_type: StatusEffectType,
+) -> Option<i32> {
+    status_effects[status_effect_type]
+        .as_ref()
+        .map(|status_effect| status_effect.value)
+}
+
 impl PacketWriteStatusEffects for PacketWriter {
-    fn write_status_effects_flags_u32(&mut self, status_effects: &StatusEffects) {
+    fn write_status_effects_flags_u32(&mut self, status_effects: &ActiveStatusEffects) {
         let mut status_effect_flags = 0u32;
 
-        for (status_effect_type, status_effect) in status_effects.active.iter() {
+        for (status_effect_type, status_effect) in status_effects.iter() {
             if status_effect.is_some() {
                 status_effect_flags |= get_status_effect_type_flag(status_effect_type);
             }
@@ -579,32 +590,33 @@ impl PacketWriteStatusEffects for PacketWriter {
         self.write_u32(status_effect_flags);
     }
 
-    fn write_status_effects_values(&mut self, status_effects: &StatusEffects) {
-        if let Some(value) = status_effects.get_status_effect_value(StatusEffectType::IncreaseMaxHp)
+    fn write_status_effects_values(&mut self, status_effects: &ActiveStatusEffects) {
+        if let Some(value) =
+            get_status_effect_value(status_effects, StatusEffectType::IncreaseMaxHp)
         {
             self.write_u16(value as u16);
         }
 
         if let Some(value) =
-            status_effects.get_status_effect_value(StatusEffectType::IncreaseMoveSpeed)
+            get_status_effect_value(status_effects, StatusEffectType::IncreaseMoveSpeed)
         {
             self.write_u16(value as u16);
         }
 
         if let Some(value) =
-            status_effects.get_status_effect_value(StatusEffectType::DecreaseMoveSpeed)
+            get_status_effect_value(status_effects, StatusEffectType::DecreaseMoveSpeed)
         {
             self.write_u16(value as u16);
         }
 
         if let Some(value) =
-            status_effects.get_status_effect_value(StatusEffectType::IncreaseAttackSpeed)
+            get_status_effect_value(status_effects, StatusEffectType::IncreaseAttackSpeed)
         {
             self.write_u16(value as u16);
         }
 
         if let Some(value) =
-            status_effects.get_status_effect_value(StatusEffectType::DecreaseAttackSpeed)
+            get_status_effect_value(status_effects, StatusEffectType::DecreaseAttackSpeed)
         {
             self.write_u16(value as u16);
         }

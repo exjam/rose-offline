@@ -1,7 +1,7 @@
 use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum BasicStatType {
     Strength,
     Dexterity,

@@ -1,5 +1,6 @@
 use bevy_ecs::prelude::{Component, Entity};
 use nalgebra::{Point2, Point3};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 use crate::{
@@ -8,41 +9,41 @@ use crate::{
 };
 use rose_data::{Item, MotionId, SkillId};
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandMove {
     pub destination: Point3<f32>,
     pub target: Option<Entity>,
     pub move_mode: Option<MoveMode>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandStop {
     pub send_message: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandDie {
     pub killer: Option<Entity>,
     pub damage: Option<Damage>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandAttack {
     pub target: Entity,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandPickupItemDrop {
     pub target: Entity,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum CommandCastSkillTarget {
     Entity(Entity),
     Position(Point2<f32>),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandCastSkill {
     pub skill_id: SkillId,
     pub skill_target: Option<CommandCastSkillTarget>,
@@ -51,20 +52,20 @@ pub struct CommandCastSkill {
     pub action_motion_id: Option<MotionId>,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum CommandSit {
     Sitting,
     Sit,
     Standing,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandEmote {
     pub motion_id: MotionId,
     pub is_stop: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CommandData {
     Die(CommandDie),
     Stop(CommandStop),
@@ -83,7 +84,7 @@ impl CommandData {
     }
 }
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug, Serialize, Deserialize)]
 pub struct Command {
     // Current command that is executing
     pub command: CommandData,

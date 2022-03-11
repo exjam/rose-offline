@@ -50,7 +50,7 @@ fn handle_game_connection_request(
     game_client: &mut GameClient,
     token_id: u32,
     password_md5: &str,
-) -> Result<GameConnectionResponse, ConnectionRequestError> {
+) -> Result<Box<GameConnectionResponse>, ConnectionRequestError> {
     // Verify token
     let login_token = login_tokens
         .get_token_mut(token_id)
@@ -169,7 +169,7 @@ fn handle_game_connection_request(
         union_membership: character.union_membership.clone(),
     });
 
-    Ok(GameConnectionResponse {
+    Ok(Box::new(GameConnectionResponse {
         packet_sequence_id: 123,
         character_info: character.info,
         position,
@@ -187,7 +187,7 @@ fn handle_game_connection_request(
         quest_state: character.quest_state,
         union_membership: character.union_membership,
         stamina: character.stamina,
-    })
+    }))
 }
 
 pub fn game_server_authentication_system(

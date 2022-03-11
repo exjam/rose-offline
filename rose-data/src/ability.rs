@@ -1,4 +1,6 @@
-#[derive(Copy, Clone, Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub enum AbilityType {
     Gender,
     Birthstone,

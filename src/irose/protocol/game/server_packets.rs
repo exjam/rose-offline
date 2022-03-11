@@ -8,7 +8,7 @@ use rose_data::{
     SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
 use rose_data_irose::{encode_ability_type, encode_ammo_index};
-use rose_game_common::data::Damage;
+use rose_game_common::{data::Damage, messages::server::ActiveStatusEffects};
 
 use crate::{
     game::{
@@ -17,8 +17,7 @@ use crate::{
             CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
             Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot,
             Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList,
-            SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, Team,
-            UnionMembership,
+            SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
         },
         messages::server::{
             CancelCastingSkillReason, LearnSkillError, LearnSkillSuccess, LevelUpSkillError,
@@ -708,7 +707,7 @@ pub struct PacketServerSpawnEntityNpc<'a> {
     pub target_entity_id: Option<ClientEntityId>,
     pub health: &'a HealthPoints,
     pub move_mode: MoveMode,
-    pub status_effects: &'a StatusEffects,
+    pub status_effects: &'a ActiveStatusEffects,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
@@ -744,7 +743,7 @@ pub struct PacketServerSpawnEntityMonster<'a> {
     pub command: &'a Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
-    pub status_effects: &'a StatusEffects,
+    pub status_effects: &'a ActiveStatusEffects,
 }
 
 impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
@@ -780,7 +779,7 @@ pub struct PacketServerSpawnEntityCharacter<'a> {
     pub move_speed: MoveSpeed,
     pub passive_attack_speed: i32,
     pub position: &'a Position,
-    pub status_effects: &'a StatusEffects,
+    pub status_effects: &'a ActiveStatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: &'a Team,
     pub personal_store_info: &'a Option<(i32, String)>,
@@ -1569,7 +1568,7 @@ impl From<&PacketServerUpdateSpeed> for Packet {
 
 pub struct PacketServerUpdateStatusEffects<'a> {
     pub entity_id: ClientEntityId,
-    pub status_effects: &'a StatusEffects,
+    pub status_effects: &'a ActiveStatusEffects,
     pub updated_hp: Option<HealthPoints>,
     pub updated_mp: Option<ManaPoints>,
 }

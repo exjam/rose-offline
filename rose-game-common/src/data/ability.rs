@@ -1,18 +1,19 @@
 use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData};
+use serde::{Deserialize, Serialize};
 
 use crate::components::{
     AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
     StatusEffects,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Damage {
     pub amount: u32,
     pub is_critical: bool,
     pub apply_hit_stun: bool,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum PassiveRecoveryState {
     Normal,
     Sitting,
