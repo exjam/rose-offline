@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Entity;
+use bevy_ecs::{change_detection::Mut, prelude::Entity};
 use bitvec::prelude::*;
 use nalgebra::{Point2, Point3, Vector2};
 use std::collections::HashMap;
@@ -208,7 +208,7 @@ impl ClientEntityZone {
         &mut self,
         entity: Entity,
         client_entity: &ClientEntity,
-        client_entity_sector: &mut ClientEntitySector,
+        client_entity_sector: &mut Mut<ClientEntitySector>,
         position: Point3<f32>,
     ) {
         // Validate entity list
