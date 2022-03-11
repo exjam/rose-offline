@@ -1,6 +1,8 @@
 mod ability_values;
 mod basic_stats;
+mod character_delete_time;
 mod character_info;
+mod client_entity;
 mod equipment;
 mod inventory;
 mod item_drop;
@@ -10,7 +12,9 @@ mod status_effects;
 
 pub use ability_values::{AbilityValues, DamageCategory, DamageType};
 pub use basic_stats::{BasicStatType, BasicStats};
+pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::{CharacterGender, CharacterInfo, CharacterUniqueId};
+pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use equipment::{Equipment, EquipmentItemDatabase, EquipmentItemReference};
 pub use inventory::{Inventory, InventoryError, InventoryPage, InventoryPageType, ItemSlot, Money};
 pub use item_drop::{DroppedItem, ItemDrop};

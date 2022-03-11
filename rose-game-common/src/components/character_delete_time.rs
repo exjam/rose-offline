@@ -27,3 +27,9 @@ impl CharacterDeleteTime {
         }
     }
 }
+
+impl Default for CharacterDeleteTime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
