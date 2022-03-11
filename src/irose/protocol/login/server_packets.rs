@@ -98,14 +98,14 @@ pub struct PacketServerChannelListItem<'a> {
 }
 
 pub struct PacketServerChannelList<'a> {
-    pub server_id: u32,
+    pub server_id: usize,
     pub channels: &'a [PacketServerChannelListItem<'a>],
 }
 
 impl<'a> From<&PacketServerChannelList<'a>> for Packet {
     fn from(packet: &PacketServerChannelList) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::ChannelList as u16);
-        writer.write_u32(packet.server_id);
+        writer.write_u32(packet.server_id as u32);
         writer.write_u8(packet.channels.len() as u8);
 
         for channel in packet.channels {

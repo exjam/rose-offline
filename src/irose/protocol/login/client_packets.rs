@@ -38,7 +38,7 @@ impl<'a> TryFrom<&'a Packet> for PacketClientLoginRequest<'a> {
 
 #[derive(Debug)]
 pub struct PacketClientChannelList {
-    pub server_id: u32,
+    pub server_id: usize,
 }
 
 impl TryFrom<&Packet> for PacketClientChannelList {
@@ -50,7 +50,7 @@ impl TryFrom<&Packet> for PacketClientChannelList {
         }
 
         let mut reader = PacketReader::from(packet);
-        let server_id = reader.read_u32()?;
+        let server_id = reader.read_u32()? as usize;
 
         Ok(PacketClientChannelList { server_id })
     }

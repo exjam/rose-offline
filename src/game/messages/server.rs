@@ -4,16 +4,136 @@ use nalgebra::Point2;
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
-    QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, ZoneId,
+    QuestTriggerHash, SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
-use rose_game_common::data::Damage;
+use rose_game_common::{components::CharacterDeleteTime, data::Damage};
 
 use crate::game::components::{
-    BasicStatType, CharacterInfo, CharacterUniqueId, ClientEntityId, Command, Destination,
-    DroppedItem, Equipment, ExperiencePoints, HealthPoints, ItemSlot, Level, ManaPoints, Money,
-    MoveMode, MoveSpeed, Npc, NpcStandingDirection, Position, SkillPoints, SkillSlot, Stamina,
-    StatPoints, StatusEffects, Team,
+    BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
+    Destination, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
+    Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, NpcStandingDirection,
+    Position, QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects,
+    Team, UnionMembership,
 };
+
+#[derive(Clone)]
+pub enum ConnectionRequestError {
+    Failed,
+    InvalidToken,
+    InvalidPassword,
+}
+
+#[derive(Clone)]
+pub struct ConnectionResponse {
+    pub packet_sequence_id: u32,
+}
+
+#[derive(Clone)]
+pub enum LoginError {
+    Failed,
+    InvalidAccount,
+    InvalidPassword,
+    AlreadyLoggedIn,
+}
+
+#[derive(Clone)]
+pub struct LoginResponse {
+    pub server_list: Vec<(u32, String)>,
+}
+
+#[derive(Clone)]
+pub enum ChannelListError {
+    InvalidServerId(usize),
+}
+
+#[derive(Clone)]
+pub struct ChannelList {
+    pub server_id: usize,
+    pub channels: Vec<(u8, String)>,
+}
+
+#[derive(Clone)]
+pub enum JoinServerError {
+    InvalidServerId,
+    InvalidChannelId,
+}
+
+#[derive(Clone)]
+pub struct JoinServerResponse {
+    pub login_token: u32,
+    pub packet_codec_seed: u32,
+    pub ip: String,
+    pub port: u16,
+}
+
+#[derive(Clone)]
+pub struct CharacterListItem {
+    pub info: CharacterInfo,
+    pub level: Level,
+    pub delete_time: Option<CharacterDeleteTime>,
+    pub equipment: Equipment,
+}
+
+#[derive(Clone)]
+pub enum CreateCharacterError {
+    Failed,
+    AlreadyExists,
+    InvalidValue,
+    NoMoreSlots,
+}
+
+#[derive(Clone)]
+pub struct CreateCharacterResponse {
+    pub character_slot: usize,
+}
+
+#[derive(Clone)]
+pub enum DeleteCharacterError {
+    Failed(String),
+}
+
+#[derive(Clone)]
+pub struct DeleteCharacterResponse {
+    pub name: String,
+    pub delete_time: Option<CharacterDeleteTime>,
+}
+
+#[derive(Clone)]
+pub enum SelectCharacterError {
+    Failed,
+}
+
+#[derive(Clone)]
+pub struct GameConnectionResponse {
+    pub packet_sequence_id: u32,
+    pub character_info: CharacterInfo,
+    pub position: Position,
+    pub equipment: Equipment,
+    pub basic_stats: BasicStats,
+    pub level: Level,
+    pub experience_points: ExperiencePoints,
+    pub inventory: Inventory,
+    pub skill_list: SkillList,
+    pub hotbar: Hotbar,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
+    pub stat_points: StatPoints,
+    pub skill_points: SkillPoints,
+    pub quest_state: QuestState,
+    pub union_membership: UnionMembership,
+    pub stamina: Stamina,
+}
+
+#[derive(Clone)]
+pub struct JoinZoneResponse {
+    pub entity_id: ClientEntityId,
+    pub level: Level,
+    pub experience_points: ExperiencePoints,
+    pub team: Team,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
+    pub world_ticks: WorldTicks,
+}
 
 #[derive(Clone)]
 pub struct LocalChat {
@@ -481,6 +601,16 @@ pub struct PartyMemberLeave {
 
 #[derive(Clone)]
 pub enum ServerMessage {
+    ConnectionResponse(Result<ConnectionResponse, ConnectionRequestError>),
+    LoginResponse(Result<LoginResponse, LoginError>),
+    ChannelList(Result<ChannelList, ChannelListError>),
+    JoinServer(Result<JoinServerResponse, JoinServerError>),
+    CharacterList(Vec<CharacterListItem>),
+    CreateCharacter(Result<CreateCharacterResponse, CreateCharacterError>),
+    DeleteCharacter(Result<DeleteCharacterResponse, DeleteCharacterError>),
+    SelectCharacter(Result<JoinServerResponse, SelectCharacterError>),
+    GameConnectionResponse(Result<GameConnectionResponse, ConnectionRequestError>),
+    JoinZone(JoinZoneResponse),
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),
     LocalChat(LocalChat),
@@ -541,4 +671,5 @@ pub enum ServerMessage {
     PartyMemberUpdateInfo(PartyMemberInfoOnline),
     PartyChangeOwner(ClientEntityId),
     ChangeNpcId(ClientEntityId, NpcId),
+    SetHotbarSlot(usize, Option<HotbarSlot>),
 }

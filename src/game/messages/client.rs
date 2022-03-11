@@ -1,123 +1,35 @@
 use nalgebra::Point2;
-use tokio::sync::oneshot;
 
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
-    WorldTicks,
 };
 use rose_game_common::components::CharacterGender;
 
-use crate::game::{
-    components::{
-        BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo, CharacterUniqueId,
-        ClientEntityId, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
-        ItemSlot, Level, ManaPoints, Position, QuestState, SkillList, SkillPoints, SkillSlot,
-        Stamina, StatPoints, Team, UnionMembership,
-    },
-    storage::character::CharacterStorage,
+use crate::game::components::{
+    BasicStatType, CharacterUniqueId, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot,
 };
-
-#[derive(Debug)]
-pub enum ConnectionRequestError {
-    Failed,
-    InvalidToken,
-    InvalidPassword,
-}
-
-#[derive(Debug)]
-pub struct ConnectionRequestResponse {
-    pub packet_sequence_id: u32,
-}
 
 #[derive(Debug)]
 pub struct ConnectionRequest {
     pub login_token: u32,
     pub password_md5: String,
-    pub response_tx: oneshot::Sender<Result<ConnectionRequestResponse, ConnectionRequestError>>,
-}
-
-#[derive(Debug)]
-pub enum LoginError {
-    Failed,
-    InvalidAccount,
-    InvalidPassword,
-    AlreadyLoggedIn,
 }
 
 #[derive(Debug)]
 pub struct LoginRequest {
     pub username: String,
     pub password_md5: String,
-    pub response_tx: oneshot::Sender<Result<(), LoginError>>,
-}
-
-#[derive(Debug)]
-pub struct GetWorldServerList {
-    pub response_tx: oneshot::Sender<Vec<(u32, String)>>,
-}
-
-#[derive(Debug)]
-pub enum GetChannelListError {
-    InvalidServerId,
 }
 
 #[derive(Debug)]
 pub struct GetChannelList {
-    pub server_id: u32,
-    pub response_tx: oneshot::Sender<Result<Vec<(u8, String)>, GetChannelListError>>,
-}
-
-#[derive(Debug)]
-pub enum JoinServerError {
-    InvalidServerId,
-    InvalidChannelId,
-}
-
-#[derive(Debug)]
-pub struct JoinServerResponse {
-    pub login_token: u32,
-    pub packet_codec_seed: u32,
-    pub ip: String,
-    pub port: u16,
+    pub server_id: usize,
 }
 
 #[derive(Debug)]
 pub struct JoinServer {
     pub server_id: u32,
     pub channel_id: u8,
-    pub response_tx: oneshot::Sender<Result<JoinServerResponse, JoinServerError>>,
-}
-
-#[derive(Clone, Debug)]
-pub struct CharacterListItem {
-    pub info: CharacterInfo,
-    pub level: Level,
-    pub delete_time: Option<CharacterDeleteTime>,
-    pub equipment: Equipment,
-}
-
-impl From<&CharacterStorage> for CharacterListItem {
-    fn from(storage: &CharacterStorage) -> CharacterListItem {
-        CharacterListItem {
-            info: storage.info.clone(),
-            delete_time: storage.delete_time.clone(),
-            equipment: storage.equipment.clone(),
-            level: storage.level.clone(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct GetCharacterList {
-    pub response_tx: oneshot::Sender<Vec<CharacterListItem>>,
-}
-
-#[derive(Debug)]
-pub enum CreateCharacterError {
-    Failed,
-    AlreadyExists,
-    InvalidValue,
-    NoMoreSlots,
 }
 
 #[derive(Debug)]
@@ -127,12 +39,6 @@ pub struct CreateCharacter {
     pub hair: u8,
     pub face: u8,
     pub name: String,
-    pub response_tx: oneshot::Sender<Result<u8, CreateCharacterError>>,
-}
-
-#[derive(Debug)]
-pub enum DeleteCharacterError {
-    Failed,
 }
 
 #[derive(Debug)]
@@ -140,63 +46,18 @@ pub struct DeleteCharacter {
     pub slot: u8,
     pub name: String,
     pub is_delete: bool,
-    pub response_tx: oneshot::Sender<Result<Option<CharacterDeleteTime>, DeleteCharacterError>>,
-}
-
-#[derive(Debug)]
-pub enum SelectCharacterError {
-    Failed,
 }
 
 #[derive(Debug)]
 pub struct SelectCharacter {
     pub slot: u8,
     pub name: String,
-    pub response_tx: oneshot::Sender<Result<JoinServerResponse, SelectCharacterError>>,
-}
-
-#[derive(Debug)]
-pub struct GameConnectionResponse {
-    pub packet_sequence_id: u32,
-    pub character_info: CharacterInfo,
-    pub position: Position,
-    pub equipment: Equipment,
-    pub basic_stats: BasicStats,
-    pub level: Level,
-    pub experience_points: ExperiencePoints,
-    pub inventory: Inventory,
-    pub skill_list: SkillList,
-    pub hotbar: Hotbar,
-    pub health_points: HealthPoints,
-    pub mana_points: ManaPoints,
-    pub stat_points: StatPoints,
-    pub skill_points: SkillPoints,
-    pub quest_state: QuestState,
-    pub union_membership: UnionMembership,
-    pub stamina: Stamina,
 }
 
 #[derive(Debug)]
 pub struct GameConnectionRequest {
     pub login_token: u32,
     pub password_md5: String,
-    pub response_tx: oneshot::Sender<Result<GameConnectionResponse, ConnectionRequestError>>,
-}
-
-#[derive(Debug)]
-pub struct JoinZoneResponse {
-    pub entity_id: ClientEntityId,
-    pub level: Level,
-    pub experience_points: ExperiencePoints,
-    pub team: Team,
-    pub health_points: HealthPoints,
-    pub mana_points: ManaPoints,
-    pub world_ticks: WorldTicks,
-}
-
-#[derive(Debug)]
-pub struct JoinZoneRequest {
-    pub response_tx: oneshot::Sender<JoinZoneResponse>,
 }
 
 #[derive(Debug)]
@@ -213,15 +74,9 @@ pub struct Attack {
 }
 
 #[derive(Debug)]
-pub enum SetHotbarSlotError {
-    InvalidSlot,
-}
-
-#[derive(Debug)]
 pub struct SetHotbarSlot {
     pub slot_index: usize,
     pub slot: Option<HotbarSlot>,
-    pub response_tx: oneshot::Sender<Result<(), SetHotbarSlotError>>,
 }
 
 #[derive(Debug)]
@@ -294,15 +149,14 @@ pub enum PartyReply {
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
-    GetWorldServerList(GetWorldServerList),
     GetChannelList(GetChannelList),
     JoinServer(JoinServer),
-    GetCharacterList(GetCharacterList),
+    GetCharacterList,
     CreateCharacter(CreateCharacter),
     DeleteCharacter(DeleteCharacter),
     SelectCharacter(SelectCharacter),
     GameConnectionRequest(GameConnectionRequest),
-    JoinZoneRequest(JoinZoneRequest),
+    JoinZoneRequest,
     Chat(String),
     Move(Move),
     Attack(Attack),

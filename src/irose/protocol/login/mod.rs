@@ -1,11 +1,15 @@
 use async_trait::async_trait;
-use log::warn;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
-use tokio::sync::oneshot;
 
 use crate::{
-    game::messages::{client::*, server::ServerMessage},
+    game::messages::{
+        client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
+        server::{
+            ChannelList, ChannelListError, JoinServerError, LoginError, LoginResponse,
+            ServerMessage,
+        },
+    },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
 };
 
@@ -15,33 +19,95 @@ mod server_packets;
 use client_packets::*;
 use server_packets::*;
 
-pub struct LoginClient {}
+pub enum LoginClientState {
+    WaitingConnectRequest,
+    WaitingLogin,
+    Connected,
+    SelectedServer,
+}
+
+pub struct LoginClient {
+    state: LoginClientState,
+}
 
 impl LoginClient {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            state: LoginClientState::WaitingConnectRequest,
+        }
     }
 
     async fn handle_packet(
-        &self,
+        &mut self,
         client: &mut Client<'_>,
         packet: Packet,
     ) -> Result<(), ProtocolError> {
-        match FromPrimitive::from_u16(packet.command) {
-            Some(ClientPackets::Connect) => {
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::ConnectionRequest(ConnectionRequest {
-                        login_token: 0u32,
-                        password_md5: String::new(),
-                        response_tx,
-                    }))?;
-                let packet = match response_rx.await? {
-                    Ok(result) => Packet::from(&PacketConnectionReply {
-                        status: ConnectionResult::Accepted,
-                        packet_sequence_id: result.packet_sequence_id,
-                    }),
+        match self.state {
+            LoginClientState::WaitingConnectRequest => {
+                match FromPrimitive::from_u16(packet.command) {
+                    Some(ClientPackets::Connect) => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                                login_token: 0u32,
+                                password_md5: String::new(),
+                            }))?;
+                    }
+                    _ => return Err(ProtocolError::InvalidPacket),
+                }
+            }
+            LoginClientState::WaitingLogin => match FromPrimitive::from_u16(packet.command) {
+                Some(ClientPackets::LoginRequest) => {
+                    let login_request = PacketClientLoginRequest::try_from(&packet)?;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::LoginRequest(LoginRequest {
+                            username: String::from(login_request.username),
+                            password_md5: String::from(login_request.password_md5),
+                        }))?;
+                }
+                _ => return Err(ProtocolError::InvalidPacket),
+            },
+            LoginClientState::Connected => match FromPrimitive::from_u16(packet.command) {
+                Some(ClientPackets::ChannelList) => {
+                    let server_id = PacketClientChannelList::try_from(&packet)?.server_id;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::GetChannelList(GetChannelList { server_id }))?;
+                }
+                Some(ClientPackets::SelectServer) => {
+                    let select_server = PacketClientSelectServer::try_from(&packet)?;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::JoinServer(JoinServer {
+                            server_id: select_server.server_id,
+                            channel_id: select_server.channel_id,
+                        }))?;
+                }
+                _ => return Err(ProtocolError::InvalidPacket),
+            },
+            LoginClientState::SelectedServer => return Err(ProtocolError::InvalidPacket),
+        }
+
+        Ok(())
+    }
+
+    async fn handle_server_message(
+        &mut self,
+        client: &mut Client<'_>,
+        message: ServerMessage,
+    ) -> Result<(), ProtocolError> {
+        match message {
+            ServerMessage::ConnectionResponse(response) => {
+                let packet = match response {
+                    Ok(result) => {
+                        self.state = LoginClientState::WaitingLogin;
+
+                        Packet::from(&PacketConnectionReply {
+                            status: ConnectionResult::Accepted,
+                            packet_sequence_id: result.packet_sequence_id,
+                        })
+                    }
                     Err(_) => Packet::from(&PacketConnectionReply {
                         status: ConnectionResult::Disconnect,
                         packet_sequence_id: 0u32,
@@ -49,30 +115,16 @@ impl LoginClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            Some(ClientPackets::LoginRequest) => {
-                let login_request = PacketClientLoginRequest::try_from(&packet)?;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::LoginRequest(LoginRequest {
-                        username: String::from(login_request.username),
-                        password_md5: String::from(login_request.password_md5),
-                        response_tx,
-                    }))?;
-                let packet = match response_rx.await? {
-                    Ok(_) => {
-                        let (response_tx, response_rx) = oneshot::channel();
-                        client
-                            .client_message_tx
-                            .send(ClientMessage::GetWorldServerList(GetWorldServerList {
-                                response_tx,
-                            }))?;
-                        let servers = response_rx.await?;
+            ServerMessage::LoginResponse(response) => {
+                let packet = match response {
+                    Ok(LoginResponse { server_list }) => {
+                        self.state = LoginClientState::Connected;
+
                         Packet::from(&PacketServerLoginReply {
                             result: LoginResult::Ok,
                             rights: 0x800,
                             pay_type: 0xff,
-                            servers: &servers,
+                            servers: &server_list,
                         })
                     }
                     Err(LoginError::Failed) => Packet::from(
@@ -90,17 +142,12 @@ impl LoginClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            Some(ClientPackets::ChannelList) => {
-                let server_id = PacketClientChannelList::try_from(&packet)?.server_id;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::GetChannelList(GetChannelList {
+            ServerMessage::ChannelList(message) => {
+                let packet = match message {
+                    Ok(ChannelList {
                         server_id,
-                        response_tx,
-                    }))?;
-                let packet = match response_rx.await? {
-                    Ok(channels) => {
+                        channels,
+                    }) => {
                         let mut channel_list: Vec<PacketServerChannelListItem> = Vec::new();
                         for (id, name) in &channels {
                             channel_list.push(PacketServerChannelListItem {
@@ -117,32 +164,28 @@ impl LoginClient {
                             channels: &channel_list,
                         })
                     }
-                    Err(_) => Packet::from(&PacketServerChannelList {
-                        server_id,
-                        channels: &[],
-                    }),
+                    Err(ChannelListError::InvalidServerId(server_id)) => {
+                        Packet::from(&PacketServerChannelList {
+                            server_id,
+                            channels: &[],
+                        })
+                    }
                 };
                 client.connection.write_packet(packet).await?;
             }
-            Some(ClientPackets::SelectServer) => {
-                let select_server = PacketClientSelectServer::try_from(&packet)?;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::JoinServer(JoinServer {
-                        server_id: select_server.server_id,
-                        channel_id: select_server.channel_id,
-                        response_tx,
-                    }))?;
+            ServerMessage::JoinServer(message) => {
+                let packet = match message {
+                    Ok(response) => {
+                        self.state = LoginClientState::SelectedServer;
 
-                let packet = match response_rx.await? {
-                    Ok(response) => Packet::from(&PacketServerSelectServer {
-                        result: SelectServerResult::Ok,
-                        login_token: response.login_token,
-                        packet_codec_seed: response.packet_codec_seed,
-                        ip: &response.ip,
-                        port: response.port,
-                    }),
+                        Packet::from(&PacketServerSelectServer {
+                            result: SelectServerResult::Ok,
+                            login_token: response.login_token,
+                            packet_codec_seed: response.packet_codec_seed,
+                            ip: &response.ip,
+                            port: response.port,
+                        })
+                    }
                     Err(JoinServerError::InvalidChannelId) => Packet::from(
                         &PacketServerSelectServer::with_result(SelectServerResult::InvalidChannel),
                     ),
@@ -152,28 +195,16 @@ impl LoginClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            _ => warn!(
-                "[LS] Unhandled packet [{:#03X}] {:02x?}",
-                packet.command,
-                &packet.data[..]
-            ),
+            _ => panic!("Received unexpected server message for login server"),
         }
 
         Ok(())
-    }
-
-    async fn handle_server_message(
-        &self,
-        _client: &mut Client<'_>,
-        _message: ServerMessage,
-    ) -> Result<(), ProtocolError> {
-        panic!("Unimplemented message for irose login server!")
     }
 }
 
 #[async_trait]
 impl ProtocolClient for LoginClient {
-    async fn run_client(&self, client: &mut Client) -> Result<(), ProtocolError> {
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError> {
         loop {
             tokio::select! {
                 packet = client.connection.read_packet() => {

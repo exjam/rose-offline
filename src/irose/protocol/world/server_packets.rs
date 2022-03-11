@@ -3,7 +3,7 @@ use num_derive::FromPrimitive;
 use rose_data::{EquipmentIndex, EquipmentItem};
 
 use crate::{
-    game::messages::client::CharacterListItem,
+    game::messages::server::CharacterListItem,
     irose::protocol::common_packets::PacketWriteCharacterGender,
     protocol::{Packet, PacketWriter},
 };

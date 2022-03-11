@@ -28,12 +28,13 @@ use crate::game::{
     },
     messages::{
         client::{
-            ChangeEquipment, ClientMessage, ConnectionRequestError, GameConnectionResponse,
-            JoinZoneResponse, LogoutRequest, NpcStoreTransaction, PartyReply, PartyRequest,
-            PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
-            SetHotbarSlotError,
+            ChangeEquipment, ClientMessage, LogoutRequest, NpcStoreTransaction, PartyReply,
+            PartyRequest, PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
         },
-        server::{self, LogoutReply, QuestDeleteResult, ServerMessage, UpdateBasicStat},
+        server::{
+            self, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse, LogoutReply,
+            QuestDeleteResult, ServerMessage, UpdateBasicStat,
+        },
     },
     resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldTime},
     storage::{account::AccountStorage, character::CharacterStorage},
@@ -201,9 +202,8 @@ pub fn game_server_authentication_system(
         if let Ok(message) = game_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::GameConnectionRequest(message) => {
-                    message
-                        .response_tx
-                        .send(handle_game_connection_request(
+                    let response =
+                        ServerMessage::GameConnectionResponse(handle_game_connection_request(
                             &mut commands,
                             game_data.as_ref(),
                             login_tokens.as_mut(),
@@ -213,8 +213,8 @@ pub fn game_server_authentication_system(
                             game_client.as_mut(),
                             message.login_token,
                             &message.password_md5,
-                        ))
-                        .ok();
+                        ));
+                    game_client.server_message_tx.send(response).ok();
                 }
                 _ => warn!("Received unexpected client message {:?}", message),
             }
@@ -253,7 +253,7 @@ pub fn game_server_join_system(
         )| {
             if let Ok(message) = game_client.client_message_rx.try_recv() {
                 match message {
-                    ClientMessage::JoinZoneRequest(message) => {
+                    ClientMessage::JoinZoneRequest => {
                         if let Ok(entity_id) = client_entity_join_zone(
                             &mut commands,
                             &mut client_entity_list,
@@ -266,9 +266,9 @@ pub fn game_server_join_system(
                                 .insert(ClientEntityVisibility::new())
                                 .insert(PassiveRecoveryTime::default());
 
-                            message
-                                .response_tx
-                                .send(JoinZoneResponse {
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::JoinZone(JoinZoneResponse {
                                     entity_id,
                                     level: level.clone(),
                                     experience_points: experience_points.clone(),
@@ -276,7 +276,7 @@ pub fn game_server_join_system(
                                     health_points: *health_points,
                                     mana_points: *mana_points,
                                     world_ticks: world_time.ticks,
-                                })
+                                }))
                                 .ok();
                         }
                     }
@@ -588,15 +588,12 @@ pub fn game_server_main_system(
                             entity_commands.insert(NextCommand::with_stop(true));
                         }
                     }
-                    ClientMessage::SetHotbarSlot(SetHotbarSlot {
-                        slot_index,
-                        slot,
-                        response_tx,
-                    }) => {
-                        if hotbar.set_slot(slot_index, slot).is_some() {
-                            response_tx.send(Ok(())).ok();
-                        } else {
-                            response_tx.send(Err(SetHotbarSlotError::InvalidSlot)).ok();
+                    ClientMessage::SetHotbarSlot(SetHotbarSlot { slot_index, slot }) => {
+                        if hotbar.set_slot(slot_index, slot.clone()).is_some() {
+                            client
+                                .server_message_tx
+                                .send(ServerMessage::SetHotbarSlot(slot_index, slot))
+                                .ok();
                         }
                     }
                     ClientMessage::ChangeEquipment(ChangeEquipment {

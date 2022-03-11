@@ -3,10 +3,13 @@ use log::warn;
 
 use crate::game::{
     components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
-    messages::client::{
-        CharacterListItem, ClientMessage, ConnectionRequestError, ConnectionRequestResponse,
-        CreateCharacter, CreateCharacterError, DeleteCharacterError, JoinServerResponse,
-        SelectCharacterError,
+    messages::{
+        client::{ClientMessage, CreateCharacter},
+        server::{
+            CharacterListItem, ConnectionRequestError, ConnectionResponse, CreateCharacterError,
+            CreateCharacterResponse, DeleteCharacterError, DeleteCharacterResponse,
+            JoinServerResponse, SelectCharacterError, ServerMessage,
+        },
     },
     resources::{GameData, LoginTokens},
     storage::{
@@ -22,7 +25,7 @@ fn handle_world_connection_request(
     world_client: &mut WorldClient,
     token_id: u32,
     password_md5: &str,
-) -> Result<ConnectionRequestResponse, ConnectionRequestError> {
+) -> Result<ConnectionResponse, ConnectionRequestError> {
     let login_token = login_tokens
         .get_token_mut(token_id)
         .ok_or(ConnectionRequestError::InvalidToken)?;
@@ -69,7 +72,7 @@ fn handle_world_connection_request(
     world_client.login_token = login_token.token;
     world_client.selected_game_server = Some(login_token.selected_game_server);
 
-    Ok(ConnectionRequestResponse {
+    Ok(ConnectionResponse {
         packet_sequence_id: 123,
     })
 }
@@ -83,17 +86,16 @@ pub fn world_server_authentication_system(
         if let Ok(message) = world_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::ConnectionRequest(message) => {
-                    message
-                        .response_tx
-                        .send(handle_world_connection_request(
+                    let response =
+                        ServerMessage::ConnectionResponse(handle_world_connection_request(
                             &mut commands,
                             login_tokens.as_mut(),
                             entity,
                             world_client.as_mut(),
                             message.login_token,
                             &message.password_md5,
-                        ))
-                        .ok();
+                        ));
+                    world_client.server_message_tx.send(response).ok();
                 }
                 _ => panic!("Received unexpected client message {:?}", message),
             }
@@ -130,12 +132,20 @@ pub fn world_server_system(
     world_client_query.for_each_mut(|(world_client, mut account, mut character_list)| {
         if let Ok(message) = world_client.client_message_rx.try_recv() {
             match message {
-                ClientMessage::GetCharacterList(message) => {
+                ClientMessage::GetCharacterList => {
                     let mut characters = Vec::new();
                     for character in &character_list.characters {
-                        characters.push(CharacterListItem::from(character));
+                        characters.push(CharacterListItem {
+                            info: character.info.clone(),
+                            level: character.level.clone(),
+                            delete_time: character.delete_time.clone(),
+                            equipment: character.equipment.clone(),
+                        });
                     }
-                    message.response_tx.send(characters).ok();
+                    world_client
+                        .server_message_tx
+                        .send(ServerMessage::CharacterList(characters))
+                        .ok();
                 }
                 ClientMessage::CreateCharacter(message) => {
                     let response = if account.character_names.len() >= 5 {
@@ -148,31 +158,43 @@ pub fn world_server_system(
                         create_character(&game_data, &message)
                     }
                     .map(|character| {
-                        let slot = account.character_names.len();
+                        let character_slot = account.character_names.len();
                         account.character_names.push(character.info.name.clone());
                         AccountStorage::from(&*account).save().ok();
                         character_list.characters.push(character);
-                        slot as u8
+                        CreateCharacterResponse { character_slot }
                     });
-                    message.response_tx.send(response).ok();
+                    world_client
+                        .server_message_tx
+                        .send(ServerMessage::CreateCharacter(response))
+                        .ok();
                 }
                 ClientMessage::DeleteCharacter(message) => {
                     let response = character_list
                         .characters
                         .get_mut(message.slot as usize)
                         .filter(|character| character.info.name == message.name)
-                        .map_or(Err(DeleteCharacterError::Failed), |character| {
-                            if message.is_delete {
-                                if character.delete_time.is_none() {
-                                    character.delete_time = Some(CharacterDeleteTime::new());
+                        .map_or_else(
+                            || Err(DeleteCharacterError::Failed(message.name.clone())),
+                            |character| {
+                                if message.is_delete {
+                                    if character.delete_time.is_none() {
+                                        character.delete_time = Some(CharacterDeleteTime::new());
+                                    }
+                                } else {
+                                    character.delete_time = None;
                                 }
-                            } else {
-                                character.delete_time = None;
-                            }
-                            character.save().ok();
-                            Ok(character.delete_time.clone())
-                        });
-                    message.response_tx.send(response).ok();
+                                character.save().ok();
+                                Ok(DeleteCharacterResponse {
+                                    name: message.name.clone(),
+                                    delete_time: character.delete_time.clone(),
+                                })
+                            },
+                        );
+                    world_client
+                        .server_message_tx
+                        .send(ServerMessage::DeleteCharacter(response))
+                        .ok();
                 }
                 ClientMessage::SelectCharacter(message) => {
                     let response = character_list
@@ -206,7 +228,10 @@ pub fn world_server_system(
                                 Err(SelectCharacterError::Failed)
                             }
                         });
-                    message.response_tx.send(response).ok();
+                    world_client
+                        .server_message_tx
+                        .send(ServerMessage::SelectCharacter(response))
+                        .ok();
                 }
                 _ => warn!("Received unimplemented client message {:?}", message),
             }

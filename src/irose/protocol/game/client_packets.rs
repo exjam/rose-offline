@@ -175,7 +175,7 @@ impl<'a> TryFrom<&'a Packet> for PacketClientChat<'a> {
 
 #[derive(Debug)]
 pub struct PacketClientSetHotbarSlot {
-    pub slot_index: u8,
+    pub slot_index: usize,
     pub slot: Option<HotbarSlot>,
 }
 
@@ -188,7 +188,7 @@ impl TryFrom<&Packet> for PacketClientSetHotbarSlot {
         }
 
         let mut reader = PacketReader::from(packet);
-        let slot_index = reader.read_u8()?;
+        let slot_index = reader.read_u8()? as usize;
         let slot = reader.read_hotbar_slot()?;
         Ok(PacketClientSetHotbarSlot { slot_index, slot })
     }

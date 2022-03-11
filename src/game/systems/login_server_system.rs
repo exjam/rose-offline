@@ -3,9 +3,13 @@ use log::warn;
 
 use crate::game::{
     components::{Account, LoginClient},
-    messages::client::{
-        ClientMessage, ConnectionRequestResponse, GetChannelListError, JoinServerError,
-        JoinServerResponse, LoginError,
+    messages::client::ClientMessage,
+    messages::{
+        client::GetChannelList,
+        server::{
+            ChannelList, ChannelListError, ConnectionResponse, JoinServerError, JoinServerResponse,
+            LoginError, LoginResponse, ServerMessage,
+        },
     },
     resources::{LoginTokens, ServerList},
     storage::account::{AccountStorage, AccountStorageError},
@@ -15,16 +19,17 @@ pub fn login_server_authentication_system(
     mut commands: Commands,
     query: Query<(Entity, &LoginClient), Without<Account>>,
     login_tokens: Res<LoginTokens>,
+    server_list: Res<ServerList>,
 ) {
     query.for_each(|(entity, login_client)| {
         if let Ok(message) = login_client.client_message_rx.try_recv() {
             match message {
-                ClientMessage::ConnectionRequest(message) => {
-                    message
-                        .response_tx
-                        .send(Ok(ConnectionRequestResponse {
+                ClientMessage::ConnectionRequest(_) => {
+                    login_client
+                        .server_message_tx
+                        .send(ServerMessage::ConnectionResponse(Ok(ConnectionResponse {
                             packet_sequence_id: 123,
-                        }))
+                        })))
                         .ok();
                 }
                 ClientMessage::LoginRequest(message) => {
@@ -37,7 +42,13 @@ pub fn login_server_authentication_system(
                         match AccountStorage::try_load(&message.username, &message.password_md5) {
                             Ok(account) => {
                                 commands.entity(entity).insert(Account::from(account));
-                                Ok(())
+                                let mut servers = Vec::new();
+                                for (id, server) in server_list.world_servers.iter().enumerate() {
+                                    servers.push((id as u32, server.name.clone()));
+                                }
+                                Ok(LoginResponse {
+                                    server_list: servers,
+                                })
                             }
                             Err(error) => Err(match error {
                                 AccountStorageError::NotFound => LoginError::InvalidAccount,
@@ -46,7 +57,10 @@ pub fn login_server_authentication_system(
                             }),
                         }
                     };
-                    message.response_tx.send(response).ok();
+                    login_client
+                        .server_message_tx
+                        .send(ServerMessage::LoginResponse(response))
+                        .ok();
                 }
                 _ => panic!("Received unexpected client message {:?}", message),
             }
@@ -62,26 +76,25 @@ pub fn login_server_system(
     query.for_each_mut(|(entity, account, mut login_client)| {
         if let Ok(message) = login_client.client_message_rx.try_recv() {
             match message {
-                ClientMessage::GetWorldServerList(message) => {
-                    let mut servers = Vec::new();
-                    for (id, server) in server_list.world_servers.iter().enumerate() {
-                        servers.push((id as u32, server.name.clone()));
-                    }
-                    message.response_tx.send(servers).ok();
-                }
-                ClientMessage::GetChannelList(message) => {
+                ClientMessage::GetChannelList(GetChannelList { server_id }) => {
                     let response = server_list
                         .world_servers
-                        .get(message.server_id as usize)
-                        .ok_or(GetChannelListError::InvalidServerId)
+                        .get(server_id)
+                        .ok_or(ChannelListError::InvalidServerId(server_id))
                         .map(|world_server| {
                             let mut channels = Vec::new();
                             for (id, channel) in world_server.channels.iter().enumerate() {
                                 channels.push((id as u8, channel.name.clone()));
                             }
-                            channels
+                            ChannelList {
+                                server_id,
+                                channels,
+                            }
                         });
-                    message.response_tx.send(response).ok();
+                    login_client
+                        .server_message_tx
+                        .send(ServerMessage::ChannelList(response))
+                        .ok();
                 }
                 ClientMessage::JoinServer(message) => {
                     let response = server_list
@@ -109,7 +122,10 @@ pub fn login_server_system(
                                 })
                         });
 
-                    message.response_tx.send(response).ok();
+                    login_client
+                        .server_message_tx
+                        .send(ServerMessage::JoinServer(response))
+                        .ok();
                 }
                 _ => warn!("Received unimplemented client message {:?}", message),
             }

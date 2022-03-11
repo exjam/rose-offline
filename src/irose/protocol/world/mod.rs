@@ -4,7 +4,15 @@ use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
 use crate::{
-    game::messages::{client::*, server::ServerMessage},
+    game::messages::{
+        client::{
+            ClientMessage, ConnectionRequest, CreateCharacter, DeleteCharacter, SelectCharacter,
+        },
+        server::{
+            CreateCharacterError, CreateCharacterResponse, DeleteCharacterError,
+            DeleteCharacterResponse, ServerMessage,
+        },
+    },
     protocol::{Client, Packet, ProtocolClient, ProtocolError},
 };
 
@@ -13,38 +21,138 @@ mod server_packets;
 
 use client_packets::*;
 use server_packets::*;
-use tokio::sync::oneshot;
 
-pub struct WorldClient {}
+pub enum WorldClientState {
+    WaitingConnectRequest,
+    Connected,
+}
+
+pub struct WorldClient {
+    state: WorldClientState,
+}
 
 impl WorldClient {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            state: WorldClientState::WaitingConnectRequest,
+        }
     }
 
     async fn handle_packet(
-        &self,
+        &mut self,
         client: &mut Client<'_>,
         packet: Packet,
     ) -> Result<(), ProtocolError> {
-        match FromPrimitive::from_u16(packet.command) {
-            Some(ClientPackets::ConnectRequest) => {
-                let request = PacketClientConnectRequest::try_from(&packet)?;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::ConnectionRequest(ConnectionRequest {
-                        login_token: request.login_token,
-                        password_md5: String::from(request.password_md5),
-                        response_tx,
-                    }))?;
-                let packet = match response_rx.await? {
-                    Ok(result) => Packet::from(&PacketConnectionReply {
-                        result: ConnectResult::Ok,
-                        packet_sequence_id: result.packet_sequence_id,
-                        pay_flags: 0xff,
-                    }),
-                    Err(_) => Packet::from(&PacketConnectionReply {
+        match self.state {
+            WorldClientState::WaitingConnectRequest => {
+                match FromPrimitive::from_u16(packet.command) {
+                    Some(ClientPackets::ConnectRequest) => {
+                        let request = PacketClientConnectRequest::try_from(&packet)?;
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                                login_token: request.login_token,
+                                password_md5: String::from(request.password_md5),
+                            }))?;
+                    }
+                    _ => return Err(ProtocolError::InvalidPacket),
+                }
+            }
+            WorldClientState::Connected => match FromPrimitive::from_u16(packet.command) {
+                Some(ClientPackets::ConnectRequest) => {
+                    let request = PacketClientConnectRequest::try_from(&packet)?;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                            login_token: request.login_token,
+                            password_md5: String::from(request.password_md5),
+                        }))?;
+                    let packet = match client
+                        .server_message_rx
+                        .recv()
+                        .await
+                        .ok_or(ProtocolError::IscError)?
+                    {
+                        ServerMessage::ConnectionResponse(Ok(result)) => {
+                            Packet::from(&PacketConnectionReply {
+                                result: ConnectResult::Ok,
+                                packet_sequence_id: result.packet_sequence_id,
+                                pay_flags: 0xff,
+                            })
+                        }
+                        _ => Packet::from(&PacketConnectionReply {
+                            result: ConnectResult::Failed,
+                            packet_sequence_id: 0,
+                            pay_flags: 0,
+                        }),
+                    };
+                    client.connection.write_packet(packet).await?;
+                }
+                Some(ClientPackets::CharacterListRequest) => {
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::GetCharacterList)?;
+                }
+                Some(ClientPackets::CreateCharacter) => {
+                    let request = PacketClientCreateCharacter::try_from(&packet)?;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::CreateCharacter(CreateCharacter {
+                            gender: request.gender,
+                            birth_stone: request.birth_stone,
+                            hair: request.hair,
+                            face: request.face,
+                            name: String::from(request.name),
+                        }))?;
+                }
+                Some(ClientPackets::DeleteCharacter) => {
+                    let request = PacketClientDeleteCharacter::try_from(&packet)?;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::DeleteCharacter(DeleteCharacter {
+                            slot: request.slot,
+                            name: String::from(request.name),
+                            is_delete: request.is_delete,
+                        }))?;
+                }
+                Some(ClientPackets::SelectCharacter) => {
+                    let request = PacketClientSelectCharacter::try_from(&packet)?;
+                    client
+                        .client_message_tx
+                        .send(ClientMessage::SelectCharacter(SelectCharacter {
+                            slot: request.slot,
+                            name: String::from(request.name),
+                        }))?;
+                }
+                _ => warn!(
+                    "[WS] Unhandled packet [{:#03X}] {:02x?}",
+                    packet.command,
+                    &packet.data[..]
+                ),
+            },
+        }
+
+        Ok(())
+    }
+
+    async fn handle_server_message(
+        &mut self,
+        client: &mut Client<'_>,
+        message: ServerMessage,
+    ) -> Result<(), ProtocolError> {
+        match message {
+            ServerMessage::ConnectionResponse(message) => {
+                let packet = match message {
+                    Ok(result) => {
+                        self.state = WorldClientState::Connected;
+
+                        Packet::from(&PacketConnectionReply {
+                            result: ConnectResult::Ok,
+                            packet_sequence_id: result.packet_sequence_id,
+                            pay_flags: 0xff,
+                        })
+                    }
+                    _ => Packet::from(&PacketConnectionReply {
                         result: ConnectResult::Failed,
                         packet_sequence_id: 0,
                         pay_flags: 0,
@@ -52,39 +160,42 @@ impl WorldClient {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            Some(ClientPackets::CharacterListRequest) => {
-                let (response_tx, response_rx) = oneshot::channel();
+            ServerMessage::ReturnToCharacterSelect => {
                 client
-                    .client_message_tx
-                    .send(ClientMessage::GetCharacterList(GetCharacterList {
-                        response_tx,
-                    }))?;
-                let response = response_rx.await?;
+                    .connection
+                    .write_packet(Packet::from(&PacketServerReturnToCharacterSelect {}))
+                    .await?;
+            }
+            ServerMessage::SelectCharacter(message) => match message {
+                Ok(response) => {
+                    client
+                        .connection
+                        .write_packet(Packet::from(&PacketServerMoveServer {
+                            login_token: response.login_token,
+                            packet_codec_seed: response.packet_codec_seed,
+                            ip: &response.ip,
+                            port: response.port,
+                        }))
+                        .await?;
+                }
+                Err(_) => return Err(ProtocolError::InvalidPacket),
+            },
+            ServerMessage::CharacterList(characters) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerCharacterList {
-                        characters: &response[..],
+                        characters: &characters,
                     }))
                     .await?;
             }
-            Some(ClientPackets::CreateCharacter) => {
-                let request = PacketClientCreateCharacter::try_from(&packet)?;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::CreateCharacter(CreateCharacter {
-                        gender: request.gender,
-                        birth_stone: request.birth_stone,
-                        hair: request.hair,
-                        face: request.face,
-                        name: String::from(request.name),
-                        response_tx,
-                    }))?;
-                let response = match response_rx.await? {
-                    Ok(slot) => Packet::from(&PacketServerCreateCharacterReply {
-                        result: CreateCharacterResult::Ok,
-                        is_platinum: slot >= 3,
-                    }),
+            ServerMessage::CreateCharacter(message) => {
+                let response = match message {
+                    Ok(CreateCharacterResponse { character_slot }) => {
+                        Packet::from(&PacketServerCreateCharacterReply {
+                            result: CreateCharacterResult::Ok,
+                            is_platinum: character_slot >= 3,
+                        })
+                    }
                     Err(CreateCharacterError::Failed) => {
                         Packet::from(&PacketServerCreateCharacterReply {
                             result: CreateCharacterResult::Failed,
@@ -112,77 +223,26 @@ impl WorldClient {
                 };
                 client.connection.write_packet(response).await?;
             }
-            Some(ClientPackets::DeleteCharacter) => {
-                let request = PacketClientDeleteCharacter::try_from(&packet)?;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::DeleteCharacter(DeleteCharacter {
-                        slot: request.slot,
-                        name: String::from(request.name),
-                        is_delete: request.is_delete,
-                        response_tx,
-                    }))?;
-                let packet = match response_rx.await? {
-                    Ok(response) => Packet::from(&PacketServerDeleteCharacterReply {
-                        seconds_until_delete: Some(
-                            response
-                                .map(|t| t.get_time_until_delete().as_secs())
-                                .unwrap_or(0) as u32,
-                        ),
-                        name: request.name,
-                    }),
-                    Err(DeleteCharacterError::Failed) => {
+            ServerMessage::DeleteCharacter(message) => {
+                let packet = match message {
+                    Ok(DeleteCharacterResponse { name, delete_time }) => {
+                        Packet::from(&PacketServerDeleteCharacterReply {
+                            seconds_until_delete: Some(
+                                delete_time
+                                    .map(|t| t.get_time_until_delete().as_secs())
+                                    .unwrap_or(0) as u32,
+                            ),
+                            name: &name,
+                        })
+                    }
+                    Err(DeleteCharacterError::Failed(name)) => {
                         Packet::from(&PacketServerDeleteCharacterReply {
                             seconds_until_delete: None,
-                            name: request.name,
+                            name: &name,
                         })
                     }
                 };
                 client.connection.write_packet(packet).await?;
-            }
-            Some(ClientPackets::SelectCharacter) => {
-                let request = PacketClientSelectCharacter::try_from(&packet)?;
-                let (response_tx, response_rx) = oneshot::channel();
-                client
-                    .client_message_tx
-                    .send(ClientMessage::SelectCharacter(SelectCharacter {
-                        slot: request.slot,
-                        name: String::from(request.name),
-                        response_tx,
-                    }))?;
-                let packet = match response_rx.await? {
-                    Ok(response) => Packet::from(&PacketServerMoveServer {
-                        login_token: response.login_token,
-                        packet_codec_seed: response.packet_codec_seed,
-                        ip: &response.ip,
-                        port: response.port,
-                    }),
-                    Err(_) => return Err(ProtocolError::InvalidPacket),
-                };
-                client.connection.write_packet(packet).await?;
-            }
-            _ => warn!(
-                "[WS] Unhandled packet [{:#03X}] {:02x?}",
-                packet.command,
-                &packet.data[..]
-            ),
-        }
-
-        Ok(())
-    }
-
-    async fn handle_server_message(
-        &self,
-        client: &mut Client<'_>,
-        message: ServerMessage,
-    ) -> Result<(), ProtocolError> {
-        match message {
-            ServerMessage::ReturnToCharacterSelect => {
-                client
-                    .connection
-                    .write_packet(Packet::from(&PacketServerReturnToCharacterSelect {}))
-                    .await?;
             }
             _ => panic!("Received unexpected server message for world server"),
         }
@@ -192,7 +252,7 @@ impl WorldClient {
 
 #[async_trait]
 impl ProtocolClient for WorldClient {
-    async fn run_client(&self, client: &mut Client) -> Result<(), ProtocolError> {
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError> {
         loop {
             tokio::select! {
                 packet = client.connection.read_packet() => {

@@ -53,7 +53,7 @@ pub struct Client<'a> {
 
 #[async_trait]
 pub trait ProtocolClient {
-    async fn run_client(&self, client: &mut Client) -> Result<(), ProtocolError>;
+    async fn run_client(&mut self, client: &mut Client) -> Result<(), ProtocolError>;
 }
 
 pub struct Protocol {

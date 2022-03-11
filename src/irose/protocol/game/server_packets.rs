@@ -629,14 +629,14 @@ impl From<&PacketServerTeleport> for Packet {
 
 #[derive(Debug)]
 pub struct PacketServerSetHotbarSlot {
-    pub slot_index: u8,
+    pub slot_index: usize,
     pub slot: Option<HotbarSlot>,
 }
 
 impl From<&PacketServerSetHotbarSlot> for Packet {
     fn from(packet: &PacketServerSetHotbarSlot) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SetHotbarSlot as u16);
-        writer.write_u8(packet.slot_index);
+        writer.write_u8(packet.slot_index as u8);
         writer.write_hotbar_slot(&packet.slot);
         writer.into()
     }
