@@ -3,26 +3,17 @@ use log::warn;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
-use rose_network_common::{Packet, PacketError};
-
-use crate::{
-    game::messages::{
-        client::{
-            ClientMessage, ConnectionRequest, CreateCharacter, DeleteCharacter, SelectCharacter,
-        },
-        server::{
-            CreateCharacterError, CreateCharacterResponse, DeleteCharacterError,
-            DeleteCharacterResponse, ServerMessage,
-        },
+use rose_game_common::messages::{
+    client::{ClientMessage, ConnectionRequest, CreateCharacter, DeleteCharacter, SelectCharacter},
+    server::{
+        CreateCharacterError, CreateCharacterResponse, DeleteCharacterError,
+        DeleteCharacterResponse, ServerMessage,
     },
-    protocol::{Client, ProtocolClient, ProtocolClientError},
 };
+use rose_network_common::{Packet, PacketError};
+use rose_network_irose::{world_client_packets::*, world_server_packets::*};
 
-mod client_packets;
-mod server_packets;
-
-use client_packets::*;
-use server_packets::*;
+use crate::protocol::{Client, ProtocolClient, ProtocolClientError};
 
 pub enum WorldClientState {
     WaitingConnectRequest,

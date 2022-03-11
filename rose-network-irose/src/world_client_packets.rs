@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use rose_game_common::components::CharacterGender;
 use rose_network_common::{Packet, PacketError, PacketReader};
 
-use crate::irose::protocol::common_packets::PacketReadCharacterGender;
+use crate::common_packets::PacketReadCharacterGender;
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {

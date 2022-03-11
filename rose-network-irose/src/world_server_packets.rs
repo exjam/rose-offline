@@ -1,12 +1,10 @@
 use num_derive::FromPrimitive;
 
 use rose_data::{EquipmentIndex, EquipmentItem};
+use rose_game_common::messages::server::CharacterListItem;
 use rose_network_common::{Packet, PacketWriter};
 
-use crate::{
-    game::messages::server::CharacterListItem,
-    irose::protocol::common_packets::PacketWriteCharacterGender,
-};
+use crate::common_packets::PacketWriteCharacterGender;
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {

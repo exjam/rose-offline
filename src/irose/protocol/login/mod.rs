@@ -2,24 +2,16 @@ use async_trait::async_trait;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
-use rose_network_common::{Packet, PacketError};
-
-use crate::{
-    game::messages::{
-        client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
-        server::{
-            ChannelList, ChannelListError, JoinServerError, LoginError, LoginResponse,
-            ServerMessage,
-        },
+use rose_game_common::messages::{
+    client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
+    server::{
+        ChannelList, ChannelListError, JoinServerError, LoginError, LoginResponse, ServerMessage,
     },
-    protocol::{Client, ProtocolClient, ProtocolClientError},
 };
+use rose_network_common::{Packet, PacketError};
+use rose_network_irose::{login_client_packets::*, login_server_packets::*};
 
-mod client_packets;
-mod server_packets;
-
-use client_packets::*;
-use server_packets::*;
+use crate::protocol::{Client, ProtocolClient, ProtocolClientError};
 
 pub enum LoginClientState {
     WaitingConnectRequest,
