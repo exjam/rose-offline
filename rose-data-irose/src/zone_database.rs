@@ -221,9 +221,9 @@ fn load_zone(
     }
 
     let min_x = min_block_x.unwrap();
-    let min_y = min_block_y.unwrap() - 1; // Map grows in negative y
-    let max_x = max_block_x.unwrap() + 1; // Map grows in positive x
-    let max_y = max_block_y.unwrap();
+    let min_y = min_block_y.unwrap() + 1;
+    let max_x = max_block_x.unwrap() + 1;
+    let max_y = max_block_y.unwrap() + 2;
 
     let sector_size = data
         .get_zone_sector_size(id)
