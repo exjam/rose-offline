@@ -400,13 +400,13 @@ where
     }
 
     fn encrypt_packet(&self, buffer: &mut BytesMut) {
-        let add_table_value = 1u16;
-        let encrypt_add_value = 1u8;
+        let add_table_value = 0u16;
+        let encrypt_add_value = 0u8;
         let size = (&buffer[0..2]).get_u16_le();
         let head = Head::new()
             .with_add_table_value(add_table_value)
             .with_encrypt_add_value(encrypt_add_value)
-            .with_encrypt_value(((add_table_value + encrypt_add_value as u16) & 0xFF) as u8)
+            .with_encrypt_value(((add_table_value + encrypt_add_value as u16) & 0x7) as u8)
             .with_add_buffer_len(size)
             .with_command((&buffer[2..4]).get_u16_le());
 
