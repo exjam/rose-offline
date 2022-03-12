@@ -164,6 +164,17 @@ impl PacketWriter {
         self.data.put(value.as_bytes());
         self.data.put_u8(0);
     }
+
+    pub fn write_fixed_length_utf8(&mut self, value: &str, length: usize) {
+        if value.len() > length {
+            self.data.put(&value.as_bytes()[0..length]);
+        } else {
+            self.data.put(value.as_bytes());
+            for _ in value.len()..length {
+                self.data.put_u8(0);
+            }
+        }
+    }
 }
 
 impl From<PacketWriter> for Packet {

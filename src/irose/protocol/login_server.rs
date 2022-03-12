@@ -118,7 +118,7 @@ impl LoginServer {
                             result: LoginResult::Ok,
                             rights: 0x800,
                             pay_type: 0xff,
-                            servers: &server_list,
+                            servers: server_list,
                         })
                     }
                     Err(LoginError::Failed) => Packet::from(
@@ -155,13 +155,13 @@ impl LoginServer {
 
                         Packet::from(&PacketServerChannelList {
                             server_id,
-                            channels: &channel_list,
+                            channels: channel_list,
                         })
                     }
                     Err(ChannelListError::InvalidServerId(server_id)) => {
                         Packet::from(&PacketServerChannelList {
                             server_id,
-                            channels: &[],
+                            channels: Vec::new(),
                         })
                     }
                 };

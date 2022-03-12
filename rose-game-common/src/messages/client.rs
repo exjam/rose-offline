@@ -28,8 +28,8 @@ pub struct GetChannelList {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct JoinServer {
-    pub server_id: u32,
-    pub channel_id: u8,
+    pub server_id: usize,
+    pub channel_id: usize,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
