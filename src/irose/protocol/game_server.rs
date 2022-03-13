@@ -21,25 +21,16 @@ use rose_game_common::messages::{
         UseEmote, UseInventoryItem, UseItem, Whisper,
     },
 };
-use rose_network_common::{Packet, PacketError};
+use rose_network_common::Packet;
 use rose_network_irose::{game_client_packets::*, game_server_packets::*};
 
 use crate::protocol::{Client, ProtocolServer, ProtocolServerError};
 
-pub enum GameServerState {
-    WaitingConnectRequest,
-    Connected,
-}
-
-pub struct GameServer {
-    state: GameServerState,
-}
+pub struct GameServer;
 
 impl GameServer {
     pub fn new() -> Self {
-        Self {
-            state: GameServerState::WaitingConnectRequest,
-        }
+        Self {}
     }
 
     async fn handle_packet(
@@ -47,276 +38,266 @@ impl GameServer {
         client: &mut Client<'_>,
         packet: Packet,
     ) -> Result<(), anyhow::Error> {
-        match self.state {
-            GameServerState::WaitingConnectRequest => {
-                match FromPrimitive::from_u16(packet.command) {
-                    Some(ClientPackets::ConnectRequest) => {
-                        let request = PacketClientConnectRequest::try_from(&packet)?;
-                        client
-                            .client_message_tx
-                            .send(ClientMessage::GameConnectionRequest(
-                                GameConnectionRequest {
-                                    login_token: request.login_token,
-                                    password_md5: String::from(request.password_md5),
-                                },
-                            ))?;
-                    }
-                    _ => return Err(PacketError::InvalidPacket.into()),
-                }
+        match FromPrimitive::from_u16(packet.command) {
+            Some(ClientPackets::ConnectRequest) => {
+                let request = PacketClientConnectRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::GameConnectionRequest(
+                        GameConnectionRequest {
+                            login_token: request.login_token,
+                            password_md5: String::from(request.password_md5),
+                        },
+                    ))?;
             }
-            GameServerState::Connected => match FromPrimitive::from_u16(packet.command) {
-                Some(ClientPackets::ConnectRequest) => {
-                    return Err(PacketError::InvalidPacket.into())
-                }
-                Some(ClientPackets::JoinZone) => {
-                    let _request = PacketClientJoinZone::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::JoinZoneRequest)?;
-                }
-                Some(ClientPackets::Chat) => {
-                    let packet = PacketClientChat::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::Chat(String::from(packet.text)))?;
-                }
-                Some(ClientPackets::Move) => {
-                    let packet = PacketClientMove::try_from(&packet)?;
-                    client.client_message_tx.send(ClientMessage::Move(Move {
+            Some(ClientPackets::JoinZone) => {
+                let _request = PacketClientJoinZone::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::JoinZoneRequest)?;
+            }
+            Some(ClientPackets::Chat) => {
+                let packet = PacketClientChat::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::Chat(String::from(packet.text)))?;
+            }
+            Some(ClientPackets::Move) => {
+                let packet = PacketClientMove::try_from(&packet)?;
+                client.client_message_tx.send(ClientMessage::Move(Move {
+                    target_entity_id: packet.target_entity_id,
+                    x: packet.x,
+                    y: packet.y,
+                    z: packet.z,
+                }))?;
+            }
+            Some(ClientPackets::Attack) => {
+                let packet = PacketClientAttack::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::Attack(Attack {
                         target_entity_id: packet.target_entity_id,
-                        x: packet.x,
-                        y: packet.y,
-                        z: packet.z,
                     }))?;
-                }
-                Some(ClientPackets::Attack) => {
-                    let packet = PacketClientAttack::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::Attack(Attack {
-                            target_entity_id: packet.target_entity_id,
-                        }))?;
-                }
-                Some(ClientPackets::SetHotbarSlot) => {
-                    let request = PacketClientSetHotbarSlot::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::SetHotbarSlot(SetHotbarSlot {
-                            slot_index: request.slot_index,
-                            slot: request.slot,
-                        }))?;
-                }
-                Some(ClientPackets::ChangeAmmo) => {
-                    let PacketClientChangeAmmo {
-                        ammo_index,
-                        item_slot,
-                    } = PacketClientChangeAmmo::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::ChangeAmmo(ammo_index, item_slot))?;
-                }
-                Some(ClientPackets::ChangeEquipment) => {
-                    let PacketClientChangeEquipment {
+            }
+            Some(ClientPackets::SetHotbarSlot) => {
+                let request = PacketClientSetHotbarSlot::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::SetHotbarSlot(SetHotbarSlot {
+                        slot_index: request.slot_index,
+                        slot: request.slot,
+                    }))?;
+            }
+            Some(ClientPackets::ChangeAmmo) => {
+                let PacketClientChangeAmmo {
+                    ammo_index,
+                    item_slot,
+                } = PacketClientChangeAmmo::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ChangeAmmo(ammo_index, item_slot))?;
+            }
+            Some(ClientPackets::ChangeEquipment) => {
+                let PacketClientChangeEquipment {
+                    equipment_index,
+                    item_slot,
+                } = PacketClientChangeEquipment::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ChangeEquipment(ChangeEquipment {
                         equipment_index,
                         item_slot,
-                    } = PacketClientChangeEquipment::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::ChangeEquipment(ChangeEquipment {
-                            equipment_index,
-                            item_slot,
-                        }))?;
-                }
-                Some(ClientPackets::ChangeVehiclePart) => {
-                    let PacketClientChangeVehiclePart {
+                    }))?;
+            }
+            Some(ClientPackets::ChangeVehiclePart) => {
+                let PacketClientChangeVehiclePart {
+                    vehicle_part_index,
+                    item_slot,
+                } = PacketClientChangeVehiclePart::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ChangeVehiclePart(
                         vehicle_part_index,
                         item_slot,
-                    } = PacketClientChangeVehiclePart::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::ChangeVehiclePart(
-                            vehicle_part_index,
-                            item_slot,
-                        ))?;
-                }
-                Some(ClientPackets::IncreaseBasicStat) => {
-                    let PacketClientIncreaseBasicStat { basic_stat_type } =
-                        PacketClientIncreaseBasicStat::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::IncreaseBasicStat(basic_stat_type))?;
-                }
-                Some(ClientPackets::PickupItemDrop) => {
-                    let packet = PacketClientPickupItemDrop::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::PickupItemDrop(PickupItemDrop {
-                            target_entity_id: packet.target_entity_id,
-                        }))?;
-                }
-                Some(ClientPackets::LogoutRequest) => {
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::LogoutRequest(LogoutRequest::Logout))?;
-                }
-                Some(ClientPackets::ReturnToCharacterSelectRequest) => {
-                    client.client_message_tx.send(ClientMessage::LogoutRequest(
-                        LogoutRequest::ReturnToCharacterSelect,
                     ))?;
-                }
-                Some(ClientPackets::ReviveRequest) => {
-                    let packet = PacketClientReviveRequest::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::ReviveRequest(packet.revive_request_type))?;
-                }
-                Some(ClientPackets::SetReviveZone) => {
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::SetReviveZone)?;
-                }
-                Some(ClientPackets::QuestRequest) => {
-                    let packet = PacketClientQuestRequest::try_from(&packet)?;
-                    match packet.request_type {
-                        PacketClientQuestRequestType::DoTrigger => {
-                            client.client_message_tx.send(ClientMessage::QuestTrigger(
-                                QuestTriggerHash::new(packet.quest_id),
-                            ))?;
-                        }
-                        PacketClientQuestRequestType::DeleteQuest => {
-                            client.client_message_tx.send(ClientMessage::QuestDelete(
-                                QuestDelete {
-                                    slot: packet.quest_slot as usize,
-                                    quest_id: packet.quest_id as usize,
-                                },
-                            ))?;
-                        }
-                    }
-                }
-                Some(ClientPackets::PersonalStoreListItems) => {
-                    let packet = PacketClientPersonalStoreListItems::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::PersonalStoreListItems(
-                            packet.target_entity_id,
+            }
+            Some(ClientPackets::IncreaseBasicStat) => {
+                let PacketClientIncreaseBasicStat { basic_stat_type } =
+                    PacketClientIncreaseBasicStat::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::IncreaseBasicStat(basic_stat_type))?;
+            }
+            Some(ClientPackets::PickupItemDrop) => {
+                let packet = PacketClientPickupItemDrop::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PickupItemDrop(PickupItemDrop {
+                        target_entity_id: packet.target_entity_id,
+                    }))?;
+            }
+            Some(ClientPackets::LogoutRequest) => {
+                client
+                    .client_message_tx
+                    .send(ClientMessage::LogoutRequest(LogoutRequest::Logout))?;
+            }
+            Some(ClientPackets::ReturnToCharacterSelectRequest) => {
+                client.client_message_tx.send(ClientMessage::LogoutRequest(
+                    LogoutRequest::ReturnToCharacterSelect,
+                ))?;
+            }
+            Some(ClientPackets::ReviveRequest) => {
+                let packet = PacketClientReviveRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ReviveRequest(packet.revive_request_type))?;
+            }
+            Some(ClientPackets::SetReviveZone) => {
+                client
+                    .client_message_tx
+                    .send(ClientMessage::SetReviveZone)?;
+            }
+            Some(ClientPackets::QuestRequest) => {
+                let packet = PacketClientQuestRequest::try_from(&packet)?;
+                match packet.request_type {
+                    PacketClientQuestRequestType::DoTrigger => {
+                        client.client_message_tx.send(ClientMessage::QuestTrigger(
+                            QuestTriggerHash::new(packet.quest_id),
                         ))?;
-                }
-                Some(ClientPackets::PersonalStoreBuyItem) => {
-                    let packet = PacketClientPersonalStoreBuyItem::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
-                            store_entity_id: packet.store_entity_id,
-                            store_slot_index: packet.store_slot_index,
-                            buy_item: packet.buy_item,
-                        }))?;
-                }
-                Some(ClientPackets::DropItemFromInventory) => {
-                    let packet = PacketClientDropItemFromInventory::try_from(&packet)?;
-                    match packet {
-                        PacketClientDropItemFromInventory::Item(item_slot, quantity) => {
-                            client
-                                .client_message_tx
-                                .send(ClientMessage::DropItem(item_slot, quantity as usize))?;
-                        }
-                        PacketClientDropItemFromInventory::Money(quantity) => {
-                            client
-                                .client_message_tx
-                                .send(ClientMessage::DropMoney(quantity as usize))?;
-                        }
+                    }
+                    PacketClientQuestRequestType::DeleteQuest => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::QuestDelete(QuestDelete {
+                                slot: packet.quest_slot as usize,
+                                quest_id: packet.quest_id as usize,
+                            }))?;
                     }
                 }
-                Some(ClientPackets::UseItem) => {
-                    let packet = PacketClientUseItem::try_from(&packet)?;
-                    client.client_message_tx.send(ClientMessage::UseItem(
-                        packet.item_slot,
+            }
+            Some(ClientPackets::PersonalStoreListItems) => {
+                let packet = PacketClientPersonalStoreListItems::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PersonalStoreListItems(
                         packet.target_entity_id,
                     ))?;
-                }
-                Some(ClientPackets::LevelUpSkill) => {
-                    let packet = PacketClientLevelUpSkill::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::LevelUpSkill(packet.skill_slot))?;
-                }
-                Some(ClientPackets::CastSkillSelf) => {
-                    let packet = PacketClientCastSkillSelf::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::CastSkillSelf(packet.skill_slot))?;
-                }
-                Some(ClientPackets::CastSkillTargetEntity) => {
-                    let packet = PacketClientCastSkillTargetEntity::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::CastSkillTargetEntity(
-                            packet.skill_slot,
-                            packet.target_entity_id,
-                        ))?;
-                }
-                Some(ClientPackets::CastSkillTargetPosition) => {
-                    let packet = PacketClientCastSkillTargetPosition::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::CastSkillTargetPosition(
-                            packet.skill_slot,
-                            packet.position,
-                        ))?;
-                }
-                Some(ClientPackets::NpcStoreTransaction) => {
-                    let packet = PacketClientNpcStoreTransaction::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
-                            npc_entity_id: packet.npc_entity_id,
-                            buy_items: packet.buy_items,
-                            sell_items: packet.sell_items,
-                        }))?;
-                }
-                Some(ClientPackets::MoveToggle) => {
-                    let packet = PacketClientMoveToggle::try_from(&packet)?;
-                    match packet.toggle_type {
-                        PacketClientMoveToggleType::Run => {
-                            client.client_message_tx.send(ClientMessage::RunToggle)?;
-                        }
-                        PacketClientMoveToggleType::Sit => {
-                            client.client_message_tx.send(ClientMessage::SitToggle)?;
-                        }
-                        PacketClientMoveToggleType::Drive => {
-                            client.client_message_tx.send(ClientMessage::DriveToggle)?;
-                        }
+            }
+            Some(ClientPackets::PersonalStoreBuyItem) => {
+                let packet = PacketClientPersonalStoreBuyItem::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
+                        store_entity_id: packet.store_entity_id,
+                        store_slot_index: packet.store_slot_index,
+                        buy_item: packet.buy_item,
+                    }))?;
+            }
+            Some(ClientPackets::DropItemFromInventory) => {
+                let packet = PacketClientDropItemFromInventory::try_from(&packet)?;
+                match packet {
+                    PacketClientDropItemFromInventory::Item(item_slot, quantity) => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::DropItem(item_slot, quantity as usize))?;
+                    }
+                    PacketClientDropItemFromInventory::Money(quantity) => {
+                        client
+                            .client_message_tx
+                            .send(ClientMessage::DropMoney(quantity as usize))?;
                     }
                 }
-                Some(ClientPackets::Emote) => {
-                    let packet = PacketClientEmote::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::UseEmote(packet.motion_id, packet.is_stop))?;
+            }
+            Some(ClientPackets::UseItem) => {
+                let packet = PacketClientUseItem::try_from(&packet)?;
+                client.client_message_tx.send(ClientMessage::UseItem(
+                    packet.item_slot,
+                    packet.target_entity_id,
+                ))?;
+            }
+            Some(ClientPackets::LevelUpSkill) => {
+                let packet = PacketClientLevelUpSkill::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::LevelUpSkill(packet.skill_slot))?;
+            }
+            Some(ClientPackets::CastSkillSelf) => {
+                let packet = PacketClientCastSkillSelf::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CastSkillSelf(packet.skill_slot))?;
+            }
+            Some(ClientPackets::CastSkillTargetEntity) => {
+                let packet = PacketClientCastSkillTargetEntity::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CastSkillTargetEntity(
+                        packet.skill_slot,
+                        packet.target_entity_id,
+                    ))?;
+            }
+            Some(ClientPackets::CastSkillTargetPosition) => {
+                let packet = PacketClientCastSkillTargetPosition::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::CastSkillTargetPosition(
+                        packet.skill_slot,
+                        packet.position,
+                    ))?;
+            }
+            Some(ClientPackets::NpcStoreTransaction) => {
+                let packet = PacketClientNpcStoreTransaction::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
+                        npc_entity_id: packet.npc_entity_id,
+                        buy_items: packet.buy_items,
+                        sell_items: packet.sell_items,
+                    }))?;
+            }
+            Some(ClientPackets::MoveToggle) => {
+                let packet = PacketClientMoveToggle::try_from(&packet)?;
+                match packet.toggle_type {
+                    PacketClientMoveToggleType::Run => {
+                        client.client_message_tx.send(ClientMessage::RunToggle)?;
+                    }
+                    PacketClientMoveToggleType::Sit => {
+                        client.client_message_tx.send(ClientMessage::SitToggle)?;
+                    }
+                    PacketClientMoveToggleType::Drive => {
+                        client.client_message_tx.send(ClientMessage::DriveToggle)?;
+                    }
                 }
-                Some(ClientPackets::WarpGateRequest) => {
-                    let packet = PacketClientWarpGateRequest::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::WarpGateRequest(packet.warp_gate_id))?;
-                }
-                Some(ClientPackets::PartyRequest) => {
-                    let packet = PacketClientPartyRequest::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::PartyRequest(packet.request))?;
-                }
-                Some(ClientPackets::PartyReply) => {
-                    let packet = PacketClientPartyReply::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::PartyReply(packet.reply))?;
-                }
-                _ => warn!(
-                    "[GS] Unhandled packet [{:#03X}] {:02x?}",
-                    packet.command,
-                    &packet.data[..]
-                ),
-            },
+            }
+            Some(ClientPackets::Emote) => {
+                let packet = PacketClientEmote::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::UseEmote(packet.motion_id, packet.is_stop))?;
+            }
+            Some(ClientPackets::WarpGateRequest) => {
+                let packet = PacketClientWarpGateRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::WarpGateRequest(packet.warp_gate_id))?;
+            }
+            Some(ClientPackets::PartyRequest) => {
+                let packet = PacketClientPartyRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PartyRequest(packet.request))?;
+            }
+            Some(ClientPackets::PartyReply) => {
+                let packet = PacketClientPartyReply::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PartyReply(packet.reply))?;
+            }
+            _ => warn!(
+                "[GS] Unhandled packet [{:#03X}] {:02x?}",
+                packet.command,
+                &packet.data[..]
+            ),
         }
         Ok(())
     }
@@ -330,8 +311,6 @@ impl GameServer {
             ServerMessage::GameConnectionResponse(response) => {
                 match response {
                     Ok(response) => {
-                        self.state = GameServerState::Connected;
-
                         client
                             .connection
                             .write_packet(Packet::from(&PacketConnectionReply {

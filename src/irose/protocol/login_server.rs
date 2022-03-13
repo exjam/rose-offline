@@ -13,22 +13,11 @@ use rose_network_irose::{login_client_packets::*, login_server_packets::*};
 
 use crate::protocol::{Client, ProtocolServer, ProtocolServerError};
 
-pub enum LoginServerState {
-    WaitingConnectRequest,
-    WaitingLogin,
-    Connected,
-    SelectedServer,
-}
-
-pub struct LoginServer {
-    state: LoginServerState,
-}
+pub struct LoginServer;
 
 impl LoginServer {
     pub fn new() -> Self {
-        Self {
-            state: LoginServerState::WaitingConnectRequest,
-        }
+        Self {}
     }
 
     async fn handle_packet(
@@ -36,51 +25,40 @@ impl LoginServer {
         client: &mut Client<'_>,
         packet: Packet,
     ) -> Result<(), anyhow::Error> {
-        match self.state {
-            LoginServerState::WaitingConnectRequest => {
-                match FromPrimitive::from_u16(packet.command) {
-                    Some(ClientPackets::Connect) => {
-                        client
-                            .client_message_tx
-                            .send(ClientMessage::ConnectionRequest(ConnectionRequest {
-                                login_token: 0u32,
-                                password_md5: String::new(),
-                            }))?;
-                    }
-                    _ => return Err(PacketError::InvalidPacket.into()),
-                }
+        match FromPrimitive::from_u16(packet.command) {
+            Some(ClientPackets::Connect) => {
+                client
+                    .client_message_tx
+                    .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                        login_token: 0u32,
+                        password_md5: String::new(),
+                    }))?;
             }
-            LoginServerState::WaitingLogin => match FromPrimitive::from_u16(packet.command) {
-                Some(ClientPackets::LoginRequest) => {
-                    let login_request = PacketClientLoginRequest::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::LoginRequest(LoginRequest {
-                            username: String::from(login_request.username),
-                            password_md5: String::from(login_request.password_md5),
-                        }))?;
-                }
-                _ => return Err(PacketError::InvalidPacket.into()),
-            },
-            LoginServerState::Connected => match FromPrimitive::from_u16(packet.command) {
-                Some(ClientPackets::ChannelList) => {
-                    let server_id = PacketClientChannelList::try_from(&packet)?.server_id;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::GetChannelList(GetChannelList { server_id }))?;
-                }
-                Some(ClientPackets::SelectServer) => {
-                    let select_server = PacketClientSelectServer::try_from(&packet)?;
-                    client
-                        .client_message_tx
-                        .send(ClientMessage::JoinServer(JoinServer {
-                            server_id: select_server.server_id,
-                            channel_id: select_server.channel_id,
-                        }))?;
-                }
-                _ => return Err(PacketError::InvalidPacket.into()),
-            },
-            LoginServerState::SelectedServer => return Err(PacketError::InvalidPacket.into()),
+            Some(ClientPackets::LoginRequest) => {
+                let login_request = PacketClientLoginRequest::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::LoginRequest(LoginRequest {
+                        username: String::from(login_request.username),
+                        password_md5: String::from(login_request.password_md5),
+                    }))?;
+            }
+            Some(ClientPackets::ChannelList) => {
+                let server_id = PacketClientChannelList::try_from(&packet)?.server_id;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::GetChannelList(GetChannelList { server_id }))?;
+            }
+            Some(ClientPackets::SelectServer) => {
+                let select_server = PacketClientSelectServer::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::JoinServer(JoinServer {
+                        server_id: select_server.server_id,
+                        channel_id: select_server.channel_id,
+                    }))?;
+            }
+            _ => return Err(PacketError::InvalidPacket.into()),
         }
 
         Ok(())
@@ -94,14 +72,10 @@ impl LoginServer {
         match message {
             ServerMessage::ConnectionResponse(response) => {
                 let packet = match response {
-                    Ok(result) => {
-                        self.state = LoginServerState::WaitingLogin;
-
-                        Packet::from(&PacketConnectionReply {
-                            status: ConnectionResult::Accepted,
-                            packet_sequence_id: result.packet_sequence_id,
-                        })
-                    }
+                    Ok(result) => Packet::from(&PacketConnectionReply {
+                        status: ConnectionResult::Accepted,
+                        packet_sequence_id: result.packet_sequence_id,
+                    }),
                     Err(_) => Packet::from(&PacketConnectionReply {
                         status: ConnectionResult::Disconnect,
                         packet_sequence_id: 0u32,
@@ -111,16 +85,12 @@ impl LoginServer {
             }
             ServerMessage::LoginResponse(response) => {
                 let packet = match response {
-                    Ok(LoginResponse { server_list }) => {
-                        self.state = LoginServerState::Connected;
-
-                        Packet::from(&PacketServerLoginReply {
-                            result: LoginResult::Ok,
-                            rights: 0x800,
-                            pay_type: 0xff,
-                            servers: server_list,
-                        })
-                    }
+                    Ok(LoginResponse { server_list }) => Packet::from(&PacketServerLoginReply {
+                        result: LoginResult::Ok,
+                        rights: 0x800,
+                        pay_type: 0xff,
+                        servers: server_list,
+                    }),
                     Err(LoginError::Failed) => Packet::from(
                         &PacketServerLoginReply::with_error_result(LoginResult::Failed),
                     ),
@@ -169,17 +139,13 @@ impl LoginServer {
             }
             ServerMessage::JoinServer(message) => {
                 let packet = match message {
-                    Ok(response) => {
-                        self.state = LoginServerState::SelectedServer;
-
-                        Packet::from(&PacketServerSelectServer {
-                            result: SelectServerResult::Ok,
-                            login_token: response.login_token,
-                            packet_codec_seed: response.packet_codec_seed,
-                            ip: &response.ip,
-                            port: response.port,
-                        })
-                    }
+                    Ok(response) => Packet::from(&PacketServerSelectServer {
+                        result: SelectServerResult::Ok,
+                        login_token: response.login_token,
+                        packet_codec_seed: response.packet_codec_seed,
+                        ip: &response.ip,
+                        port: response.port,
+                    }),
                     Err(JoinServerError::InvalidChannelId) => Packet::from(
                         &PacketServerSelectServer::with_result(SelectServerResult::InvalidChannel),
                     ),
