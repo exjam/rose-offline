@@ -21,6 +21,24 @@ pub enum EquipmentIndex {
     Earring,
 }
 
+impl From<EquipmentIndex> for ItemType {
+    fn from(equipment_index: EquipmentIndex) -> Self {
+        match equipment_index {
+            EquipmentIndex::Face => ItemType::Face,
+            EquipmentIndex::Head => ItemType::Head,
+            EquipmentIndex::Body => ItemType::Body,
+            EquipmentIndex::Back => ItemType::Back,
+            EquipmentIndex::Hands => ItemType::Hands,
+            EquipmentIndex::Feet => ItemType::Feet,
+            EquipmentIndex::WeaponRight => ItemType::Weapon,
+            EquipmentIndex::WeaponLeft => ItemType::SubWeapon,
+            EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring => {
+                ItemType::Jewellery
+            }
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Enum, Serialize, Deserialize)]
 pub enum VehiclePartIndex {
     Body,

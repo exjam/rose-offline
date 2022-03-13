@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 
 use rose_game_common::components::CharacterGender;
-use rose_network_common::{Packet, PacketError, PacketReader};
+use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::PacketReadCharacterGender;
 
@@ -39,6 +39,15 @@ impl<'a> TryFrom<&'a Packet> for PacketClientConnectRequest<'a> {
     }
 }
 
+impl<'a> From<&'a PacketClientConnectRequest<'a>> for Packet {
+    fn from(packet: &'a PacketClientConnectRequest<'a>) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ConnectRequest as u16);
+        writer.write_u32(packet.login_token as u32);
+        writer.write_fixed_length_utf8(packet.password_md5, 32);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientCharacterList {}
 
@@ -51,6 +60,12 @@ impl TryFrom<&Packet> for PacketClientCharacterList {
         }
 
         Ok(PacketClientCharacterList {})
+    }
+}
+
+impl From<&PacketClientCharacterList> for Packet {
+    fn from(_: &PacketClientCharacterList) -> Self {
+        PacketWriter::new(ClientPackets::CharacterListRequest as u16).into()
     }
 }
 

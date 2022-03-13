@@ -2,6 +2,7 @@ use enum_map::EnumMap;
 use nalgebra::Point2;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use thiserror::Error;
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
@@ -20,10 +21,13 @@ use crate::{
     data::Damage,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
 pub enum ConnectionRequestError {
+    #[error("Failed")]
     Failed,
+    #[error("Invalid token")]
     InvalidToken,
+    #[error("Invalid password")]
     InvalidPassword,
 }
 
@@ -32,11 +36,15 @@ pub struct ConnectionResponse {
     pub packet_sequence_id: u32,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
 pub enum LoginError {
+    #[error("Login failed")]
     Failed,
+    #[error("Invalid account")]
     InvalidAccount,
+    #[error("Invalid password")]
     InvalidPassword,
+    #[error("Already logged in")]
     AlreadyLoggedIn,
 }
 
@@ -45,8 +53,9 @@ pub struct LoginResponse {
     pub server_list: Vec<(u32, String)>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
 pub enum ChannelListError {
+    #[error("Invalid server id")]
     InvalidServerId(usize),
 }
 
@@ -56,9 +65,11 @@ pub struct ChannelList {
     pub channels: Vec<(u8, String)>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
 pub enum JoinServerError {
+    #[error("Invalid server id")]
     InvalidServerId,
+    #[error("Invalid channel id")]
     InvalidChannelId,
 }
 

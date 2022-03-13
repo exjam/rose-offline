@@ -167,8 +167,9 @@ impl<'a> TryFrom<&'a Packet> for PacketServerChannelList<'a> {
 
         let mut reader = PacketReader::from(packet);
         let server_id = reader.read_u32()? as usize;
+        let num_channels = reader.read_u8()? as usize;
 
-        let mut channels = Vec::new();
+        let mut channels = Vec::with_capacity(num_channels);
         while let Ok(id) = reader.read_u8() {
             let low_age = reader.read_u8()?;
             let high_age = reader.read_u8()?;
