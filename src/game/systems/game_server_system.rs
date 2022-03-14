@@ -6,6 +6,9 @@ use rose_data::{
     EquipmentIndex, Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour,
     VehicleItemPart, VehiclePartIndex,
 };
+use rose_game_common::messages::server::{
+    CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
+};
 
 use crate::game::{
     bundles::{
@@ -32,8 +35,8 @@ use crate::game::{
             PartyRequest, PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
         },
         server::{
-            self, ConnectionRequestError, GameConnectionResponse, JoinZoneResponse, LogoutReply,
-            QuestDeleteResult, ServerMessage, UpdateBasicStat,
+            self, ConnectionRequestError, JoinZoneResponse, LogoutReply, QuestDeleteResult,
+            ServerMessage, UpdateBasicStat,
         },
     },
     resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldTime},
@@ -50,7 +53,15 @@ fn handle_game_connection_request(
     game_client: &mut GameClient,
     token_id: u32,
     password_md5: &str,
-) -> Result<Box<GameConnectionResponse>, ConnectionRequestError> {
+) -> Result<
+    (
+        ConnectionResponse,
+        Box<CharacterData>,
+        Box<CharacterDataItems>,
+        Box<CharacterDataQuest>,
+    ),
+    ConnectionRequestError,
+> {
     // Verify token
     let login_token = login_tokens
         .get_token_mut(token_id)
@@ -169,25 +180,34 @@ fn handle_game_connection_request(
         union_membership: character.union_membership.clone(),
     });
 
-    Ok(Box::new(GameConnectionResponse {
-        packet_sequence_id: 123,
-        character_info: character.info,
-        position,
-        equipment: character.equipment,
-        basic_stats: character.basic_stats,
-        level: character.level,
-        experience_points: character.experience_points,
-        inventory: character.inventory,
-        skill_list: character.skill_list,
-        hotbar: character.hotbar,
-        health_points,
-        mana_points,
-        stat_points: character.stat_points,
-        skill_points: character.skill_points,
-        quest_state: character.quest_state,
-        union_membership: character.union_membership,
-        stamina: character.stamina,
-    }))
+    Ok((
+        ConnectionResponse {
+            packet_sequence_id: 123,
+        },
+        Box::new(CharacterData {
+            character_info: character.info,
+            position,
+            basic_stats: character.basic_stats,
+            level: character.level,
+            equipment: character.equipment.clone(),
+            experience_points: character.experience_points,
+            skill_list: character.skill_list,
+            hotbar: character.hotbar,
+            health_points,
+            mana_points,
+            stat_points: character.stat_points,
+            skill_points: character.skill_points,
+            union_membership: character.union_membership,
+            stamina: character.stamina,
+        }),
+        Box::new(CharacterDataItems {
+            inventory: character.inventory,
+            equipment: character.equipment,
+        }),
+        Box::new(CharacterDataQuest {
+            quest_state: character.quest_state,
+        }),
+    ))
 }
 
 pub fn game_server_authentication_system(
@@ -202,19 +222,47 @@ pub fn game_server_authentication_system(
         if let Ok(message) = game_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::GameConnectionRequest(message) => {
-                    let response =
-                        ServerMessage::GameConnectionResponse(handle_game_connection_request(
-                            &mut commands,
-                            game_data.as_ref(),
-                            login_tokens.as_mut(),
-                            &mut party_query,
-                            &mut party_events,
-                            entity,
-                            game_client.as_mut(),
-                            message.login_token,
-                            &message.password_md5,
-                        ));
-                    game_client.server_message_tx.send(response).ok();
+                    match handle_game_connection_request(
+                        &mut commands,
+                        game_data.as_ref(),
+                        login_tokens.as_mut(),
+                        &mut party_query,
+                        &mut party_events,
+                        entity,
+                        game_client.as_mut(),
+                        message.login_token,
+                        &message.password_md5,
+                    ) {
+                        Ok((
+                            connection_response,
+                            character_data,
+                            character_data_items,
+                            character_data_quest,
+                        )) => {
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::ConnectionResponse(Ok(connection_response)))
+                                .ok();
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::CharacterData(character_data))
+                                .ok();
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::CharacterDataItems(character_data_items))
+                                .ok();
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::CharacterDataQuest(character_data_quest))
+                                .ok();
+                        }
+                        Err(error) => {
+                            game_client
+                                .server_message_tx
+                                .send(ServerMessage::ConnectionResponse(Err(error)))
+                                .ok();
+                        }
+                    }
                 }
                 _ => warn!("Received unexpected client message {:?}", message),
             }

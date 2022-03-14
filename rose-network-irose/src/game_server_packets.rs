@@ -1,20 +1,22 @@
+use bitvec::array::BitArray;
 use modular_bitfield::prelude::*;
-use nalgebra::Point2;
+use nalgebra::{Point2, Point3};
 use num_derive::FromPrimitive;
-use std::time::Duration;
+use num_traits::FromPrimitive;
+use std::{num::NonZeroUsize, time::Duration};
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
-    SkillId, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
+    SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
 use rose_data_irose::{encode_ability_type, encode_ammo_index};
 use rose_game_common::{
     components::{
-        BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId, Command,
-        CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem, Equipment,
-        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
-        Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList, SkillPage, SkillPoints,
-        SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId,
+        Command, CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
+        Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
+        ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList, SkillPage,
+        SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::server::ActiveStatusEffects,
@@ -24,13 +26,13 @@ use rose_game_common::{
         PickupItemDropContent, PickupItemDropError,
     },
 };
-use rose_network_common::{Packet, PacketWriter};
+use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    PacketEquipmentAmmoPart, PacketWriteCharacterGender, PacketWriteDamage, PacketWriteEntityId,
-    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
-    PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
-    PacketWriteVehiclePartIndex,
+    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadHotbarSlot, PacketReadItems,
+    PacketWriteCharacterGender, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
+    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
+    PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -100,7 +102,7 @@ pub enum ServerPackets {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, FromPrimitive)]
 pub enum ConnectResult {
     Ok = 0,
     Failed = 1,
@@ -115,6 +117,26 @@ pub struct PacketConnectionReply {
     pub pay_flags: u32,
 }
 
+impl TryFrom<&Packet> for PacketConnectionReply {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::ConnectReply as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let result = FromPrimitive::from_u8(reader.read_u8()?).ok_or(PacketError::InvalidPacket)?;
+        let packet_sequence_id = reader.read_u32()?;
+        let pay_flags = reader.read_u32()?;
+        Ok(PacketConnectionReply {
+            result,
+            packet_sequence_id,
+            pay_flags,
+        })
+    }
+}
+
 impl From<&PacketConnectionReply> for Packet {
     fn from(packet: &PacketConnectionReply) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::ConnectReply as u16);
@@ -123,6 +145,17 @@ impl From<&PacketConnectionReply> for Packet {
         writer.write_u32(packet.pay_flags);
         writer.into()
     }
+}
+
+fn read_skill_page(
+    reader: &mut PacketReader,
+    skill_page_type: SkillPageType,
+) -> Result<SkillPage, PacketError> {
+    let mut skill_page = SkillPage::new(skill_page_type);
+    for index in 0..30 {
+        skill_page.skills[index] = SkillId::new(reader.read_u16()?);
+    }
+    Ok(skill_page)
 }
 
 fn write_skill_page(writer: &mut PacketWriter, skill_page: &SkillPage) {
@@ -138,27 +171,160 @@ fn write_skill_page(writer: &mut PacketWriter, skill_page: &SkillPage) {
     }
 }
 
-pub struct PacketServerSelectCharacter<'a> {
-    pub character_info: &'a CharacterInfo,
-    pub position: &'a Position,
-    pub equipment: &'a Equipment,
-    pub basic_stats: &'a BasicStats,
-    pub level: &'a Level,
-    pub experience_points: &'a ExperiencePoints,
-    pub skill_list: &'a SkillList,
-    pub hotbar: &'a Hotbar,
-    pub health_points: &'a HealthPoints,
-    pub mana_points: &'a ManaPoints,
+pub struct PacketServerSelectCharacter {
+    pub character_info: CharacterInfo,
+    pub position: Position,
+    pub equipment: Equipment,
+    pub basic_stats: BasicStats,
+    pub level: Level,
+    pub experience_points: ExperiencePoints,
+    pub skill_list: SkillList,
+    pub hotbar: Hotbar,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
     pub stat_points: StatPoints,
     pub skill_points: SkillPoints,
-    pub union_membership: &'a UnionMembership,
+    pub union_membership: UnionMembership,
     pub stamina: Stamina,
 }
 
-impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
-    fn from(packet: &'a PacketServerSelectCharacter<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerSelectCharacter {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::SelectCharacter as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut union_membership = UnionMembership::default();
+
+        let mut reader = PacketReader::from(packet);
+        let gender = reader.read_character_gender_u8()?;
+
+        let position_zone_id = ZoneId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let position_x = reader.read_f32()?;
+        let position_y = reader.read_f32()?;
+        let revive_zone_id = ZoneId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+
+        let _face = reader.read_u32()?;
+        let _hair = reader.read_u32()?;
+        let equipment = reader.read_equipment_visible_part()?;
+
+        // tagBasicInfo
+        let birth_stone = reader.read_u8()?;
+        let face = reader.read_u8()?;
+        let hair = reader.read_u8()?;
+        let job = reader.read_u16()?;
+        union_membership.current_union = NonZeroUsize::new(reader.read_u8()? as usize);
+        let rank = reader.read_u8()?;
+        let fame = reader.read_u8()?;
+
+        // tagBasicAbility
+        let strength = reader.read_u16()? as i32;
+        let dexterity = reader.read_u16()? as i32;
+        let intelligence = reader.read_u16()? as i32;
+        let concentration = reader.read_u16()? as i32;
+        let charm = reader.read_u16()? as i32;
+        let sense = reader.read_u16()? as i32;
+
+        // tagGrowAbility
+        let health_points = HealthPoints::new(reader.read_u16()? as i32);
+        let mana_points = ManaPoints::new(reader.read_u16()? as i32);
+        let experience_points = ExperiencePoints::new(reader.read_u32()? as u64);
+        let level = Level::new(reader.read_u16()? as u32);
+        let stat_points = StatPoints::new(reader.read_u16()? as u32);
+        let skill_points = SkillPoints::new(reader.read_u16()? as u32);
+        let _body_size = reader.read_u8()?;
+        let _head_size = reader.read_u8()?;
+        let _penalty_xp = reader.read_u32()?;
+        let fame_g = reader.read_u16()?;
+        let fame_b = reader.read_u16()?;
+
+        for i in 0..10 {
+            union_membership.points[i] = reader.read_u16()? as u32;
+        }
+
+        let _guild_id = reader.read_u32()?;
+        let _guild_contribution = reader.read_u16()?;
+        let _guild_pos = reader.read_u8()?;
+        let _pk_flag = reader.read_u16()?;
+        let stamina = Stamina::new(reader.read_u16()? as u32);
+
+        for _ in 0..40 {
+            let _seconds_remaining = reader.read_u32()?;
+            let _buff_id = reader.read_u16()?;
+            let _reserved = reader.read_u16()?;
+        }
+
+        // tagSkillAbility
+        let basic_skill_page = read_skill_page(&mut reader, SkillPageType::Basic)?;
+        let active_skill_page = read_skill_page(&mut reader, SkillPageType::Active)?;
+        let passive_skill_page = read_skill_page(&mut reader, SkillPageType::Passive)?;
+        let clan_skill_page = read_skill_page(&mut reader, SkillPageType::Clan)?;
+        let skill_list = SkillList {
+            basic: basic_skill_page,
+            active: active_skill_page,
+            passive: passive_skill_page,
+            clan: clan_skill_page,
+        };
+
+        // CHotIcons
+        let mut hotbar = Hotbar::default();
+        assert!(hotbar.pages.len() * hotbar.pages[0].len() == 32);
+        for page in hotbar.pages.iter_mut() {
+            for slot in page.iter_mut() {
+                *slot = reader.read_hotbar_slot()?;
+            }
+        }
+
+        let unique_id = reader.read_u32()?;
+        let name = reader.read_null_terminated_utf8()?.to_string();
+
+        Ok(PacketServerSelectCharacter {
+            character_info: CharacterInfo {
+                name,
+                gender,
+                race: 0,
+                birth_stone,
+                job,
+                face,
+                hair,
+                rank,
+                fame,
+                fame_b,
+                fame_g,
+                revive_zone_id,
+                revive_position: Point3::new(0.0, 0.0, 0.0),
+                unique_id,
+            },
+            position: Position::new(Point3::new(position_x, position_y, 0.0), position_zone_id),
+            equipment,
+            basic_stats: BasicStats {
+                strength,
+                dexterity,
+                intelligence,
+                concentration,
+                charm,
+                sense,
+            },
+            level,
+            experience_points,
+            skill_list,
+            hotbar,
+            health_points,
+            mana_points,
+            stat_points,
+            skill_points,
+            union_membership,
+            stamina,
+        })
+    }
+}
+
+impl From<&PacketServerSelectCharacter> for Packet {
+    fn from(packet: &PacketServerSelectCharacter) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SelectCharacter as u16);
-        let character_info = packet.character_info;
+        let character_info = &packet.character_info;
         writer.write_character_gender_u8(character_info.gender);
         writer.write_u16(packet.position.zone_id.get() as u16);
         writer.write_f32(packet.position.position.x);
@@ -167,7 +333,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
 
         writer.write_u32(character_info.face as u32);
         writer.write_u32(character_info.hair as u32);
-        writer.write_equipment_visible_part(packet.equipment);
+        writer.write_equipment_visible_part(&packet.equipment);
 
         // tagBasicInfo
         writer.write_u8(character_info.birth_stone);
@@ -185,7 +351,7 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
         writer.write_u8(character_info.fame);
 
         // tagBasicAbility
-        let basic_stats = packet.basic_stats;
+        let basic_stats = &packet.basic_stats;
         writer.write_u16(basic_stats.strength as u16);
         writer.write_u16(basic_stats.dexterity as u16);
         writer.write_u16(basic_stats.intelligence as u16);
@@ -249,16 +415,84 @@ impl<'a> From<&'a PacketServerSelectCharacter<'a>> for Packet {
     }
 }
 
-pub struct PacketServerCharacterInventory<'a> {
-    pub equipment: &'a Equipment,
-    pub inventory: &'a Inventory,
+pub struct PacketServerCharacterInventory {
+    pub equipment: Equipment,
+    pub inventory: Inventory,
 }
 
-impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
-    fn from(packet: &'a PacketServerCharacterInventory<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerCharacterInventory {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::CharacterInventory as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let mut equipment = Equipment::default();
+        let mut inventory = Inventory {
+            money: Money(reader.read_i64()?),
+            ..Default::default()
+        };
+        reader.read_equipment_item_full()?; // Empty item for equipment index 0
+
+        for index in [
+            EquipmentIndex::Face,
+            EquipmentIndex::Head,
+            EquipmentIndex::Body,
+            EquipmentIndex::Back,
+            EquipmentIndex::Hands,
+            EquipmentIndex::Feet,
+            EquipmentIndex::WeaponRight,
+            EquipmentIndex::WeaponLeft,
+            EquipmentIndex::Necklace,
+            EquipmentIndex::Ring,
+            EquipmentIndex::Earring,
+        ] {
+            equipment.equipped_items[index] = reader.read_equipment_item_full()?;
+        }
+
+        for slot in inventory.equipment.slots.iter_mut() {
+            *slot = reader.read_item_full()?;
+        }
+
+        for slot in inventory.consumables.slots.iter_mut() {
+            *slot = reader.read_item_full()?;
+        }
+
+        for slot in inventory.materials.slots.iter_mut() {
+            *slot = reader.read_item_full()?;
+        }
+
+        for slot in inventory.vehicles.slots.iter_mut() {
+            *slot = reader.read_item_full()?;
+        }
+
+        for index in [AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
+            equipment.equipped_ammo[index] = reader.read_stackable_item_full()?;
+        }
+
+        for index in [
+            VehiclePartIndex::Body,
+            VehiclePartIndex::Engine,
+            VehiclePartIndex::Leg,
+            VehiclePartIndex::Ability,
+        ] {
+            equipment.equipped_vehicle[index] = reader.read_equipment_item_full()?;
+        }
+
+        Ok(PacketServerCharacterInventory {
+            equipment,
+            inventory,
+        })
+    }
+}
+
+impl From<&PacketServerCharacterInventory> for Packet {
+    fn from(packet: &PacketServerCharacterInventory) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CharacterInventory as u16);
-        let inventory = packet.inventory;
-        let equipment = packet.equipment;
+        let inventory = &packet.inventory;
+        let equipment = &packet.equipment;
         writer.write_i64(inventory.money.0);
 
         writer.write_equipment_item_full(None); // Empty item for equipment index 0
@@ -311,12 +545,106 @@ impl<'a> From<&'a PacketServerCharacterInventory<'a>> for Packet {
     }
 }
 
-pub struct PacketServerCharacterQuestData<'a> {
-    pub quest_state: &'a QuestState,
+pub struct PacketServerCharacterQuestData {
+    pub quest_state: QuestState,
 }
 
-impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
-    fn from(packet: &'a PacketServerCharacterQuestData<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerCharacterQuestData {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::QuestData as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+
+        let mut episode_variables: [u16; 5] = Default::default();
+        let mut job_variables: [u16; 3] = Default::default();
+        let mut planet_variables: [u16; 7] = Default::default();
+        let mut union_variables: [u16; 10] = Default::default();
+        let mut active_quests: [Option<ActiveQuest>; 10] = Default::default();
+        let mut quest_switches_u32: [u32; (1024 / 32)] = Default::default();
+
+        // Episode Variables
+        for variable in episode_variables.iter_mut() {
+            *variable = reader.read_u16()?;
+        }
+
+        // Job Variables
+        for variable in job_variables.iter_mut() {
+            *variable = reader.read_u16()?;
+        }
+
+        // Planet Variables
+        for variable in planet_variables.iter_mut() {
+            *variable = reader.read_u16()?;
+        }
+
+        // Union Variables
+        for variable in union_variables.iter_mut() {
+            *variable = reader.read_u16()?;
+        }
+
+        // Active Quests
+        for active_quest in active_quests.iter_mut() {
+            let quest_id = reader.read_u16()? as usize;
+            let expire_time = reader.read_u32()? as u64;
+
+            let mut variables: [u16; 10] = Default::default();
+            for variable in variables.iter_mut() {
+                *variable = reader.read_u16()?;
+            }
+
+            let switches = reader.read_u32()?;
+
+            let mut items: [Option<Item>; 6] = Default::default();
+            for item in items.iter_mut() {
+                *item = reader.read_item_full()?;
+            }
+
+            if quest_id != 0 {
+                *active_quest = Some(ActiveQuest {
+                    quest_id,
+                    expire_time: if expire_time != 0 {
+                        Some(WorldTicks(expire_time))
+                    } else {
+                        None
+                    },
+                    variables,
+                    switches: BitArray::new([switches]),
+                    items,
+                })
+            }
+        }
+
+        // Quest Switches
+        for switch_u32 in quest_switches_u32.iter_mut() {
+            *switch_u32 = reader.read_u32()?;
+        }
+
+        /*
+        // TODO: Wish list items
+        for _ in 0..30 {
+            reader.read_item_full()?;
+        }
+        */
+
+        Ok(PacketServerCharacterQuestData {
+            quest_state: QuestState {
+                episode_variables,
+                job_variables,
+                planet_variables,
+                union_variables,
+                quest_switches: BitArray::new(quest_switches_u32),
+                active_quests,
+            },
+        })
+    }
+}
+
+impl From<&PacketServerCharacterQuestData> for Packet {
+    fn from(packet: &PacketServerCharacterQuestData) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::QuestData as u16);
 
         // Episode Variables
@@ -405,7 +733,7 @@ impl<'a> From<&'a PacketServerCharacterQuestData<'a>> for Packet {
         }
 
         // Quest Switches
-        let quest_switches_u32 = packet.quest_state.quest_switches.into_inner();
+        let quest_switches_u32 = &packet.quest_state.quest_switches.into_inner();
         for i in 0..(1024 / 32) {
             writer.write_u32(quest_switches_u32.get(i).cloned().unwrap_or(0));
         }

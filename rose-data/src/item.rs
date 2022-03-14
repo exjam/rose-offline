@@ -21,8 +21,8 @@ pub enum EquipmentIndex {
     Earring,
 }
 
-impl From<EquipmentIndex> for ItemType {
-    fn from(equipment_index: EquipmentIndex) -> Self {
+impl From<&EquipmentIndex> for ItemType {
+    fn from(equipment_index: &EquipmentIndex) -> Self {
         match equipment_index {
             EquipmentIndex::Face => ItemType::Face,
             EquipmentIndex::Head => ItemType::Head,
@@ -105,7 +105,7 @@ pub struct EquipmentItem {
 
 impl EquipmentItem {
     pub fn new(item: &ItemReference) -> Option<EquipmentItem> {
-        if item.item_type.is_equipment_item() {
+        if item.item_type.is_equipment_item() && item.item_number != 0 {
             Some(EquipmentItem {
                 item: *item,
                 gem: 0,
@@ -147,7 +147,7 @@ pub enum StackError {
 
 impl StackableItem {
     pub fn new(item: &ItemReference, quantity: u32) -> Option<StackableItem> {
-        if item.item_type.is_stackable_item() && quantity > 0 {
+        if item.item_type.is_stackable_item() && item.item_number != 0 && quantity > 0 {
             Some(StackableItem {
                 item: *item,
                 quantity,

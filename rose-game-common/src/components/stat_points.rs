@@ -7,13 +7,13 @@ pub struct StatPoints {
 }
 
 impl StatPoints {
-    pub fn new() -> Self {
-        Self { points: 0 }
+    pub fn new(points: u32) -> Self {
+        Self { points }
     }
 }
 
 impl Default for StatPoints {
     fn default() -> Self {
-        Self::new()
+        Self::new(0)
     }
 }

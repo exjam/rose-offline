@@ -11,9 +11,6 @@ pub struct UnionMembership {
 
 impl UnionMembership {
     pub fn new() -> Self {
-        Self {
-            current_union: None,
-            points: [0; 10],
-        }
+        Default::default()
     }
 }

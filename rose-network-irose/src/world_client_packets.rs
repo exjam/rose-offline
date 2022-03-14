@@ -152,3 +152,14 @@ impl<'a> TryFrom<&'a Packet> for PacketClientSelectCharacter<'a> {
         Ok(PacketClientSelectCharacter { slot, name })
     }
 }
+
+impl<'a> From<&'a PacketClientSelectCharacter<'a>> for Packet {
+    fn from(packet: &'a PacketClientSelectCharacter<'a>) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::SelectCharacter as u16);
+        writer.write_u8(packet.slot);
+        writer.write_u8(0);
+        writer.write_u8(0);
+        writer.write_null_terminated_utf8(packet.name);
+        writer.into()
+    }
+}

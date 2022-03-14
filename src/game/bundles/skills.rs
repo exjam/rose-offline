@@ -120,7 +120,7 @@ pub fn skill_list_try_learn_skill(
                         skill_slot,
                         skill_id: Some(skill_id),
                         updated_skill_points: skill_points
-                            .map_or_else(SkillPoints::new, |skill_points| **skill_points),
+                            .map_or_else(SkillPoints::default, |skill_points| **skill_points),
                     })))
                     .ok();
             }
@@ -152,7 +152,7 @@ pub fn skill_list_try_level_up_skill(
 
     if let Some(game_client) = game_client {
         let updated_skill_points =
-            skill_points.map_or_else(SkillPoints::new, |skill_points| **skill_points);
+            skill_points.map_or_else(SkillPoints::default, |skill_points| **skill_points);
 
         match result {
             Ok(skill_id) => {

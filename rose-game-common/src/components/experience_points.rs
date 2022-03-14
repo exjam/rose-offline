@@ -7,13 +7,13 @@ pub struct ExperiencePoints {
 }
 
 impl ExperiencePoints {
-    pub fn new() -> Self {
-        Self { xp: 0 }
+    pub fn new(xp: u64) -> Self {
+        Self { xp }
     }
 }
 
 impl Default for ExperiencePoints {
     fn default() -> Self {
-        Self::new()
+        Self::new(0)
     }
 }

@@ -308,7 +308,7 @@ impl GameServer {
         message: ServerMessage,
     ) -> Result<(), anyhow::Error> {
         match message {
-            ServerMessage::GameConnectionResponse(response) => {
+            ServerMessage::ConnectionResponse(response) => {
                 match response {
                     Ok(response) => {
                         client
@@ -317,41 +317,6 @@ impl GameServer {
                                 result: ConnectResult::Ok,
                                 packet_sequence_id: response.packet_sequence_id,
                                 pay_flags: 0xff,
-                            }))
-                            .await?;
-
-                        client
-                            .connection
-                            .write_packet(Packet::from(&PacketServerSelectCharacter {
-                                character_info: &response.character_info,
-                                position: &response.position,
-                                equipment: &response.equipment,
-                                basic_stats: &response.basic_stats,
-                                level: &response.level,
-                                experience_points: &response.experience_points,
-                                skill_list: &response.skill_list,
-                                hotbar: &response.hotbar,
-                                health_points: &response.health_points,
-                                mana_points: &response.mana_points,
-                                stat_points: response.stat_points,
-                                skill_points: response.skill_points,
-                                union_membership: &response.union_membership,
-                                stamina: response.stamina,
-                            }))
-                            .await?;
-
-                        client
-                            .connection
-                            .write_packet(Packet::from(&PacketServerCharacterInventory {
-                                inventory: &response.inventory,
-                                equipment: &response.equipment,
-                            }))
-                            .await?;
-
-                        client
-                            .connection
-                            .write_packet(Packet::from(&PacketServerCharacterQuestData {
-                                quest_state: &response.quest_state,
                             }))
                             .await?;
                     }
@@ -366,6 +331,44 @@ impl GameServer {
                             .await?;
                     }
                 };
+            }
+            ServerMessage::CharacterData(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerSelectCharacter {
+                        character_info: message.character_info,
+                        position: message.position,
+                        equipment: message.equipment,
+                        basic_stats: message.basic_stats,
+                        level: message.level,
+                        experience_points: message.experience_points,
+                        skill_list: message.skill_list,
+                        hotbar: message.hotbar,
+                        health_points: message.health_points,
+                        mana_points: message.mana_points,
+                        stat_points: message.stat_points,
+                        skill_points: message.skill_points,
+                        union_membership: message.union_membership,
+                        stamina: message.stamina,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CharacterDataItems(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCharacterInventory {
+                        inventory: message.inventory,
+                        equipment: message.equipment,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CharacterDataQuest(message) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCharacterQuestData {
+                        quest_state: message.quest_state,
+                    }))
+                    .await?;
             }
             ServerMessage::JoinZone(response) => {
                 client
@@ -1167,7 +1170,6 @@ impl GameServer {
             }
             // These messages are for other servers
             ServerMessage::ReturnToCharacterSelect
-            | ServerMessage::ConnectionResponse(_)
             | ServerMessage::LoginResponse(_)
             | ServerMessage::ChannelList(_)
             | ServerMessage::JoinServer(_)

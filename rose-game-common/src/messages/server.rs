@@ -119,24 +119,32 @@ pub enum SelectCharacterError {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GameConnectionResponse {
-    pub packet_sequence_id: u32,
+pub struct CharacterData {
     pub character_info: CharacterInfo,
     pub position: Position,
-    pub equipment: Equipment,
     pub basic_stats: BasicStats,
     pub level: Level,
+    pub equipment: Equipment,
     pub experience_points: ExperiencePoints,
-    pub inventory: Inventory,
     pub skill_list: SkillList,
     pub hotbar: Hotbar,
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,
     pub stat_points: StatPoints,
     pub skill_points: SkillPoints,
-    pub quest_state: QuestState,
     pub union_membership: UnionMembership,
     pub stamina: Stamina,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CharacterDataItems {
+    pub inventory: Inventory,
+    pub equipment: Equipment,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CharacterDataQuest {
+    pub quest_state: QuestState,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -627,7 +635,9 @@ pub enum ServerMessage {
     CreateCharacter(Result<CreateCharacterResponse, CreateCharacterError>),
     DeleteCharacter(Result<DeleteCharacterResponse, DeleteCharacterError>),
     SelectCharacter(Result<JoinServerResponse, SelectCharacterError>),
-    GameConnectionResponse(Result<Box<GameConnectionResponse>, ConnectionRequestError>),
+    CharacterData(Box<CharacterData>),
+    CharacterDataItems(Box<CharacterDataItems>),
+    CharacterDataQuest(Box<CharacterDataQuest>),
     JoinZone(JoinZoneResponse),
     AttackEntity(AttackEntity),
     DamageEntity(DamageEntity),

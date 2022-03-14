@@ -95,7 +95,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
             reader.read_u16()?;
 
             let mut equipment = Equipment::new();
-            for &index in [
+            for index in [
                 EquipmentIndex::Head,
                 EquipmentIndex::Body,
                 EquipmentIndex::Hands,
@@ -250,6 +250,28 @@ pub struct PacketServerMoveServer<'a> {
     pub packet_codec_seed: u32,
     pub ip: &'a str,
     pub port: u16,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketServerMoveServer<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::MoveServer as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let port = reader.read_u16()?;
+        let login_token = reader.read_u32()?;
+        let packet_codec_seed = reader.read_u32()?;
+        let ip = reader.read_null_terminated_utf8()?;
+        Ok(PacketServerMoveServer {
+            login_token,
+            packet_codec_seed,
+            ip,
+            port,
+        })
+    }
 }
 
 impl<'a> From<&PacketServerMoveServer<'a>> for Packet {

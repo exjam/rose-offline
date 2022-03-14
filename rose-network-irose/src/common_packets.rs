@@ -2,8 +2,8 @@ use modular_bitfield::prelude::*;
 use std::convert::TryInto;
 
 use rose_data::{
-    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, SkillPageType, StackableItem,
-    StatusEffectType, VehiclePartIndex,
+    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, SkillPageType,
+    StackableItem, StatusEffectType, VehiclePartIndex,
 };
 use rose_data_irose::{
     decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
@@ -109,13 +109,9 @@ pub struct PacketEquipmentAmmoPart {
 #[bitfield]
 #[derive(Clone, Copy)]
 pub struct PacketEquipmentItemPart {
-    #[skip(getters)]
     item_number: B10,
-    #[skip(getters)]
     gem: B9,
-    #[skip(getters)]
     has_socket: bool,
-    #[skip(getters)]
     grade: B4,
 }
 
@@ -133,9 +129,7 @@ pub struct PacketFullItemHeader {
 #[bitfield]
 #[derive(Clone, Copy)]
 pub struct PacketEquipmentItemFull {
-    #[skip(getters)]
     item_type: B5,
-    #[skip(getters)]
     item_number: B10,
     is_crafted: bool,
     gem: B9,
@@ -150,9 +144,7 @@ pub struct PacketEquipmentItemFull {
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct PacketStackableItemFull {
-    #[skip(getters)]
     item_type: B5,
-    #[skip(getters)]
     item_number: B10,
     #[skip]
     __: B1,
@@ -161,6 +153,13 @@ pub struct PacketStackableItemFull {
 
 pub trait PacketReadItems {
     fn read_item_full(&mut self) -> Result<Option<Item>, PacketError>;
+    fn read_equipment_item_full(&mut self) -> Result<Option<EquipmentItem>, PacketError>;
+    fn read_stackable_item_full(&mut self) -> Result<Option<StackableItem>, PacketError>;
+    fn read_equipment_visible_part(&mut self) -> Result<Equipment, PacketError>;
+    fn read_equipment_item_part(
+        &mut self,
+        item_type: ItemType,
+    ) -> Result<Option<EquipmentItem>, PacketError>;
 }
 
 impl<'a> PacketReadItems for PacketReader<'a> {
@@ -198,6 +197,85 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         }
 
         Ok(None)
+    }
+
+    fn read_equipment_item_full(&mut self) -> Result<Option<EquipmentItem>, PacketError> {
+        let item = PacketEquipmentItemFull::from_bytes(
+            self.read_fixed_length_bytes(6)?.try_into().unwrap(),
+        );
+
+        if let Some(item_type) = decode_item_type(item.item_type() as usize) {
+            if let Some(mut equipment) =
+                EquipmentItem::new(&ItemReference::new(item_type, item.item_number() as usize))
+            {
+                equipment.is_crafted = item.is_crafted();
+                equipment.gem = item.gem();
+                equipment.durability = item.durability();
+                equipment.life = item.life();
+                equipment.has_socket = item.has_socket();
+                equipment.is_appraised = item.is_appraised();
+                equipment.grade = item.grade();
+                return Ok(Some(equipment));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn read_stackable_item_full(&mut self) -> Result<Option<StackableItem>, PacketError> {
+        let item = PacketStackableItemFull::from_bytes(
+            self.read_fixed_length_bytes(6)?.try_into().unwrap(),
+        );
+
+        if let Some(item_type) = decode_item_type(item.item_type() as usize) {
+            return Ok(StackableItem::new(
+                &ItemReference::new(item_type, item.item_number() as usize),
+                item.quantity() as u32,
+            ));
+        }
+
+        Ok(None)
+    }
+
+    fn read_equipment_item_part(
+        &mut self,
+        item_type: ItemType,
+    ) -> Result<Option<EquipmentItem>, PacketError> {
+        let item_part = PacketEquipmentItemPart::from_bytes(
+            self.read_fixed_length_bytes(3)?.try_into().unwrap(),
+        );
+        self.read_u8()?;
+
+        if let Some(mut item) = EquipmentItem::new(&ItemReference::new(
+            item_type,
+            item_part.item_number() as usize,
+        )) {
+            item.gem = item_part.gem();
+            item.grade = item_part.grade();
+            item.has_socket = item_part.has_socket();
+            Ok(Some(item))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn read_equipment_visible_part(&mut self) -> Result<Equipment, PacketError> {
+        let mut equipment = Equipment::default();
+
+        for index in &[
+            EquipmentIndex::Head,
+            EquipmentIndex::Body,
+            EquipmentIndex::Hands,
+            EquipmentIndex::Feet,
+            EquipmentIndex::Face,
+            EquipmentIndex::Back,
+            EquipmentIndex::WeaponRight,
+            EquipmentIndex::WeaponLeft,
+        ] {
+            equipment.equipped_items[*index] = self.read_equipment_item_part(index.into())?;
+        }
+
+        Ok(equipment)
     }
 }
 

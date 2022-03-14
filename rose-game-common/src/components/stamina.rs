@@ -9,13 +9,13 @@ pub struct Stamina {
 }
 
 impl Stamina {
-    pub fn new() -> Self {
-        Self { stamina: 0 }
+    pub fn new(stamina: u32) -> Self {
+        Self { stamina }
     }
 }
 
 impl Default for Stamina {
     fn default() -> Self {
-        Self::new()
+        Self::new(0)
     }
 }

@@ -12,7 +12,7 @@ use rose_game_common::{
     components::{BasicStatType, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot},
     messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
 };
-use rose_network_common::{Packet, PacketError, PacketReader};
+use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
     decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
@@ -75,6 +75,15 @@ impl<'a> TryFrom<&'a Packet> for PacketClientConnectRequest<'a> {
             login_token,
             password_md5,
         })
+    }
+}
+
+impl<'a> From<&'a PacketClientConnectRequest<'a>> for Packet {
+    fn from(packet: &'a PacketClientConnectRequest<'a>) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ConnectRequest as u16);
+        writer.write_u32(packet.login_token as u32);
+        writer.write_fixed_length_utf8(packet.password_md5, 32);
+        writer.into()
     }
 }
 
