@@ -132,7 +132,9 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         }
     }
 
-    let mut npcs = HashMap::new();
+    let mut npcs = Vec::with_capacity(data.rows());
+    let mut npc_count = 0;
+    npcs.push(None); // NPC id 0
     for id in 1..data.rows() {
         let npc_model_data = model_data
             .as_ref()
@@ -142,6 +144,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
 
         if npc_string_id.is_none() && npc_model_data.is_none() && ai_file_index == 0 {
             // NPC must have either a name, a model, or an AI file
+            npcs.push(None);
             continue;
         }
 
@@ -156,61 +159,59 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
             }
         }
 
-        npcs.insert(
-            NpcId::new(id as u16).unwrap(),
-            NpcData {
-                name: npc_string_id
-                    .and_then(|string_id| stl.get_text_string(1, string_id))
-                    .unwrap_or("")
-                    .to_string(),
-                id: NpcId::new(id as u16).unwrap(),
-                walk_speed: data.get_walk_speed(id).unwrap_or(0),
-                run_speed: data.get_run_speed(id).unwrap_or(0),
-                scale: (data.get_scale(id).unwrap_or(100) as f32) / 100.0,
-                right_hand_part_index: data.get_right_hand_part_index(id).unwrap_or(0),
-                left_hand_part_index: data.get_left_hand_part_index(id).unwrap_or(0),
-                level: data.get_level(id).unwrap_or(0),
-                health_points: data.get_health_points(id).unwrap_or(0),
-                attack: data.get_attack(id).unwrap_or(0),
-                hit: data.get_hit(id).unwrap_or(0),
-                defence: data.get_defence(id).unwrap_or(0),
-                resistance: data.get_resistance(id).unwrap_or(0),
-                avoid: data.get_avoid(id).unwrap_or(0),
-                attack_speed: data.get_attack_speed(id).unwrap_or(0),
-                is_attack_magic_damage: data.get_attack_is_magic_damage(id).unwrap_or(false),
-                ai_file_index: data.get_ai_file_index(id).unwrap_or(0),
-                reward_xp: data.get_reward_xp(id).unwrap_or(0),
-                drop_table_index: data.get_drop_table_index(id).unwrap_or(0),
-                drop_money_rate: data.get_drop_money_rate(id).unwrap_or(0),
-                drop_item_rate: data.get_drop_item_rate(id).unwrap_or(0),
-                npc_minimap_icon_index: data.get_npc_minimap_icon_index(id).unwrap_or(0),
-                summon_point_requirement: data.get_summon_point_requirement(id).unwrap_or(0),
-                store_tabs: data.get_store_tabs(id),
-                store_union_number: data.get_store_union_number(id),
-                is_untargetable: data.get_is_untargetable(id).unwrap_or(false),
-                attack_range: data.get_attack_range(id).unwrap_or(0),
-                npc_type_index: data.get_npc_type_index(id).unwrap_or(0),
-                hit_sound_index: data.get_hit_sound_index(id).unwrap_or(0),
-                face_icon_index: data.get_face_icon_index(id).unwrap_or(0),
-                summon_monster_type: data.get_summon_monster_type(id).unwrap_or(0),
-                normal_effect_sound_index: data.get_normal_effect_sound_index(id).unwrap_or(0),
-                attack_sound_index: data.get_attack_sound_index(id).unwrap_or(0),
-                hitted_sound_index: data.get_hitted_sound_index(id).unwrap_or(0),
-                hand_hit_effect_index: data.get_hand_hit_effect_index(id).unwrap_or(0),
-                dead_effect_index: data.get_dead_effect_index(id).unwrap_or(0),
-                die_sound_index: data.get_die_sound_index(id).unwrap_or(0),
-                npc_quest_type: data.get_npc_quest_type(id).unwrap_or(0),
-                glow_colour: data.get_glow_colour(id),
-                create_effect_index: data.get_create_effect_index(id).unwrap_or(0),
-                create_sound_index: data.get_create_sound_index(id).unwrap_or(0),
-                death_quest_trigger_name: data
-                    .get_death_quest_trigger_name(id)
-                    .unwrap_or("")
-                    .to_string(),
-                npc_height: data.get_npc_height(id).unwrap_or(0),
-                motion_data,
-            },
-        );
+        npc_count += 1;
+        npcs.push(Some(NpcData {
+            name: npc_string_id
+                .and_then(|string_id| stl.get_text_string(1, string_id))
+                .unwrap_or("")
+                .to_string(),
+            id: NpcId::new(id as u16).unwrap(),
+            walk_speed: data.get_walk_speed(id).unwrap_or(0),
+            run_speed: data.get_run_speed(id).unwrap_or(0),
+            scale: (data.get_scale(id).unwrap_or(100) as f32) / 100.0,
+            right_hand_part_index: data.get_right_hand_part_index(id).unwrap_or(0),
+            left_hand_part_index: data.get_left_hand_part_index(id).unwrap_or(0),
+            level: data.get_level(id).unwrap_or(0),
+            health_points: data.get_health_points(id).unwrap_or(0),
+            attack: data.get_attack(id).unwrap_or(0),
+            hit: data.get_hit(id).unwrap_or(0),
+            defence: data.get_defence(id).unwrap_or(0),
+            resistance: data.get_resistance(id).unwrap_or(0),
+            avoid: data.get_avoid(id).unwrap_or(0),
+            attack_speed: data.get_attack_speed(id).unwrap_or(0),
+            is_attack_magic_damage: data.get_attack_is_magic_damage(id).unwrap_or(false),
+            ai_file_index: data.get_ai_file_index(id).unwrap_or(0),
+            reward_xp: data.get_reward_xp(id).unwrap_or(0),
+            drop_table_index: data.get_drop_table_index(id).unwrap_or(0),
+            drop_money_rate: data.get_drop_money_rate(id).unwrap_or(0),
+            drop_item_rate: data.get_drop_item_rate(id).unwrap_or(0),
+            npc_minimap_icon_index: data.get_npc_minimap_icon_index(id).unwrap_or(0),
+            summon_point_requirement: data.get_summon_point_requirement(id).unwrap_or(0),
+            store_tabs: data.get_store_tabs(id),
+            store_union_number: data.get_store_union_number(id),
+            is_untargetable: data.get_is_untargetable(id).unwrap_or(false),
+            attack_range: data.get_attack_range(id).unwrap_or(0),
+            npc_type_index: data.get_npc_type_index(id).unwrap_or(0),
+            hit_sound_index: data.get_hit_sound_index(id).unwrap_or(0),
+            face_icon_index: data.get_face_icon_index(id).unwrap_or(0),
+            summon_monster_type: data.get_summon_monster_type(id).unwrap_or(0),
+            normal_effect_sound_index: data.get_normal_effect_sound_index(id).unwrap_or(0),
+            attack_sound_index: data.get_attack_sound_index(id).unwrap_or(0),
+            hitted_sound_index: data.get_hitted_sound_index(id).unwrap_or(0),
+            hand_hit_effect_index: data.get_hand_hit_effect_index(id).unwrap_or(0),
+            dead_effect_index: data.get_dead_effect_index(id).unwrap_or(0),
+            die_sound_index: data.get_die_sound_index(id).unwrap_or(0),
+            npc_quest_type: data.get_npc_quest_type(id).unwrap_or(0),
+            glow_colour: data.get_glow_colour(id),
+            create_effect_index: data.get_create_effect_index(id).unwrap_or(0),
+            create_sound_index: data.get_create_sound_index(id).unwrap_or(0),
+            death_quest_trigger_name: data
+                .get_death_quest_trigger_name(id)
+                .unwrap_or("")
+                .to_string(),
+            npc_height: data.get_npc_height(id).unwrap_or(0),
+            motion_data,
+        }));
     }
 
     let data = StbEvent(
@@ -267,7 +268,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
 
     log::debug!(
         "Loaded {} NPCs, {} motions, {} conversations, {} stores",
-        npcs.len(),
+        npc_count,
         motions.len(),
         conversation_files.len(),
         store_tabs.len()

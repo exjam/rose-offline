@@ -106,14 +106,14 @@ pub struct NpcDatabaseOptions {
 }
 
 pub struct NpcDatabase {
-    npcs: HashMap<NpcId, NpcData>,
+    npcs: Vec<Option<NpcData>>,
     conversation_files: HashMap<String, NpcConversationData>,
     store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
 }
 
 impl NpcDatabase {
     pub fn new(
-        npcs: HashMap<NpcId, NpcData>,
+        npcs: Vec<Option<NpcData>>,
         conversation_files: HashMap<String, NpcConversationData>,
         store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
     ) -> Self {
@@ -125,7 +125,10 @@ impl NpcDatabase {
     }
 
     pub fn get_npc(&self, id: NpcId) -> Option<&NpcData> {
-        self.npcs.get(&id)
+        match self.npcs.get(id.get() as usize) {
+            Some(inner) => inner.as_ref(),
+            None => None,
+        }
     }
 
     pub fn get_conversation(&self, key: &NpcConversationId) -> Option<&NpcConversationData> {
@@ -139,5 +142,9 @@ impl NpcDatabase {
 
     pub fn get_store_tab(&self, id: NpcStoreTabId) -> Option<&NpcStoreTabData> {
         self.store_tabs.get(&id)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &NpcData> {
+        self.npcs.iter().filter_map(|npc_data| npc_data.as_ref())
     }
 }
