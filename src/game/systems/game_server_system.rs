@@ -276,7 +276,6 @@ pub fn game_server_join_system(
         (
             Entity,
             &GameClient,
-            &Level,
             &ExperiencePoints,
             &Team,
             &HealthPoints,
@@ -289,16 +288,7 @@ pub fn game_server_join_system(
     world_time: Res<WorldTime>,
 ) {
     query.for_each(
-        |(
-            entity,
-            game_client,
-            level,
-            experience_points,
-            team,
-            health_points,
-            mana_points,
-            position,
-        )| {
+        |(entity, game_client, experience_points, team, health_points, mana_points, position)| {
             if let Ok(message) = game_client.client_message_rx.try_recv() {
                 match message {
                     ClientMessage::JoinZoneRequest => {
@@ -318,7 +308,6 @@ pub fn game_server_join_system(
                                 .server_message_tx
                                 .send(ServerMessage::JoinZone(JoinZoneResponse {
                                     entity_id,
-                                    level: level.clone(),
                                     experience_points: experience_points.clone(),
                                     team: team.clone(),
                                     health_points: *health_points,

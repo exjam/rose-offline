@@ -150,7 +150,6 @@ pub struct CharacterDataQuest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct JoinZoneResponse {
     pub entity_id: ClientEntityId,
-    pub level: Level,
     pub experience_points: ExperiencePoints,
     pub team: Team,
     pub health_points: HealthPoints,

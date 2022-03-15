@@ -375,11 +375,10 @@ impl GameServer {
                     .connection
                     .write_packet(Packet::from(&PacketServerJoinZone {
                         entity_id: response.entity_id,
-                        level: &response.level,
-                        experience_points: &response.experience_points,
-                        team: &response.team,
-                        health_points: &response.health_points,
-                        mana_points: &response.mana_points,
+                        experience_points: response.experience_points,
+                        team: response.team,
+                        health_points: response.health_points,
+                        mana_points: response.mana_points,
                         world_ticks: response.world_ticks,
                     }))
                     .await?;

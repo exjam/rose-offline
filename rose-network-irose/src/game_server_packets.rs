@@ -819,18 +819,57 @@ impl From<&PacketServerMoveEntity> for Packet {
     }
 }
 
-pub struct PacketServerJoinZone<'a> {
+pub struct PacketServerJoinZone {
     pub entity_id: ClientEntityId,
-    pub level: &'a Level,
-    pub experience_points: &'a ExperiencePoints,
-    pub team: &'a Team,
-    pub health_points: &'a HealthPoints,
-    pub mana_points: &'a ManaPoints,
+    pub experience_points: ExperiencePoints,
+    pub team: Team,
+    pub health_points: HealthPoints,
+    pub mana_points: ManaPoints,
     pub world_ticks: WorldTicks,
 }
 
-impl<'a> From<&'a PacketServerJoinZone<'a>> for Packet {
-    fn from(packet: &'a PacketServerJoinZone<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerJoinZone {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::JoinZone as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let health_points = HealthPoints::new(reader.read_u16()? as i32);
+        let mana_points = ManaPoints::new(reader.read_u16()? as i32);
+
+        let experience_points = ExperiencePoints::new(reader.read_u32()? as u64);
+        let _penalty_xp = reader.read_u32();
+
+        // tagVAR_GLOBAL
+        let _crate_rate = reader.read_u16()?;
+        let _update_time = reader.read_u32()?;
+        let _world_price_rate = reader.read_u16()?;
+        let _town_rate = reader.read_u8()?;
+        for _ in 0..11 {
+            let _item_rate = reader.read_u8()?;
+        }
+        let _global_flags = reader.read_u32()?;
+
+        let world_ticks = WorldTicks(reader.read_u32()? as u64);
+        let team = Team::new(reader.read_u32()?);
+
+        Ok(PacketServerJoinZone {
+            entity_id,
+            experience_points,
+            team,
+            health_points,
+            mana_points,
+            world_ticks,
+        })
+    }
+}
+
+impl From<&PacketServerJoinZone> for Packet {
+    fn from(packet: &PacketServerJoinZone) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::JoinZone as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.health_points.hp as u16);
