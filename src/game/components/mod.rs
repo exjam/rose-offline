@@ -22,7 +22,6 @@ mod passive_recovery_time;
 mod personal_store;
 mod server_info;
 mod spawn_origin;
-mod target;
 mod weight;
 mod world_client;
 
@@ -36,7 +35,7 @@ pub use rose_game_common::components::{
     HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPage, InventoryPageType, ItemDrop,
     ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList,
     SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, StatusEffectsRegen,
-    Team, UnionMembership, MAX_STAMINA,
+    Team, UnionMembership, MAX_STAMINA, Target,
 };
 
 pub use account::Account;
@@ -63,6 +62,5 @@ pub use passive_recovery_time::PassiveRecoveryTime;
 pub use personal_store::{PersonalStore, PERSONAL_STORE_ITEM_SLOTS};
 pub use server_info::ServerInfo;
 pub use spawn_origin::SpawnOrigin;
-pub use target::Target;
 pub use weight::Weight;
 pub use world_client::WorldClient;

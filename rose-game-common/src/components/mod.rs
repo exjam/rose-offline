@@ -23,6 +23,7 @@ mod skill_points;
 mod stamina;
 mod stat_points;
 mod status_effects;
+mod target;
 mod team;
 mod union_membership;
 
@@ -56,5 +57,6 @@ pub use stat_points::StatPoints;
 pub use status_effects::{
     ActiveStatusEffect, ActiveStatusEffectRegen, StatusEffects, StatusEffectsRegen,
 };
+pub use target::Target;
 pub use team::Team;
 pub use union_membership::UnionMembership;
