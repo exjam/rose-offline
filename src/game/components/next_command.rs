@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::{Component, Entity};
-use nalgebra::{Point2, Point3};
+use bevy_math::{Vec2, Vec3};
 
 use rose_data::{Item, MotionId, SkillId};
 use rose_game_common::components::{
@@ -29,7 +29,7 @@ impl NextCommand {
     }
 
     pub fn with_move(
-        destination: Point3<f32>,
+        destination: Vec3,
         target: Option<Entity>,
         move_mode: Option<MoveMode>,
     ) -> Self {
@@ -134,7 +134,7 @@ impl NextCommand {
         }
     }
 
-    pub fn with_cast_skill_target_position(skill_id: SkillId, position: Point2<f32>) -> Self {
+    pub fn with_cast_skill_target_position(skill_id: SkillId, position: Vec2) -> Self {
         Self {
             command: Some(CommandData::CastSkill(CommandCastSkill {
                 skill_id,

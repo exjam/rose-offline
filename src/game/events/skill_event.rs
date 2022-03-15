@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::Entity;
-use nalgebra::Point2;
+use bevy_math::Vec2;
 use std::time::Instant;
 
 use rose_data::{Item, SkillId};
@@ -9,7 +9,7 @@ use crate::game::components::ItemSlot;
 #[derive(Clone)]
 pub enum SkillEventTarget {
     Entity(Entity),
-    Position(Point2<f32>),
+    Position(Vec2),
 }
 
 #[derive(Clone)]

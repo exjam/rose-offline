@@ -1,6 +1,6 @@
+use bevy_math::{Vec2, Vec3};
 use bitvec::array::BitArray;
 use modular_bitfield::prelude::*;
-use nalgebra::{Point2, Point3};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::{num::NonZeroUsize, time::Duration};
@@ -296,10 +296,10 @@ impl TryFrom<&Packet> for PacketServerSelectCharacter {
                 fame_b,
                 fame_g,
                 revive_zone_id,
-                revive_position: Point3::new(0.0, 0.0, 0.0),
+                revive_position: Vec3::new(0.0, 0.0, 0.0),
                 unique_id,
             },
-            position: Position::new(Point3::new(position_x, position_y, 0.0), position_zone_id),
+            position: Position::new(Vec3::new(position_x, position_y, 0.0), position_zone_id),
             equipment,
             basic_stats: BasicStats {
                 strength,
@@ -1096,13 +1096,13 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityNpc {
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
         let position = Position::new(
-            Point3::new(position_x, position_y, 0.0),
+            Vec3::new(position_x, position_y, 0.0),
             ZoneId::new(1).unwrap(),
         );
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Destination::new(Point3::new(
+            Some(Destination::new(Vec3::new(
                 destination_x,
                 destination_y,
                 0.0,
@@ -1192,13 +1192,13 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityMonster {
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
         let position = Position::new(
-            Point3::new(position_x, position_y, 0.0),
+            Vec3::new(position_x, position_y, 0.0),
             ZoneId::new(1).unwrap(),
         );
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Destination::new(Point3::new(
+            Some(Destination::new(Vec3::new(
                 destination_x,
                 destination_y,
                 0.0,
@@ -1900,7 +1900,7 @@ pub struct PacketServerCastSkillTargetEntity {
     pub skill_id: SkillId,
     pub target_entity_id: ClientEntityId,
     pub target_distance: f32,
-    pub target_position: Point2<f32>,
+    pub target_position: Vec2,
     pub cast_motion_id: Option<MotionId>,
 }
 
@@ -1923,7 +1923,7 @@ impl From<&PacketServerCastSkillTargetEntity> for Packet {
 pub struct PacketServerCastSkillTargetPosition {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
-    pub target_position: Point2<f32>,
+    pub target_position: Vec2,
     pub cast_motion_id: Option<MotionId>,
 }
 

@@ -1,8 +1,8 @@
+use bevy_math::Vec2;
 use modular_bitfield::{
     bitfield,
     prelude::{B14, B2},
 };
-use nalgebra::Point2;
 use num_derive::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
@@ -544,7 +544,7 @@ impl TryFrom<&Packet> for PacketClientCastSkillTargetEntity {
 #[derive(Debug)]
 pub struct PacketClientCastSkillTargetPosition {
     pub skill_slot: SkillSlot,
-    pub position: Point2<f32>,
+    pub position: Vec2,
 }
 
 impl TryFrom<&Packet> for PacketClientCastSkillTargetPosition {
@@ -562,7 +562,7 @@ impl TryFrom<&Packet> for PacketClientCastSkillTargetPosition {
 
         Ok(PacketClientCastSkillTargetPosition {
             skill_slot,
-            position: Point2::new(x, y),
+            position: Vec2::new(x, y),
         })
     }
 }

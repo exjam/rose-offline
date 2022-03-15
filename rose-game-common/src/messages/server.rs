@@ -1,5 +1,5 @@
+use bevy_math::Vec2;
 use enum_map::EnumMap;
-use nalgebra::Point2;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use thiserror::Error;
@@ -508,7 +508,7 @@ pub struct CastSkillTargetEntity {
     pub skill_id: SkillId,
     pub target_entity_id: ClientEntityId,
     pub target_distance: f32,
-    pub target_position: Point2<f32>,
+    pub target_position: Vec2,
     pub cast_motion_id: Option<MotionId>,
 }
 
@@ -516,7 +516,7 @@ pub struct CastSkillTargetEntity {
 pub struct CastSkillTargetPosition {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
-    pub target_position: Point2<f32>,
+    pub target_position: Vec2,
     pub cast_motion_id: Option<MotionId>,
 }
 

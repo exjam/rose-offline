@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy_math::Vec3Swizzles;
 
 use crate::game::{
     components::{ClientEntity, ClientEntitySector, Destination, MoveSpeed, Position},
@@ -21,7 +22,7 @@ pub fn update_position_system(
     query.for_each_mut(
         |(entity, client_entity, client_entity_sector, move_speed, mut position, destination)| {
             let direction = destination.position.xy() - position.position.xy();
-            let distance_squared = direction.magnitude_squared();
+            let distance_squared = direction.length_squared();
 
             if distance_squared == 0.0 {
                 position.position = destination.position;
@@ -29,7 +30,7 @@ pub fn update_position_system(
             } else {
                 let move_vector =
                     direction.normalize() * move_speed.speed * server_time.delta.as_secs_f32();
-                if move_vector.magnitude_squared() >= distance_squared {
+                if move_vector.length_squared() >= distance_squared {
                     position.position = destination.position;
                     commands.entity(entity).remove::<Destination>();
                 } else {

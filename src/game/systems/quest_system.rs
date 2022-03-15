@@ -2,9 +2,9 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
+use bevy_math::{Vec2, Vec3, Vec3Swizzles};
 use chrono::{Datelike, Timelike};
 use log::warn;
-use nalgebra::{Point2, Point3};
 use rand::Rng;
 use std::{marker::PhantomData, num::NonZeroU8, ops::RangeInclusive};
 
@@ -297,15 +297,20 @@ fn quest_condition_ability_values(
 fn quest_condition_position(
     quest_parameters: &QuestParameters,
     zone_id: QsdZoneId,
-    position: Point2<f32>,
+    position: Vec2,
     distance: i32,
 ) -> bool {
     if quest_parameters.source.position.zone_id.get() as usize != zone_id {
         return false;
     }
 
-    (nalgebra::distance(&quest_parameters.source.position.position.xy(), &position) as i32)
-        < distance
+    quest_parameters
+        .source
+        .position
+        .position
+        .xy()
+        .distance_squared(position)
+        < (distance as f32 * distance as f32)
 }
 
 fn get_quest_variable(
@@ -559,10 +564,12 @@ fn quest_condition_object_distance(
         .map(|(_, position)| position)
         .filter(|position| position.zone_id == quest_parameters.source.position.zone_id)
         .map(|position| {
-            nalgebra::distance(
-                &position.position.xy(),
-                &quest_parameters.source.position.position.xy(),
-            ) as i32
+            quest_parameters
+                .source
+                .position
+                .position
+                .xy()
+                .distance(position.position.xy()) as i32
         })
         .map(|object_distance| object_distance < distance)
         .unwrap_or(false)
@@ -658,7 +665,7 @@ fn quest_trigger_check_conditions(
             QsdCondition::Position(zone_id, ref position, distance) => quest_condition_position(
                 quest_parameters,
                 zone_id,
-                Point2::new(position.x, position.y),
+                Vec2::new(position.x, position.y),
                 distance,
             ),
             QsdCondition::QuestVariable(ref quest_variables) => {
@@ -1275,7 +1282,7 @@ fn quest_reward_teleport(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_parameters: &mut QuestParameters,
     new_zone_id: ZoneId,
-    new_position: Point3<f32>,
+    new_position: Vec3,
 ) -> bool {
     client_entity_teleport_zone(
         &mut quest_system_parameters.commands,
@@ -1512,7 +1519,7 @@ fn quest_reward_spawn_monster(
                 .map(|(_, position)| (position.zone_id, position.position)),
             QsdRewardSpawnMonsterLocation::Position(zone_id, position) => {
                 ZoneId::new(zone_id as u16)
-                    .map(|zone_id| (zone_id, Point3::new(position.x, position.y, 0.0)))
+                    .map(|zone_id| (zone_id, Vec3::new(position.x, position.y, 0.0)))
             }
         } {
             for _ in 0..count {
@@ -1752,7 +1759,7 @@ fn quest_trigger_apply_rewards(
                 quest_system_parameters,
                 quest_parameters,
                 ZoneId::new(zone_id as u16).unwrap(),
-                Point3::new(position.x, position.y, 0.0),
+                Vec3::new(position.x, position.y, 0.0),
             ),
             QsdReward::Trigger(ref name) => {
                 quest_parameters.next_trigger_name = Some(name.clone());

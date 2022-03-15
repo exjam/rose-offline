@@ -1,4 +1,4 @@
-use nalgebra::Point2;
+use bevy_math::Vec2;
 use serde::{Deserialize, Serialize};
 
 use crate::components::{
@@ -179,7 +179,7 @@ pub enum ClientMessage {
     LevelUpSkill(SkillSlot),
     CastSkillSelf(SkillSlot),
     CastSkillTargetEntity(SkillSlot, ClientEntityId),
-    CastSkillTargetPosition(SkillSlot, Point2<f32>),
+    CastSkillTargetPosition(SkillSlot, Vec2),
     NpcStoreTransaction(NpcStoreTransaction),
     RunToggle,
     SitToggle,

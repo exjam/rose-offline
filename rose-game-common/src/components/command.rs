@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::{Component, Entity};
-use nalgebra::{Point2, Point3};
+use bevy_math::{Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -11,7 +11,7 @@ use rose_data::{Item, MotionId, SkillId};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandMove {
-    pub destination: Point3<f32>,
+    pub destination: Vec3,
     pub target: Option<Entity>,
     pub move_mode: Option<MoveMode>,
 }
@@ -40,7 +40,7 @@ pub struct CommandPickupItemDrop {
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum CommandCastSkillTarget {
     Entity(Entity),
-    Position(Point2<f32>),
+    Position(Vec2),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -137,7 +137,7 @@ impl Command {
     }
 
     pub fn with_move(
-        destination: Point3<f32>,
+        destination: Vec3,
         target: Option<Entity>,
         move_mode: Option<MoveMode>,
     ) -> Self {

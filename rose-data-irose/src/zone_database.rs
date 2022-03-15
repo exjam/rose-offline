@@ -1,5 +1,5 @@
+use bevy_math::{Quat, Vec2, Vec3, Vec3Swizzles};
 use log::debug;
-use nalgebra::{Point2, Point3, Quaternion, Unit, Vector3};
 
 use rose_data::{
     NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneList,
@@ -64,7 +64,7 @@ pub enum LoadZoneError {
 
 fn create_monster_spawn(
     spawn: &IfoMonsterSpawnPoint,
-    object_offset: Vector3<f32>,
+    object_offset: Vec3,
 ) -> ZoneMonsterSpawnPoint {
     let transform_spawn_list = |spawn_list: &Vec<IfoMonsterSpawn>| {
         spawn_list
@@ -74,7 +74,7 @@ fn create_monster_spawn(
     };
 
     ZoneMonsterSpawnPoint {
-        position: Point3::new(
+        position: Vec3::new(
             spawn.object.position.x,
             spawn.object.position.y,
             spawn.object.position.z,
@@ -88,21 +88,21 @@ fn create_monster_spawn(
     }
 }
 
-fn create_npc_spawn(npc: &IfoNpc, object_offset: Vector3<f32>) -> ZoneNpcSpawn {
+fn create_npc_spawn(npc: &IfoNpc, object_offset: Vec3) -> ZoneNpcSpawn {
     ZoneNpcSpawn {
         npc_id: NpcId::new(npc.object.object_id as u16).unwrap(),
-        position: Point3::new(
+        position: Vec3::new(
             npc.object.position.x,
             npc.object.position.y,
             npc.object.position.z,
         ) + object_offset,
-        direction: Unit::new_unchecked(Quaternion::new(
-            npc.object.rotation.w,
+        direction: Quat::from_xyzw(
             npc.object.rotation.x,
             npc.object.rotation.y,
             npc.object.rotation.z,
-        ))
-        .euler_angles()
+            npc.object.rotation.w,
+        )
+        .to_euler(bevy_math::EulerRot::XYZ)
         .2
         .to_degrees(),
         conversation: NpcConversationId::new(npc.quest_file_name.to_string()),
@@ -111,7 +111,7 @@ fn create_npc_spawn(npc: &IfoNpc, object_offset: Vector3<f32>) -> ZoneNpcSpawn {
 
 fn create_event_object(
     event_object: &IfoEventObject,
-    object_offset: Vector3<f32>,
+    object_offset: Vec3,
     map_chunk_x: i32,
     map_chunk_y: i32,
 ) -> ZoneEventObject {
@@ -119,7 +119,7 @@ fn create_event_object(
         event_id: event_object.object.event_id,
         map_chunk_x,
         map_chunk_y,
-        position: Point3::new(
+        position: Vec3::new(
             event_object.object.position.x,
             event_object.object.position.y,
             event_object.object.position.z,
@@ -161,7 +161,7 @@ fn load_zone(
     let mut max_block_x = None;
     let mut max_block_y = None;
 
-    let objects_offset = Vector3::new(
+    let objects_offset = Vec3::new(
         (64.0 / 2.0) * (zon_file.grid_size * zon_file.grid_per_patch * 16.0)
             + (zon_file.grid_size * zon_file.grid_per_patch * 16.0) / 2.0,
         (64.0 / 2.0) * (zon_file.grid_size * zon_file.grid_per_patch * 16.0)
@@ -237,10 +237,10 @@ fn load_zone(
 
     let start_event_position_name = data.get_zone_start_event_position_name(id).unwrap_or("");
     let revive_event_position_name = data.get_zone_revive_event_position_name(id).unwrap_or("");
-    let mut start_position = Point3::new(0.0, 0.0, 0.0);
+    let mut start_position = Vec3::new(0.0, 0.0, 0.0);
     let mut revive_positions = Vec::new();
     for (name, position) in zon_file.event_positions.iter() {
-        let position = Point3::new(position.x, position.y, position.z).xzy() + objects_offset;
+        let position = Vec3::new(position.x, position.y, position.z).xzy() + objects_offset;
 
         if name == start_event_position_name {
             start_position = position;
@@ -275,10 +275,7 @@ fn load_zone(
         event_objects,
         monster_spawns,
         npcs,
-        sectors_base_position: Point2::new(
-            (min_x as f32) * block_size,
-            (min_y as f32) * block_size,
-        ),
+        sectors_base_position: Vec2::new((min_x as f32) * block_size, (min_y as f32) * block_size),
         num_sectors_x,
         num_sectors_y,
         start_position,
@@ -289,7 +286,7 @@ fn load_zone(
             .map(|(name, position)| {
                 (
                     name,
-                    Point3::new(position.x, position.y, position.z).xzy() + objects_offset,
+                    Vec3::new(position.x, position.y, position.z).xzy() + objects_offset,
                 )
             })
             .collect(),

@@ -1,13 +1,13 @@
 use bevy_ecs::prelude::Component;
-use nalgebra::Point2;
+use bevy_math::UVec2;
 
 #[derive(Component, Clone, Debug)]
 pub struct ClientEntitySector {
-    pub sector: Point2<u32>,
+    pub sector: UVec2,
 }
 
 impl ClientEntitySector {
-    pub fn new(sector: Point2<u32>) -> Self {
+    pub fn new(sector: UVec2) -> Self {
         Self { sector }
     }
 }

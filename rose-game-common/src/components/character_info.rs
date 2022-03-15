@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::Component;
+use bevy_math::Vec3;
 use enum_map::Enum;
-use nalgebra::Point3;
 use serde::{Deserialize, Serialize};
 
 use rose_data::ZoneId;
@@ -27,6 +27,6 @@ pub struct CharacterInfo {
     pub fame_b: u16,
     pub fame_g: u16,
     pub revive_zone_id: ZoneId,
-    pub revive_position: Point3<f32>,
+    pub revive_position: Vec3,
     pub unique_id: CharacterUniqueId,
 }

@@ -2,8 +2,8 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
+use bevy_math::Vec3;
 use log::warn;
-use nalgebra::Point3;
 use std::time::Duration;
 
 use rose_data::{AbilityType, ItemClass, ItemType, SkillType};
@@ -172,7 +172,7 @@ fn use_inventory_item(
                             use_item_user.client_entity_sector,
                             use_item_user.position,
                             Position::new(
-                                Point3::new(skill_data.warp_zone_x, skill_data.warp_zone_y, 0.0),
+                                Vec3::new(skill_data.warp_zone_x, skill_data.warp_zone_y, 0.0),
                                 zone_id,
                             ),
                             use_item_user.game_client,

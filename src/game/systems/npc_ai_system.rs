@@ -2,8 +2,8 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
     system::SystemParam,
 };
+use bevy_math::{Vec3, Vec3Swizzles};
 use chrono::{Datelike, Timelike};
-use nalgebra::{Point3, Vector3};
 use rand::{prelude::SliceRandom, Rng};
 use std::{
     marker::PhantomData,
@@ -105,8 +105,8 @@ struct AiAttackerData<'a> {
 struct AiParameters<'a> {
     source: &'a AiSourceData<'a>,
     attacker: Option<&'a AiAttackerData<'a>>,
-    find_char: Option<(Entity, Point3<f32>)>,
-    near_char: Option<(Entity, Point3<f32>)>,
+    find_char: Option<(Entity, Vec3)>,
+    near_char: Option<(Entity, Vec3)>,
     damage_received: Option<Damage>,
     selected_local_npc: Option<Entity>,
     is_dead: bool,
@@ -169,8 +169,11 @@ fn ai_condition_count_nearby_entities(
         }
 
         // Update near char for nearest found character
-        let distance_squared =
-            (ai_parameters.source.position.position - position).magnitude_squared();
+        let distance_squared = ai_parameters
+            .source
+            .position
+            .position
+            .distance_squared(position);
         if near_char_distance.map_or(true, |x| distance_squared < x) {
             ai_parameters.near_char = Some((entity, position));
             near_char_distance = Some(distance_squared);
@@ -240,7 +243,12 @@ fn ai_condition_distance(
             .map(|(position, _)| position.position.xy()),
     }
     .map(|compare_position| {
-        (ai_parameters.source.position.position.xy() - compare_position).magnitude_squared() as i32
+        ai_parameters
+            .source
+            .position
+            .position
+            .xy()
+            .distance_squared(compare_position) as i32
     });
 
     if let Some(distance_squared) = distance_squared {
@@ -794,7 +802,7 @@ fn ai_action_move_away_from_target(
             let direction_away_from_target =
                 (source_position.xy() - target_position.position.xy()).normalize();
             let move_vector = distance as f32 * direction_away_from_target;
-            let destination = source_position + Vector3::new(move_vector.x, move_vector.y, 0.0);
+            let destination = source_position + Vec3::new(move_vector.x, move_vector.y, 0.0);
 
             ai_system_parameters
                 .commands
@@ -833,7 +841,7 @@ fn ai_action_move_random_distance(
             AipMoveMode::Run => MoveMode::Run,
             AipMoveMode::Walk => MoveMode::Walk,
         };
-        let destination = move_origin + Vector3::new(dx as f32, dy as f32, 0.0);
+        let destination = move_origin + Vec3::new(dx as f32, dy as f32, 0.0);
         ai_system_parameters
             .commands
             .entity(ai_parameters.source.entity)
@@ -853,7 +861,7 @@ fn ai_action_move_near_owner(
     {
         // Move 80% of the way towards owner
         let delta = owner_position.position.xy() - ai_parameters.source.position.position.xy();
-        let distance = 0.8 * delta.magnitude();
+        let distance = 0.8 * delta.length();
         let direction = delta.normalize();
         let destination = ai_parameters.source.position.position.xy() + direction * distance;
 
@@ -861,7 +869,7 @@ fn ai_action_move_near_owner(
             .commands
             .entity(ai_parameters.source.entity)
             .insert(NextCommand::with_move(
-                Point3::new(destination.x, destination.y, 0.0),
+                Vec3::new(destination.x, destination.y, 0.0),
                 None,
                 Some(MoveMode::Run),
             ));

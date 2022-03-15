@@ -1,17 +1,17 @@
 use bevy_ecs::prelude::Component;
-use nalgebra::Point3;
+use bevy_math::Vec3;
 use serde::{Deserialize, Serialize};
 
 use rose_data::ZoneId;
 
 #[derive(Component, Clone, Debug, Deserialize, Serialize)]
 pub struct Position {
-    pub position: Point3<f32>,
+    pub position: Vec3,
     pub zone_id: ZoneId,
 }
 
 impl Position {
-    pub fn new(position: Point3<f32>, zone_id: ZoneId) -> Self {
+    pub fn new(position: Vec3, zone_id: ZoneId) -> Self {
         Self { position, zone_id }
     }
 }

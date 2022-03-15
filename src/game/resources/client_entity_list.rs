@@ -1,6 +1,6 @@
 use bevy_ecs::{change_detection::Mut, prelude::Entity};
+use bevy_math::{UVec2, Vec2, Vec3, Vec3Swizzles};
 use bitvec::prelude::*;
-use nalgebra::{Point2, Point3, Vector2};
 use std::collections::HashMap;
 
 use rose_data::{ZoneData, ZoneDatabase, ZoneId};
@@ -54,16 +54,16 @@ pub struct ClientEntityZone {
     sector_leave_distance_squared: f32,
 
     // X, Y position of the first sector
-    sector_base_position: Point2<f32>,
+    sector_base_position: Vec2,
 
     // Number of sectors in X and Y direction
-    sector_count: Point2<u32>,
+    sector_count: UVec2,
 
     // The list of sectors
     sectors: Vec<ClientEntityZoneSector>,
 
     // The list of entities currently inside this zone
-    entities: Vec<Option<(Entity, ClientEntity, Point3<f32>)>>,
+    entities: Vec<Option<(Entity, ClientEntity, Vec3)>>,
 
     // The list of entities leaving the zone, this is so we can process any
     // visibility changes before freeing the entity id
@@ -78,7 +78,7 @@ impl ClientEntityZone {
         Self {
             zone_id: zone_info.id,
             sector_size,
-            sector_count: Point2::new(zone_info.num_sectors_x, zone_info.num_sectors_y),
+            sector_count: UVec2::new(zone_info.num_sectors_x, zone_info.num_sectors_y),
             sector_base_position: zone_info.sectors_base_position,
             sector_leave_distance_squared: sector_limit * sector_limit,
             sectors: vec![
@@ -90,9 +90,9 @@ impl ClientEntityZone {
         }
     }
 
-    pub fn calculate_sector(&self, position: Point2<f32>) -> Point2<u32> {
+    pub fn calculate_sector(&self, position: Vec2) -> UVec2 {
         let sector = (position - self.sector_base_position) / self.sector_size;
-        Point2::new(
+        UVec2::new(
             u32::min(
                 i32::max(0i32, sector[0] as i32) as u32,
                 self.sector_count.x - 1,
@@ -104,28 +104,28 @@ impl ClientEntityZone {
         )
     }
 
-    fn calculate_sector_midpoint(&self, sector: Point2<u32>) -> Point2<f32> {
+    fn calculate_sector_midpoint(&self, sector: UVec2) -> Vec2 {
         self.sector_base_position
-            + Vector2::new(sector[0] as f32 + 0.5, sector[1] as f32 + 0.5) * self.sector_size
+            + Vec2::new(sector[0] as f32 + 0.5, sector[1] as f32 + 0.5) * self.sector_size
     }
 
-    fn get_sector(&self, sector: Point2<u32>) -> &ClientEntityZoneSector {
+    fn get_sector(&self, sector: UVec2) -> &ClientEntityZoneSector {
         &self.sectors[sector[0] as usize + (sector[1] * self.sector_count.x) as usize]
     }
 
-    fn get_sector_mut(&mut self, sector: Point2<u32>) -> &mut ClientEntityZoneSector {
+    fn get_sector_mut(&mut self, sector: UVec2) -> &mut ClientEntityZoneSector {
         &mut self.sectors[sector[0] as usize + (sector[1] * self.sector_count.x) as usize]
     }
 
-    pub fn get_sector_visible_entities(&self, sector: Point2<u32>) -> &ClientEntitySet {
+    pub fn get_sector_visible_entities(&self, sector: UVec2) -> &ClientEntitySet {
         self.get_sector(sector).get_visible_entities()
     }
 
-    pub fn get_entity(&self, id: ClientEntityId) -> Option<&(Entity, ClientEntity, Point3<f32>)> {
+    pub fn get_entity(&self, id: ClientEntityId) -> Option<&(Entity, ClientEntity, Vec3)> {
         self.entities[id.0].as_ref()
     }
 
-    fn for_each_visible_sector<F>(&mut self, sector: Point2<u32>, mut f: F)
+    fn for_each_visible_sector<F>(&mut self, sector: UVec2, mut f: F)
     where
         F: FnMut(&mut ClientEntityZoneSector),
     {
@@ -136,12 +136,12 @@ impl ClientEntityZone {
 
         for x in min_sector_x..=max_sector_x {
             for y in min_sector_y..=max_sector_y {
-                f(self.get_sector_mut(Point2::new(x, y)))
+                f(self.get_sector_mut(UVec2::new(x, y)))
             }
         }
     }
 
-    fn join_sector(&mut self, sector: Point2<u32>, id: ClientEntityId) {
+    fn join_sector(&mut self, sector: UVec2, id: ClientEntityId) {
         // Join the sector
         self.get_sector_mut(sector).join_sector(id);
 
@@ -149,7 +149,7 @@ impl ClientEntityZone {
         self.for_each_visible_sector(sector, |zone_sector| zone_sector.add_visible_entity(id));
     }
 
-    fn leave_sector(&mut self, sector: Point2<u32>, id: ClientEntityId) {
+    fn leave_sector(&mut self, sector: UVec2, id: ClientEntityId) {
         // Leave the sector
         self.get_sector_mut(sector).leave_sector(id);
 
@@ -161,7 +161,7 @@ impl ClientEntityZone {
         &mut self,
         entity_type: ClientEntityType,
         entity: Entity,
-        position: Point3<f32>,
+        position: Vec3,
     ) -> Option<(ClientEntity, ClientEntitySector)> {
         let sector = self.calculate_sector(position.xy());
 
@@ -209,7 +209,7 @@ impl ClientEntityZone {
         entity: Entity,
         client_entity: &ClientEntity,
         client_entity_sector: &mut Mut<ClientEntitySector>,
-        position: Point3<f32>,
+        position: Vec3,
     ) {
         // Validate entity list
         assert_eq!(
@@ -219,7 +219,7 @@ impl ClientEntityZone {
 
         // Update sector
         let midpoint = self.calculate_sector_midpoint(client_entity_sector.sector);
-        if (midpoint - position.xy()).magnitude_squared() > self.sector_leave_distance_squared {
+        if position.xy().distance_squared(midpoint) > self.sector_leave_distance_squared {
             let previous_sector = client_entity_sector.sector;
             let new_sector = self.calculate_sector(position.xy());
             self.leave_sector(previous_sector, client_entity.id);
@@ -242,11 +242,11 @@ impl ClientEntityZone {
 
     pub fn iter_entities_within_distance(
         &self,
-        origin: Point2<f32>,
+        origin: Vec2,
         distance: f32,
     ) -> ClientEntityZoneEntityIterator<'_> {
-        let min_sector = self.calculate_sector(origin - Vector2::new(distance, distance));
-        let max_sector = self.calculate_sector(origin + Vector2::new(distance, distance));
+        let min_sector = self.calculate_sector(origin - Vec2::new(distance, distance));
+        let max_sector = self.calculate_sector(origin + Vec2::new(distance, distance));
 
         ClientEntityZoneEntityIterator {
             zone: self,
@@ -262,22 +262,22 @@ impl ClientEntityZone {
 
 pub struct ClientEntityZoneEntityIterator<'a> {
     zone: &'a ClientEntityZone,
-    min_sector: Point2<u32>,
-    max_sector: Point2<u32>,
-    current_sector: Point2<u32>,
+    min_sector: UVec2,
+    max_sector: UVec2,
+    current_sector: UVec2,
     current_iter: bitvec::slice::IterOnes<'a, usize, Lsb0>,
-    origin: Point2<f32>,
+    origin: Vec2,
     max_distance_squared: f32,
 }
 
 impl Iterator for ClientEntityZoneEntityIterator<'_> {
-    type Item = (Entity, Point3<f32>);
+    type Item = (Entity, Vec3);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(index) = self.current_iter.next() {
                 if let Some((entity, _, position)) = self.zone.entities[index].as_ref() {
-                    let distance_squared = (position.xy() - self.origin).magnitude_squared();
+                    let distance_squared = self.origin.distance_squared(position.xy());
                     if distance_squared <= self.max_distance_squared {
                         break Some((*entity, *position));
                     } else {

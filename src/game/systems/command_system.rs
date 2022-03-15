@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
-use nalgebra::Point3;
+use bevy_math::{Vec3, Vec3Swizzles};
 use std::time::Duration;
 
 use rose_data::{
@@ -131,7 +131,10 @@ fn is_valid_pickup_target<'a>(
     )) = query.get_mut(target_entity)
     {
         // Check distance to target
-        let distance = (position.position.xy() - target_position.position.xy()).magnitude();
+        let distance = position
+            .position
+            .xy()
+            .distance(target_position.position.xy());
         if position.zone_id == target_position.zone_id && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
             return Some((
                 target_client_entity,
@@ -223,7 +226,7 @@ pub fn command_system(
                             }
                         }
 
-                        let distance = (destination.xy() - position.position.xy()).magnitude();
+                        let distance = position.position.xy().distance(destination.xy());
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::MoveEntity(server::MoveEntity {
@@ -243,8 +246,10 @@ pub fn command_system(
                         if let Some((target_client_entity, target_position, ..)) =
                             is_valid_attack_target(position, *target_entity, &attack_target_query)
                         {
-                            let distance = (target_position.position.xy() - position.position.xy())
-                                .magnitude();
+                            let distance = position
+                                .position
+                                .xy()
+                                .distance(target_position.position.xy());
 
                             server_messages.send_entity_message(
                                 client_entity,
@@ -285,8 +290,10 @@ pub fn command_system(
                         if let Some((target_client_entity, target_position, ..)) =
                             is_valid_skill_target(position, *target_entity, &attack_target_query)
                         {
-                            let distance = (target_position.position.xy() - position.position.xy())
-                                .magnitude();
+                            let distance = position
+                                .position
+                                .xy()
+                                .distance(target_position.position.xy());
 
                             server_messages.send_entity_message(
                                 client_entity,
@@ -473,7 +480,7 @@ pub fn command_system(
                         None => {}
                     }
 
-                    let distance = (destination.xy() - position.position.xy()).magnitude();
+                    let distance = position.position.xy().distance(destination.xy());
                     if distance < 0.1 {
                         *command = Command::with_stop();
                         entity_commands.remove::<Target>().remove::<Destination>();
@@ -584,8 +591,10 @@ pub fn command_system(
                         is_valid_attack_target(position, target_entity, &attack_target_query)
                     {
                         let mut entity_commands = commands.entity(entity);
-                        let distance =
-                            (target_position.position.xy() - position.position.xy()).magnitude();
+                        let distance = position
+                            .position
+                            .xy()
+                            .distance(target_position.position.xy());
 
                         // Check if we are in attack range
                         let attack_range = ability_values.get_attack_range() as f32;
@@ -740,7 +749,7 @@ pub fn command_system(
                                 }
                             }
                             Some(CommandCastSkillTarget::Position(target_position)) => (
-                                Some(Point3::new(target_position.x, target_position.y, 0.0)),
+                                Some(Vec3::new(target_position.x, target_position.y, 0.0)),
                                 None,
                             ),
                             None => (None, None),
@@ -754,7 +763,7 @@ pub fn command_system(
 
                         let in_distance = target_position
                             .map(|target_position| {
-                                (target_position.xy() - position.position.xy()).magnitude()
+                                position.position.xy().distance(target_position.xy())
                                     < cast_range as f32
                             })
                             .unwrap_or(true);

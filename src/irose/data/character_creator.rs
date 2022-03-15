@@ -1,5 +1,5 @@
+use bevy_math::Vec3;
 use enum_map::EnumMap;
-use nalgebra::Point3;
 use rose_game_common::components::CharacterGender;
 use std::sync::Arc;
 
@@ -228,7 +228,7 @@ pub fn get_character_creator(
     let revive_position = zone_data
         .get_closest_revive_position(zone_data.start_position)
         .unwrap_or(zone_data.start_position);
-    let start_position = Point3::new(530500.0, 539500.0, 0.0);
+    let start_position = Vec3::new(530500.0, 539500.0, 0.0);
 
     Some(Box::new(CharacterCreatorData {
         skill_database,

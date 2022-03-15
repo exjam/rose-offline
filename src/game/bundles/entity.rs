@@ -1,5 +1,5 @@
 use bevy_ecs::prelude::{Bundle, Commands, Entity};
-use nalgebra::Point3;
+use bevy_math::Vec3;
 use rand::Rng;
 use std::time::Duration;
 
@@ -142,7 +142,7 @@ impl MonsterBundle {
         };
 
         let position = Position::new(
-            Point3::new(
+            Vec3::new(
                 spawn_position.x + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
                 spawn_position.y + rand::thread_rng().gen_range(-spawn_range..spawn_range) as f32,
                 0.0,
@@ -216,7 +216,7 @@ impl ItemDropBundle {
     ) -> Option<Entity> {
         let mut rng = rand::thread_rng();
 
-        let drop_point = Point3::new(
+        let drop_point = Vec3::new(
             position.position.x + rng.gen_range(-ITEM_DROP_RADIUS..=ITEM_DROP_RADIUS) as f32,
             position.position.y + rng.gen_range(-ITEM_DROP_RADIUS..=ITEM_DROP_RADIUS) as f32,
             position.position.z,

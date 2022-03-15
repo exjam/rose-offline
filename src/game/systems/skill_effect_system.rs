@@ -2,6 +2,7 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Local, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
+use bevy_math::Vec3Swizzles;
 use log::warn;
 use rand::Rng;
 use std::marker::PhantomData;

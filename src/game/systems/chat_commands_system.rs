@@ -2,9 +2,9 @@ use bevy_ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
+use bevy_math::{UVec2, Vec3, Vec3Swizzles};
 use clap::{Arg, PossibleValue};
 use lazy_static::lazy_static;
-use nalgebra::{Point2, Point3};
 use rand::prelude::SliceRandom;
 use std::{
     f32::consts::PI,
@@ -328,7 +328,7 @@ fn handle_chat_command(
                 .map(|client_entity_zone| {
                     client_entity_zone.calculate_sector(chat_command_user.position.position.xy())
                 })
-                .unwrap_or_else(|| Point2::new(0u32, 0u32));
+                .unwrap_or_else(|| UVec2::new(0u32, 0u32));
 
             chat_command_user
                 .game_client
@@ -373,7 +373,7 @@ fn handle_chat_command(
                 chat_command_user.client_entity,
                 chat_command_user.client_entity_sector,
                 chat_command_user.position,
-                Position::new(Point3::new(x, y, 0.0), zone_id),
+                Position::new(Vec3::new(x, y, 0.0), zone_id),
                 Some(chat_command_user.game_client),
             );
         }

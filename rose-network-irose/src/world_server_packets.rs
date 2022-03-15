@@ -1,7 +1,7 @@
-use nalgebra::Point3;
+use bevy_math::Vec3;
 use num_derive::FromPrimitive;
-
 use num_traits::FromPrimitive;
+
 use rose_data::{EquipmentIndex, EquipmentItem, ItemReference, ZoneId};
 use rose_game_common::{
     components::{CharacterInfo, Equipment, Level},
@@ -134,7 +134,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
                     fame_b: 0,
                     fame_g: 0,
                     revive_zone_id: ZoneId::new(1).unwrap(),
-                    revive_position: Point3::new(0.0, 0.0, 0.0),
+                    revive_position: Vec3::new(0.0, 0.0, 0.0),
                     unique_id: 0,
                 },
                 level,

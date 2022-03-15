@@ -1,6 +1,6 @@
 use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
+use bevy_math::Vec3;
 use log::warn;
-use nalgebra::Point3;
 
 use rose_data::{
     EquipmentIndex, Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour,
@@ -19,10 +19,9 @@ use crate::game::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector,
         ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit, DroppedItem,
         Equipment, EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar,
-        Inventory, ItemSlot, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
-        NextCommand, Party, PartyMember, PartyMembership, PassiveRecoveryTime, Position,
-        QuestState, SkillList, SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team,
-        WorldClient,
+        Inventory, ItemSlot, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand,
+        Party, PartyMember, PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList,
+        SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
     },
     events::{
         ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
@@ -608,7 +607,7 @@ pub fn game_server_main_system(
                             }
                         }
 
-                        let destination = Point3::new(message.x, message.y, message.z as f32);
+                        let destination = Vec3::new(message.x, message.y, message.z as f32);
                         entity_commands.insert(NextCommand::with_move(
                             destination,
                             move_target_entity,
