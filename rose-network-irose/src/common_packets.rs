@@ -3,7 +3,7 @@ use std::convert::TryInto;
 
 use rose_data::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, SkillPageType,
-    StackableItem, StatusEffectType, VehiclePartIndex,
+    StackableItem, StatusEffectId, StatusEffectType, VehiclePartIndex,
 };
 use rose_data_irose::{
     decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
@@ -11,8 +11,9 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        CharacterGender, ClientEntityId, Equipment, HotbarSlot, InventoryPageType, ItemSlot, Money,
-        MoveMode, SkillSlot,
+        ActiveStatusEffect, CharacterGender, ClientEntityId, Command, CommandCastSkill,
+        CommandCastSkillTarget, CommandData, Equipment, HotbarSlot, InventoryPageType, ItemSlot,
+        Money, MoveMode, SkillSlot,
     },
     data::Damage,
     messages::server::ActiveStatusEffects,
@@ -579,6 +580,21 @@ impl PacketWriteSkillSlot for PacketWriter {
     }
 }
 
+pub trait PacketReadMoveMode {
+    fn read_move_mode_u8(&mut self) -> Result<MoveMode, PacketError>;
+}
+
+impl<'a> PacketReadMoveMode for PacketReader<'a> {
+    fn read_move_mode_u8(&mut self) -> Result<MoveMode, PacketError> {
+        match self.read_u8()? {
+            0 => Ok(MoveMode::Walk),
+            1 => Ok(MoveMode::Run),
+            2 => Ok(MoveMode::Drive),
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
 pub trait PacketWriteMoveMode {
     fn write_move_mode_u8(&mut self, move_mode: MoveMode);
     fn write_move_mode_toggle_u8(&mut self, move_mode: MoveMode);
@@ -599,6 +615,65 @@ impl PacketWriteMoveMode for PacketWriter {
             MoveMode::Run => 3,
             MoveMode::Drive => 4,
         })
+    }
+}
+
+pub trait PacketReadStatusEffects {
+    fn read_status_effects_flags_u32(
+        &mut self,
+        status_effects: &mut ActiveStatusEffects,
+    ) -> Result<(), PacketError>;
+
+    fn read_status_effects_values(
+        &mut self,
+        status_effects: &mut ActiveStatusEffects,
+    ) -> Result<(), PacketError>;
+}
+
+impl<'a> PacketReadStatusEffects for PacketReader<'a> {
+    fn read_status_effects_flags_u32(
+        &mut self,
+        status_effects: &mut ActiveStatusEffects,
+    ) -> Result<(), PacketError> {
+        let flags = self.read_u32()?;
+
+        for (status_effect_type, status_effect) in status_effects.iter_mut() {
+            if (flags & get_status_effect_type_flag(status_effect_type)) != 0 {
+                *status_effect = Some(ActiveStatusEffect {
+                    id: StatusEffectId::new(1).unwrap(),
+                    value: 0,
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    fn read_status_effects_values(
+        &mut self,
+        status_effects: &mut ActiveStatusEffects,
+    ) -> Result<(), PacketError> {
+        if let Some(status_effect) = &mut status_effects[StatusEffectType::IncreaseMaxHp] {
+            status_effect.value = self.read_u16()? as i32;
+        }
+
+        if let Some(status_effect) = &mut status_effects[StatusEffectType::IncreaseMoveSpeed] {
+            status_effect.value = self.read_u16()? as i32;
+        }
+
+        if let Some(status_effect) = &mut status_effects[StatusEffectType::DecreaseMoveSpeed] {
+            status_effect.value = self.read_u16()? as i32;
+        }
+
+        if let Some(status_effect) = &mut status_effects[StatusEffectType::IncreaseAttackSpeed] {
+            status_effect.value = self.read_u16()? as i32;
+        }
+
+        if let Some(status_effect) = &mut status_effects[StatusEffectType::DecreaseAttackSpeed] {
+            status_effect.value = self.read_u16()? as i32;
+        }
+
+        Ok(())
     }
 }
 
@@ -738,6 +813,31 @@ impl PacketWriteDamage for PacketWriter {
     }
 }
 
+pub trait PacketReadEntityId {
+    fn read_entity_id(&mut self) -> Result<ClientEntityId, PacketError>;
+    fn read_option_entity_id(&mut self) -> Result<Option<ClientEntityId>, PacketError>;
+}
+
+impl<'a> PacketReadEntityId for PacketReader<'a> {
+    fn read_entity_id(&mut self) -> Result<ClientEntityId, PacketError> {
+        let entity_id = self.read_u16()?;
+        if entity_id == 0 {
+            Err(PacketError::InvalidPacket)
+        } else {
+            Ok(ClientEntityId(entity_id as usize))
+        }
+    }
+
+    fn read_option_entity_id(&mut self) -> Result<Option<ClientEntityId>, PacketError> {
+        let entity_id = self.read_u16()?;
+        if entity_id == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(ClientEntityId(entity_id as usize)))
+        }
+    }
+}
+
 pub trait PacketWriteEntityId {
     fn write_entity_id(&mut self, entity_id: ClientEntityId);
     fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>);
@@ -750,5 +850,60 @@ impl PacketWriteEntityId for PacketWriter {
 
     fn write_option_entity_id(&mut self, entity_id: Option<ClientEntityId>) {
         self.write_u16(entity_id.map_or(0, |x| x.0) as u16);
+    }
+}
+
+pub trait PacketReadCommand {
+    fn read_command_id(&mut self) -> Result<Command, PacketError>;
+}
+
+impl<'a> PacketReadCommand for PacketReader<'a> {
+    fn read_command_id(&mut self) -> Result<Command, PacketError> {
+        // TODO: Fix read_command_id
+        match self.read_u16()? {
+            0 => Ok(Command::with_stop()),
+            1 => Ok(Command::with_stop()),
+            2 => Ok(Command::with_stop()),
+            3 => Ok(Command::with_stop()),
+            4 => Ok(Command::with_stop()),
+            6 => Ok(Command::with_stop()),
+            7 => Ok(Command::with_stop()),
+            8 => Ok(Command::with_stop()),
+            9 => Ok(Command::with_stop()), // TODO: run away
+            10 => Ok(Command::with_stop()),
+            11 => Ok(Command::with_stop()),
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
+pub trait PacketWriteCommand {
+    fn write_command_id(&mut self, command: &Command);
+}
+
+impl PacketWriteCommand for PacketWriter {
+    fn write_command_id(&mut self, command: &Command) {
+        let command_id = match command.command {
+            CommandData::Stop(_) | CommandData::Emote(_) => 0,
+            CommandData::Move(_) => 1,
+            CommandData::Attack(_) => 2,
+            CommandData::Die(_) => 3,
+            CommandData::PickupItemDrop(_) => 4,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: None, ..
+            }) => 6,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: Some(CommandCastSkillTarget::Entity(_)),
+                ..
+            }) => 7,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: Some(CommandCastSkillTarget::Position(_)),
+                ..
+            }) => 8,
+            // TODO: Run away => 9
+            CommandData::Sit(_) => 10,
+            CommandData::PersonalStore => 11,
+        };
+        self.write_u16(command_id);
     }
 }

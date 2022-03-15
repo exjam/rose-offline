@@ -532,16 +532,16 @@ impl GameServer {
             }
             ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
                 entity_id,
-                ref npc,
+                npc,
                 direction,
-                ref position,
-                ref team,
-                ref health,
+                position,
+                team,
+                health,
                 destination,
-                ref command,
+                command,
                 target_entity_id,
                 move_mode,
-                ref status_effects,
+                status_effects,
             }) => {
                 client
                     .connection
@@ -552,7 +552,7 @@ impl GameServer {
                         position,
                         team,
                         health,
-                        destination: destination.as_ref(),
+                        destination,
                         command,
                         target_entity_id,
                         move_mode,
@@ -562,15 +562,15 @@ impl GameServer {
             }
             ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
                 entity_id,
-                ref npc,
-                ref position,
-                ref team,
-                ref health,
+                npc,
+                position,
+                team,
+                health,
                 destination,
-                ref command,
+                command,
                 target_entity_id,
                 move_mode,
-                ref status_effects,
+                status_effects,
             }) => {
                 client
                     .connection
@@ -580,7 +580,7 @@ impl GameServer {
                         position,
                         team,
                         health,
-                        destination: destination.as_ref(),
+                        destination,
                         command,
                         target_entity_id,
                         move_mode,
@@ -588,7 +588,7 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::RemoveEntities(RemoveEntities { ref entity_ids }) => {
+            ServerMessage::RemoveEntities(RemoveEntities { entity_ids }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerRemoveEntities { entity_ids }))

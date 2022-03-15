@@ -304,14 +304,16 @@ impl RoseFile for ZscFile {
                             rotation = Some(Vec4::<f32> { x, y, z, w });
                         }
                         3 => scale = Some(reader.read_vector3_f32()?),
-                        7 => parent = {
-                            let parent_id = reader.read_u16()?;
-                            if parent_id == 0 {
-                                None
-                            } else {
-                                Some(parent_id - 1)
+                        7 => {
+                            parent = {
+                                let parent_id = reader.read_u16()?;
+                                if parent_id == 0 {
+                                    None
+                                } else {
+                                    Some(parent_id - 1)
+                                }
                             }
-                        },
+                        }
                         _ => bail!("Invalid ZscObjectEffect property_id: {}", property_id),
                     }
                 }

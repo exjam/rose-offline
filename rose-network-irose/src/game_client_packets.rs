@@ -16,7 +16,7 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
     decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-    PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
+    PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex, PacketWriteEntityId,
 };
 
 #[derive(FromPrimitive)]
@@ -108,6 +108,15 @@ impl TryFrom<&Packet> for PacketClientJoinZone {
     }
 }
 
+impl From<&PacketClientJoinZone> for Packet {
+    fn from(packet: &PacketClientJoinZone) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::JoinZone as u16);
+        writer.write_u8(packet.weight_rate);
+        writer.write_u16(packet.z);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientMove {
     pub target_entity_id: Option<ClientEntityId>,
@@ -139,6 +148,17 @@ impl TryFrom<&Packet> for PacketClientMove {
             y,
             z,
         })
+    }
+}
+
+impl From<&PacketClientMove> for Packet {
+    fn from(packet: &PacketClientMove) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::Move as u16);
+        writer.write_option_entity_id(packet.target_entity_id);
+        writer.write_f32(packet.x);
+        writer.write_f32(packet.y);
+        writer.write_u16(packet.z);
+        writer.into()
     }
 }
 

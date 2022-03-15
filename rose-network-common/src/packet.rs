@@ -63,6 +63,14 @@ impl<'a> PacketReader<'a> {
         }
     }
 
+    pub fn read_i32(&mut self) -> Result<i32, PacketError> {
+        if self.cursor.remaining() < 4 {
+            Err(PacketError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_i32_le())
+        }
+    }
+
     pub fn read_u32(&mut self) -> Result<u32, PacketError> {
         if self.cursor.remaining() < 4 {
             Err(PacketError::UnexpectedEof)
@@ -72,7 +80,7 @@ impl<'a> PacketReader<'a> {
     }
 
     pub fn read_i64(&mut self) -> Result<i64, PacketError> {
-        if self.cursor.remaining() < 9 {
+        if self.cursor.remaining() < 8 {
             Err(PacketError::UnexpectedEof)
         } else {
             Ok(self.cursor.get_i64_le())

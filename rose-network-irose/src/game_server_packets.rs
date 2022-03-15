@@ -13,10 +13,10 @@ use rose_data_irose::{encode_ability_type, encode_ammo_index};
 use rose_game_common::{
     components::{
         ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId,
-        Command, CommandCastSkill, CommandCastSkillTarget, CommandData, Destination, DroppedItem,
-        Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
-        ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList, SkillPage,
-        SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        Command, Destination, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar,
+        HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
+        Position, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints,
+        Team, UnionMembership,
     },
     data::Damage,
     messages::server::ActiveStatusEffects,
@@ -29,10 +29,12 @@ use rose_game_common::{
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadHotbarSlot, PacketReadItems,
-    PacketWriteCharacterGender, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
-    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
-    PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommand, PacketReadEntityId,
+    PacketReadHotbarSlot, PacketReadItems, PacketReadMoveMode, PacketReadStatusEffects,
+    PacketWriteCharacterGender, PacketWriteCommand, PacketWriteDamage, PacketWriteEntityId,
+    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+    PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
+    PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -796,6 +798,42 @@ pub struct PacketServerMoveEntity {
     pub move_mode: Option<MoveMode>,
 }
 
+impl TryFrom<&Packet> for PacketServerMoveEntity {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::MoveEntity as u16
+            && packet.command != ServerPackets::MoveEntityWithMoveMode as u16
+        {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let target_entity_id = reader.read_option_entity_id()?;
+        let distance = reader.read_u16()?;
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let z = reader.read_u16()?;
+
+        let move_mode = if packet.command == ServerPackets::MoveEntityWithMoveMode as u16 {
+            Some(reader.read_move_mode_u8()?)
+        } else {
+            None
+        };
+
+        Ok(PacketServerMoveEntity {
+            entity_id,
+            target_entity_id,
+            distance,
+            x,
+            y,
+            z,
+            move_mode,
+        })
+    }
+}
+
 impl From<&PacketServerMoveEntity> for Packet {
     fn from(packet: &PacketServerMoveEntity) -> Self {
         let opcode = if packet.move_mode.is_some() {
@@ -1007,37 +1045,6 @@ impl From<&PacketServerSetHotbarSlot> for Packet {
     }
 }
 
-trait PacketWriteCommand {
-    fn write_command_id(&mut self, command: &Command);
-}
-
-impl PacketWriteCommand for PacketWriter {
-    fn write_command_id(&mut self, command: &Command) {
-        let command_id = match command.command {
-            CommandData::Stop(_) | CommandData::Emote(_) => 0,
-            CommandData::Move(_) => 1,
-            CommandData::Attack(_) => 2,
-            CommandData::Die(_) => 3,
-            CommandData::PickupItemDrop(_) => 4,
-            CommandData::PersonalStore => 11,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: None, ..
-            }) => 6,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: Some(CommandCastSkillTarget::Entity(_)),
-                ..
-            }) => 7,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: Some(CommandCastSkillTarget::Position(_)),
-                ..
-            }) => 8,
-            // TODO: Run away => 9
-            CommandData::Sit(_) => 10,
-        };
-        self.write_u16(command_id);
-    }
-}
-
 pub struct PacketServerSpawnEntityItemDrop<'a> {
     pub entity_id: ClientEntityId,
     pub dropped_item: &'a DroppedItem,
@@ -1062,73 +1069,190 @@ impl<'a> From<&'a PacketServerSpawnEntityItemDrop<'a>> for Packet {
     }
 }
 
-pub struct PacketServerSpawnEntityNpc<'a> {
+pub struct PacketServerSpawnEntityNpc {
     pub entity_id: ClientEntityId,
-    pub npc: &'a Npc,
+    pub npc: Npc,
     pub direction: f32,
-    pub position: &'a Position,
-    pub team: &'a Team,
-    pub destination: Option<&'a Destination>,
-    pub command: &'a Command,
+    pub position: Position,
+    pub team: Team,
+    pub destination: Option<Destination>,
+    pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
-    pub health: &'a HealthPoints,
+    pub health: HealthPoints,
     pub move_mode: MoveMode,
-    pub status_effects: &'a ActiveStatusEffects,
+    pub status_effects: ActiveStatusEffects,
 }
 
-impl<'a> From<&'a PacketServerSpawnEntityNpc<'a>> for Packet {
-    fn from(packet: &'a PacketServerSpawnEntityNpc<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerSpawnEntityNpc {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::SpawnEntityNpc as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let position_x = reader.read_f32()?;
+        let position_y = reader.read_f32()?;
+        let position = Position::new(
+            Point3::new(position_x, position_y, 0.0),
+            ZoneId::new(1).unwrap(),
+        );
+        let destination_x = reader.read_f32()?;
+        let destination_y = reader.read_f32()?;
+        let destination = if destination_x != 0.0 && destination_y != 0.0 {
+            Some(Destination::new(Point3::new(
+                destination_x,
+                destination_y,
+                0.0,
+            )))
+        } else {
+            None
+        };
+        let command = reader.read_command_id()?;
+        let target_entity_id = reader.read_option_entity_id()?;
+        let move_mode = reader.read_move_mode_u8()?;
+        let health = HealthPoints::new(reader.read_i32()?);
+        let team = Team::new(reader.read_u32()?);
+        let mut status_effects = ActiveStatusEffects::default();
+        reader.read_status_effects_flags_u32(&mut status_effects)?;
+        let npc_id = NpcId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let quest_index = reader.read_u16()?;
+        let direction = reader.read_f32()?;
+        let _event_status = reader.read_u16()?;
+        reader.read_status_effects_values(&mut status_effects)?;
+        Ok(PacketServerSpawnEntityNpc {
+            entity_id,
+            npc: Npc::new(npc_id, quest_index),
+            direction,
+            position,
+            team,
+            destination,
+            command,
+            target_entity_id,
+            health,
+            move_mode,
+            status_effects,
+        })
+    }
+}
+
+impl From<&PacketServerSpawnEntityNpc> for Packet {
+    fn from(packet: &PacketServerSpawnEntityNpc) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityNpc as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
-        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
-        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        writer.write_command_id(packet.command);
+        if let Some(destination) = packet.destination.as_ref() {
+            writer.write_f32(destination.position.x);
+            writer.write_f32(destination.position.y);
+        } else {
+            writer.write_f32(0.0);
+            writer.write_f32(0.0);
+        }
+        writer.write_command_id(&packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
-        writer.write_status_effects_flags_u32(packet.status_effects);
+        writer.write_status_effects_flags_u32(&packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
         writer.write_u16(packet.npc.quest_index);
         writer.write_f32(packet.direction);
         writer.write_u16(0); // event status
-        writer.write_status_effects_values(packet.status_effects);
+        writer.write_status_effects_values(&packet.status_effects);
         writer.into()
     }
 }
 
-pub struct PacketServerSpawnEntityMonster<'a> {
+pub struct PacketServerSpawnEntityMonster {
     pub entity_id: ClientEntityId,
-    pub npc: &'a Npc,
-    pub position: &'a Position,
-    pub destination: Option<&'a Destination>,
-    pub team: &'a Team,
-    pub health: &'a HealthPoints,
-    pub command: &'a Command,
+    pub npc: Npc,
+    pub position: Position,
+    pub destination: Option<Destination>,
+    pub team: Team,
+    pub health: HealthPoints,
+    pub command: Command,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
-    pub status_effects: &'a ActiveStatusEffects,
+    pub status_effects: ActiveStatusEffects,
 }
 
-impl<'a> From<&'a PacketServerSpawnEntityMonster<'a>> for Packet {
-    fn from(packet: &'a PacketServerSpawnEntityMonster<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerSpawnEntityMonster {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::SpawnEntityMonster as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let position_x = reader.read_f32()?;
+        let position_y = reader.read_f32()?;
+        let position = Position::new(
+            Point3::new(position_x, position_y, 0.0),
+            ZoneId::new(1).unwrap(),
+        );
+        let destination_x = reader.read_f32()?;
+        let destination_y = reader.read_f32()?;
+        let destination = if destination_x != 0.0 && destination_y != 0.0 {
+            Some(Destination::new(Point3::new(
+                destination_x,
+                destination_y,
+                0.0,
+            )))
+        } else {
+            None
+        };
+        let command = reader.read_command_id()?;
+        let target_entity_id = reader.read_option_entity_id()?;
+        let move_mode = reader.read_move_mode_u8()?;
+        let health = HealthPoints::new(reader.read_i32()?);
+        let team = Team::new(reader.read_u32()?);
+        let mut status_effects = ActiveStatusEffects::default();
+        reader.read_status_effects_flags_u32(&mut status_effects)?;
+        let npc_id = NpcId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let quest_index = reader.read_u16()?;
+        reader.read_status_effects_values(&mut status_effects)?;
+        Ok(PacketServerSpawnEntityMonster {
+            entity_id,
+            npc: Npc::new(npc_id, quest_index),
+            position,
+            team,
+            destination,
+            command,
+            target_entity_id,
+            health,
+            move_mode,
+            status_effects,
+        })
+    }
+}
+
+impl From<&PacketServerSpawnEntityMonster> for Packet {
+    fn from(packet: &PacketServerSpawnEntityMonster) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityMonster as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.position.x);
         writer.write_f32(packet.position.position.y);
-        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
-        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        writer.write_command_id(packet.command);
+        if let Some(destination) = packet.destination.as_ref() {
+            writer.write_f32(destination.position.x);
+            writer.write_f32(destination.position.y);
+        } else {
+            writer.write_f32(0.0);
+            writer.write_f32(0.0);
+        }
+        writer.write_command_id(&packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
-        writer.write_status_effects_flags_u32(packet.status_effects);
+        writer.write_status_effects_flags_u32(&packet.status_effects);
         writer.write_u16(packet.npc.id.get() as u16);
         writer.write_u16(packet.npc.quest_index);
-        writer.write_status_effects_values(packet.status_effects);
+        writer.write_status_effects_values(&packet.status_effects);
         writer.into()
     }
 }
@@ -1218,14 +1342,31 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
     }
 }
 
-pub struct PacketServerRemoveEntities<'a> {
-    pub entity_ids: &'a [ClientEntityId],
+pub struct PacketServerRemoveEntities {
+    pub entity_ids: Vec<ClientEntityId>,
 }
 
-impl<'a> From<&'a PacketServerRemoveEntities<'a>> for Packet {
-    fn from(packet: &'a PacketServerRemoveEntities<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerRemoveEntities {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::RemoveEntities as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let mut entity_ids = Vec::new();
+        while let Ok(entity_id) = reader.read_entity_id() {
+            entity_ids.push(entity_id);
+        }
+        Ok(PacketServerRemoveEntities { entity_ids })
+    }
+}
+
+impl From<&PacketServerRemoveEntities> for Packet {
+    fn from(packet: &PacketServerRemoveEntities) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::RemoveEntities as u16);
-        for entity_id in packet.entity_ids {
+        for entity_id in packet.entity_ids.iter() {
             writer.write_entity_id(*entity_id);
         }
         writer.into()

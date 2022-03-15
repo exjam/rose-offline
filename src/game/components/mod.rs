@@ -35,7 +35,7 @@ pub use rose_game_common::components::{
     HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPage, InventoryPageType, ItemDrop,
     ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList,
     SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, StatusEffectsRegen,
-    Team, UnionMembership, MAX_STAMINA, Target,
+    Target, Team, UnionMembership, MAX_STAMINA,
 };
 
 pub use account::Account;

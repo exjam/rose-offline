@@ -19,7 +19,7 @@ use crate::game::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector,
         ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit, DroppedItem,
         Equipment, EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar,
-        Inventory, ItemSlot, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
+        Inventory, ItemSlot, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
         NextCommand, Party, PartyMember, PartyMembership, PassiveRecoveryTime, Position,
         QuestState, SkillList, SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team,
         WorldClient,
