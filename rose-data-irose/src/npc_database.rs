@@ -140,7 +140,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         let npc_string_id = data.get_string_id(id);
         let ai_file_index = data.get_ai_file_index(id).unwrap_or(0);
 
-        if npc_string_id.is_none() && npc_model_data.is_some() && ai_file_index == 0 {
+        if npc_string_id.is_none() && npc_model_data.is_none() && ai_file_index == 0 {
             // NPC must have either a name, a model, or an AI file
             continue;
         }
