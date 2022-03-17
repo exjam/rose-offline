@@ -1017,6 +1017,32 @@ pub struct PacketServerTeleport {
     pub ride_mode: u8,
 }
 
+impl TryFrom<&Packet> for PacketServerTeleport {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::Teleport as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let zone_id = ZoneId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let run_mode = reader.read_u8()?;
+        let ride_mode = reader.read_u8()?;
+        Ok(PacketServerTeleport {
+            entity_id,
+            zone_id,
+            x,
+            y,
+            run_mode,
+            ride_mode,
+        })
+    }
+}
+
 impl From<&PacketServerTeleport> for Packet {
     fn from(packet: &PacketServerTeleport) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::Teleport as u16);
