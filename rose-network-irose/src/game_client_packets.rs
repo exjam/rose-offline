@@ -186,6 +186,14 @@ pub struct PacketClientChat<'a> {
     pub text: &'a str,
 }
 
+impl<'a> From<&'a PacketClientChat<'a>> for Packet {
+    fn from(packet: &'a PacketClientChat<'a>) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::Chat as u16);
+        writer.write_null_terminated_utf8(packet.text);
+        writer.into()
+    }
+}
+
 impl<'a> TryFrom<&'a Packet> for PacketClientChat<'a> {
     type Error = PacketError;
 
