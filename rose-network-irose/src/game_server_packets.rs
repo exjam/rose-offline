@@ -2255,6 +2255,27 @@ pub struct PacketServerUpdateSpeed {
     pub passive_attack_speed: i32,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateSpeed {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateSpeed as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let run_speed = reader.read_i32()?;
+        let passive_attack_speed = reader.read_i32()?;
+
+        Ok(Self {
+            entity_id,
+            run_speed,
+            passive_attack_speed,
+        })
+    }
+}
+
 impl From<&PacketServerUpdateSpeed> for Packet {
     fn from(packet: &PacketServerUpdateSpeed) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateSpeed as u16);
