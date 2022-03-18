@@ -2267,8 +2267,9 @@ impl TryFrom<&Packet> for PacketServerUpdateSpeed {
 
         let mut reader = PacketReader::from(packet);
         let entity_id = reader.read_entity_id()?;
-        let run_speed = reader.read_i32()?;
-        let passive_attack_speed = reader.read_i32()?;
+        let run_speed = reader.read_u16()? as i32;
+        let passive_attack_speed = reader.read_u16()? as i32;
+        let _weight_rate = reader.read_u8()?;
 
         Ok(Self {
             entity_id,
