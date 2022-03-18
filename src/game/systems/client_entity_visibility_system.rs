@@ -130,7 +130,7 @@ pub fn client_entity_visibility_system(
                                             SpawnEntityCharacter {
                                                 entity_id: spawn_client_entity.id,
                                                 character_info: spawn_character_info.clone(),
-                                                position: spawn_position.clone(),
+                                                position: spawn_position.position,
                                                 destination: spawn_destination.cloned(),
                                                 health: *spawn_health_points,
                                                 team: spawn_team.clone(),
@@ -179,7 +179,7 @@ pub fn client_entity_visibility_system(
                                                 SpawnEntityItemDrop {
                                                     entity_id: spawn_client_entity.id,
                                                     dropped_item: spawn_dropped_item,
-                                                    position: spawn_position.clone(),
+                                                    position: spawn_position.position,
                                                     remaining_time: spawn_expire_time.when
                                                         - server_time.now,
                                                     owner_entity_id,
@@ -216,7 +216,7 @@ pub fn client_entity_visibility_system(
                                             SpawnEntityMonster {
                                                 entity_id: spawn_client_entity.id,
                                                 npc: spawn_npc.clone(),
-                                                position: spawn_position.clone(),
+                                                position: spawn_position.position,
                                                 team: spawn_team.clone(),
                                                 health: *spawn_health,
                                                 destination: spawn_destination.cloned(),
@@ -257,7 +257,7 @@ pub fn client_entity_visibility_system(
                                             entity_id: spawn_client_entity.id,
                                             npc: spawn_npc.clone(),
                                             direction: spawn_direction.direction,
-                                            position: spawn_position.clone(),
+                                            position: spawn_position.position,
                                             team: spawn_team.clone(),
                                             health: *spawn_health,
                                             destination: spawn_destination.cloned(),

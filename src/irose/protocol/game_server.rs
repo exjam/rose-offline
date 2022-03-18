@@ -338,6 +338,7 @@ impl GameServer {
                     .write_packet(Packet::from(&PacketServerSelectCharacter {
                         character_info: message.character_info,
                         position: message.position,
+                        zone_id: message.zone_id,
                         equipment: message.equipment,
                         basic_stats: message.basic_stats,
                         level: message.level,
@@ -494,28 +495,28 @@ impl GameServer {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerSpawnEntityCharacter {
-                        character_info: &data.character_info,
-                        command: &data.command,
-                        destination: data.destination.as_ref(),
+                        character_info: data.character_info,
+                        command: data.command,
+                        destination: data.destination,
                         entity_id: data.entity_id,
-                        equipment: &data.equipment,
-                        health: &data.health,
-                        level: &data.level,
+                        equipment: data.equipment,
+                        health: data.health,
+                        level: data.level,
                         passive_attack_speed: data.passive_attack_speed,
-                        position: &data.position,
-                        status_effects: &data.status_effects,
+                        position: data.position,
+                        status_effects: data.status_effects,
                         move_mode: data.move_mode,
                         move_speed: data.move_speed,
                         target_entity_id: data.target_entity_id,
-                        team: &data.team,
-                        personal_store_info: &data.personal_store_info,
+                        team: data.team,
+                        personal_store_info: data.personal_store_info,
                     }))
                     .await?;
             }
             ServerMessage::SpawnEntityItemDrop(SpawnEntityItemDrop {
                 entity_id,
                 ref dropped_item,
-                ref position,
+                position,
                 ref remaining_time,
                 owner_entity_id,
             }) => {

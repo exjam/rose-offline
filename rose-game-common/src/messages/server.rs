@@ -1,4 +1,4 @@
-use bevy_math::Vec2;
+use bevy_math::{Vec2, Vec3};
 use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -15,8 +15,8 @@ use crate::{
         ActiveStatusEffect, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
         CharacterUniqueId, ClientEntityId, Command, Destination, DroppedItem, Equipment,
         ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
-        Money, MoveMode, MoveSpeed, Npc, Position, QuestState, SkillList, SkillPoints, SkillSlot,
-        Stamina, StatPoints, Team, UnionMembership,
+        Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPoints, SkillSlot, Stamina,
+        StatPoints, Team, UnionMembership,
     },
     data::Damage,
 };
@@ -121,7 +121,8 @@ pub enum SelectCharacterError {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CharacterData {
     pub character_info: CharacterInfo,
-    pub position: Position,
+    pub position: Vec3,
+    pub zone_id: ZoneId,
     pub basic_stats: BasicStats,
     pub level: Level,
     pub equipment: Equipment,
@@ -238,7 +239,7 @@ impl RemoveEntities {
 pub struct SpawnEntityItemDrop {
     pub entity_id: ClientEntityId,
     pub dropped_item: DroppedItem,
-    pub position: Position,
+    pub position: Vec3,
     pub remaining_time: Duration,
     pub owner_entity_id: Option<ClientEntityId>,
 }
@@ -257,7 +258,7 @@ pub struct SpawnEntityCharacter {
     pub move_mode: MoveMode,
     pub move_speed: MoveSpeed,
     pub passive_attack_speed: i32,
-    pub position: Position,
+    pub position: Vec3,
     pub status_effects: ActiveStatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
@@ -269,7 +270,7 @@ pub struct SpawnEntityNpc {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
     pub direction: f32,
-    pub position: Position,
+    pub position: Vec3,
     pub team: Team,
     pub health: HealthPoints,
     pub destination: Option<Destination>,
@@ -283,7 +284,7 @@ pub struct SpawnEntityNpc {
 pub struct SpawnEntityMonster {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
-    pub position: Position,
+    pub position: Vec3,
     pub team: Team,
     pub health: HealthPoints,
     pub destination: Option<Destination>,

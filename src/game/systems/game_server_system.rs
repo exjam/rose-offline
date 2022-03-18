@@ -185,7 +185,8 @@ fn handle_game_connection_request(
         },
         Box::new(CharacterData {
             character_info: character.info,
-            position,
+            position: position.position,
+            zone_id: position.zone_id,
             basic_stats: character.basic_stats,
             level: character.level,
             equipment: character.equipment.clone(),

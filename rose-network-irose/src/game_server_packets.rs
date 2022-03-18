@@ -6,8 +6,8 @@ use num_traits::FromPrimitive;
 use std::{num::NonZeroUsize, time::Duration};
 
 use rose_data::{
-    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
-    SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
+    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, MotionId,
+    NpcId, SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
 use rose_data_irose::{encode_ability_type, encode_ammo_index};
 use rose_game_common::{
@@ -15,8 +15,8 @@ use rose_game_common::{
         ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClientEntityId,
         Command, Destination, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar,
         HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
-        Position, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints,
-        Team, UnionMembership,
+        QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, Team,
+        UnionMembership,
     },
     data::Damage,
     messages::server::ActiveStatusEffects,
@@ -175,7 +175,8 @@ fn write_skill_page(writer: &mut PacketWriter, skill_page: &SkillPage) {
 
 pub struct PacketServerSelectCharacter {
     pub character_info: CharacterInfo,
-    pub position: Position,
+    pub position: Vec3,
+    pub zone_id: ZoneId,
     pub equipment: Equipment,
     pub basic_stats: BasicStats,
     pub level: Level,
@@ -203,7 +204,7 @@ impl TryFrom<&Packet> for PacketServerSelectCharacter {
         let mut reader = PacketReader::from(packet);
         let gender = reader.read_character_gender_u8()?;
 
-        let position_zone_id = ZoneId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let zone_id = ZoneId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
         let revive_zone_id = ZoneId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
@@ -299,7 +300,8 @@ impl TryFrom<&Packet> for PacketServerSelectCharacter {
                 revive_position: Vec3::new(0.0, 0.0, 0.0),
                 unique_id,
             },
-            position: Position::new(Vec3::new(position_x, position_y, 0.0), position_zone_id),
+            position: Vec3::new(position_x, position_y, 0.0),
+            zone_id,
             equipment,
             basic_stats: BasicStats {
                 strength,
@@ -328,9 +330,9 @@ impl From<&PacketServerSelectCharacter> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::SelectCharacter as u16);
         let character_info = &packet.character_info;
         writer.write_character_gender_u8(character_info.gender);
-        writer.write_u16(packet.position.zone_id.get() as u16);
-        writer.write_f32(packet.position.position.x);
-        writer.write_f32(packet.position.position.y);
+        writer.write_u16(packet.zone_id.get() as u16);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
         writer.write_u16(character_info.revive_zone_id.get() as u16);
 
         writer.write_u32(character_info.face as u32);
@@ -1074,7 +1076,7 @@ impl From<&PacketServerSetHotbarSlot> for Packet {
 pub struct PacketServerSpawnEntityItemDrop<'a> {
     pub entity_id: ClientEntityId,
     pub dropped_item: &'a DroppedItem,
-    pub position: &'a Position,
+    pub position: Vec3,
     pub owner_entity_id: Option<ClientEntityId>,
     pub remaining_time: &'a Duration,
 }
@@ -1082,8 +1084,8 @@ pub struct PacketServerSpawnEntityItemDrop<'a> {
 impl<'a> From<&'a PacketServerSpawnEntityItemDrop<'a>> for Packet {
     fn from(packet: &'a PacketServerSpawnEntityItemDrop<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityItemDrop as u16);
-        writer.write_f32(packet.position.position.x);
-        writer.write_f32(packet.position.position.y);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
         match packet.dropped_item {
             DroppedItem::Item(item) => writer.write_item_full(Some(item)),
             DroppedItem::Money(amount) => writer.write_item_full_money(*amount),
@@ -1099,7 +1101,7 @@ pub struct PacketServerSpawnEntityNpc {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
     pub direction: f32,
-    pub position: Position,
+    pub position: Vec3,
     pub team: Team,
     pub destination: Option<Destination>,
     pub command: Command,
@@ -1121,10 +1123,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityNpc {
         let entity_id = reader.read_entity_id()?;
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
-        let position = Position::new(
-            Vec3::new(position_x, position_y, 0.0),
-            ZoneId::new(1).unwrap(),
-        );
+        let position = Vec3::new(position_x, position_y, 0.0);
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
@@ -1168,8 +1167,8 @@ impl From<&PacketServerSpawnEntityNpc> for Packet {
     fn from(packet: &PacketServerSpawnEntityNpc) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityNpc as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_f32(packet.position.position.x);
-        writer.write_f32(packet.position.position.y);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
         if let Some(destination) = packet.destination.as_ref() {
             writer.write_f32(destination.position.x);
             writer.write_f32(destination.position.y);
@@ -1195,7 +1194,7 @@ impl From<&PacketServerSpawnEntityNpc> for Packet {
 pub struct PacketServerSpawnEntityMonster {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
-    pub position: Position,
+    pub position: Vec3,
     pub destination: Option<Destination>,
     pub team: Team,
     pub health: HealthPoints,
@@ -1217,10 +1216,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityMonster {
         let entity_id = reader.read_entity_id()?;
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
-        let position = Position::new(
-            Vec3::new(position_x, position_y, 0.0),
-            ZoneId::new(1).unwrap(),
-        );
+        let position = Vec3::new(position_x, position_y, 0.0);
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
@@ -1261,8 +1257,8 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
     fn from(packet: &PacketServerSpawnEntityMonster) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityMonster as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_f32(packet.position.position.x);
-        writer.write_f32(packet.position.position.y);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
         if let Some(destination) = packet.destination.as_ref() {
             writer.write_f32(destination.position.x);
             writer.write_f32(destination.position.y);
@@ -1283,38 +1279,147 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
     }
 }
 
-pub struct PacketServerSpawnEntityCharacter<'a> {
-    pub character_info: &'a CharacterInfo,
-    pub command: &'a Command,
-    pub destination: Option<&'a Destination>,
+pub struct PacketServerSpawnEntityCharacter {
+    pub character_info: CharacterInfo,
+    pub command: Command,
+    pub destination: Option<Destination>,
     pub entity_id: ClientEntityId,
-    pub equipment: &'a Equipment,
-    pub health: &'a HealthPoints,
-    pub level: &'a Level,
+    pub equipment: Equipment,
+    pub health: HealthPoints,
+    pub level: Level,
     pub move_mode: MoveMode,
     pub move_speed: MoveSpeed,
     pub passive_attack_speed: i32,
-    pub position: &'a Position,
-    pub status_effects: &'a ActiveStatusEffects,
+    pub position: Vec3,
+    pub status_effects: ActiveStatusEffects,
     pub target_entity_id: Option<ClientEntityId>,
-    pub team: &'a Team,
-    pub personal_store_info: &'a Option<(i32, String)>,
+    pub team: Team,
+    pub personal_store_info: Option<(i32, String)>,
 }
 
-impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
-    fn from(packet: &'a PacketServerSpawnEntityCharacter<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::SpawnEntityCharacter as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let position_x = reader.read_f32()?;
+        let position_y = reader.read_f32()?;
+        let destination_x = reader.read_f32()?;
+        let destination_y = reader.read_f32()?;
+        let destination = if destination_x != 0.0 && destination_y != 0.0 {
+            Some(Destination::new(Vec3::new(
+                destination_x,
+                destination_y,
+                0.0,
+            )))
+        } else {
+            None
+        };
+        let command = reader.read_command_id()?;
+        let target_entity_id = reader.read_option_entity_id()?;
+        let move_mode = reader.read_move_mode_u8()?;
+        let health = HealthPoints::new(reader.read_i32()?);
+        let team = Team::new(reader.read_u32()?);
+        let mut status_effects = ActiveStatusEffects::default();
+        reader.read_status_effects_flags_u32(&mut status_effects)?;
+
+        let gender = reader.read_character_gender_u8()?;
+        let move_speed = MoveSpeed::new(reader.read_u16()? as f32);
+        let passive_attack_speed = reader.read_u16()? as i32;
+        let _weight_rate = reader.read_u8()?;
+        let face = reader.read_u32()? as u8;
+        let hair = reader.read_u32()? as u8;
+        let mut equipment = reader.read_equipment_visible_part()?;
+
+        for index in [AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
+            equipment.equipped_ammo[index] = reader.read_equipment_ammo_part()?;
+        }
+
+        let job = reader.read_u16()?;
+        let level = Level::new(reader.read_u8()? as u32);
+
+        for index in [
+            VehiclePartIndex::Body,
+            VehiclePartIndex::Engine,
+            VehiclePartIndex::Leg,
+            VehiclePartIndex::Ability,
+        ] {
+            equipment.equipped_vehicle[index] =
+                reader.read_equipment_item_part(ItemType::Weapon)?;
+        }
+
+        let position_z = reader.read_u16()? as f32;
+        let sub_flags = reader.read_u32()?; // TODO: Use sub flags
+        let name = reader.read_null_terminated_utf8()?.to_string();
+        reader.read_status_effects_values(&mut status_effects)?;
+
+        let personal_store_info = if sub_flags & 2 != 0 {
+            let store_skin = reader.read_u16()? as i32;
+            let store_title = reader.read_null_terminated_utf8()?.to_string();
+            Some((store_skin, store_title))
+        } else {
+            None
+        };
+
+        Ok(Self {
+            entity_id,
+            position: Vec3::new(position_x, position_y, position_z),
+            team,
+            destination,
+            command,
+            target_entity_id,
+            health,
+            move_mode,
+            status_effects,
+            character_info: CharacterInfo {
+                name,
+                gender,
+                race: 0,
+                birth_stone: 0,
+                job,
+                face,
+                hair,
+                rank: 0,
+                fame: 0,
+                fame_b: 0,
+                fame_g: 0,
+                revive_zone_id: ZoneId::new(1).unwrap(),
+                revive_position: Vec3::new(0.0, 0.0, 0.0),
+                unique_id: 0,
+            },
+            equipment,
+            level,
+            move_speed,
+            passive_attack_speed,
+            personal_store_info,
+        })
+    }
+}
+
+impl From<&PacketServerSpawnEntityCharacter> for Packet {
+    fn from(packet: &PacketServerSpawnEntityCharacter) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityCharacter as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_f32(packet.position.position.x);
-        writer.write_f32(packet.position.position.y);
-        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.x));
-        writer.write_f32(packet.destination.map_or(0.0, |d| d.position.y));
-        writer.write_command_id(packet.command);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
+        if let Some(destination) = packet.destination.as_ref() {
+            writer.write_f32(destination.position.x);
+            writer.write_f32(destination.position.y);
+        } else {
+            writer.write_f32(0.0);
+            writer.write_f32(0.0);
+        }
+        writer.write_command_id(&packet.command);
         writer.write_option_entity_id(packet.target_entity_id);
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
-        writer.write_status_effects_flags_u32(packet.status_effects);
+        writer.write_status_effects_flags_u32(&packet.status_effects);
         writer.write_character_gender_u8(packet.character_info.gender);
         writer.write_u16(packet.move_speed.speed as u16);
         writer.write_u16(packet.passive_attack_speed as u16);
@@ -1322,7 +1427,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
 
         writer.write_u32(packet.character_info.face as u32);
         writer.write_u32(packet.character_info.hair as u32);
-        writer.write_equipment_visible_part(packet.equipment);
+        writer.write_equipment_visible_part(&packet.equipment);
 
         for index in &[AmmoIndex::Arrow, AmmoIndex::Bullet, AmmoIndex::Throw] {
             writer.write_equipment_ammo_part(packet.equipment.get_ammo_item(*index));
@@ -1340,7 +1445,7 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
             writer.write_equipment_item_part(packet.equipment.get_vehicle_item(*index));
         }
 
-        writer.write_u16(packet.position.position.z as u16);
+        writer.write_u16(packet.position.z as u16);
 
         /*
         TODO Sub flags:
@@ -1356,9 +1461,11 @@ impl<'a> From<&'a PacketServerSpawnEntityCharacter<'a>> for Packet {
         writer.write_u32(sub_flags);
         writer.write_null_terminated_utf8(&packet.character_info.name);
 
-        writer.write_status_effects_values(packet.status_effects);
+        writer.write_status_effects_values(&packet.status_effects);
 
-        if let Some((personal_store_skin, personal_store_title)) = packet.personal_store_info {
+        if let Some((personal_store_skin, personal_store_title)) =
+            packet.personal_store_info.as_ref()
+        {
             writer.write_u16(*personal_store_skin as u16);
             writer.write_null_terminated_utf8(personal_store_title);
         }
