@@ -99,9 +99,7 @@ impl PacketWriteCharacterGender for PacketWriter {
 #[bitfield]
 #[derive(Clone, Copy)]
 pub struct PacketEquipmentAmmoPart {
-    #[skip(getters)]
     pub item_type: B5,
-    #[skip(getters)]
     pub item_number: B10,
     #[skip]
     __: B1,
@@ -161,6 +159,7 @@ pub trait PacketReadItems {
         &mut self,
         item_type: ItemType,
     ) -> Result<Option<EquipmentItem>, PacketError>;
+    fn read_equipment_ammo_part(&mut self) -> Result<Option<StackableItem>, PacketError>;
 }
 
 impl<'a> PacketReadItems for PacketReader<'a> {
@@ -277,6 +276,25 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         }
 
         Ok(equipment)
+    }
+
+    fn read_equipment_ammo_part(&mut self) -> Result<Option<StackableItem>, PacketError> {
+        let ammo_part = PacketEquipmentAmmoPart::from_bytes(
+            self.read_fixed_length_bytes(2)?.try_into().unwrap(),
+        );
+
+        if let Some(item_type) = decode_item_type(ammo_part.item_type() as usize) {
+            if let Some(item) = StackableItem::new(
+                &ItemReference::new(item_type, ammo_part.item_number() as usize),
+                999,
+            ) {
+                Ok(Some(item))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
     }
 }
 
