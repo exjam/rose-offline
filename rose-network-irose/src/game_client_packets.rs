@@ -9,8 +9,11 @@ use std::convert::{TryFrom, TryInto};
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, VehiclePartIndex, WarpGateId};
 use rose_data_irose::decode_ammo_index;
 use rose_game_common::{
-    components::{BasicStatType, ClientEntityId, HotbarSlot, ItemSlot, SkillSlot},
-    messages::client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
+    components::{BasicStatType, HotbarSlot, ItemSlot, SkillSlot},
+    messages::{
+        client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
+        ClientEntityId,
+    },
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 

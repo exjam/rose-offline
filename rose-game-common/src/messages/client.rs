@@ -1,9 +1,11 @@
 use bevy_math::Vec2;
 use serde::{Deserialize, Serialize};
 
-use crate::components::{
-    BasicStatType, CharacterGender, CharacterUniqueId, ClientEntityId, HotbarSlot, ItemSlot,
-    SkillSlot,
+use crate::{
+    components::{
+        BasicStatType, CharacterGender, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot,
+    },
+    messages::ClientEntityId,
 };
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,

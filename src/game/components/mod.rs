@@ -1,6 +1,7 @@
 mod account;
 mod bot_ai;
 mod character_list;
+mod client_entity;
 mod client_entity_sector;
 mod client_entity_visibility;
 mod command;
@@ -30,17 +31,17 @@ mod world_client;
 pub use rose_game_common::components::{
     AbilityValues, ActiveQuest, ActiveStatusEffect, ActiveStatusEffectRegen, BasicStatType,
     BasicStats, CharacterDeleteTime, CharacterGender, CharacterInfo, CharacterUniqueId,
-    ClientEntity, ClientEntityId, ClientEntityType, DamageCategory, DamageType, Destination,
-    DroppedItem, Equipment, EquipmentItemDatabase, EquipmentItemReference, ExperiencePoints,
-    HealthPoints, Hotbar, HotbarSlot, Inventory, InventoryPage, InventoryPageType, ItemDrop,
-    ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPage,
-    SkillPoints, SkillSlot, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Target, Team,
-    UnionMembership, MAX_STAMINA,
+    DamageCategory, DamageType, Destination, DroppedItem, Equipment, EquipmentItemDatabase,
+    EquipmentItemReference, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
+    InventoryPage, InventoryPageType, ItemDrop, ItemSlot, Level, ManaPoints, Money, MoveMode,
+    MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints,
+    StatusEffects, StatusEffectsRegen, Target, Team, UnionMembership, MAX_STAMINA,
 };
 
 pub use account::Account;
 pub use bot_ai::{BotAi, BotAiState, BOT_IDLE_CHECK_DURATION};
 pub use character_list::CharacterList;
+pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_sector::ClientEntitySector;
 pub use client_entity_visibility::ClientEntityVisibility;
 pub use command::{

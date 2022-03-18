@@ -13,12 +13,13 @@ use rose_data::{
 use crate::{
     components::{
         ActiveStatusEffect, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
-        CharacterUniqueId, ClientEntityId, Destination, DroppedItem, Equipment, ExperiencePoints,
-        HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode,
-        MoveSpeed, Npc, QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team,
+        CharacterUniqueId, Destination, DroppedItem, Equipment, ExperiencePoints, HealthPoints,
+        Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed,
+        Npc, QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team,
         UnionMembership,
     },
     data::Damage,
+    messages::ClientEntityId,
 };
 
 #[derive(Clone, Debug, Error, Serialize, Deserialize)]
