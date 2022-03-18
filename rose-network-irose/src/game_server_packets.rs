@@ -939,6 +939,21 @@ pub struct PacketServerLocalChat<'a> {
     pub text: &'a str,
 }
 
+impl<'a> TryFrom<&'a Packet> for PacketServerLocalChat<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::LocalChat as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let text = reader.read_null_terminated_utf8()?;
+        Ok(PacketServerLocalChat { entity_id, text })
+    }
+}
+
 impl<'a> From<&'a PacketServerLocalChat<'a>> for Packet {
     fn from(packet: &'a PacketServerLocalChat<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::LocalChat as u16);
@@ -951,6 +966,21 @@ impl<'a> From<&'a PacketServerLocalChat<'a>> for Packet {
 pub struct PacketServerShoutChat<'a> {
     pub name: &'a str,
     pub text: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketServerShoutChat<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::ShoutChat as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let name = reader.read_null_terminated_utf8()?;
+        let text = reader.read_null_terminated_utf8()?;
+        Ok(PacketServerShoutChat { name, text })
+    }
 }
 
 impl<'a> From<&'a PacketServerShoutChat<'a>> for Packet {
@@ -967,6 +997,21 @@ pub struct PacketServerAnnounceChat<'a> {
     pub text: &'a str,
 }
 
+impl<'a> TryFrom<&'a Packet> for PacketServerAnnounceChat<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::AnnounceChat as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let text = reader.read_null_terminated_utf8()?;
+        let name = reader.read_null_terminated_utf8().ok();
+        Ok(PacketServerAnnounceChat { name, text })
+    }
+}
+
 impl<'a> From<&'a PacketServerAnnounceChat<'a>> for Packet {
     fn from(packet: &'a PacketServerAnnounceChat<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::AnnounceChat as u16);
@@ -981,6 +1026,21 @@ impl<'a> From<&'a PacketServerAnnounceChat<'a>> for Packet {
 pub struct PacketServerWhisper<'a> {
     pub from: &'a str,
     pub text: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketServerWhisper<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::Whisper as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let from = reader.read_null_terminated_utf8()?;
+        let text = reader.read_null_terminated_utf8()?;
+        Ok(PacketServerWhisper { from, text })
+    }
 }
 
 impl<'a> From<&'a PacketServerWhisper<'a>> for Packet {
