@@ -141,7 +141,7 @@ pub fn client_entity_visibility_system(
                                                 passive_attack_speed: spawn_ability_values
                                                     .passive_attack_speed,
                                                 status_effects: spawn_status_effects.active.clone(),
-                                                command: spawn_command.clone(),
+                                                command: spawn_command.into(),
                                                 target_entity_id,
                                                 personal_store_info: spawn_personal_store.map(
                                                     |personal_store| {
@@ -220,7 +220,7 @@ pub fn client_entity_visibility_system(
                                                 team: spawn_team.clone(),
                                                 health: *spawn_health,
                                                 destination: spawn_destination.cloned(),
-                                                command: spawn_command.clone(),
+                                                command: spawn_command.into(),
                                                 target_entity_id,
                                                 move_mode: *spawn_move_mode,
                                                 status_effects: spawn_status_effects.active.clone(),
@@ -261,7 +261,7 @@ pub fn client_entity_visibility_system(
                                             team: spawn_team.clone(),
                                             health: *spawn_health,
                                             destination: spawn_destination.cloned(),
-                                            command: spawn_command.clone(),
+                                            command: spawn_command.into(),
                                             target_entity_id,
                                             move_mode: *spawn_move_mode,
                                             status_effects: spawn_status_effects.active.clone(),

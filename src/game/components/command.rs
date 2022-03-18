@@ -3,11 +3,11 @@ use bevy_math::{Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-use crate::{
+use rose_data::{Item, MotionId, SkillId};
+use rose_game_common::{
     components::{ItemSlot, MoveMode},
     data::Damage,
 };
-use rose_data::{Item, MotionId, SkillId};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CommandMove {
@@ -216,5 +216,31 @@ impl Command {
             }),
             Some(casting_duration + action_duration),
         )
+    }
+}
+
+impl From<&Command> for rose_game_common::messages::server::CommandState {
+    fn from(command: &Command) -> Self {
+        match command.command {
+            CommandData::Die(_) => Self::Die,
+            CommandData::Stop(_) => Self::Stop,
+            CommandData::Move(_) => Self::Move,
+            CommandData::Attack(_) => Self::Attack,
+            CommandData::PickupItemDrop(_) => Self::PickupItemDrop,
+            CommandData::PersonalStore => Self::PersonalStore,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: None, ..
+            }) => Self::CastSkillSelf,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: Some(CommandCastSkillTarget::Entity(_)),
+                ..
+            }) => Self::CastSkillTargetEntity,
+            CommandData::CastSkill(CommandCastSkill {
+                skill_target: Some(CommandCastSkillTarget::Position(_)),
+                ..
+            }) => Self::CastSkillTargetPosition,
+            CommandData::Sit(_) => Self::Sit,
+            CommandData::Emote(_) => Self::Emote,
+        }
     }
 }

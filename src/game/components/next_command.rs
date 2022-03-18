@@ -2,7 +2,8 @@ use bevy_ecs::prelude::{Component, Entity};
 use bevy_math::{Vec2, Vec3};
 
 use rose_data::{Item, MotionId, SkillId};
-use rose_game_common::components::{
+
+use crate::game::components::{
     CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandEmote,
     CommandMove, CommandPickupItemDrop, CommandSit, CommandStop, ItemSlot, MoveMode,
 };

@@ -13,10 +13,10 @@ use rose_data::{
 use crate::{
     components::{
         ActiveStatusEffect, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
-        CharacterUniqueId, ClientEntityId, Command, Destination, DroppedItem, Equipment,
-        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
-        Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPoints, SkillSlot, Stamina,
-        StatPoints, Team, UnionMembership,
+        CharacterUniqueId, ClientEntityId, Destination, DroppedItem, Equipment, ExperiencePoints,
+        HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode,
+        MoveSpeed, Npc, QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team,
+        UnionMembership,
     },
     data::Damage,
 };
@@ -247,9 +247,25 @@ pub struct SpawnEntityItemDrop {
 pub type ActiveStatusEffects = EnumMap<StatusEffectType, Option<ActiveStatusEffect>>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum CommandState {
+    Stop,
+    Emote,
+    Move,
+    Attack,
+    Die,
+    PickupItemDrop,
+    CastSkillSelf,
+    CastSkillTargetEntity,
+    CastSkillTargetPosition,
+    RunAway,
+    Sit,
+    PersonalStore,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityCharacter {
     pub character_info: CharacterInfo,
-    pub command: Command,
+    pub command: CommandState,
     pub destination: Option<Destination>,
     pub entity_id: ClientEntityId,
     pub equipment: Equipment,
@@ -274,7 +290,7 @@ pub struct SpawnEntityNpc {
     pub team: Team,
     pub health: HealthPoints,
     pub destination: Option<Destination>,
-    pub command: Command,
+    pub command: CommandState,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
     pub status_effects: ActiveStatusEffects,
@@ -288,7 +304,7 @@ pub struct SpawnEntityMonster {
     pub team: Team,
     pub health: HealthPoints,
     pub destination: Option<Destination>,
-    pub command: Command,
+    pub command: CommandState,
     pub target_entity_id: Option<ClientEntityId>,
     pub move_mode: MoveMode,
     pub status_effects: ActiveStatusEffects,

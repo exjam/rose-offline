@@ -11,12 +11,11 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveStatusEffect, CharacterGender, ClientEntityId, Command, CommandCastSkill,
-        CommandCastSkillTarget, CommandData, Equipment, HotbarSlot, InventoryPageType, ItemSlot,
-        Money, MoveMode, SkillSlot,
+        ActiveStatusEffect, CharacterGender, ClientEntityId, Equipment, HotbarSlot,
+        InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot,
     },
     data::Damage,
-    messages::server::ActiveStatusEffects,
+    messages::server::{ActiveStatusEffects, CommandState},
 };
 use rose_network_common::{PacketError, PacketReader, PacketWriter};
 
@@ -871,56 +870,47 @@ impl PacketWriteEntityId for PacketWriter {
     }
 }
 
-pub trait PacketReadCommand {
-    fn read_command_id(&mut self) -> Result<Command, PacketError>;
+pub trait PacketReadCommandState {
+    fn read_command_state(&mut self) -> Result<CommandState, PacketError>;
 }
 
-impl<'a> PacketReadCommand for PacketReader<'a> {
-    fn read_command_id(&mut self) -> Result<Command, PacketError> {
-        // TODO: Fix read_command_id
+impl<'a> PacketReadCommandState for PacketReader<'a> {
+    fn read_command_state(&mut self) -> Result<CommandState, PacketError> {
         match self.read_u16()? {
-            0 => Ok(Command::with_stop()),
-            1 => Ok(Command::with_stop()),
-            2 => Ok(Command::with_stop()),
-            3 => Ok(Command::with_stop()),
-            4 => Ok(Command::with_stop()),
-            6 => Ok(Command::with_stop()),
-            7 => Ok(Command::with_stop()),
-            8 => Ok(Command::with_stop()),
-            9 => Ok(Command::with_stop()), // TODO: run away
-            10 => Ok(Command::with_stop()),
-            11 => Ok(Command::with_stop()),
+            0 => Ok(CommandState::Stop),
+            1 => Ok(CommandState::Move),
+            2 => Ok(CommandState::Attack),
+            3 => Ok(CommandState::Die),
+            4 => Ok(CommandState::PickupItemDrop),
+            6 => Ok(CommandState::CastSkillSelf),
+            7 => Ok(CommandState::CastSkillTargetEntity),
+            8 => Ok(CommandState::CastSkillTargetPosition),
+            9 => Ok(CommandState::RunAway),
+            10 => Ok(CommandState::Sit),
+            11 => Ok(CommandState::PersonalStore),
             _ => Err(PacketError::InvalidPacket),
         }
     }
 }
 
-pub trait PacketWriteCommand {
-    fn write_command_id(&mut self, command: &Command);
+pub trait PacketWriteCommandState {
+    fn write_command_state(&mut self, command: &CommandState);
 }
 
-impl PacketWriteCommand for PacketWriter {
-    fn write_command_id(&mut self, command: &Command) {
-        let command_id = match command.command {
-            CommandData::Stop(_) | CommandData::Emote(_) => 0,
-            CommandData::Move(_) => 1,
-            CommandData::Attack(_) => 2,
-            CommandData::Die(_) => 3,
-            CommandData::PickupItemDrop(_) => 4,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: None, ..
-            }) => 6,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: Some(CommandCastSkillTarget::Entity(_)),
-                ..
-            }) => 7,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: Some(CommandCastSkillTarget::Position(_)),
-                ..
-            }) => 8,
-            // TODO: Run away => 9
-            CommandData::Sit(_) => 10,
-            CommandData::PersonalStore => 11,
+impl PacketWriteCommandState for PacketWriter {
+    fn write_command_state(&mut self, command: &CommandState) {
+        let command_id = match command {
+            CommandState::Stop | CommandState::Emote => 0,
+            CommandState::Move => 1,
+            CommandState::Attack => 2,
+            CommandState::Die => 3,
+            CommandState::PickupItemDrop => 4,
+            CommandState::CastSkillSelf => 6,
+            CommandState::CastSkillTargetEntity => 7,
+            CommandState::CastSkillTargetPosition => 8,
+            CommandState::RunAway => 9,
+            CommandState::Sit => 10,
+            CommandState::PersonalStore => 11,
         };
         self.write_u16(command_id);
     }
