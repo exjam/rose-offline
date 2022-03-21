@@ -11,6 +11,7 @@ use crate::{
 pub struct ZmoFile {
     pub fps: usize,
     pub num_frames: usize,
+    pub channels: Vec<(u32, ZmoChannel)>,
     pub frame_events: Vec<u16>,
     pub total_attack_frames: usize,
 }
@@ -130,6 +131,7 @@ impl RoseFile for ZmoFile {
         Ok(Self {
             fps,
             num_frames,
+            channels,
             frame_events,
             total_attack_frames,
         })
