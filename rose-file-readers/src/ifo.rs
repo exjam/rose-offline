@@ -79,6 +79,7 @@ pub struct IfoFile {
     pub monster_spawns: Vec<IfoMonsterSpawnPoint>,
     pub npcs: Vec<IfoNpc>,
     pub event_objects: Vec<IfoEventObject>,
+    pub animated_objects: Vec<IfoObject>,
     pub deco_objects: Vec<IfoObject>,
     pub cnst_objects: Vec<IfoObject>,
     pub water_size: f32,
@@ -93,7 +94,7 @@ enum BlockType {
     CnstObject = 3,
     Sound = 4,
     Effect = 5,
-    Animation = 6,
+    AnimatedObject = 6,
     LegacyWater = 7,
     MonsterSpawn = 8,
     WaterPlanes = 9,
@@ -106,6 +107,7 @@ enum BlockType {
 pub struct IfoReadOptions {
     pub skip_monster_spawns: bool,
     pub skip_npcs: bool,
+    pub skip_animated_objects: bool,
     pub skip_event_objects: bool,
     pub skip_cnst_objects: bool,
     pub skip_deco_objects: bool,
@@ -122,6 +124,7 @@ impl RoseFile for IfoFile {
         let mut monster_spawns = Vec::new();
         let mut npcs = Vec::new();
         let mut event_objects = Vec::new();
+        let mut animated_objects = Vec::new();
         let mut cnst_objects = Vec::new();
         let mut deco_objects = Vec::new();
         let mut water_size = 0.0;
@@ -135,6 +138,16 @@ impl RoseFile for IfoFile {
             reader.set_position(block_offset as u64);
 
             match FromPrimitive::from_u32(block_type) {
+                Some(BlockType::AnimatedObject) => {
+                    if !read_options.skip_animated_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        animated_objects.reserve_exact(object_count);
+
+                        for _ in 0..object_count {
+                            animated_objects.push(read_object(&mut reader)?);
+                        }
+                    }
+                }
                 Some(BlockType::CnstObject) => {
                     if !read_options.skip_cnst_objects {
                         let object_count = reader.read_u32()? as usize;
@@ -262,6 +275,7 @@ impl RoseFile for IfoFile {
             monster_spawns,
             npcs,
             event_objects,
+            animated_objects,
             deco_objects,
             cnst_objects,
             water_size,
