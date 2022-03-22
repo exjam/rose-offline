@@ -44,10 +44,14 @@ impl RoseFile for ZmsFile {
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let magic = reader.read_null_terminated_string()?;
-        if magic == "ZMS0006" {
-            Self::read_version6(&mut reader)
-        } else if magic == "ZMS0007" || magic == "ZMS0008" {
-            Self::read_version8(&mut reader)
+        if magic == "ZMS0005" {
+            Self::read_version6(&mut reader, 5)
+        } else if magic == "ZMS0006" {
+            Self::read_version6(&mut reader, 6)
+        } else if magic == "ZMS0007" {
+            Self::read_version8(&mut reader, 7)
+        } else if magic == "ZMS0008" {
+            Self::read_version8(&mut reader, 8)
         } else {
             Err(anyhow!("Invalid ZMS magic header: {}", magic))
         }
@@ -55,7 +59,7 @@ impl RoseFile for ZmsFile {
 }
 
 impl ZmsFile {
-    fn read_version6(reader: &mut RoseFileReader) -> Result<Self, anyhow::Error> {
+    fn read_version6(reader: &mut RoseFileReader, version: usize) -> Result<Self, anyhow::Error> {
         let format_bits = reader.read_u32()?;
         let format = ZmsFormatFlags::from_bits(format_bits)
             .ok_or_else(|| anyhow!("Invalid ZMS format bits: {:X}", format_bits))?;
@@ -103,11 +107,18 @@ impl ZmsFile {
                 Ok(values)
             };
 
-        let position = if format.contains(ZmsFormatFlags::POSITION) {
+        let mut position = if format.contains(ZmsFormatFlags::POSITION) {
             read_vertex_f32x3(vertex_count, reader)?
         } else {
             Vec::new()
         };
+
+        // Mesh version 5/6 is scaled by 100.0
+        for [x, y, z] in position.iter_mut() {
+            *x /= 100.0;
+            *y /= 100.0;
+            *z /= 100.0;
+        }
 
         let normal = if format.contains(ZmsFormatFlags::NORMAL) {
             read_vertex_f32x3(vertex_count, reader)?
@@ -210,7 +221,7 @@ impl ZmsFile {
         })
     }
 
-    fn read_version8(reader: &mut RoseFileReader) -> Result<Self, anyhow::Error> {
+    fn read_version8(reader: &mut RoseFileReader, version: usize) -> Result<Self, anyhow::Error> {
         let format_bits = reader.read_u32()?;
         let format = ZmsFormatFlags::from_bits(format_bits)
             .ok_or_else(|| anyhow!("Invalid ZMS format bits: {:X}", format_bits))?;
