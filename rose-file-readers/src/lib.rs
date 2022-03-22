@@ -43,7 +43,7 @@ pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry};
 pub use til::TilFile;
 pub use vfs::{VfsFile, VfsIndex, VfsPath, VfsPathBuf};
 pub use zmd::ZmdFile;
-pub use zmo::{ZmoFile, ZmoChannel, ZmoReadOptions};
+pub use zmo::{ZmoChannel, ZmoFile, ZmoReadOptions};
 pub use zms::{ZmsFile, ZmsReadError};
 pub use zon::{ZonFile, ZonReadOptions, ZonTile, ZonTileRotation};
 pub use zsc::{

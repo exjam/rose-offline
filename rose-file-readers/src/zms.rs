@@ -31,6 +31,8 @@ pub struct ZmsFile {
     pub uv3: Vec<[f32; 2]>,
     pub uv4: Vec<[f32; 2]>,
     pub indices: Vec<u16>,
+    pub strip_indices: Vec<u16>,
+    pub material_num_faces: Vec<u16>,
 }
 
 #[derive(Error, Debug)]
@@ -205,6 +207,16 @@ impl ZmsFile {
             indices.push(reader.read_u32()? as u16);
         }
 
+        let mut material_num_faces = Vec::new();
+        if version >= 6 {
+            let num_matids = reader.read_u32()? as usize;
+            material_num_faces.reserve_exact(num_matids);
+            for _ in 0..num_matids {
+                let _index = reader.read_u32()?;
+                material_num_faces.push(reader.read_u32()? as u16);
+            }
+        }
+
         Ok(Self {
             format,
             position,
@@ -218,6 +230,8 @@ impl ZmsFile {
             uv3,
             uv4,
             indices,
+            strip_indices: Vec::new(),
+            material_num_faces,
         })
     }
 
@@ -320,6 +334,16 @@ impl ZmsFile {
         let triangle_count = reader.read_u16()? as usize;
         let indices = reader.read_vec::<u16>(triangle_count * 3)?;
 
+        let num_matids = reader.read_u16()? as usize;
+        let material_num_faces = reader.read_vec::<u16>(num_matids)?;
+
+        let num_strip_indices = reader.read_u16()? as usize;
+        let strip_indices = reader.read_vec::<u16>(num_strip_indices)?;
+
+        if version >= 8 {
+            let _pool_type = reader.read_u16();
+        }
+
         Ok(Self {
             format,
             position,
@@ -333,6 +357,8 @@ impl ZmsFile {
             uv3,
             uv4,
             indices,
+            strip_indices,
+            material_num_faces,
         })
     }
 }
