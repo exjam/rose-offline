@@ -148,15 +148,15 @@ impl ZmsFile {
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 let bone_y = bones
-                    .get(index.x as usize)
+                    .get(index.y as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 let bone_z = bones
-                    .get(index.x as usize)
+                    .get(index.z as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 let bone_w = bones
-                    .get(index.x as usize)
+                    .get(index.w as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 bone_indices.push([bone_x as u32, bone_y as u32, bone_z as u32, bone_w as u32]);
@@ -269,15 +269,15 @@ impl ZmsFile {
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 let bone_y = bones
-                    .get(index.x as usize)
+                    .get(index.y as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 let bone_z = bones
-                    .get(index.x as usize)
+                    .get(index.z as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 let bone_w = bones
-                    .get(index.x as usize)
+                    .get(index.w as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
                 bone_indices.push([bone_x as u32, bone_y as u32, bone_z as u32, bone_w as u32]);
