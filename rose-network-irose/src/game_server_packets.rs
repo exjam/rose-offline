@@ -12,10 +12,10 @@ use rose_data::{
 use rose_data_irose::{encode_ability_type, encode_ammo_index};
 use rose_game_common::{
     components::{
-        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, Destination,
-        DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
-        ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList,
-        SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, DroppedItem,
+        Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
+        ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints,
+        SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::{
@@ -1165,7 +1165,7 @@ pub struct PacketServerSpawnEntityNpc {
     pub direction: f32,
     pub position: Vec3,
     pub team: Team,
-    pub destination: Option<Destination>,
+    pub destination: Option<Vec3>,
     pub command: CommandState,
     pub target_entity_id: Option<ClientEntityId>,
     pub health: HealthPoints,
@@ -1189,11 +1189,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityNpc {
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Destination::new(Vec3::new(
-                destination_x,
-                destination_y,
-                0.0,
-            )))
+            Some(Vec3::new(destination_x, destination_y, 0.0))
         } else {
             None
         };
@@ -1232,8 +1228,8 @@ impl From<&PacketServerSpawnEntityNpc> for Packet {
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
         if let Some(destination) = packet.destination.as_ref() {
-            writer.write_f32(destination.position.x);
-            writer.write_f32(destination.position.y);
+            writer.write_f32(destination.x);
+            writer.write_f32(destination.y);
         } else {
             writer.write_f32(0.0);
             writer.write_f32(0.0);
@@ -1257,7 +1253,7 @@ pub struct PacketServerSpawnEntityMonster {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
     pub position: Vec3,
-    pub destination: Option<Destination>,
+    pub destination: Option<Vec3>,
     pub team: Team,
     pub health: HealthPoints,
     pub command: CommandState,
@@ -1282,11 +1278,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityMonster {
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Destination::new(Vec3::new(
-                destination_x,
-                destination_y,
-                0.0,
-            )))
+            Some(Vec3::new(destination_x, destination_y, 0.0))
         } else {
             None
         };
@@ -1322,8 +1314,8 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
         if let Some(destination) = packet.destination.as_ref() {
-            writer.write_f32(destination.position.x);
-            writer.write_f32(destination.position.y);
+            writer.write_f32(destination.x);
+            writer.write_f32(destination.y);
         } else {
             writer.write_f32(0.0);
             writer.write_f32(0.0);
@@ -1344,7 +1336,7 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
 pub struct PacketServerSpawnEntityCharacter {
     pub character_info: CharacterInfo,
     pub command: CommandState,
-    pub destination: Option<Destination>,
+    pub destination: Option<Vec3>,
     pub entity_id: ClientEntityId,
     pub equipment: Equipment,
     pub health: HealthPoints,
@@ -1374,11 +1366,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
         let destination_x = reader.read_f32()?;
         let destination_y = reader.read_f32()?;
         let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Destination::new(Vec3::new(
-                destination_x,
-                destination_y,
-                0.0,
-            )))
+            Some(Vec3::new(destination_x, destination_y, 0.0))
         } else {
             None
         };
@@ -1470,8 +1458,8 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
         if let Some(destination) = packet.destination.as_ref() {
-            writer.write_f32(destination.position.x);
-            writer.write_f32(destination.position.y);
+            writer.write_f32(destination.x);
+            writer.write_f32(destination.y);
         } else {
             writer.write_f32(0.0);
             writer.write_f32(0.0);
