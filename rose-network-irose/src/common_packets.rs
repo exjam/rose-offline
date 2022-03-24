@@ -264,7 +264,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
     fn read_equipment_visible_part(&mut self) -> Result<Equipment, PacketError> {
         let mut equipment = Equipment::default();
 
-        for index in &[
+        for index in [
             EquipmentIndex::Head,
             EquipmentIndex::Body,
             EquipmentIndex::Hands,
@@ -274,7 +274,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
             EquipmentIndex::WeaponRight,
             EquipmentIndex::WeaponLeft,
         ] {
-            equipment.equipped_items[*index] = self.read_equipment_item_part(index.into())?;
+            equipment.equipped_items[index] = self.read_equipment_item_part(index.into())?;
         }
 
         Ok(equipment)

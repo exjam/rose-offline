@@ -21,8 +21,8 @@ pub enum EquipmentIndex {
     Earring,
 }
 
-impl From<&EquipmentIndex> for ItemType {
-    fn from(equipment_index: &EquipmentIndex) -> Self {
+impl From<EquipmentIndex> for ItemType {
+    fn from(equipment_index: EquipmentIndex) -> Self {
         match equipment_index {
             EquipmentIndex::Face => ItemType::Face,
             EquipmentIndex::Head => ItemType::Head,
@@ -35,6 +35,29 @@ impl From<&EquipmentIndex> for ItemType {
             EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring => {
                 ItemType::Jewellery
             }
+        }
+    }
+}
+
+impl TryFrom<ItemType> for EquipmentIndex {
+    type Error = ();
+
+    fn try_from(item_type: ItemType) -> Result<EquipmentIndex, ()> {
+        match item_type {
+            ItemType::Face => Ok(EquipmentIndex::Face),
+            ItemType::Head => Ok(EquipmentIndex::Head),
+            ItemType::Body => Ok(EquipmentIndex::Body),
+            ItemType::Hands => Ok(EquipmentIndex::Hands),
+            ItemType::Feet => Ok(EquipmentIndex::Feet),
+            ItemType::Back => Ok(EquipmentIndex::Back),
+            ItemType::Jewellery => {
+                // Requires a lookup in STB which type of jewellery this is
+                Err(())
+            }
+            // TODO: Support dual wielding of weapons
+            ItemType::Weapon => Ok(EquipmentIndex::WeaponRight),
+            ItemType::SubWeapon => Ok(EquipmentIndex::WeaponLeft),
+            _ => Err(()),
         }
     }
 }

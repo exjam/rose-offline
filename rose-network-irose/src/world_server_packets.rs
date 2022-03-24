@@ -104,9 +104,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
                 EquipmentIndex::Back,
                 EquipmentIndex::WeaponLeft,
                 EquipmentIndex::WeaponRight,
-            ]
-            .iter()
-            {
+            ] {
                 let item_number = reader.read_u16()? as usize;
                 let grade = reader.read_u16()?;
                 if item_number != 0 {
