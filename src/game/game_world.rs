@@ -1,6 +1,6 @@
 use bevy_ecs::{
     event::Events,
-    prelude::{IntoSystem, Schedule, StageLabel, World},
+    prelude::{Schedule, StageLabel, World},
     schedule::{RunOnce, SystemStage},
 };
 use chrono::Local;
@@ -86,7 +86,7 @@ impl GameWorld {
             GameStages::Startup,
             SystemStage::single_threaded()
                 .with_run_criteria(RunOnce::default())
-                .with_system(startup_zones_system.system()),
+                .with_system(startup_zones_system),
         );
         schedule.add_stage_after(
             GameStages::Startup,
@@ -108,62 +108,62 @@ impl GameWorld {
             GameStages::First,
             GameStages::Input,
             SystemStage::parallel()
-                .with_system(world_time_system.system())
-                .with_system(control_server_system.system())
-                .with_system(login_server_authentication_system.system())
-                .with_system(login_server_system.system())
-                .with_system(world_server_authentication_system.system())
-                .with_system(world_server_system.system())
-                .with_system(game_server_authentication_system.system())
-                .with_system(game_server_join_system.system())
-                .with_system(game_server_main_system.system())
-                .with_system(chat_commands_system.system())
-                .with_system(monster_spawn_system.system())
-                .with_system(bot_ai_system.system())
-                .with_system(npc_ai_system.system())
-                .with_system(expire_time_system.system())
-                .with_system(status_effect_system.system())
-                .with_system(passive_recovery_system.system()),
+                .with_system(world_time_system)
+                .with_system(control_server_system)
+                .with_system(login_server_authentication_system)
+                .with_system(login_server_system)
+                .with_system(world_server_authentication_system)
+                .with_system(world_server_system)
+                .with_system(game_server_authentication_system)
+                .with_system(game_server_join_system)
+                .with_system(game_server_main_system)
+                .with_system(chat_commands_system)
+                .with_system(monster_spawn_system)
+                .with_system(bot_ai_system)
+                .with_system(npc_ai_system)
+                .with_system(expire_time_system)
+                .with_system(status_effect_system)
+                .with_system(passive_recovery_system),
         );
 
         schedule.add_stage_after(
             GameStages::Input,
             GameStages::PreUpdate,
             SystemStage::parallel()
-                .with_system(command_system.system())
-                .with_system(party_system.system())
-                .with_system(update_position_system.system()),
+                .with_system(command_system)
+                .with_system(party_system)
+                .with_system(update_position_system),
         );
 
         schedule.add_stage_after(
             GameStages::PreUpdate,
             GameStages::Update,
             SystemStage::parallel()
-                .with_system(skill_effect_system.system())
-                .with_system(personal_store_system.system())
-                .with_system(npc_store_system.system())
-                .with_system(damage_system.system())
-                .with_system(quest_system.system())
-                .with_system(use_item_system.system())
-                .with_system(reward_item_system.system()),
+                .with_system(skill_effect_system)
+                .with_system(personal_store_system)
+                .with_system(npc_store_system)
+                .with_system(damage_system)
+                .with_system(quest_system)
+                .with_system(use_item_system)
+                .with_system(reward_item_system),
         );
 
         schedule.add_stage_after(
             GameStages::Update,
             GameStages::PostUpdate,
             SystemStage::parallel()
-                .with_system(experience_points_system.system())
-                .with_system(client_entity_visibility_system.system())
-                .with_system(weight_system.system()),
+                .with_system(experience_points_system)
+                .with_system(client_entity_visibility_system)
+                .with_system(weight_system),
         );
 
         schedule.add_stage_after(
             GameStages::PostUpdate,
             GameStages::Output,
             SystemStage::parallel()
-                .with_system(ability_values_system.system())
-                .with_system(server_messages_system.system())
-                .with_system(save_system.system()),
+                .with_system(ability_values_system)
+                .with_system(server_messages_system)
+                .with_system(save_system),
         );
 
         let min_tick_duration = Duration::from_millis(1000 / self.tick_rate_hz);

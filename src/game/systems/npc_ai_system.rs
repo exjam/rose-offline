@@ -1553,7 +1553,7 @@ fn get_attacker_data<'w, 's>(
         attacker_team,
         attacker_ability_values,
         attacker_health_points,
-    )) = attacker_query.get(entity)
+    )) = attacker_query.get_inner(entity)
     {
         Some(AiAttackerData::<'w> {
             entity,

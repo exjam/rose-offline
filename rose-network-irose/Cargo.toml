@@ -5,7 +5,7 @@ authors = ["James Benton <james.benton2@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-bevy_math = { version = "0.6" }
+bevy_math = { version = "0.7.0-dev" }
 bitvec = { version = "1.0", features = ["serde"] }
 bytes = "1.1"
 modular-bitfield = "0.11"
