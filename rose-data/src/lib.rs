@@ -55,6 +55,7 @@ macro_rules! id_wrapper_impl {
 
 mod ability;
 mod ai_database;
+mod character_motion_list;
 mod data_decoder;
 mod item;
 mod item_database;
@@ -70,6 +71,7 @@ mod zone_list;
 
 pub use ability::AbilityType;
 pub use ai_database::AiDatabase;
+pub use character_motion_list::{CharacterMotionAction, CharacterMotionId, CharacterMotionList};
 pub use data_decoder::DataDecoder;
 pub use item::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemSlotBehaviour, ItemWeaponType, StackError,
