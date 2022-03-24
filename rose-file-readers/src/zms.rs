@@ -24,7 +24,7 @@ pub struct ZmsFile {
     pub normal: Vec<[f32; 3]>,
     pub color: Vec<[f32; 4]>,
     pub bone_weights: Vec<[f32; 4]>,
-    pub bone_indices: Vec<[u32; 4]>,
+    pub bone_indices: Vec<[u16; 4]>,
     pub tangent: Vec<[f32; 3]>,
     pub uv1: Vec<[f32; 2]>,
     pub uv2: Vec<[f32; 2]>,
@@ -161,7 +161,7 @@ impl ZmsFile {
                     .get(index.w as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
-                bone_indices.push([bone_x as u32, bone_y as u32, bone_z as u32, bone_w as u32]);
+                bone_indices.push([bone_x, bone_y, bone_z, bone_w]);
             }
             (bone_weights, bone_indices)
         } else {
@@ -294,7 +294,7 @@ impl ZmsFile {
                     .get(index.w as usize)
                     .cloned()
                     .ok_or(ZmsReadError::InvalidBoneIndex)?;
-                bone_indices.push([bone_x as u32, bone_y as u32, bone_z as u32, bone_w as u32]);
+                bone_indices.push([bone_x, bone_y, bone_z, bone_w]);
             }
             (bone_weights, bone_indices)
         } else {
