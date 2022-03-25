@@ -761,6 +761,35 @@ pub struct PacketServerAttackEntity {
     pub z: u16,
 }
 
+impl TryFrom<&Packet> for PacketServerAttackEntity {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::AttackEntity as u16
+        {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let target_entity_id = reader.read_entity_id()?;
+        let distance = reader.read_u16()?;
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let z = reader.read_u16()?;
+
+        Ok(Self {
+            entity_id,
+            target_entity_id,
+            distance,
+            x,
+            y,
+            z,
+        })
+    }
+}
+
+
 impl From<&PacketServerAttackEntity> for Packet {
     fn from(packet: &PacketServerAttackEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::AttackEntity as u16);

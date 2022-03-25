@@ -184,6 +184,14 @@ impl TryFrom<&Packet> for PacketClientAttack {
     }
 }
 
+impl From<&PacketClientAttack> for Packet {
+    fn from(packet: &PacketClientAttack) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::Attack as u16);
+        writer.write_entity_id(packet.target_entity_id);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientChat<'a> {
     pub text: &'a str,
