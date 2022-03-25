@@ -31,12 +31,12 @@ use rose_game_common::{
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadEntityId,
-    PacketReadHotbarSlot, PacketReadItems, PacketReadMoveMode, PacketReadStatusEffects,
-    PacketWriteCharacterGender, PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId,
-    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
-    PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
-    PacketWriteVehiclePartIndex,
+    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
+    PacketReadEntityId, PacketReadHotbarSlot, PacketReadItems, PacketReadMoveMode,
+    PacketReadStatusEffects, PacketWriteCharacterGender, PacketWriteCommandState,
+    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
+    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot,
+    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -765,8 +765,7 @@ impl TryFrom<&Packet> for PacketServerAttackEntity {
     type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, PacketError> {
-        if packet.command != ServerPackets::AttackEntity as u16
-        {
+        if packet.command != ServerPackets::AttackEntity as u16 {
             return Err(PacketError::InvalidPacket);
         }
 
@@ -789,7 +788,6 @@ impl TryFrom<&Packet> for PacketServerAttackEntity {
     }
 }
 
-
 impl From<&PacketServerAttackEntity> for Packet {
     fn from(packet: &PacketServerAttackEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::AttackEntity as u16);
@@ -809,6 +807,28 @@ pub struct PacketServerDamageEntity {
     pub damage: Damage,
     pub is_killed: bool,
     // TODO: Optional item drop with damage
+}
+
+impl TryFrom<&Packet> for PacketServerDamageEntity {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::DamageEntity as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let attacker_entity_id = reader.read_entity_id()?;
+        let defender_entity_id = reader.read_entity_id()?;
+        let (damage, is_killed) = reader.read_damage_u16()?;
+
+        Ok(Self {
+            attacker_entity_id,
+            defender_entity_id,
+            damage,
+            is_killed,
+        })
+    }
 }
 
 impl From<&PacketServerDamageEntity> for Packet {
@@ -1090,6 +1110,23 @@ pub struct PacketServerStopMoveEntity {
     pub z: u16,
 }
 
+impl TryFrom<&Packet> for PacketServerStopMoveEntity {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::StopMoveEntity as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let z = reader.read_u16()?;
+        Ok(Self { entity_id, x, y, z })
+    }
+}
+
 impl From<&PacketServerStopMoveEntity> for Packet {
     fn from(packet: &PacketServerStopMoveEntity) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::StopMoveEntity as u16);
@@ -1164,20 +1201,55 @@ impl From<&PacketServerSetHotbarSlot> for Packet {
     }
 }
 
-pub struct PacketServerSpawnEntityItemDrop<'a> {
+pub struct PacketServerSpawnEntityItemDrop {
     pub entity_id: ClientEntityId,
-    pub dropped_item: &'a DroppedItem,
+    pub dropped_item: DroppedItem,
     pub position: Vec3,
     pub owner_entity_id: Option<ClientEntityId>,
-    pub remaining_time: &'a Duration,
+    pub remaining_time: Duration,
 }
 
-impl<'a> From<&'a PacketServerSpawnEntityItemDrop<'a>> for Packet {
-    fn from(packet: &'a PacketServerSpawnEntityItemDrop<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerSpawnEntityItemDrop {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::SpawnEntityItemDrop as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let position_x = reader.read_f32()?;
+        let position_y = reader.read_f32()?;
+        let position = Vec3::new(position_x, position_y, 0.0);
+
+        let dropped_item = if let Ok(item) = reader.read_item_full() {
+            DroppedItem::Item(item.ok_or(PacketError::InvalidPacket)?)
+        } else if let Ok(money) = reader.read_item_full_money() {
+            DroppedItem::Money(money.ok_or(PacketError::InvalidPacket)?)
+        } else {
+            return Err(PacketError::InvalidPacket);
+        };
+
+        let entity_id = reader.read_entity_id()?;
+        let owner_entity_id = reader.read_option_entity_id()?;
+        let remaining_time = Duration::from_millis(reader.read_u16()? as u64);
+
+        Ok(Self {
+            entity_id,
+            dropped_item,
+            position,
+            owner_entity_id,
+            remaining_time,
+        })
+    }
+}
+
+impl From<&PacketServerSpawnEntityItemDrop> for Packet {
+    fn from(packet: &PacketServerSpawnEntityItemDrop) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SpawnEntityItemDrop as u16);
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
-        match packet.dropped_item {
+        match &packet.dropped_item {
             DroppedItem::Item(item) => writer.write_item_full(Some(item)),
             DroppedItem::Money(amount) => writer.write_item_full_money(*amount),
         }
@@ -1728,6 +1800,31 @@ pub struct PacketServerUpdateLevel {
     pub skill_points: SkillPoints,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateLevel {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateLevel as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let level = Level::new(reader.read_u16()? as u32);
+        let experience_points = ExperiencePoints::new(reader.read_u32()? as u64);
+        let stat_points = StatPoints::new(reader.read_u16()? as u32);
+        let skill_points = SkillPoints::new(reader.read_u16()? as u32);
+
+        Ok(Self {
+            entity_id,
+            level,
+            experience_points,
+            stat_points,
+            skill_points,
+        })
+    }
+}
+
 impl From<&PacketServerUpdateLevel> for Packet {
     fn from(packet: &PacketServerUpdateLevel) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateLevel as u16);
@@ -1744,6 +1841,27 @@ pub struct PacketServerUpdateXpStamina {
     pub xp: u64,
     pub stamina: u32,
     pub source_entity_id: Option<ClientEntityId>,
+}
+
+impl TryFrom<&Packet> for PacketServerUpdateXpStamina {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateXpStamina as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let xp = reader.read_u32()? as u64;
+        let stamina = reader.read_u16()? as u32;
+        let source_entity_id = reader.read_option_entity_id()?;
+
+        Ok(Self {
+            xp,
+            stamina,
+            source_entity_id,
+        })
+    }
 }
 
 impl From<&PacketServerUpdateXpStamina> for Packet {

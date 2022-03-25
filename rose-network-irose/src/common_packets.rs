@@ -154,6 +154,7 @@ pub struct PacketStackableItemFull {
 
 pub trait PacketReadItems {
     fn read_item_full(&mut self) -> Result<Option<Item>, PacketError>;
+    fn read_item_full_money(&mut self) -> Result<Option<Money>, PacketError>;
     fn read_equipment_item_full(&mut self) -> Result<Option<EquipmentItem>, PacketError>;
     fn read_stackable_item_full(&mut self) -> Result<Option<StackableItem>, PacketError>;
     fn read_equipment_visible_part(&mut self) -> Result<Equipment, PacketError>;
@@ -199,6 +200,20 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         }
 
         Ok(None)
+    }
+
+    fn read_item_full_money(&mut self) -> Result<Option<Money>, PacketError> {
+        let item_bytes = self.read_fixed_length_bytes(6)?;
+        let stackable_item = PacketStackableItemFull::from_bytes(item_bytes.try_into().unwrap());
+        if stackable_item.item_type() != 31 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        if stackable_item.quantity() == 0 {
+            return Ok(None);
+        } else {
+            return Ok(Some(Money(stackable_item.quantity() as i64)));
+        }
     }
 
     fn read_equipment_item_full(&mut self) -> Result<Option<EquipmentItem>, PacketError> {
@@ -797,10 +812,33 @@ impl PacketWriteStatusEffects for PacketWriter {
 #[bitfield]
 #[derive(Clone, Copy)]
 pub struct PacketServerDamage {
-    #[skip(getters)]
     amount: B11,
-    #[skip(getters)]
     action: B5,
+}
+
+pub trait PacketReadDamage {
+    fn read_damage_u16(&mut self) -> Result<(Damage, bool), PacketError>;
+}
+
+impl<'a> PacketReadDamage for PacketReader<'a> {
+    fn read_damage_u16(&mut self) -> Result<(Damage, bool), PacketError> {
+        let server_damage =
+            PacketServerDamage::from_bytes(self.read_fixed_length_bytes(2)?.try_into().unwrap());
+        let action = server_damage.action();
+
+        let is_critical = (action & 0x08) != 0;
+        let apply_hit_stun = (action & 0x04) != 0;
+        let is_killed = (action & 0x10) != 0;
+
+        Ok((
+            Damage {
+                amount: server_damage.amount() as u32,
+                is_critical,
+                apply_hit_stun,
+            },
+            is_killed,
+        ))
+    }
 }
 
 pub trait PacketWriteDamage {

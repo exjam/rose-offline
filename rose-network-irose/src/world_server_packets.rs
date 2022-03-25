@@ -202,7 +202,7 @@ impl From<&PacketServerCharacterList> for Packet {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
 pub enum CreateCharacterResult {
     Ok = 0,
     Failed = 1,
@@ -215,6 +215,24 @@ pub enum CreateCharacterResult {
 pub struct PacketServerCreateCharacterReply {
     pub result: CreateCharacterResult,
     pub is_platinum: bool,
+}
+
+impl TryFrom<&Packet> for PacketServerCreateCharacterReply {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::CreateCharacterReply as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let result = FromPrimitive::from_u8(reader.read_u8()?).ok_or(PacketError::InvalidPacket)?;
+        let is_platinum = reader.read_u8()? != 0;
+        Ok(Self {
+            result,
+            is_platinum,
+        })
+    }
 }
 
 impl From<&PacketServerCreateCharacterReply> for Packet {

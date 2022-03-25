@@ -4,7 +4,7 @@ use std::convert::TryFrom;
 use rose_game_common::components::CharacterGender;
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
-use crate::common_packets::PacketReadCharacterGender;
+use crate::common_packets::{PacketReadCharacterGender, PacketWriteCharacterGender};
 
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
@@ -102,6 +102,20 @@ impl<'a> TryFrom<&'a Packet> for PacketClientCreateCharacter<'a> {
             start_point,
             name,
         })
+    }
+}
+
+impl<'a> From<&'a PacketClientCreateCharacter<'a>> for Packet {
+    fn from(packet: &'a PacketClientCreateCharacter<'a>) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::CreateCharacter as u16);
+        writer.write_character_gender_u8(packet.gender);
+        writer.write_u8(packet.birth_stone);
+        writer.write_u8(packet.hair);
+        writer.write_u8(packet.face);
+        writer.write_u8(0);
+        writer.write_u16(packet.start_point);
+        writer.write_null_terminated_utf8(packet.name);
+        writer.into()
     }
 }
 
