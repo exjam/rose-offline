@@ -88,11 +88,6 @@ pub struct ChangeEquipment {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PickupItemDrop {
-    pub target_entity_id: ClientEntityId,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LogoutRequest {
     Logout,
     ReturnToCharacterSelect,
@@ -167,7 +162,7 @@ pub enum ClientMessage {
     ChangeEquipment(ChangeEquipment),
     ChangeVehiclePart(VehiclePartIndex, Option<ItemSlot>),
     IncreaseBasicStat(BasicStatType),
-    PickupItemDrop(PickupItemDrop),
+    PickupItemDrop(ClientEntityId),
     LogoutRequest(LogoutRequest),
     ReviveRequest(ReviveRequestType),
     SetReviveZone,

@@ -7,7 +7,7 @@ use rose_data::QuestTriggerHash;
 use rose_game_common::messages::{
     client::{
         Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, LogoutRequest, Move,
-        NpcStoreTransaction, PersonalStoreBuyItem, PickupItemDrop, QuestDelete, SetHotbarSlot,
+        NpcStoreTransaction, PersonalStoreBuyItem, QuestDelete, SetHotbarSlot,
     },
     server::{
         AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
@@ -132,9 +132,7 @@ impl GameServer {
                 let packet = PacketClientPickupItemDrop::try_from(&packet)?;
                 client
                     .client_message_tx
-                    .send(ClientMessage::PickupItemDrop(PickupItemDrop {
-                        target_entity_id: packet.target_entity_id,
-                    }))?;
+                    .send(ClientMessage::PickupItemDrop(packet.target_entity_id))?;
             }
             Some(ClientPackets::LogoutRequest) => {
                 client

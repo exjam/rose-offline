@@ -830,10 +830,10 @@ pub fn game_server_main_system(
                             }
                         }
                     }
-                    ClientMessage::PickupItemDrop(message) => {
+                    ClientMessage::PickupItemDrop(target_entity_id) => {
                         if let Some((target_entity, _, _)) = client_entity_list
                             .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(message.target_entity_id))
+                            .and_then(|zone| zone.get_entity(target_entity_id))
                         {
                             entity_commands
                                 .insert(NextCommand::with_pickup_item_drop(*target_entity));

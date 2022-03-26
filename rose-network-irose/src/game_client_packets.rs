@@ -18,8 +18,9 @@ use rose_game_common::{
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    decode_item_slot, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-    PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex, PacketWriteEntityId,
+    decode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot,
+    PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
+    PacketWriteEntityId,
 };
 
 #[derive(FromPrimitive)]
@@ -316,6 +317,14 @@ pub struct PacketClientPickupItemDrop {
     pub target_entity_id: ClientEntityId,
 }
 
+impl From<&PacketClientPickupItemDrop> for Packet {
+    fn from(packet: &PacketClientPickupItemDrop) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PickupItemDrop as u16);
+        writer.write_entity_id(packet.target_entity_id);
+        writer.into()
+    }
+}
+
 impl TryFrom<&Packet> for PacketClientPickupItemDrop {
     type Error = PacketError;
 
@@ -325,7 +334,7 @@ impl TryFrom<&Packet> for PacketClientPickupItemDrop {
         }
 
         let mut reader = PacketReader::from(packet);
-        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let target_entity_id = reader.read_entity_id()?;
         Ok(PacketClientPickupItemDrop { target_entity_id })
     }
 }
