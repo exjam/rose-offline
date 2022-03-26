@@ -20,3 +20,16 @@ pub struct BasicStats {
     pub charm: i32,
     pub sense: i32,
 }
+
+impl Default for BasicStats {
+    fn default() -> Self {
+        Self {
+            strength: 10,
+            dexterity: 10,
+            intelligence: 10,
+            concentration: 10,
+            charm: 10,
+            sense: 10,
+        }
+    }
+}
