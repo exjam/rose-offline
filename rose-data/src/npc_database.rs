@@ -23,7 +23,7 @@ pub struct NpcStoreTabId(NonZeroU16);
 
 id_wrapper_impl!(NpcStoreTabId, NonZeroU16, u16);
 
-#[derive(Debug, Enum)]
+#[derive(Copy, Clone, Debug, Enum)]
 pub enum NpcMotionAction {
     Stop,
     Move,
