@@ -24,7 +24,7 @@ mod target;
 mod team;
 mod union_membership;
 
-pub use ability_values::{AbilityValues, DamageCategory, DamageType};
+pub use ability_values::{AbilityValues, AbilityValuesAdjust, DamageCategory, DamageType};
 pub use basic_stats::{BasicStatType, BasicStats};
 pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::{CharacterGender, CharacterInfo, CharacterUniqueId};
