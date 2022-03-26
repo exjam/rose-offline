@@ -120,7 +120,7 @@ pub fn startup_zones_system(
                     command: Command::default(),
                     health_points,
                     level,
-                    motion_data: MotionData::from_npc(npc_data),
+                    motion_data: MotionData::from_npc(&game_data.npcs, npc.npc_id),
                     move_mode: MoveMode::Walk,
                     move_speed,
                     next_command: NextCommand::default(),

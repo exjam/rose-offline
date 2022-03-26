@@ -3,8 +3,7 @@ use bevy_math::{Vec3, Vec3Swizzles};
 use std::time::Duration;
 
 use rose_data::{
-    AmmoIndex, EquipmentIndex, Item, ItemClass, NpcMotionId, SkillActionMode,
-    StackableSlotBehaviour,
+    AmmoIndex, EquipmentIndex, Item, ItemClass, SkillActionMode, StackableSlotBehaviour,
 };
 
 use crate::game::{
@@ -772,9 +771,7 @@ pub fn command_system(
                                 .or(skill_data.casting_motion_id)
                                 .and_then(|motion_id| {
                                     if let Some(npc) = npc {
-                                        game_data
-                                            .npcs
-                                            .get_motion(npc.id, NpcMotionId::new(motion_id.get()))
+                                        game_data.npcs.get_npc_motion(npc.id, motion_id)
                                     } else {
                                         game_data.motions.find_first_character_motion(motion_id)
                                     }
@@ -787,9 +784,7 @@ pub fn command_system(
                                 .or(skill_data.action_motion_id)
                                 .and_then(|motion_id| {
                                     if let Some(npc) = npc {
-                                        game_data
-                                            .npcs
-                                            .get_motion(npc.id, NpcMotionId::new(motion_id.get()))
+                                        game_data.npcs.get_npc_motion(npc.id, motion_id)
                                     } else {
                                         game_data.motions.find_first_character_motion(motion_id)
                                     }
@@ -923,13 +918,11 @@ pub fn command_system(
                     // The transition from Sitting to Sit happens above
                     *next_command = NextCommand::default();
                 }
-                CommandData::Emote(CommandEmote { motion_id, is_stop }) => {
+                &mut CommandData::Emote(CommandEmote { motion_id, is_stop }) => {
                     let motion_data = if let Some(npc) = npc {
-                        game_data
-                            .npcs
-                            .get_motion(npc.id, NpcMotionId::new(motion_id.get()))
+                        game_data.npcs.get_npc_motion(npc.id, motion_id)
                     } else {
-                        game_data.motions.find_first_character_motion(*motion_id)
+                        game_data.motions.find_first_character_motion(motion_id)
                     };
 
                     // We wait to send emote message until now as client applies it immediately
@@ -937,8 +930,8 @@ pub fn command_system(
                         client_entity,
                         ServerMessage::UseEmote(server::UseEmote {
                             entity_id: client_entity.id,
-                            motion_id: *motion_id,
-                            is_stop: *is_stop,
+                            motion_id,
+                            is_stop,
                         }),
                     );
 
@@ -946,7 +939,7 @@ pub fn command_system(
                         .map(|motion_data| motion_data.duration)
                         .unwrap_or_else(|| Duration::from_secs(0));
 
-                    *command = Command::with_emote(*motion_id, *is_stop, duration);
+                    *command = Command::with_emote(motion_id, is_stop, duration);
                     *next_command = NextCommand::default();
                 }
                 CommandData::Die(_) => {}

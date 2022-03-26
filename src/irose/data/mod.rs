@@ -1,10 +1,10 @@
 use std::{path::Path, sync::Arc};
 
-use rose_data::NpcDatabaseOptions;
+use rose_data::{CharacterMotionDatabaseOptions, NpcDatabaseOptions};
 use rose_data_irose::{
-    get_ai_database, get_data_decoder, get_item_database, get_motion_database, get_npc_database,
-    get_quest_database, get_skill_database, get_status_effect_database, get_warp_gate_database,
-    get_zone_database,
+    get_ai_database, get_character_motion_database, get_data_decoder, get_item_database,
+    get_npc_database, get_quest_database, get_skill_database, get_status_effect_database,
+    get_warp_gate_database, get_zone_database,
 };
 use rose_file_readers::VfsIndex;
 use rose_game_irose::data::{get_ability_value_calculator, get_drop_table};
@@ -31,7 +31,7 @@ pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&
         get_npc_database(
             &vfs_index,
             &NpcDatabaseOptions {
-                load_motion_file_data: true,
+                load_frame_data: true,
             },
         )
         .expect("Failed to load npc database"),
@@ -59,7 +59,15 @@ pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&
         drop_table,
         ai: Arc::new(get_ai_database(&vfs_index).expect("Failed to load AI database")),
         items: item_database,
-        motions: Arc::new(get_motion_database(&vfs_index).expect("Failed to load motion database")),
+        motions: Arc::new(
+            get_character_motion_database(
+                &vfs_index,
+                &CharacterMotionDatabaseOptions {
+                    load_frame_data: true,
+                },
+            )
+            .expect("Failed to load motion database"),
+        ),
         npcs: npc_database,
         quests: Arc::new(get_quest_database(&vfs_index).expect("Failed to load quest database")),
         skills: skill_database,

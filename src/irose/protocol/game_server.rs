@@ -515,9 +515,9 @@ impl GameServer {
             }
             ServerMessage::SpawnEntityItemDrop(SpawnEntityItemDrop {
                 entity_id,
-                ref dropped_item,
+                dropped_item,
                 position,
-                ref remaining_time,
+                remaining_time,
                 owner_entity_id,
             }) => {
                 client

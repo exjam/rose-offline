@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use rose_data::{
-    AiDatabase, DataDecoder, ItemDatabase, MotionDatabase, NpcDatabase, QuestDatabase,
-    SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
+    AiDatabase, CharacterMotionDatabase, DataDecoder, ItemDatabase, NpcDatabase,
+    QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
 };
 use rose_game_common::data::{AbilityValueCalculator, DropTable};
 
@@ -15,7 +15,7 @@ pub struct GameData {
     pub drop_table: Box<dyn DropTable + Send + Sync>,
     pub ai: Arc<AiDatabase>,
     pub items: Arc<ItemDatabase>,
-    pub motions: Arc<MotionDatabase>,
+    pub motions: Arc<CharacterMotionDatabase>,
     pub npcs: Arc<NpcDatabase>,
     pub quests: Arc<QuestDatabase>,
     pub skills: Arc<SkillDatabase>,

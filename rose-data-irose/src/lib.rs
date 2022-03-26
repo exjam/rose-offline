@@ -1,7 +1,7 @@
 mod ai_database;
+mod character_motion_database;
 mod data_decoder;
 mod item_database;
-mod motion_database;
 mod npc_database;
 mod quest_database;
 mod skill_database;
@@ -10,9 +10,9 @@ mod warp_gate_database;
 mod zone_database;
 
 pub use ai_database::get_ai_database;
+pub use character_motion_database::get_character_motion_database;
 pub use data_decoder::get_data_decoder;
 pub use item_database::get_item_database;
-pub use motion_database::{get_character_motion_list, get_motion_database};
 pub use npc_database::get_npc_database;
 pub use quest_database::get_quest_database;
 pub use skill_database::get_skill_database;

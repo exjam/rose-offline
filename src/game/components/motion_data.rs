@@ -1,8 +1,8 @@
 use bevy_ecs::prelude::Component;
 
 use rose_data::{
-    MotionCharacterAction, MotionDatabase, MotionFileData, MotionId, NpcData, NpcMotionAction,
-    NpcMotionId,
+    CharacterMotionAction, CharacterMotionDatabase, MotionFileData, NpcDatabase, NpcId,
+    NpcMotionAction,
 };
 use rose_game_common::components::CharacterGender;
 
@@ -52,13 +52,8 @@ pub enum MotionData {
 }
 
 impl MotionData {
-    pub fn from_npc(npc_data: &NpcData) -> Self {
-        let get_motion = |action| {
-            npc_data
-                .motion_data
-                .get(&NpcMotionId::new(action as u16))
-                .cloned()
-        };
+    pub fn from_npc(npc_database: &NpcDatabase, npc_id: NpcId) -> Self {
+        let get_motion = |action| npc_database.get_npc_action_motion(npc_id, action).cloned();
 
         Self::Npc(MotionDataNpc {
             stop: get_motion(NpcMotionAction::Stop),
@@ -76,7 +71,7 @@ impl MotionData {
     }
 
     pub fn from_character(
-        motion_database: &MotionDatabase,
+        character_motion_database: &CharacterMotionDatabase,
         weapon_motion_type: usize,
         gender: CharacterGender,
     ) -> Self {
@@ -85,36 +80,32 @@ impl MotionData {
             CharacterGender::Female => 1,
         };
         let get_motion = |action| {
-            motion_database
-                .get_character_motion(
-                    MotionId::new(action as u16),
-                    weapon_motion_type,
-                    gender_index,
-                )
+            character_motion_database
+                .get_character_action_motion(action, weapon_motion_type, gender_index)
                 .cloned()
         };
 
         Self::Character(MotionDataCharacter {
             weapon_motion_type,
             gender_index,
-            attack1: get_motion(MotionCharacterAction::Attack),
-            attack2: get_motion(MotionCharacterAction::Attack2),
-            attack3: get_motion(MotionCharacterAction::Attack3),
-            die: get_motion(MotionCharacterAction::Die),
-            fall: get_motion(MotionCharacterAction::Fall),
-            hit: get_motion(MotionCharacterAction::Hit),
-            jump1: get_motion(MotionCharacterAction::Jump1),
-            jump2: get_motion(MotionCharacterAction::Jump2),
-            pickup_dropped_item: get_motion(MotionCharacterAction::Pickitem),
-            raise: get_motion(MotionCharacterAction::Raise),
-            run: get_motion(MotionCharacterAction::Run),
-            sit: get_motion(MotionCharacterAction::Sit),
-            sitting: get_motion(MotionCharacterAction::Sitting),
-            standup: get_motion(MotionCharacterAction::Standup),
-            stop1: get_motion(MotionCharacterAction::Stop1),
-            stop2: get_motion(MotionCharacterAction::Stop2),
-            stop3: get_motion(MotionCharacterAction::Stop3),
-            walk: get_motion(MotionCharacterAction::Walk),
+            attack1: get_motion(CharacterMotionAction::Attack),
+            attack2: get_motion(CharacterMotionAction::Attack2),
+            attack3: get_motion(CharacterMotionAction::Attack3),
+            die: get_motion(CharacterMotionAction::Die),
+            fall: get_motion(CharacterMotionAction::Fall),
+            hit: get_motion(CharacterMotionAction::Hit),
+            jump1: get_motion(CharacterMotionAction::Jump1),
+            jump2: get_motion(CharacterMotionAction::Jump2),
+            pickup_dropped_item: get_motion(CharacterMotionAction::Pickitem),
+            raise: get_motion(CharacterMotionAction::Raise),
+            run: get_motion(CharacterMotionAction::Run),
+            sit: get_motion(CharacterMotionAction::Sit),
+            sitting: get_motion(CharacterMotionAction::Sitting),
+            standup: get_motion(CharacterMotionAction::Standup),
+            stop1: get_motion(CharacterMotionAction::Stop1),
+            stop2: get_motion(CharacterMotionAction::Stop2),
+            stop3: get_motion(CharacterMotionAction::Stop3),
+            walk: get_motion(CharacterMotionAction::Walk),
         })
     }
 

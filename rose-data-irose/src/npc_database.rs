@@ -1,8 +1,9 @@
+use enum_map::enum_map;
 use std::{collections::HashMap, num::NonZeroUsize};
 
 use rose_data::{
-    MotionFileData, NpcConversationData, NpcData, NpcDatabase, NpcDatabaseOptions, NpcId,
-    NpcMotionId, NpcStoreTabData, NpcStoreTabId,
+    MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase, NpcDatabaseOptions, NpcId,
+    NpcMotionAction, NpcStoreTabData, NpcStoreTabId,
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 
@@ -95,13 +96,28 @@ impl StbEvent {
     stb_column! { 3, get_filename, &str }
 }
 
-fn load_zmo(vfs: &VfsIndex, path: &str) -> Option<MotionFileData> {
-    let zmo = vfs.read_file::<ZmoFile, _>(path).ok()?;
-    Some(MotionFileData {
-        path: path.to_string(),
-        duration: zmo.get_duration(),
-        total_attack_frames: zmo.total_attack_frames,
-    })
+fn load_motion_file_data(
+    vfs: &VfsIndex,
+    path: &str,
+    options: &NpcDatabaseOptions,
+) -> Option<MotionFileData> {
+    if path.is_empty() {
+        return None;
+    }
+
+    if options.load_frame_data {
+        let zmo = vfs.read_file::<ZmoFile, _>(path).ok()?;
+        Some(MotionFileData {
+            path: path.to_string(),
+            duration: zmo.get_duration(),
+            total_attack_frames: zmo.total_attack_frames,
+        })
+    } else {
+        Some(MotionFileData {
+            path: path.to_string(),
+            ..Default::default()
+        })
+    }
 }
 
 pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<NpcDatabase> {
@@ -109,36 +125,25 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         .read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")
         .ok()?;
 
-    let model_data = if options.load_motion_file_data {
-        Some(
-            vfs.read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")
-                .ok()?,
-        )
-    } else {
-        None
-    };
+    let model_data = vfs
+        .read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")
+        .ok()?;
 
     let data = StbNpc(
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")
             .ok()?,
     );
 
-    let mut motions = HashMap::new();
-    if let Some(model_data) = model_data.as_ref() {
-        for (motion_id, path) in model_data.motion_files.iter().enumerate() {
-            if let Some(motion_file_data) = load_zmo(vfs, path) {
-                motions.insert(motion_id as u16, motion_file_data);
-            }
-        }
+    let mut motions = Vec::with_capacity(model_data.motion_files.len());
+    for path in model_data.motion_files.iter() {
+        motions.push(load_motion_file_data(vfs, path, options));
     }
 
     let mut npcs = Vec::with_capacity(data.rows());
     let mut npc_count = 0;
     npcs.push(None); // NPC id 0
     for id in 1..data.rows() {
-        let npc_model_data = model_data
-            .as_ref()
-            .and_then(|model_data| model_data.npcs.get(&(id as u16)));
+        let npc_model_data = model_data.npcs.get(&(id as u16));
         let npc_string_id = data.get_string_id(id);
         let ai_file_index = data.get_ai_file_index(id).unwrap_or(0);
 
@@ -148,13 +153,14 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
             continue;
         }
 
-        let mut motion_data = HashMap::new();
-        if options.load_motion_file_data {
-            if let Some(npc_model_data) = npc_model_data {
-                for &(action_id, motion_id) in npc_model_data.motion_ids.iter() {
-                    if let Some(motion_file_data) = motions.get(&motion_id) {
-                        motion_data.insert(NpcMotionId::new(action_id), motion_file_data.clone());
-                    }
+        let mut motion_data = Vec::new();
+        if let Some(npc_model_data) = npc_model_data {
+            for &(motion_id, motion_file_index) in npc_model_data.motion_ids.iter() {
+                if let Some(motion_file_data) = motions
+                    .get(motion_file_index as usize)
+                    .and_then(|x| x.as_ref())
+                {
+                    motion_data.push((MotionId::new(motion_id), motion_file_data.clone()));
                 }
             }
         }
@@ -266,6 +272,20 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         }
     }
 
+    let action_map = enum_map! {
+        NpcMotionAction::Stop => MotionId::new(0),
+        NpcMotionAction::Move => MotionId::new(1),
+        NpcMotionAction::Attack => MotionId::new(2),
+        NpcMotionAction::Hit => MotionId::new(3),
+        NpcMotionAction::Die => MotionId::new(4),
+        NpcMotionAction::Run => MotionId::new(5),
+        NpcMotionAction::Cast1 => MotionId::new(6),
+        NpcMotionAction::SkillAction1 => MotionId::new(7),
+        NpcMotionAction::Cast2 => MotionId::new(8),
+        NpcMotionAction::SkillAction2 => MotionId::new(9),
+        NpcMotionAction::Etc => MotionId::new(10),
+    };
+
     log::debug!(
         "Loaded {} NPCs, {} motions, {} conversations, {} stores",
         npc_count,
@@ -273,5 +293,10 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         conversation_files.len(),
         store_tabs.len()
     );
-    Some(NpcDatabase::new(npcs, conversation_files, store_tabs))
+    Some(NpcDatabase::new(
+        npcs,
+        conversation_files,
+        store_tabs,
+        action_map,
+    ))
 }

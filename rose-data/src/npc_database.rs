@@ -1,3 +1,4 @@
+use enum_map::{Enum, EnumMap};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -5,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{ItemReference, MotionFileData};
+use crate::{ItemReference, MotionFileData, MotionId};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpcId(NonZeroU16);
@@ -22,23 +23,19 @@ pub struct NpcStoreTabId(NonZeroU16);
 
 id_wrapper_impl!(NpcStoreTabId, NonZeroU16, u16);
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
-pub struct NpcMotionId(u16);
-
-id_wrapper_impl!(NpcMotionId, u16);
-
+#[derive(Debug, Enum)]
 pub enum NpcMotionAction {
-    Stop = 0,
-    Move = 1,
-    Attack = 2,
-    Hit = 3,
-    Die = 4,
-    Run = 5,
-    Cast1 = 6,
-    SkillAction1 = 7,
-    Cast2 = 8,
-    SkillAction2 = 9,
-    Etc = 10,
+    Stop,
+    Move,
+    Attack,
+    Hit,
+    Die,
+    Run,
+    Cast1,
+    SkillAction1,
+    Cast2,
+    SkillAction2,
+    Etc,
 }
 
 pub struct NpcData {
@@ -85,7 +82,7 @@ pub struct NpcData {
     pub create_sound_index: u32,
     pub death_quest_trigger_name: String,
     pub npc_height: i32,
-    pub motion_data: HashMap<NpcMotionId, MotionFileData>,
+    pub motion_data: Vec<(MotionId, MotionFileData)>,
 }
 
 pub struct NpcConversationData {
@@ -102,13 +99,14 @@ pub struct NpcStoreTabData {
 }
 
 pub struct NpcDatabaseOptions {
-    pub load_motion_file_data: bool,
+    pub load_frame_data: bool,
 }
 
 pub struct NpcDatabase {
     npcs: Vec<Option<NpcData>>,
     conversation_files: HashMap<String, NpcConversationData>,
     store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
+    action_map: EnumMap<NpcMotionAction, MotionId>,
 }
 
 impl NpcDatabase {
@@ -116,11 +114,13 @@ impl NpcDatabase {
         npcs: Vec<Option<NpcData>>,
         conversation_files: HashMap<String, NpcConversationData>,
         store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
+        action_map: EnumMap<NpcMotionAction, MotionId>,
     ) -> Self {
         Self {
             npcs,
             conversation_files,
             store_tabs,
+            action_map,
         }
     }
 
@@ -135,9 +135,21 @@ impl NpcDatabase {
         self.conversation_files.get(&key.0)
     }
 
-    pub fn get_motion(&self, id: NpcId, motion_id: NpcMotionId) -> Option<&MotionFileData> {
-        let npc_data = self.get_npc(id)?;
-        npc_data.motion_data.get(&motion_id)
+    pub fn get_npc_motion(&self, npc_id: NpcId, motion_id: MotionId) -> Option<&MotionFileData> {
+        let npc_data = self.get_npc(npc_id)?;
+        npc_data
+            .motion_data
+            .iter()
+            .find(|(id, _)| *id == motion_id)
+            .map(|(_, data)| data)
+    }
+
+    pub fn get_npc_action_motion(
+        &self,
+        npc_id: NpcId,
+        action: NpcMotionAction,
+    ) -> Option<&MotionFileData> {
+        self.get_npc_motion(npc_id, self.action_map[action])
     }
 
     pub fn get_store_tab(&self, id: NpcStoreTabId) -> Option<&NpcStoreTabData> {

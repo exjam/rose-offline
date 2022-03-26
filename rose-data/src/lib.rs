@@ -1,6 +1,7 @@
 macro_rules! id_wrapper_impl {
     ($name:ident, String) => {
         impl $name {
+            #[allow(dead_code)]
             pub fn new(value: String) -> Self {
                 Self(value)
             }
@@ -13,6 +14,7 @@ macro_rules! id_wrapper_impl {
     };
     ($name:ident, $value_type:ty) => {
         impl $name {
+            #[allow(dead_code)]
             pub fn new(value: $value_type) -> Self {
                 Self(value)
             }
@@ -23,6 +25,7 @@ macro_rules! id_wrapper_impl {
             }
         }
 
+        #[allow(dead_code)]
         impl FromStr for $name {
             type Err = <$value_type as std::str::FromStr>::Err;
 
@@ -33,6 +36,7 @@ macro_rules! id_wrapper_impl {
     };
     ($name:ident, $inner_type:ty, $value_type:ty) => {
         impl $name {
+            #[allow(dead_code)]
             pub fn new(value: $value_type) -> Option<Self> {
                 <$inner_type>::new(value).map($name)
             }
@@ -43,6 +47,7 @@ macro_rules! id_wrapper_impl {
             }
         }
 
+        #[allow(dead_code)]
         impl FromStr for $name {
             type Err = <$inner_type as std::str::FromStr>::Err;
 
@@ -55,11 +60,11 @@ macro_rules! id_wrapper_impl {
 
 mod ability;
 mod ai_database;
-mod character_motion_list;
+mod character_motion_database;
 mod data_decoder;
 mod item;
 mod item_database;
-mod motion_database;
+mod motion_file_data;
 mod npc_database;
 mod quest_database;
 mod skill_database;
@@ -71,7 +76,9 @@ mod zone_list;
 
 pub use ability::AbilityType;
 pub use ai_database::AiDatabase;
-pub use character_motion_list::{CharacterMotionAction, CharacterMotionId, CharacterMotionList};
+pub use character_motion_database::{
+    CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions,
+};
 pub use data_decoder::DataDecoder;
 pub use item::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemSlotBehaviour, ItemWeaponType, StackError,
@@ -83,10 +90,10 @@ pub use item_database::{
     ItemReference, ItemType, JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData,
     VehicleItemData, VehicleItemPart, WeaponItemData,
 };
-pub use motion_database::{MotionCharacterAction, MotionDatabase, MotionFileData, MotionId};
+pub use motion_file_data::{MotionFileData, MotionId};
 pub use npc_database::{
     NpcConversationData, NpcConversationId, NpcData, NpcDatabase, NpcDatabaseOptions, NpcId,
-    NpcMotionAction, NpcMotionId, NpcStoreTabData, NpcStoreTabId,
+    NpcMotionAction, NpcStoreTabData, NpcStoreTabId,
 };
 pub use quest_database::{QuestData, QuestDatabase, QuestTrigger, QuestTriggerHash};
 pub use skill_database::{

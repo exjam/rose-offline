@@ -210,9 +210,9 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         }
 
         if stackable_item.quantity() == 0 {
-            return Ok(None);
+            Ok(None)
         } else {
-            return Ok(Some(Money(stackable_item.quantity() as i64)));
+            Ok(Some(Money(stackable_item.quantity() as i64)))
         }
     }
 

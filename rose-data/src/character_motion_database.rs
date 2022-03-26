@@ -1,11 +1,6 @@
 use enum_map::{Enum, EnumMap};
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
-pub struct CharacterMotionId(u16);
-
-id_wrapper_impl!(CharacterMotionId, u16);
+use crate::{MotionFileData, MotionId};
 
 #[derive(Copy, Clone, Debug, Enum)]
 pub enum CharacterMotionAction {
@@ -29,51 +24,55 @@ pub enum CharacterMotionAction {
     Pickitem,
 }
 
-pub struct CharacterMotionList {
+pub struct CharacterMotionDatabase {
     weapon_type_count: usize,
     motion_indices: Vec<u16>,
-    motion_paths: Vec<Vec<String>>, // [gender][motion id]
-    action_map: EnumMap<CharacterMotionAction, CharacterMotionId>,
+    motion_data: Vec<Vec<Option<MotionFileData>>>, // [gender][motion id]
+    action_map: EnumMap<CharacterMotionAction, MotionId>,
 }
 
-impl CharacterMotionList {
+pub struct CharacterMotionDatabaseOptions {
+    pub load_frame_data: bool,
+}
+
+impl CharacterMotionDatabase {
     pub fn new(
         weapon_type_count: usize,
         motion_indices: Vec<u16>,
-        motion_paths: Vec<Vec<String>>,
-        action_map: EnumMap<CharacterMotionAction, CharacterMotionId>,
+        motion_paths: Vec<Vec<Option<MotionFileData>>>,
+        action_map: EnumMap<CharacterMotionAction, MotionId>,
     ) -> Self {
         Self {
             weapon_type_count,
             motion_indices,
-            motion_paths,
+            motion_data: motion_paths,
             action_map,
         }
     }
 
     pub fn get_character_motion(
         &self,
-        motion_id: CharacterMotionId,
+        motion_id: MotionId,
         weapon_motion_type: usize,
         gender: usize,
-    ) -> Option<&str> {
+    ) -> Option<&MotionFileData> {
         let index = *self
             .motion_indices
             .get(motion_id.get() as usize * self.weapon_type_count + weapon_motion_type)?
             as usize;
 
-        self.motion_paths
+        self.motion_data
             .get(gender)
-            .and_then(|x| x.get(index).filter(|x| !x.is_empty()).map(|x| x.as_str()))
+            .and_then(|x| x.get(index).and_then(|x| x.as_ref()))
     }
 
-    pub fn find_first_character_motion(&self, motion_id: CharacterMotionId) -> Option<&str> {
+    pub fn find_first_character_motion(&self, motion_id: MotionId) -> Option<&MotionFileData> {
         // Try find the first non-empty motion for every weapon_type & gender for an action
-        for gender in 0..self.motion_paths.len() {
+        for gender in 0..self.motion_data.len() {
             for weapon_motion_type in 0..self.weapon_type_count {
-                if let Some(path) = self.get_character_motion(motion_id, weapon_motion_type, gender)
+                if let Some(data) = self.get_character_motion(motion_id, weapon_motion_type, gender)
                 {
-                    return Some(path);
+                    return Some(data);
                 }
             }
         }
@@ -86,14 +85,14 @@ impl CharacterMotionList {
         action: CharacterMotionAction,
         weapon_motion_type: usize,
         gender: usize,
-    ) -> Option<&str> {
+    ) -> Option<&MotionFileData> {
         self.get_character_motion(self.action_map[action], weapon_motion_type, gender)
     }
 
     pub fn find_first_character_action_motion(
         &self,
         action: CharacterMotionAction,
-    ) -> Option<&str> {
+    ) -> Option<&MotionFileData> {
         self.find_first_character_motion(self.action_map[action])
     }
 }
