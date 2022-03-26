@@ -6,8 +6,8 @@ pub struct NpcModelData {
     pub name: String,
     pub skeleton_index: u16,
     pub model_ids: Vec<u16>,
-    pub motion_ids: Vec<(u16, u16)>, // (action, index)
-    pub effect_ids: Vec<(u16, u16)>, // (action, index)
+    pub motion_ids: Vec<(u16, u16)>, // (motion_id, motion_files index)
+    pub effect_ids: Vec<(u16, u16)>, // (motion_id, effect_files index)
 }
 
 pub struct ChrFile {
@@ -58,17 +58,17 @@ impl RoseFile for ChrFile {
             let motion_count = reader.read_u16()?;
             let mut motion_ids = Vec::new();
             for _ in 0..motion_count {
-                let action = reader.read_u16()?;
                 let motion_id = reader.read_u16()?;
-                motion_ids.push((action, motion_id));
+                let motion_file_index = reader.read_u16()?;
+                motion_ids.push((motion_id, motion_file_index));
             }
 
             let effect_count = reader.read_u16()?;
             let mut effect_ids = Vec::new();
             for _ in 0..effect_count {
-                let action = reader.read_u16()?;
-                let effect_id = reader.read_u16()?;
-                effect_ids.push((action, effect_id));
+                let motion_id = reader.read_u16()?;
+                let effect_file_index = reader.read_u16()?;
+                effect_ids.push((motion_id, effect_file_index));
             }
 
             npcs.insert(
