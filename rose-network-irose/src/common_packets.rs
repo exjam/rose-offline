@@ -154,7 +154,7 @@ pub struct PacketStackableItemFull {
 
 pub trait PacketReadItems {
     fn read_item_full(&mut self) -> Result<Option<Item>, PacketError>;
-    fn read_item_full_money(&mut self) -> Result<Option<Money>, PacketError>;
+    fn read_item_or_money_full(&mut self) -> Result<(Option<Item>, Option<Money>), PacketError>;
     fn read_equipment_item_full(&mut self) -> Result<Option<EquipmentItem>, PacketError>;
     fn read_stackable_item_full(&mut self) -> Result<Option<StackableItem>, PacketError>;
     fn read_equipment_visible_part(&mut self) -> Result<Equipment, PacketError>;
@@ -165,54 +165,58 @@ pub trait PacketReadItems {
     fn read_equipment_ammo_part(&mut self) -> Result<Option<StackableItem>, PacketError>;
 }
 
+fn decode_item_full_bytes(item_bytes: &[u8]) -> Result<Option<Item>, PacketError> {
+    let item_header = PacketFullItemHeader::from_bytes(item_bytes[0..2].try_into().unwrap());
+    let item_number = item_header.item_number();
+    if item_number == 0 || item_number > 999 {
+        return Ok(None);
+    }
+
+    if let Some(item_type) = decode_item_type(item_header.item_type() as usize) {
+        let item_reference = ItemReference::new(item_type, item_header.item_number() as usize);
+
+        if item_type.is_stackable_item() {
+            let stackable_item =
+                PacketStackableItemFull::from_bytes(item_bytes.try_into().unwrap());
+            if let Some(item) = StackableItem::new(&item_reference, stackable_item.quantity()) {
+                return Ok(Some(Item::Stackable(item)));
+            }
+        } else {
+            let equipment_item =
+                PacketEquipmentItemFull::from_bytes(item_bytes.try_into().unwrap());
+            if let Some(mut item) = EquipmentItem::new(&item_reference) {
+                item.gem = equipment_item.gem();
+                item.durability = equipment_item.durability();
+                item.life = equipment_item.life();
+                item.grade = equipment_item.grade();
+                item.is_crafted = equipment_item.is_crafted();
+                item.has_socket = equipment_item.has_socket();
+                item.is_appraised = equipment_item.is_appraised();
+                return Ok(Some(Item::Equipment(item)));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 impl<'a> PacketReadItems for PacketReader<'a> {
     fn read_item_full(&mut self) -> Result<Option<Item>, PacketError> {
         let item_bytes = self.read_fixed_length_bytes(6)?;
-        let item_header = PacketFullItemHeader::from_bytes(item_bytes[0..2].try_into().unwrap());
-        let item_number = item_header.item_number();
-        if item_number == 0 || item_number > 999 {
-            return Ok(None);
-        }
-
-        if let Some(item_type) = decode_item_type(item_header.item_type() as usize) {
-            let item_reference = ItemReference::new(item_type, item_header.item_number() as usize);
-
-            if item_type.is_stackable_item() {
-                let stackable_item =
-                    PacketStackableItemFull::from_bytes(item_bytes.try_into().unwrap());
-                if let Some(item) = StackableItem::new(&item_reference, stackable_item.quantity()) {
-                    return Ok(Some(Item::Stackable(item)));
-                }
-            } else {
-                let equipment_item =
-                    PacketEquipmentItemFull::from_bytes(item_bytes.try_into().unwrap());
-                if let Some(mut item) = EquipmentItem::new(&item_reference) {
-                    item.gem = equipment_item.gem();
-                    item.durability = equipment_item.durability();
-                    item.life = equipment_item.life();
-                    item.grade = equipment_item.grade();
-                    item.is_crafted = equipment_item.is_crafted();
-                    item.has_socket = equipment_item.has_socket();
-                    item.is_appraised = equipment_item.is_appraised();
-                    return Ok(Some(Item::Equipment(item)));
-                }
-            }
-        }
-
-        Ok(None)
+        decode_item_full_bytes(item_bytes)
     }
 
-    fn read_item_full_money(&mut self) -> Result<Option<Money>, PacketError> {
+    fn read_item_or_money_full(&mut self) -> Result<(Option<Item>, Option<Money>), PacketError> {
         let item_bytes = self.read_fixed_length_bytes(6)?;
         let stackable_item = PacketStackableItemFull::from_bytes(item_bytes.try_into().unwrap());
-        if stackable_item.item_type() != 31 {
-            return Err(PacketError::InvalidPacket);
-        }
-
-        if stackable_item.quantity() == 0 {
-            Ok(None)
+        if stackable_item.item_type() == 31 {
+            if stackable_item.quantity() == 0 {
+                Ok((None, None))
+            } else {
+                Ok((None, Some(Money(stackable_item.quantity() as i64))))
+            }
         } else {
-            Ok(Some(Money(stackable_item.quantity() as i64)))
+            decode_item_full_bytes(item_bytes).map_or(Ok((None, None)), |item| Ok((item, None)))
         }
     }
 

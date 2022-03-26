@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use rose_data::{
-    AiDatabase, CharacterMotionDatabase, DataDecoder, ItemDatabase, NpcDatabase,
-    QuestDatabase, SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
+    AiDatabase, CharacterMotionDatabase, DataDecoder, ItemDatabase, NpcDatabase, QuestDatabase,
+    SkillDatabase, StatusEffectDatabase, WarpGateDatabase, ZoneDatabase,
 };
 use rose_game_common::data::{AbilityValueCalculator, DropTable};
 

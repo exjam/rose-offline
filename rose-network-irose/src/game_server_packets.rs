@@ -1222,10 +1222,11 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityItemDrop {
         let position_y = reader.read_f32()?;
         let position = Vec3::new(position_x, position_y, 0.0);
 
-        let dropped_item = if let Ok(item) = reader.read_item_full() {
-            DroppedItem::Item(item.ok_or(PacketError::InvalidPacket)?)
-        } else if let Ok(money) = reader.read_item_full_money() {
-            DroppedItem::Money(money.ok_or(PacketError::InvalidPacket)?)
+        let (item, money) = reader.read_item_or_money_full()?;
+        let dropped_item = if let Some(item) = item {
+            DroppedItem::Item(item)
+        } else if let Some(money) = money {
+            DroppedItem::Money(money)
         } else {
             return Err(PacketError::InvalidPacket);
         };
