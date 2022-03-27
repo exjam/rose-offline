@@ -32,11 +32,11 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
     PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
-    PacketReadEntityId, PacketReadHotbarSlot, PacketReadItems, PacketReadMoveMode,
-    PacketReadStatusEffects, PacketWriteCharacterGender, PacketWriteCommandState,
-    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
-    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot,
-    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    PacketReadEntityId, PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
+    PacketReadMoveMode, PacketReadStatusEffects, PacketWriteCharacterGender,
+    PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
+    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
+    PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -1900,6 +1900,41 @@ impl From<&PacketServerUpdateBasicStat> for Packet {
 pub struct PacketServerPickupItemDropResult {
     pub item_entity_id: ClientEntityId,
     pub result: Result<PickupItemDropContent, PickupItemDropError>,
+}
+
+impl TryFrom<&Packet> for PacketServerPickupItemDropResult {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PickupItemDropResult as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let item_entity_id = reader.read_entity_id()?;
+        let result = match reader.read_u8()? {
+            0 => {
+                let item_slot = reader.read_item_slot_u16().ok();
+                match reader.read_item_or_money_full()? {
+                    (None, Some(money)) => Ok(PickupItemDropContent::Money(money)),
+                    (Some(item), None) => Ok(PickupItemDropContent::Item(
+                        item_slot.ok_or(PacketError::InvalidPacket)?,
+                        item,
+                    )),
+                    _ => return Err(PacketError::InvalidPacket),
+                }
+            }
+            1 => Err(PickupItemDropError::NotExist),
+            2 => Err(PickupItemDropError::NoPermission),
+            3 => Err(PickupItemDropError::InventoryFull),
+            _ => Err(PickupItemDropError::NotExist),
+        };
+
+        Ok(Self {
+            item_entity_id,
+            result,
+        })
+    }
 }
 
 impl From<&PacketServerPickupItemDropResult> for Packet {
