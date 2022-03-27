@@ -1,4 +1,5 @@
 use bevy_ecs::prelude::Component;
+use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::TryFrom,
@@ -59,7 +60,7 @@ impl From<Money> for u32 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, Hash, Enum)]
 pub enum InventoryPageType {
     Equipment,
     Consumables,
