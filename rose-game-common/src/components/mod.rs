@@ -33,7 +33,7 @@ pub use equipment::{Equipment, EquipmentItemDatabase, EquipmentItemReference};
 pub use experience_points::ExperiencePoints;
 pub use health_points::HealthPoints;
 pub use hotbar::{Hotbar, HotbarSlot};
-pub use inventory::{Inventory, InventoryError, InventoryPage, InventoryPageType, ItemSlot, Money};
+pub use inventory::{Inventory, InventoryError, InventoryPage, InventoryPageType, ItemSlot, Money, INVENTORY_PAGE_SIZE};
 pub use item_drop::{DroppedItem, ItemDrop};
 pub use level::Level;
 pub use mana_points::ManaPoints;
