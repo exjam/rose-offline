@@ -619,7 +619,7 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::UpdateInventory(ref items, with_money) => {
+            ServerMessage::UpdateInventory(items, with_money) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateInventory {

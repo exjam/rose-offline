@@ -538,7 +538,7 @@ pub fn decode_item_slot(index: usize) -> Option<ItemSlot> {
     }
 }
 
-fn encode_item_slot(slot: ItemSlot) -> usize {
+pub fn encode_item_slot(slot: ItemSlot) -> usize {
     match slot {
         ItemSlot::Equipment(equipment_index) => {
             encode_equipment_index(equipment_index).unwrap_or(0)

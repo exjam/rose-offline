@@ -9,7 +9,7 @@ use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, MotionId,
     NpcId, SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
-use rose_data_irose::{encode_ability_type, encode_ammo_index};
+use rose_data_irose::{decode_ammo_index, encode_ability_type, encode_ammo_index};
 use rose_game_common::{
     components::{
         ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, DroppedItem,
@@ -32,11 +32,12 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
     PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
-    PacketReadEntityId, PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
-    PacketReadMoveMode, PacketReadStatusEffects, PacketWriteCharacterGender,
-    PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
-    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
-    PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
+    PacketReadItems, PacketReadMoveMode, PacketReadStatusEffects, PacketReadVehiclePartIndex,
+    PacketWriteCharacterGender, PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId,
+    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+    PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
+    PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -1658,13 +1659,44 @@ impl From<&PacketServerRemoveEntities> for Packet {
     }
 }
 
-pub struct PacketServerUpdateInventory<'a> {
-    pub items: &'a [(ItemSlot, Option<Item>)],
+pub struct PacketServerUpdateInventory {
+    pub items: Vec<(ItemSlot, Option<Item>)>,
     pub with_money: Option<Money>,
 }
 
-impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
-    fn from(packet: &'a PacketServerUpdateInventory<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerUpdateInventory {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateInventory as u16 &&
+           packet.command != ServerPackets::UpdateMoneyAndInventory as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let with_money = if packet.command == ServerPackets::UpdateMoneyAndInventory as u16 {
+            Some(Money(reader.read_i64()?))
+        } else {
+            None
+        };
+
+        let num_items = reader.read_u8()? as usize;
+        let mut items = Vec::with_capacity(num_items);
+        for _ in 0..num_items {
+            let item_slot = reader.read_item_slot_u8()?;
+            let item = reader.read_item_full()?;
+            items.push((item_slot, item));
+        }
+
+        Ok(Self {
+            items,
+            with_money,
+        })
+    }
+}
+
+impl From<&PacketServerUpdateInventory> for Packet {
+    fn from(packet: &PacketServerUpdateInventory) -> Self {
         let command = if packet.with_money.is_some() {
             ServerPackets::UpdateMoneyAndInventory
         } else {
@@ -1677,7 +1709,7 @@ impl<'a> From<&'a PacketServerUpdateInventory<'a>> for Packet {
         }
 
         writer.write_u8(packet.items.len() as u8);
-        for (slot, item) in packet.items {
+        for (slot, item) in packet.items.iter() {
             writer.write_item_slot_u8(*slot);
             writer.write_item_full(item.as_ref());
         }
@@ -1731,6 +1763,37 @@ pub struct PacketServerUpdateAmmo {
     pub item: Option<StackableItem>,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateAmmo {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateAmmo as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+
+        let ammo_part = PacketEquipmentAmmoPart::from_bytes(
+            reader.read_fixed_length_bytes(2)?.try_into().unwrap(),
+        );
+
+        let ammo_index =
+            decode_ammo_index(ammo_part.item_type() as usize).ok_or(PacketError::InvalidPacket)?;
+
+        let item = StackableItem::new(
+            &ItemReference::new(ItemType::Material, ammo_part.item_number() as usize),
+            999,
+        );
+
+        Ok(Self {
+            entity_id,
+            ammo_index,
+            item,
+        })
+    }
+}
+
 impl From<&PacketServerUpdateAmmo> for Packet {
     fn from(packet: &PacketServerUpdateAmmo) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateAmmo as u16);
@@ -1760,6 +1823,42 @@ pub struct PacketServerUpdateEquipment {
     pub run_speed: Option<u16>,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateEquipment {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateEquipment as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let equipment_index = reader.read_equipment_index_u16()?;
+        let item_type = match equipment_index {
+            EquipmentIndex::Face => ItemType::Face,
+            EquipmentIndex::Head => ItemType::Head,
+            EquipmentIndex::Body => ItemType::Body,
+            EquipmentIndex::Back => ItemType::Back,
+            EquipmentIndex::Hands => ItemType::Hands,
+            EquipmentIndex::Feet => ItemType::Feet,
+            EquipmentIndex::WeaponRight => ItemType::Weapon,
+            EquipmentIndex::WeaponLeft => ItemType::SubWeapon,
+            EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring => {
+                ItemType::Jewellery
+            }
+        };
+        let item = reader.read_equipment_item_part(item_type)?;
+        let run_speed = reader.read_u16().ok();
+
+        Ok(Self {
+            entity_id,
+            equipment_index,
+            item,
+            run_speed,
+        })
+    }
+}
+
 impl From<&PacketServerUpdateEquipment> for Packet {
     fn from(packet: &PacketServerUpdateEquipment) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateEquipment as u16);
@@ -1778,6 +1877,29 @@ pub struct PacketServerUpdateVehiclePart {
     pub vehicle_part_index: VehiclePartIndex,
     pub item: Option<EquipmentItem>,
     pub run_speed: Option<u16>,
+}
+
+impl TryFrom<&Packet> for PacketServerUpdateVehiclePart {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateVehiclePart as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let vehicle_part_index = reader.read_vehicle_part_index_u16()?;
+        let item = reader.read_equipment_item_part(ItemType::Vehicle)?;
+        let run_speed = reader.read_u16().ok();
+
+        Ok(Self {
+            entity_id,
+            vehicle_part_index,
+            item,
+            run_speed,
+        })
+    }
 }
 
 impl From<&PacketServerUpdateVehiclePart> for Packet {

@@ -7,7 +7,7 @@ use num_derive::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, VehiclePartIndex, WarpGateId};
-use rose_data_irose::decode_ammo_index;
+use rose_data_irose::{decode_ammo_index, encode_ammo_index};
 use rose_game_common::{
     components::{BasicStatType, HotbarSlot, ItemSlot, SkillSlot},
     messages::{
@@ -18,9 +18,10 @@ use rose_game_common::{
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    decode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot,
-    PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot, PacketReadVehiclePartIndex,
-    PacketWriteEntityId,
+    decode_item_slot, encode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex,
+    PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
+    PacketReadVehiclePartIndex, PacketWriteEntityId, PacketWriteEquipmentIndex,
+    PacketWriteItemSlot, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -263,6 +264,20 @@ impl TryFrom<&Packet> for PacketClientChangeEquipment {
         })
     }
 }
+
+impl From<&PacketClientChangeEquipment> for Packet {
+    fn from(packet: &PacketClientChangeEquipment) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ChangeEquipment as u16);
+        writer.write_equipment_index_u16(packet.equipment_index);
+        if let Some(item_slot) = packet.item_slot {
+            writer.write_item_slot_u16(item_slot);
+        } else {
+            writer.write_u16(0);
+        }
+        writer.into()
+    }
+}
+
 pub struct PacketClientChangeVehiclePart {
     pub vehicle_part_index: VehiclePartIndex,
     pub item_slot: Option<ItemSlot>,
@@ -283,6 +298,19 @@ impl TryFrom<&Packet> for PacketClientChangeVehiclePart {
             vehicle_part_index,
             item_slot,
         })
+    }
+}
+
+impl From<&PacketClientChangeVehiclePart> for Packet {
+    fn from(packet: &PacketClientChangeVehiclePart) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ChangeVehiclePart as u16);
+        writer.write_vehicle_part_index_u16(packet.vehicle_part_index);
+        if let Some(item_slot) = packet.item_slot {
+            writer.write_item_slot_u16(item_slot);
+        } else {
+            writer.write_u16(0);
+        }
+        writer.into()
     }
 }
 
@@ -653,9 +681,7 @@ impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
 #[bitfield]
 #[derive(Clone, Copy)]
 struct ChangeAmmoBits {
-    #[skip(setters)]
     ammo_index: B2,
-    #[skip(setters)]
     item_slot: B14,
 }
 
@@ -684,6 +710,23 @@ impl TryFrom<&Packet> for PacketClientChangeAmmo {
             ammo_index,
             item_slot,
         })
+    }
+}
+
+impl From<&PacketClientChangeAmmo> for Packet {
+    fn from(packet: &PacketClientChangeAmmo) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ChangeAmmo as u16);
+        let mut ammo_bits = ChangeAmmoBits::new()
+            .with_ammo_index(encode_ammo_index(packet.ammo_index).unwrap() as u8);
+        if let Some(item_slot) = packet.item_slot {
+            ammo_bits = ammo_bits.with_item_slot(encode_item_slot(item_slot) as u16);
+        }
+
+        for b in ammo_bits.into_bytes().iter() {
+            writer.write_u8(*b);
+        }
+
+        writer.into()
     }
 }
 
