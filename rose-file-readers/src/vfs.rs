@@ -1,3 +1,4 @@
+use anyhow::Context;
 use encoding_rs::EUC_KR;
 use memmap::{Mmap, MmapOptions};
 use std::borrow::Cow;
@@ -246,8 +247,11 @@ impl VfsIndex {
         &self,
         path: P,
     ) -> Result<T, anyhow::Error> {
-        if let Some(file) = self.open_file(path) {
+        let vfs_path: VfsPath = path.into();
+
+        if let Some(file) = self.open_file(&vfs_path) {
             RoseFile::read(RoseFileReader::from(&file), &Default::default())
+                .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
         } else {
             Err(VfsError::FileNotFound.into())
         }
@@ -258,8 +262,11 @@ impl VfsIndex {
         path: P,
         options: &T::ReadOptions,
     ) -> Result<T, anyhow::Error> {
-        if let Some(file) = self.open_file(path) {
+        let vfs_path: VfsPath = path.into();
+
+        if let Some(file) = self.open_file(&vfs_path) {
             RoseFile::read(RoseFileReader::from(&file), options)
+                .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
         } else {
             Err(VfsError::FileNotFound.into())
         }
