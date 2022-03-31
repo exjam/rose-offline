@@ -14,7 +14,7 @@ pub struct SkillId(NonZeroU16);
 
 id_wrapper_impl!(SkillId, NonZeroU16, u16);
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
 pub enum SkillPageType {
     Basic,
     Active,

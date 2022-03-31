@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use rose_data::{SkillData, SkillId, SkillPageType};
 
-const SKILL_PAGE_SIZE: usize = 30;
+pub const SKILL_PAGE_SIZE: usize = 30;
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct SkillSlot(pub SkillPageType, pub usize);

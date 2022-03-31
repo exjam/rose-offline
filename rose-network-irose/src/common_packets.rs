@@ -38,9 +38,13 @@ impl<'a> PacketReadHotbarSlot for PacketReader<'a> {
         let slot =
             PacketHotbarSlot::from_bytes(self.read_fixed_length_bytes(2)?.try_into().unwrap());
         match slot.slot_type() {
-            1 => Ok(Some(HotbarSlot::Inventory(slot.index()))),
+            1 => Ok(Some(HotbarSlot::Inventory(
+                decode_item_slot(slot.index() as usize).ok_or(PacketError::InvalidPacket)?,
+            ))),
             2 => Ok(Some(HotbarSlot::Command(slot.index()))),
-            3 => Ok(Some(HotbarSlot::Skill(slot.index()))),
+            3 => Ok(Some(HotbarSlot::Skill(decode_skill_slot(
+                slot.index() as usize
+            )?))),
             4 => Ok(Some(HotbarSlot::Emote(slot.index()))),
             5 => Ok(Some(HotbarSlot::Dialog(slot.index()))),
             6 => Ok(Some(HotbarSlot::ClanSkill(slot.index()))),
@@ -56,9 +60,9 @@ pub trait PacketWriteHotbarSlot {
 impl PacketWriteHotbarSlot for PacketWriter {
     fn write_hotbar_slot(&mut self, slot: &Option<HotbarSlot>) {
         let (slot_type, index) = match slot {
-            Some(HotbarSlot::Inventory(index)) => (1, *index),
+            &Some(HotbarSlot::Inventory(item_slot)) => (1, encode_item_slot(item_slot) as u16),
             Some(HotbarSlot::Command(index)) => (2, *index),
-            Some(HotbarSlot::Skill(index)) => (3, *index),
+            &Some(HotbarSlot::Skill(skill_slot)) => (3, encode_skill_slot(skill_slot) as u16),
             Some(HotbarSlot::Emote(index)) => (4, *index),
             Some(HotbarSlot::Dialog(index)) => (5, *index),
             Some(HotbarSlot::ClanSkill(index)) => (6, *index),
@@ -588,7 +592,7 @@ pub trait PacketWriteSkillSlot {
     fn write_skill_slot_u8(&mut self, slot: SkillSlot);
 }
 
-fn skill_slot_from_index(index: usize) -> Result<SkillSlot, PacketError> {
+fn decode_skill_slot(index: usize) -> Result<SkillSlot, PacketError> {
     match index {
         0..=29 => Ok(SkillSlot(SkillPageType::Basic, index)),
         30..=59 => Ok(SkillSlot(SkillPageType::Active, index - 30)),
@@ -598,7 +602,7 @@ fn skill_slot_from_index(index: usize) -> Result<SkillSlot, PacketError> {
     }
 }
 
-fn skill_slot_to_index(slot: SkillSlot) -> usize {
+fn encode_skill_slot(slot: SkillSlot) -> usize {
     match slot {
         SkillSlot(SkillPageType::Basic, index) => index,
         SkillSlot(SkillPageType::Active, index) => 30 + index,
@@ -609,13 +613,13 @@ fn skill_slot_to_index(slot: SkillSlot) -> usize {
 
 impl<'a> PacketReadSkillSlot for PacketReader<'a> {
     fn read_skill_slot_u8(&mut self) -> Result<SkillSlot, PacketError> {
-        skill_slot_from_index(self.read_u8()? as usize)
+        decode_skill_slot(self.read_u8()? as usize)
     }
 }
 
 impl PacketWriteSkillSlot for PacketWriter {
     fn write_skill_slot_u8(&mut self, slot: SkillSlot) {
-        self.write_u8(skill_slot_to_index(slot) as u8)
+        self.write_u8(encode_skill_slot(slot) as u8)
     }
 }
 

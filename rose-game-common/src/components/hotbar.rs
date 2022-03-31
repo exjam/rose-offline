@@ -1,18 +1,20 @@
 use bevy_ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
+use crate::components::{ItemSlot, SkillSlot};
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum HotbarSlot {
-    Inventory(u16),
+    Inventory(ItemSlot),
     Command(u16),
-    Skill(u16),
+    Skill(SkillSlot),
     Emote(u16),
     Dialog(u16),
     ClanSkill(u16),
 }
 
-const HOTBAR_PAGE_SIZE: usize = 8;
-const HOTBAR_NUM_PAGES: usize = 4;
+pub const HOTBAR_PAGE_SIZE: usize = 8;
+pub const HOTBAR_NUM_PAGES: usize = 4;
 
 #[derive(Component, Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Hotbar {

@@ -32,7 +32,7 @@ pub use destination::Destination;
 pub use equipment::{Equipment, EquipmentItemDatabase, EquipmentItemReference};
 pub use experience_points::ExperiencePoints;
 pub use health_points::HealthPoints;
-pub use hotbar::{Hotbar, HotbarSlot};
+pub use hotbar::{Hotbar, HotbarSlot, HOTBAR_NUM_PAGES, HOTBAR_PAGE_SIZE};
 pub use inventory::{
     Inventory, InventoryError, InventoryPage, InventoryPageType, ItemSlot, Money,
     INVENTORY_PAGE_SIZE,
@@ -44,7 +44,7 @@ pub use move_mode::MoveMode;
 pub use move_speed::MoveSpeed;
 pub use npc::Npc;
 pub use quest_state::{ActiveQuest, QuestState};
-pub use skill_list::{SkillList, SkillPage, SkillSlot};
+pub use skill_list::{SkillList, SkillPage, SkillSlot, SKILL_PAGE_SIZE};
 pub use skill_points::SkillPoints;
 pub use stamina::{Stamina, MAX_STAMINA};
 pub use stat_points::StatPoints;
