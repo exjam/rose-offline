@@ -1668,8 +1668,9 @@ impl TryFrom<&Packet> for PacketServerUpdateInventory {
     type Error = PacketError;
 
     fn try_from(packet: &Packet) -> Result<Self, PacketError> {
-        if packet.command != ServerPackets::UpdateInventory as u16 &&
-           packet.command != ServerPackets::UpdateMoneyAndInventory as u16 {
+        if packet.command != ServerPackets::UpdateInventory as u16
+            && packet.command != ServerPackets::UpdateMoneyAndInventory as u16
+        {
             return Err(PacketError::InvalidPacket);
         }
 
@@ -1688,10 +1689,7 @@ impl TryFrom<&Packet> for PacketServerUpdateInventory {
             items.push((item_slot, item));
         }
 
-        Ok(Self {
-            items,
-            with_money,
-        })
+        Ok(Self { items, with_money })
     }
 }
 
