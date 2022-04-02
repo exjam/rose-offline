@@ -47,7 +47,7 @@ impl<'a> From<&'a VfsFile<'a>> for RoseFileReader<'a> {
     }
 }
 
-#[derive(Debug, Hash, Clone)]
+#[derive(Default, Debug, Hash, Clone)]
 pub struct VfsPathBuf {
     path: PathBuf,
 }

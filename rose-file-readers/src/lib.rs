@@ -13,9 +13,11 @@ pub mod types;
 
 mod aip;
 mod chr;
+mod eft;
 mod him;
 mod ifo;
 mod lit;
+mod ptl;
 mod qsd;
 mod stl;
 mod til;
@@ -31,12 +33,14 @@ mod stb;
 
 pub use aip::*;
 pub use chr::ChrFile;
+pub use eft::{EftFile, EftMesh, EftParticle};
 pub use him::HimFile;
 pub use ifo::{
     IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc, IfoObject,
     IfoReadOptions,
 };
 pub use lit::{LitFile, LitObject, LitObjectPart};
+pub use ptl::{PtlFile, PtlKeyframe, PtlKeyframeData, PtlSequence};
 pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry};
