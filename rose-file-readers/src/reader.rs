@@ -161,6 +161,14 @@ impl<'a> RoseFileReader<'a> {
         }
     }
 
+    pub fn read_f64(&mut self) -> Result<f64, ReadError> {
+        if self.cursor.remaining() < 8 {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_f64_le())
+        }
+    }
+
     #[allow(clippy::uninit_vec)]
     pub fn read_vec<T>(&mut self, elements: usize) -> Result<Vec<T>, ReadError> {
         let bytes_length = std::mem::size_of::<T>() * elements;

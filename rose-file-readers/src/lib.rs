@@ -13,10 +13,12 @@ pub mod types;
 
 mod aip;
 mod chr;
+mod con_;
 mod eft;
 mod him;
 mod ifo;
 mod lit;
+mod ltb;
 mod ptl;
 mod qsd;
 mod stl;
@@ -33,6 +35,7 @@ mod stb;
 
 pub use aip::*;
 pub use chr::ChrFile;
+pub use con_::{ConFile, ConMenu, ConMessage, ConMessageType};
 pub use eft::{EftFile, EftMesh, EftParticle};
 pub use him::HimFile;
 pub use ifo::{
@@ -40,6 +43,7 @@ pub use ifo::{
     IfoReadOptions,
 };
 pub use lit::{LitFile, LitObject, LitObjectPart};
+pub use ltb::LtbFile;
 pub use ptl::{PtlFile, PtlKeyframe, PtlKeyframeData, PtlSequence};
 pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};

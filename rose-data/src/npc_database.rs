@@ -135,6 +135,13 @@ impl NpcDatabase {
         self.conversation_files.get(&key.0)
     }
 
+    pub fn find_conversation(&self, index: usize) -> Option<&NpcConversationData> {
+        self.conversation_files
+            .iter()
+            .find(|(_, conv)| conv.index == index)
+            .map(|(_, conv)| conv)
+    }
+
     pub fn get_npc_motion(&self, npc_id: NpcId, motion_id: MotionId) -> Option<&MotionFileData> {
         let npc_data = self.get_npc(npc_id)?;
         npc_data
