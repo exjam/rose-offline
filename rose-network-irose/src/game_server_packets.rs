@@ -2121,6 +2121,35 @@ pub struct PacketServerQuestResult {
     pub quest_id: u32,
 }
 
+impl TryFrom<&Packet> for PacketServerQuestResult {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::QuestResult as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let result = match reader.read_u8()? {
+            1 => PacketServerQuestResultType::AddSuccess,
+            2 => PacketServerQuestResultType::AddFailed,
+            3 => PacketServerQuestResultType::DeleteSuccess,
+            4 => PacketServerQuestResultType::DeleteFailed,
+            5 => PacketServerQuestResultType::TriggerSuccess,
+            6 => PacketServerQuestResultType::TriggerFailed,
+            _ => return Err(PacketError::InvalidPacket),
+        };
+        let slot = reader.read_u8()?;
+        let quest_id = reader.read_u32()?;
+
+        Ok(Self {
+            result,
+            slot,
+            quest_id,
+        })
+    }
+}
+
 impl From<&PacketServerQuestResult> for Packet {
     fn from(packet: &PacketServerQuestResult) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::QuestResult as u16);

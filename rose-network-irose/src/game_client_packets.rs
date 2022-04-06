@@ -428,6 +428,21 @@ impl TryFrom<&Packet> for PacketClientQuestRequest {
     }
 }
 
+impl From<&PacketClientQuestRequest> for Packet {
+    fn from(packet: &PacketClientQuestRequest) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::QuestRequest as u16);
+
+        let request_type = match packet.request_type {
+            PacketClientQuestRequestType::DeleteQuest => 2,
+            PacketClientQuestRequestType::DoTrigger => 3,
+        };
+        writer.write_u8(request_type);
+        writer.write_u8(packet.quest_slot);
+        writer.write_u32(packet.quest_id);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientPersonalStoreListItems {
     pub target_entity_id: ClientEntityId,
