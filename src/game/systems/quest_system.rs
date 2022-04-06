@@ -162,14 +162,15 @@ fn quest_condition_quest_item(
             .decode_item_base1000(item_base1000.get() as usize)
     });
 
-    if let Some(equipment_index) = equipment_index {
-        let equipment_index = quest_system_resources
+    let equipment_index = equipment_index.and_then(|equipment_index| {
+        quest_system_resources
             .game_data
             .data_decoder
-            .decode_equipment_index(equipment_index.get());
-        if let (Some(equipment), Some(equipment_index)) =
-            (quest_parameters.source.equipment.as_ref(), equipment_index)
-        {
+            .decode_equipment_index(equipment_index.get())
+    });
+
+    if let Some(equipment_index) = equipment_index {
+        if let Some(equipment) = quest_parameters.source.equipment.as_ref() {
             item_reference
                 == equipment
                     .get_equipment_item(equipment_index)
