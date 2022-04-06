@@ -2261,6 +2261,21 @@ pub struct PacketServerRunNpcDeathTrigger {
     pub npc_id: NpcId,
 }
 
+impl TryFrom<&Packet> for PacketServerRunNpcDeathTrigger {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::RunNpcDeathTrigger as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let npc_id = NpcId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+
+        Ok(Self { npc_id })
+    }
+}
+
 impl From<&PacketServerRunNpcDeathTrigger> for Packet {
     fn from(packet: &PacketServerRunNpcDeathTrigger) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::RunNpcDeathTrigger as u16);
