@@ -254,14 +254,13 @@ impl<'a> RoseFileReader<'a> {
     }
 
     pub fn read_variable_length_bytes(&mut self) -> Result<&'a [u8], ReadError> {
-        let mut length = 0usize;
-        loop {
-            let byte = self.read_u8()?;
-            length += (byte & 0x7f) as usize;
-            if (byte & 0x80) == 0 {
-                break;
-            }
-        }
+        let byte1 = self.read_u8()? as usize;
+        let length = if (byte1 & 0x80) == 0 {
+            byte1
+        } else {
+            let byte2 = self.read_u8()? as usize;
+            (byte2 << 7) | (byte1 & 0x7f)
+        };
         self.read_fixed_length_bytes(length as usize)
     }
 
