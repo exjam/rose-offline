@@ -47,7 +47,7 @@ pub use ltb::LtbFile;
 pub use ptl::{PtlFile, PtlKeyframe, PtlKeyframeData, PtlSequence};
 pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};
-pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry};
+pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadOptions};
 pub use til::TilFile;
 pub use vfs::{VfsFile, VfsIndex, VfsPath, VfsPathBuf};
 pub use zmd::ZmdFile;

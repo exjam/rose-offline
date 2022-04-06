@@ -6,12 +6,22 @@ use std::{
 
 use crate::{reader::RoseFileReader, RoseFile};
 
-#[derive(Default)]
 struct StlLanguage {
     text: Vec<(u32, u32)>,
     comment: Vec<(u32, u32)>,
     quest1: Vec<(u32, u32)>,
     quest2: Vec<(u32, u32)>,
+}
+
+impl StlLanguage {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            text: Vec::with_capacity(capacity),
+            comment: Vec::with_capacity(capacity),
+            quest1: Vec::with_capacity(capacity),
+            quest2: Vec::with_capacity(capacity),
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -38,6 +48,11 @@ pub struct StlQuestEntry<'a> {
     pub end_message: &'a str,
 }
 
+#[derive(Default)]
+pub struct StlReadOptions {
+    pub language_filter: Option<Vec<usize>>,
+}
+
 enum StlType {
     Item,
     Normal,
@@ -45,9 +60,12 @@ enum StlType {
 }
 
 impl RoseFile for StlFile {
-    type ReadOptions = ();
+    type ReadOptions = StlReadOptions;
 
-    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+    fn read(
+        mut reader: RoseFileReader,
+        read_options: &Self::ReadOptions,
+    ) -> Result<Self, anyhow::Error> {
         let stl_type_str = reader.read_variable_length_string()?;
         let stl_type = if stl_type_str == "ITST01" {
             StlType::Item
@@ -59,17 +77,17 @@ impl RoseFile for StlFile {
             return Err(anyhow!("Invalid STL type: {}", stl_type_str));
         };
 
-        let key_count = reader.read_u32()?;
-        let mut string_keys = HashMap::new();
-        let mut integer_keys = HashMap::new();
+        let key_count = reader.read_u32()? as usize;
+        let mut string_keys = HashMap::with_capacity(key_count);
+        let mut integer_keys = HashMap::with_capacity(key_count);
         for i in 0..key_count {
             let key = reader.read_variable_length_string()?;
             let index = reader.read_u32()?;
-            string_keys.insert(key.to_string(), i);
-            integer_keys.insert(index, i);
+            string_keys.insert(key.to_string(), i as u32);
+            integer_keys.insert(index, i as u32);
         }
 
-        let language_count = reader.read_u32()?;
+        let language_count = reader.read_u32()? as usize;
         let mut data = Vec::new();
 
         let read_stl_entry = |reader: &mut RoseFileReader,
@@ -83,12 +101,20 @@ impl RoseFile for StlFile {
             Ok((text_offset as u32, text_bytes_length as u32))
         };
 
-        let mut languages = Vec::new();
-        for _ in 0..language_count {
+        let mut languages = Vec::with_capacity(language_count);
+        for language_index in 0..language_count {
             let language_offset = reader.read_u32()?;
             let language_save_position = reader.position();
-            let mut language = StlLanguage::default();
+            let mut language = StlLanguage::with_capacity(key_count);
             reader.set_position(language_offset as u64);
+
+            if let Some(language_filter) = read_options.language_filter.as_ref() {
+                if !language_filter.contains(&language_index) {
+                    languages.push(language);
+                    reader.set_position(language_save_position);
+                    continue;
+                }
+            }
 
             for _ in 0..key_count {
                 let entry_offset = reader.read_u32()?;
