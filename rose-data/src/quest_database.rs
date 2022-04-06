@@ -6,6 +6,8 @@ use crate::WorldTicks;
 pub use rose_file_readers::QsdTrigger as QuestTrigger;
 
 pub struct QuestData {
+    pub id: usize,
+    pub string_id: String,
     pub time_limit: Option<WorldTicks>,
 }
 
@@ -76,7 +78,7 @@ impl From<&str> for QuestTriggerHash {
 }
 
 pub struct QuestDatabase {
-    pub quests: Vec<QuestData>,
+    pub quests: Vec<Option<QuestData>>,
     pub strings: HashMap<u16, String>,
     pub triggers: HashMap<String, QuestTrigger>,
     pub triggers_by_hash: HashMap<QuestTriggerHash, String>,
@@ -84,7 +86,7 @@ pub struct QuestDatabase {
 
 impl QuestDatabase {
     pub fn get_quest_data(&self, id: usize) -> Option<&QuestData> {
-        self.quests.get(id)
+        self.quests.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_quest_string(&self, id: u16) -> Option<&String> {

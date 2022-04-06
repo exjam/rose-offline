@@ -36,7 +36,17 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
     let mut quests = Vec::new();
     for row in 0..quest_stb.0.rows() {
         let time_limit = quest_stb.get_time_limit(row).filter(|x| x.0 != 0);
-        quests.push(QuestData { time_limit });
+        let string_id = quest_stb.0.try_get(row, quest_stb.0.columns() - 1);
+
+        if let Some(string_id) = string_id {
+            quests.push(Some(QuestData {
+                id: row,
+                string_id: string_id.to_string(),
+                time_limit,
+            }));
+        } else {
+            quests.push(None);
+        }
     }
 
     let qsd_files_stb = vfs
