@@ -6,7 +6,7 @@ use modular_bitfield::{
 use num_derive::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
-use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, VehiclePartIndex, WarpGateId};
+use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, SkillId, VehiclePartIndex, WarpGateId};
 use rose_data_irose::{decode_ammo_index, encode_ammo_index};
 use rose_game_common::{
     components::{BasicStatType, HotbarSlot, ItemSlot, SkillSlot},
@@ -21,7 +21,7 @@ use crate::common_packets::{
     decode_item_slot, encode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex,
     PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
     PacketReadVehiclePartIndex, PacketWriteEntityId, PacketWriteEquipmentIndex,
-    PacketWriteItemSlot, PacketWriteVehiclePartIndex,
+    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -242,6 +242,15 @@ impl TryFrom<&Packet> for PacketClientSetHotbarSlot {
     }
 }
 
+impl From<&PacketClientSetHotbarSlot> for Packet {
+    fn from(packet: &PacketClientSetHotbarSlot) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::SetHotbarSlot as u16);
+        writer.write_u8(packet.slot_index as u8);
+        writer.write_hotbar_slot(&packet.slot);
+        writer.into()
+    }
+}
+
 pub struct PacketClientChangeEquipment {
     pub equipment_index: EquipmentIndex,
     pub item_slot: Option<ItemSlot>,
@@ -340,17 +349,24 @@ impl TryFrom<&Packet> for PacketClientIncreaseBasicStat {
     }
 }
 
+impl From<&PacketClientIncreaseBasicStat> for Packet {
+    fn from(packet: &PacketClientIncreaseBasicStat) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::IncreaseBasicStat as u16);
+        match packet.basic_stat_type {
+            BasicStatType::Strength => writer.write_u8(0),
+            BasicStatType::Dexterity => writer.write_u8(1),
+            BasicStatType::Intelligence => writer.write_u8(2),
+            BasicStatType::Concentration => writer.write_u8(3),
+            BasicStatType::Charm => writer.write_u8(4),
+            BasicStatType::Sense => writer.write_u8(5),
+        }
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientPickupItemDrop {
     pub target_entity_id: ClientEntityId,
-}
-
-impl From<&PacketClientPickupItemDrop> for Packet {
-    fn from(packet: &PacketClientPickupItemDrop) -> Self {
-        let mut writer = PacketWriter::new(ClientPackets::PickupItemDrop as u16);
-        writer.write_entity_id(packet.target_entity_id);
-        writer.into()
-    }
 }
 
 impl TryFrom<&Packet> for PacketClientPickupItemDrop {
@@ -364,6 +380,14 @@ impl TryFrom<&Packet> for PacketClientPickupItemDrop {
         let mut reader = PacketReader::from(packet);
         let target_entity_id = reader.read_entity_id()?;
         Ok(PacketClientPickupItemDrop { target_entity_id })
+    }
+}
+
+impl From<&PacketClientPickupItemDrop> for Packet {
+    fn from(packet: &PacketClientPickupItemDrop) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PickupItemDrop as u16);
+        writer.write_entity_id(packet.target_entity_id);
+        writer.into()
     }
 }
 
@@ -389,6 +413,19 @@ impl TryFrom<&Packet> for PacketClientReviveRequest {
         Ok(PacketClientReviveRequest {
             revive_request_type,
         })
+    }
+}
+
+impl From<&PacketClientReviveRequest> for Packet {
+    fn from(packet: &PacketClientReviveRequest) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ReviveRequest as u16);
+
+        match packet.revive_request_type {
+            ReviveRequestType::RevivePosition => writer.write_u8(1),
+            ReviveRequestType::SavePosition => writer.write_u8(2),
+        }
+
+        writer.into()
     }
 }
 
@@ -457,8 +494,16 @@ impl TryFrom<&Packet> for PacketClientPersonalStoreListItems {
         }
 
         let mut reader = PacketReader::from(packet);
-        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let target_entity_id = reader.read_entity_id()?;
         Ok(PacketClientPersonalStoreListItems { target_entity_id })
+    }
+}
+
+impl From<&PacketClientPersonalStoreListItems> for Packet {
+    fn from(packet: &PacketClientPersonalStoreListItems) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PersonalStoreListItems as u16);
+        writer.write_entity_id(packet.target_entity_id);
+        writer.into()
     }
 }
 
@@ -521,6 +566,25 @@ impl TryFrom<&Packet> for PacketClientDropItemFromInventory {
     }
 }
 
+impl From<&PacketClientDropItemFromInventory> for Packet {
+    fn from(packet: &PacketClientDropItemFromInventory) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::DropItemFromInventory as u16);
+
+        match *packet {
+            PacketClientDropItemFromInventory::Item(item_slot, quantity) => {
+                writer.write_item_slot_u8(item_slot);
+                writer.write_u32(quantity);
+            }
+            PacketClientDropItemFromInventory::Money(amount) => {
+                writer.write_u8(0);
+                writer.write_u32(amount);
+            }
+        }
+
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientUseItem {
     pub item_slot: ItemSlot,
@@ -546,9 +610,19 @@ impl TryFrom<&Packet> for PacketClientUseItem {
     }
 }
 
+impl From<&PacketClientUseItem> for Packet {
+    fn from(packet: &PacketClientUseItem) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::UseItem as u16);
+        writer.write_item_slot_u16(packet.item_slot);
+        writer.write_option_entity_id(packet.target_entity_id);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientLevelUpSkill {
     pub skill_slot: SkillSlot,
+    pub next_skill_idx: SkillId,
 }
 
 impl TryFrom<&Packet> for PacketClientLevelUpSkill {
@@ -561,9 +635,21 @@ impl TryFrom<&Packet> for PacketClientLevelUpSkill {
 
         let mut reader = PacketReader::from(packet);
         let skill_slot = reader.read_skill_slot_u8()?;
-        let _next_skill_idx = reader.read_u16()?;
+        let next_skill_idx = SkillId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
 
-        Ok(PacketClientLevelUpSkill { skill_slot })
+        Ok(PacketClientLevelUpSkill {
+            skill_slot,
+            next_skill_idx,
+        })
+    }
+}
+
+impl From<&PacketClientLevelUpSkill> for Packet {
+    fn from(packet: &PacketClientLevelUpSkill) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::LevelUpSkill as u16);
+        writer.write_skill_slot_u8(packet.skill_slot);
+        writer.write_u16(packet.next_skill_idx.get());
+        writer.into()
     }
 }
 
@@ -587,6 +673,14 @@ impl TryFrom<&Packet> for PacketClientCastSkillSelf {
     }
 }
 
+impl From<&PacketClientCastSkillSelf> for Packet {
+    fn from(packet: &PacketClientCastSkillSelf) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::CastSkillSelf as u16);
+        writer.write_skill_slot_u8(packet.skill_slot);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientCastSkillTargetEntity {
     pub target_entity_id: ClientEntityId,
@@ -602,13 +696,22 @@ impl TryFrom<&Packet> for PacketClientCastSkillTargetEntity {
         }
 
         let mut reader = PacketReader::from(packet);
-        let target_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let target_entity_id = reader.read_entity_id()?;
         let skill_slot = reader.read_skill_slot_u8()?;
 
         Ok(PacketClientCastSkillTargetEntity {
             target_entity_id,
             skill_slot,
         })
+    }
+}
+
+impl From<&PacketClientCastSkillTargetEntity> for Packet {
+    fn from(packet: &PacketClientCastSkillTargetEntity) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::CastSkillTargetEntity as u16);
+        writer.write_entity_id(packet.target_entity_id);
+        writer.write_skill_slot_u8(packet.skill_slot);
+        writer.into()
     }
 }
 
@@ -635,6 +738,16 @@ impl TryFrom<&Packet> for PacketClientCastSkillTargetPosition {
             skill_slot,
             position: Vec2::new(x, y),
         })
+    }
+}
+
+impl From<&PacketClientCastSkillTargetPosition> for Packet {
+    fn from(packet: &PacketClientCastSkillTargetPosition) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::CastSkillTargetPosition as u16);
+        writer.write_skill_slot_u8(packet.skill_slot);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
+        writer.into()
     }
 }
 
@@ -797,6 +910,15 @@ impl TryFrom<&Packet> for PacketClientEmote {
     }
 }
 
+impl From<&PacketClientEmote> for Packet {
+    fn from(packet: &PacketClientEmote) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::Emote as u16);
+        writer.write_u16(packet.motion_id.get());
+        writer.write_u16(if packet.is_stop { 1 << 15 } else { 0 });
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientWarpGateRequest {
     pub warp_gate_id: WarpGateId,
@@ -813,6 +935,14 @@ impl TryFrom<&Packet> for PacketClientWarpGateRequest {
         let mut reader = PacketReader::from(packet);
         let warp_gate_id = WarpGateId::new(reader.read_u16()?);
         Ok(PacketClientWarpGateRequest { warp_gate_id })
+    }
+}
+
+impl From<&PacketClientWarpGateRequest> for Packet {
+    fn from(packet: &PacketClientWarpGateRequest) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::WarpGateRequest as u16);
+        writer.write_u16(packet.warp_gate_id.get());
+        writer.into()
     }
 }
 
