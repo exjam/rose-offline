@@ -9,7 +9,9 @@ use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, MotionId,
     NpcId, SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
 };
-use rose_data_irose::{decode_ammo_index, encode_ability_type, encode_ammo_index};
+use rose_data_irose::{
+    decode_ability_type, decode_ammo_index, encode_ability_type, encode_ammo_index,
+};
 use rose_game_common::{
     components::{
         ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, DroppedItem,
@@ -33,11 +35,11 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 use crate::common_packets::{
     PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
     PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-    PacketReadItems, PacketReadMoveMode, PacketReadStatusEffects, PacketReadVehiclePartIndex,
-    PacketWriteCharacterGender, PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId,
-    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
-    PacketWriteMoveMode, PacketWriteSkillSlot, PacketWriteStatusEffects,
-    PacketWriteVehiclePartIndex,
+    PacketReadItems, PacketReadMoveMode, PacketReadSkillSlot, PacketReadStatusEffects,
+    PacketReadVehiclePartIndex, PacketWriteCharacterGender, PacketWriteCommandState,
+    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
+    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot,
+    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -1193,6 +1195,22 @@ pub struct PacketServerSetHotbarSlot {
     pub slot: Option<HotbarSlot>,
 }
 
+impl TryFrom<&Packet> for PacketServerSetHotbarSlot {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::SetHotbarSlot as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let slot_index = reader.read_u8()? as usize;
+        let slot = reader.read_hotbar_slot()?;
+
+        Ok(Self { slot_index, slot })
+    }
+}
+
 impl From<&PacketServerSetHotbarSlot> for Packet {
     fn from(packet: &PacketServerSetHotbarSlot) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::SetHotbarSlot as u16);
@@ -1719,6 +1737,20 @@ pub struct PacketServerUpdateMoney {
     pub money: Money,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateMoney {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateMoney as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let money = Money(reader.read_i64()?);
+        Ok(Self { money })
+    }
+}
+
 impl From<&PacketServerUpdateMoney> for Packet {
     fn from(packet: &PacketServerUpdateMoney) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateMoney as u16);
@@ -1727,15 +1759,35 @@ impl From<&PacketServerUpdateMoney> for Packet {
     }
 }
 
-pub struct PacketServerRewardItems<'a> {
-    pub items: &'a [(ItemSlot, Option<Item>)],
+pub struct PacketServerRewardItems {
+    pub items: Vec<(ItemSlot, Option<Item>)>,
 }
 
-impl<'a> From<&'a PacketServerRewardItems<'a>> for Packet {
-    fn from(packet: &'a PacketServerRewardItems<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerRewardItems {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::RewardItems as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let item_count = reader.read_u8()? as usize;
+        let mut items = Vec::with_capacity(item_count);
+        for _ in 0..item_count {
+            let slot = reader.read_item_slot_u8()?;
+            let item = reader.read_item_full()?;
+            items.push((slot, item));
+        }
+        Ok(Self { items })
+    }
+}
+
+impl From<&PacketServerRewardItems> for Packet {
+    fn from(packet: &PacketServerRewardItems) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::RewardItems as u16);
         writer.write_u8(packet.items.len() as u8);
-        for (slot, item) in packet.items {
+        for (slot, item) in packet.items.iter() {
             writer.write_item_slot_u8(*slot);
             writer.write_item_full(item.as_ref());
         }
@@ -1745,6 +1797,20 @@ impl<'a> From<&'a PacketServerRewardItems<'a>> for Packet {
 
 pub struct PacketServerRewardMoney {
     pub money: Money,
+}
+
+impl TryFrom<&Packet> for PacketServerRewardMoney {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::RewardMoney as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let money = Money(reader.read_i64()?);
+        Ok(Self { money })
+    }
 }
 
 impl From<&PacketServerRewardMoney> for Packet {
@@ -2000,6 +2066,33 @@ pub struct PacketServerUpdateBasicStat {
     pub value: i32,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateBasicStat {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateBasicStat as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let basic_stat_type = match reader.read_u8()? {
+            0 => BasicStatType::Strength,
+            1 => BasicStatType::Dexterity,
+            2 => BasicStatType::Intelligence,
+            3 => BasicStatType::Concentration,
+            4 => BasicStatType::Charm,
+            5 => BasicStatType::Sense,
+            _ => return Err(PacketError::InvalidPacket),
+        };
+        let value = reader.read_u16()? as i32;
+
+        Ok(Self {
+            basic_stat_type,
+            value,
+        })
+    }
+}
+
 impl From<&PacketServerUpdateBasicStat> for Packet {
     fn from(packet: &PacketServerUpdateBasicStat) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateBasicStat as u16);
@@ -2173,6 +2266,29 @@ pub struct PacketServerUpdateAbilityValue {
     pub value: i32,
 }
 
+impl TryFrom<&Packet> for PacketServerUpdateAbilityValue {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateAbilityValueRewardAdd as u16
+            || packet.command != ServerPackets::UpdateAbilityValueRewardSet as u16
+        {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let ability_type =
+            decode_ability_type(reader.read_u16()? as usize).ok_or(PacketError::InvalidPacket)?;
+        let value = reader.read_i32()?;
+
+        Ok(Self {
+            is_add: packet.command == ServerPackets::UpdateAbilityValueRewardAdd as u16,
+            ability_type,
+            value,
+        })
+    }
+}
+
 impl From<&PacketServerUpdateAbilityValue> for Packet {
     fn from(packet: &PacketServerUpdateAbilityValue) -> Self {
         let command = if packet.is_add {
@@ -2190,6 +2306,40 @@ impl From<&PacketServerUpdateAbilityValue> for Packet {
 
 pub struct PacketServerLearnSkillResult {
     pub result: Result<LearnSkillSuccess, LearnSkillError>,
+}
+
+impl TryFrom<&Packet> for PacketServerLearnSkillResult {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::LearnSkillResult as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let result = match reader.read_u8()? {
+            0 => Err(LearnSkillError::AlreadyLearnt),
+            1 => {
+                let skill_slot = reader.read_skill_slot_u8()?;
+                let skill_id = SkillId::new(reader.read_u16()?);
+                let updated_skill_points = SkillPoints::new(reader.read_u16()? as u32);
+                Ok(LearnSkillSuccess {
+                    skill_slot,
+                    skill_id,
+                    updated_skill_points,
+                })
+            }
+            2 => Err(LearnSkillError::JobRequirement),
+            3 => Err(LearnSkillError::SkillRequirement),
+            4 => Err(LearnSkillError::AbilityRequirement),
+            5 => Err(LearnSkillError::Full),
+            6 => Err(LearnSkillError::InvalidSkillId),
+            7 => Err(LearnSkillError::SkillPointRequirement),
+            _ => return Err(PacketError::InvalidPacket),
+        };
+
+        Ok(Self { result })
+    }
 }
 
 impl From<&PacketServerLearnSkillResult> for Packet {
@@ -2228,6 +2378,37 @@ impl From<&PacketServerLearnSkillResult> for Packet {
 pub struct PacketServerLevelUpSkillResult {
     pub result: Result<(SkillSlot, SkillId), LevelUpSkillError>,
     pub updated_skill_points: SkillPoints,
+}
+
+impl TryFrom<&Packet> for PacketServerLevelUpSkillResult {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::LevelUpSkillResult as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let skill_slot = reader.read_skill_slot_u8()?;
+        let skill_id = SkillId::new(reader.read_u16()?);
+        let updated_skill_points = SkillPoints::new(reader.read_u16()? as u32);
+
+        let result = match reader.read_u8()? {
+            0 => Ok((skill_slot, skill_id.ok_or(PacketError::InvalidPacket)?)),
+            1 => Err(LevelUpSkillError::Failed),
+            2 => Err(LevelUpSkillError::SkillPointRequirement),
+            3 => Err(LevelUpSkillError::AbilityRequirement),
+            4 => Err(LevelUpSkillError::JobRequirement),
+            5 => Err(LevelUpSkillError::SkillRequirement),
+            6 => Err(LevelUpSkillError::MoneyRequirement),
+            _ => return Err(PacketError::InvalidPacket),
+        };
+
+        Ok(Self {
+            result,
+            updated_skill_points,
+        })
+    }
 }
 
 impl From<&PacketServerLevelUpSkillResult> for Packet {
@@ -2395,6 +2576,27 @@ pub struct PacketServerUseItem {
     pub inventory_slot: Option<ItemSlot>,
 }
 
+impl TryFrom<&Packet> for PacketServerUseItem {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UseItem as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let item = ItemReference::new(ItemType::Consumable, reader.read_u16()? as usize);
+        let inventory_slot = reader.read_item_slot_u8().ok();
+
+        Ok(Self {
+            entity_id,
+            item,
+            inventory_slot,
+        })
+    }
+}
+
 impl From<&PacketServerUseItem> for Packet {
     fn from(packet: &PacketServerUseItem) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UseItem as u16);
@@ -2411,6 +2613,27 @@ pub struct PacketServerCastSkillSelf {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
     pub cast_motion_id: Option<MotionId>,
+}
+
+impl TryFrom<&Packet> for PacketServerCastSkillSelf {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::CastSkillSelf as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let skill_id = SkillId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let cast_motion_id = reader.read_u8().ok().map(|x| MotionId::new(x as u16));
+
+        Ok(Self {
+            entity_id,
+            skill_id,
+            cast_motion_id,
+        })
+    }
 }
 
 impl From<&PacketServerCastSkillSelf> for Packet {
@@ -2432,6 +2655,34 @@ pub struct PacketServerCastSkillTargetEntity {
     pub target_distance: f32,
     pub target_position: Vec2,
     pub cast_motion_id: Option<MotionId>,
+}
+
+impl TryFrom<&Packet> for PacketServerCastSkillTargetEntity {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::CastSkillTargetEntity as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let target_entity_id = reader.read_entity_id()?;
+        let skill_id = SkillId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let target_distance = reader.read_u16()? as f32;
+        let target_position_x = reader.read_f32()?;
+        let target_position_y = reader.read_f32()?;
+        let cast_motion_id = reader.read_u8().ok().map(|x| MotionId::new(x as u16));
+
+        Ok(Self {
+            entity_id,
+            skill_id,
+            target_entity_id,
+            target_distance,
+            target_position: Vec2::new(target_position_x, target_position_y),
+            cast_motion_id,
+        })
+    }
 }
 
 impl From<&PacketServerCastSkillTargetEntity> for Packet {
@@ -2457,6 +2708,30 @@ pub struct PacketServerCastSkillTargetPosition {
     pub cast_motion_id: Option<MotionId>,
 }
 
+impl TryFrom<&Packet> for PacketServerCastSkillTargetPosition {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::CastSkillTargetPosition as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let skill_id = SkillId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+        let target_position_x = reader.read_f32()?;
+        let target_position_y = reader.read_f32()?;
+        let cast_motion_id = reader.read_u8().ok().map(|x| MotionId::new(x as u16));
+
+        Ok(Self {
+            entity_id,
+            skill_id,
+            target_position: Vec2::new(target_position_x, target_position_y),
+            cast_motion_id,
+        })
+    }
+}
+
 impl From<&PacketServerCastSkillTargetPosition> for Packet {
     fn from(packet: &PacketServerCastSkillTargetPosition) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CastSkillTargetPosition as u16);
@@ -2475,6 +2750,20 @@ pub struct PacketServerStartCastingSkill {
     pub entity_id: ClientEntityId,
 }
 
+impl TryFrom<&Packet> for PacketServerStartCastingSkill {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::StartCastingSkill as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        Ok(Self { entity_id })
+    }
+}
+
 impl From<&PacketServerStartCastingSkill> for Packet {
     fn from(packet: &PacketServerStartCastingSkill) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::StartCastingSkill as u16);
@@ -2486,13 +2775,9 @@ impl From<&PacketServerStartCastingSkill> for Packet {
 #[bitfield]
 #[derive(Clone, Copy)]
 pub struct SkillEffectData {
-    #[skip(getters)]
     skill_id: B12,
-    #[skip(getters)]
     effect_success_1: bool,
-    #[skip(getters)]
     effect_success_2: bool,
-    #[skip(getters)]
     caster_intelligence: B10,
 }
 
@@ -2502,6 +2787,38 @@ pub struct PacketServerApplySkillEffect {
     pub caster_intelligence: i32,
     pub skill_id: SkillId,
     pub effect_success: [bool; 2],
+}
+
+impl TryFrom<&Packet> for PacketServerApplySkillEffect {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::ApplySkillEffect as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let caster_entity_id = reader.read_entity_id()?;
+        let skill_effect_data =
+            SkillEffectData::from_bytes(reader.read_fixed_length_bytes(3)?.try_into().unwrap());
+
+        let skill_id =
+            SkillId::new(skill_effect_data.skill_id()).ok_or(PacketError::InvalidPacket)?;
+        let caster_intelligence = skill_effect_data.caster_intelligence() as i32;
+        let effect_success = [
+            skill_effect_data.effect_success_1(),
+            skill_effect_data.effect_success_2(),
+        ];
+
+        Ok(Self {
+            entity_id,
+            caster_entity_id,
+            caster_intelligence,
+            skill_id,
+            effect_success,
+        })
+    }
 }
 
 impl From<&PacketServerApplySkillEffect> for Packet {
@@ -2534,6 +2851,41 @@ pub struct PacketServerApplySkillDamage {
     // TODO: Optional item drop with damage
 }
 
+impl TryFrom<&Packet> for PacketServerApplySkillDamage {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::ApplySkillDamage as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let caster_entity_id = reader.read_entity_id()?;
+        let skill_effect_data =
+            SkillEffectData::from_bytes(reader.read_fixed_length_bytes(3)?.try_into().unwrap());
+        let (damage, is_killed) = reader.read_damage_u16()?;
+
+        let skill_id =
+            SkillId::new(skill_effect_data.skill_id()).ok_or(PacketError::InvalidPacket)?;
+        let caster_intelligence = skill_effect_data.caster_intelligence() as i32;
+        let effect_success = [
+            skill_effect_data.effect_success_1(),
+            skill_effect_data.effect_success_2(),
+        ];
+
+        Ok(Self {
+            entity_id,
+            caster_entity_id,
+            caster_intelligence,
+            skill_id,
+            effect_success,
+            damage,
+            is_killed,
+        })
+    }
+}
+
 impl From<&PacketServerApplySkillDamage> for Packet {
     fn from(packet: &PacketServerApplySkillDamage) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::ApplySkillDamage as u16);
@@ -2559,6 +2911,26 @@ pub struct PacketServerCancelCastingSkill {
     pub reason: CancelCastingSkillReason,
 }
 
+impl TryFrom<&Packet> for PacketServerCancelCastingSkill {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::CancelCastingSkill as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let reason = match reader.read_u8()? {
+            1 => CancelCastingSkillReason::NeedAbility,
+            2 => CancelCastingSkillReason::NeedTarget,
+            3 => CancelCastingSkillReason::InvalidTarget,
+            _ => return Err(PacketError::InvalidPacket),
+        };
+        Ok(Self { entity_id, reason })
+    }
+}
+
 impl From<&PacketServerCancelCastingSkill> for Packet {
     fn from(packet: &PacketServerCancelCastingSkill) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CancelCastingSkill as u16);
@@ -2575,6 +2947,25 @@ impl From<&PacketServerCancelCastingSkill> for Packet {
 pub struct PacketServerFinishCastingSkill {
     pub entity_id: ClientEntityId,
     pub skill_id: SkillId,
+}
+
+impl TryFrom<&Packet> for PacketServerFinishCastingSkill {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::FinishCastingSkill as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let skill_id = SkillId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+
+        Ok(Self {
+            entity_id,
+            skill_id,
+        })
+    }
 }
 
 impl From<&PacketServerFinishCastingSkill> for Packet {
@@ -2625,18 +3016,44 @@ impl From<&PacketServerUpdateSpeed> for Packet {
     }
 }
 
-pub struct PacketServerUpdateStatusEffects<'a> {
+pub struct PacketServerUpdateStatusEffects {
     pub entity_id: ClientEntityId,
-    pub status_effects: &'a ActiveStatusEffects,
+    pub status_effects: ActiveStatusEffects,
     pub updated_hp: Option<HealthPoints>,
     pub updated_mp: Option<ManaPoints>,
 }
 
-impl<'a> From<&'a PacketServerUpdateStatusEffects<'a>> for Packet {
-    fn from(packet: &'a PacketServerUpdateStatusEffects<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerUpdateStatusEffects {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateStatusEffects as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+
+        let mut status_effects = ActiveStatusEffects::default();
+        reader.read_status_effects_flags_u32(&mut status_effects)?;
+
+        let updated_hp = reader.read_i32().ok().map(HealthPoints::new);
+        let updated_mp = reader.read_i32().ok().map(ManaPoints::new);
+
+        Ok(Self {
+            entity_id,
+            status_effects,
+            updated_hp,
+            updated_mp,
+        })
+    }
+}
+
+impl From<&PacketServerUpdateStatusEffects> for Packet {
+    fn from(packet: &PacketServerUpdateStatusEffects) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateStatusEffects as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_status_effects_flags_u32(packet.status_effects);
+        writer.write_status_effects_flags_u32(&packet.status_effects);
 
         if let Some(updated_hp) = packet.updated_hp {
             writer.write_i32(updated_hp.hp);
@@ -2653,6 +3070,7 @@ impl<'a> From<&'a PacketServerUpdateStatusEffects<'a>> for Packet {
 pub struct PacketServerNpcStoreTransactionError {
     pub error: NpcStoreTransactionError,
 }
+
 impl From<&PacketServerNpcStoreTransactionError> for Packet {
     fn from(packet: &PacketServerNpcStoreTransactionError) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateSpeed as u16);
@@ -2706,6 +3124,27 @@ pub struct PacketServerUseEmote {
     pub entity_id: ClientEntityId,
     pub motion_id: MotionId,
     pub is_stop: bool,
+}
+
+impl TryFrom<&Packet> for PacketServerUseEmote {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UseEmote as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let motion_id = MotionId::new(reader.read_u16()?);
+        let is_stop = (reader.read_u16()? & 1 << 15) != 0;
+        let entity_id = reader.read_entity_id()?;
+
+        Ok(Self {
+            entity_id,
+            motion_id,
+            is_stop,
+        })
+    }
 }
 
 impl From<&PacketServerUseEmote> for Packet {
@@ -2903,6 +3342,25 @@ impl From<&PacketServerPartyMemberLeave> for Packet {
 pub struct PacketServerChangeNpcId {
     pub client_entity_id: ClientEntityId,
     pub npc_id: NpcId,
+}
+
+impl TryFrom<&Packet> for PacketServerChangeNpcId {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::ChangeNpcId as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let client_entity_id = reader.read_entity_id()?;
+        let npc_id = NpcId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
+
+        Ok(Self {
+            client_entity_id,
+            npc_id,
+        })
+    }
 }
 
 impl From<&PacketServerChangeNpcId> for Packet {

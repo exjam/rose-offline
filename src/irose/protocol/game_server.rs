@@ -634,7 +634,7 @@ impl GameServer {
                     .write_packet(Packet::from(&PacketServerUpdateMoney { money }))
                     .await?;
             }
-            ServerMessage::RewardItems(ref items) => {
+            ServerMessage::RewardItems(items) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerRewardItems { items }))
@@ -662,7 +662,7 @@ impl GameServer {
             }
             ServerMessage::UpdateStatusEffects(UpdateStatusEffects {
                 entity_id,
-                ref status_effects,
+                status_effects,
                 updated_hp,
                 updated_mp,
             }) => {
