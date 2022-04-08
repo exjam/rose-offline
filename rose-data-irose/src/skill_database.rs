@@ -14,8 +14,8 @@ use rose_data::{
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
 use crate::data_decoder::{
-    decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillPageType,
-    IroseSkillTargetFilter, IroseSkillType,
+    decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillBasicCommand,
+    IroseSkillPageType, IroseSkillTargetFilter, IroseSkillType,
 };
 
 pub struct StbSkill(pub StbFile);
@@ -33,6 +33,7 @@ impl StbSkill {
     stb_column! { 5, get_skill_type, IroseSkillType }
     stb_column! { 6, get_cast_range, u32 }
     stb_column! { 6, get_require_planet_index, NonZeroUsize }
+    stb_column! { 6, get_basic_command, IroseSkillBasicCommand }
     stb_column! { 7, get_target_filter, IroseSkillTargetFilter }
     stb_column! { 8, get_scope, u32 }
     stb_column! { 9, get_power, u32 }
@@ -197,6 +198,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
             .unwrap_or(100) as f32
             / 100.0,
         add_ability: data.get_add_ability(id),
+        basic_command: data.get_basic_command(id).and_then(|x| x.try_into().ok()),
         cast_range: data.get_cast_range(id).unwrap_or(0),
         casting_motion_id: data.get_casting_motion_id(id),
         casting_motion_speed: data

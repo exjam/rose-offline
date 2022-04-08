@@ -5,8 +5,8 @@ use num_traits::{FromPrimitive, ToPrimitive};
 
 use rose_data::{
     AbilityType, AmmoIndex, DataDecoder, EquipmentIndex, ItemClass, ItemReference, ItemType,
-    SkillActionMode, SkillPageType, SkillTargetFilter, SkillType, StatusEffectClearedByType,
-    StatusEffectType, VehiclePartIndex,
+    SkillActionMode, SkillBasicCommand, SkillPageType, SkillTargetFilter, SkillType,
+    StatusEffectClearedByType, StatusEffectType, VehiclePartIndex,
 };
 
 macro_rules! impl_conversions {
@@ -369,6 +369,28 @@ impl_conversions!(
     IroseSkillActionMode,
     SkillActionMode,
     decode_skill_action_mode
+);
+
+#[derive(FromPrimitive)]
+pub enum IroseSkillBasicCommand {
+    Sit = 1,
+    PickupItem = 2,
+    Jump = 3,
+    AirJump = 4,
+    AutoTarget = 5,
+    Attack = 6,
+    DriveVehicle = 7,
+    AddFriend = 8,
+    PartyInvite = 9,
+    Trade = 10,
+    PrivateStore = 11,
+    SelfTarget = 12,
+    VehiclePassengerInvite = 13,
+}
+impl_conversions!(
+    IroseSkillBasicCommand,
+    SkillBasicCommand,
+    decode_skill_basic_command
 );
 
 #[derive(FromPrimitive)]
@@ -931,6 +953,26 @@ pub fn decode_skill_action_mode(id: usize) -> Option<SkillActionMode> {
         IroseSkillActionMode::Stop => Some(SkillActionMode::Stop),
         IroseSkillActionMode::Attack => Some(SkillActionMode::Attack),
         IroseSkillActionMode::Restore => Some(SkillActionMode::Restore),
+    }
+}
+
+pub fn decode_skill_basic_command(id: usize) -> Option<SkillBasicCommand> {
+    match FromPrimitive::from_usize(id)? {
+        IroseSkillBasicCommand::Sit => Some(SkillBasicCommand::Sit),
+        IroseSkillBasicCommand::PickupItem => Some(SkillBasicCommand::PickupItem),
+        IroseSkillBasicCommand::Jump => Some(SkillBasicCommand::Jump),
+        IroseSkillBasicCommand::AirJump => Some(SkillBasicCommand::AirJump),
+        IroseSkillBasicCommand::AutoTarget => Some(SkillBasicCommand::AutoTarget),
+        IroseSkillBasicCommand::Attack => Some(SkillBasicCommand::Attack),
+        IroseSkillBasicCommand::DriveVehicle => Some(SkillBasicCommand::DriveVehicle),
+        IroseSkillBasicCommand::AddFriend => Some(SkillBasicCommand::AddFriend),
+        IroseSkillBasicCommand::PartyInvite => Some(SkillBasicCommand::PartyInvite),
+        IroseSkillBasicCommand::Trade => Some(SkillBasicCommand::Trade),
+        IroseSkillBasicCommand::PrivateStore => Some(SkillBasicCommand::PrivateStore),
+        IroseSkillBasicCommand::SelfTarget => Some(SkillBasicCommand::SelfTarget),
+        IroseSkillBasicCommand::VehiclePassengerInvite => {
+            Some(SkillBasicCommand::VehiclePassengerInvite)
+        }
     }
 }
 

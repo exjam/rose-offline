@@ -75,6 +75,23 @@ pub enum SkillType {
     Resurrection,
 }
 
+#[derive(Debug)]
+pub enum SkillBasicCommand {
+    Sit,
+    PickupItem,
+    Jump,
+    AirJump,
+    AutoTarget,
+    Attack,
+    DriveVehicle,
+    AddFriend,
+    PartyInvite,
+    Trade,
+    PrivateStore,
+    SelfTarget,
+    VehiclePassengerInvite,
+}
+
 impl SkillType {
     pub fn is_self_skill(&self) -> bool {
         matches!(
@@ -138,6 +155,7 @@ pub struct SkillData {
     pub action_motion_id: Option<MotionId>,
     pub action_motion_speed: f32,
     pub add_ability: [Option<SkillAddAbility>; 2],
+    pub basic_command: Option<SkillBasicCommand>,
     pub cast_range: u32,
     pub casting_motion_id: Option<MotionId>,
     pub casting_motion_speed: f32,
