@@ -120,10 +120,10 @@ impl SkillType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct SkillCooldownGroup(pub NonZeroUsize);
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum SkillCooldown {
     Skill(Duration),
     Group(SkillCooldownGroup, Duration),
