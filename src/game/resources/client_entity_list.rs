@@ -244,7 +244,7 @@ impl ClientEntityZone {
         &self,
         origin: Vec2,
         distance: f32,
-    ) -> ClientEntityZoneEntityIterator<'_> {
+    ) -> ClientEntityZoneEntityIterator<'_, '_> {
         let min_sector = self.calculate_sector(origin - Vec2::new(distance, distance));
         let max_sector = self.calculate_sector(origin + Vec2::new(distance, distance));
 
@@ -256,11 +256,33 @@ impl ClientEntityZone {
             current_iter: self.get_sector(min_sector).entities.iter_ones(),
             origin,
             max_distance_squared: distance * distance,
+            filter_entity_type: None,
+        }
+    }
+
+    pub fn iter_entity_type_within_distance<'a>(
+        &self,
+        origin: Vec2,
+        distance: f32,
+        entity_type: &'a [ClientEntityType],
+    ) -> ClientEntityZoneEntityIterator<'_, 'a> {
+        let min_sector = self.calculate_sector(origin - Vec2::new(distance, distance));
+        let max_sector = self.calculate_sector(origin + Vec2::new(distance, distance));
+
+        ClientEntityZoneEntityIterator {
+            zone: self,
+            min_sector,
+            max_sector,
+            current_sector: min_sector,
+            current_iter: self.get_sector(min_sector).entities.iter_ones(),
+            origin,
+            max_distance_squared: distance * distance,
+            filter_entity_type: Some(entity_type),
         }
     }
 }
 
-pub struct ClientEntityZoneEntityIterator<'a> {
+pub struct ClientEntityZoneEntityIterator<'a, 'b> {
     zone: &'a ClientEntityZone,
     min_sector: UVec2,
     max_sector: UVec2,
@@ -268,15 +290,25 @@ pub struct ClientEntityZoneEntityIterator<'a> {
     current_iter: bitvec::slice::IterOnes<'a, usize, Lsb0>,
     origin: Vec2,
     max_distance_squared: f32,
+    filter_entity_type: Option<&'b [ClientEntityType]>,
 }
 
-impl Iterator for ClientEntityZoneEntityIterator<'_> {
+impl<'a, 'b> Iterator for ClientEntityZoneEntityIterator<'a, 'b> {
     type Item = (Entity, Vec3);
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             if let Some(index) = self.current_iter.next() {
-                if let Some((entity, _, position)) = self.zone.entities[index].as_ref() {
+                if let Some((entity, client_entity, position)) = self.zone.entities[index].as_ref()
+                {
+                    if !self
+                        .filter_entity_type
+                        .as_ref()
+                        .map_or(true, |x| x.contains(&client_entity.entity_type))
+                    {
+                        continue;
+                    }
+
                     let distance_squared = self.origin.distance_squared(position.xy());
                     if distance_squared <= self.max_distance_squared {
                         break Some((*entity, *position));

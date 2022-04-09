@@ -12,7 +12,7 @@ use std::{
 };
 
 use rose_data::{AbilityType, EquipmentIndex, Item, ItemReference, ItemType, SkillId, ZoneId};
-use rose_game_common::components::CharacterGender;
+use rose_game_common::{components::CharacterGender, data::Damage};
 
 use crate::game::{
     bundles::{
@@ -26,7 +26,7 @@ use crate::game::{
         PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints, Stamina, StatPoints,
         StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
     },
-    events::{ChatCommandEvent, RewardXpEvent},
+    events::{ChatCommandEvent, DamageEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
     resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
     GameData,
@@ -39,6 +39,7 @@ pub struct ChatCommandParams<'w, 's> {
     client_entity_list: ResMut<'w, ClientEntityList>,
     game_data: Res<'w, GameData>,
     reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
+    damage_events: EventWriter<'w, 's, DamageEvent>,
     server_messages: ResMut<'w, ServerMessages>,
 }
 
@@ -66,6 +67,12 @@ lazy_static! {
             .subcommand(clap::Command::new("help"))
             .subcommand(clap::Command::new("where"))
             .subcommand(clap::Command::new("ability_values"))
+            .subcommand(
+                clap::Command::new("damage")
+                    .arg(Arg::new("amount").required(true))
+                    .arg(Arg::new("distance").required(true))
+                    .arg(Arg::new("type").required(false)),
+            )
             .subcommand(
                 clap::Command::new("mm")
                     .arg(Arg::new("zone").required(true))
@@ -649,6 +656,40 @@ fn handle_chat_command(
                     "Invalid skill command {}",
                     cmd
                 )));
+            }
+        }
+        ("damage", arg_matches) => {
+            let amount = arg_matches.value_of("amount").unwrap().parse::<u32>()?;
+            let distance = arg_matches.value_of("distance").unwrap().parse::<f32>()?;
+            let damage = Damage {
+                amount,
+                is_critical: arg_matches
+                    .value_of("type")
+                    .map_or(false, |str| str == "crit"),
+                apply_hit_stun: arg_matches
+                    .value_of("type")
+                    .map_or(false, |str| str == "hit"),
+            };
+
+            if let Some(client_entity_zone) = chat_command_params
+                .client_entity_list
+                .get_zone(chat_command_user.position.zone_id)
+            {
+                for (defender, _) in client_entity_zone.iter_entity_type_within_distance(
+                    chat_command_user.position.position.xy(),
+                    distance,
+                    &[ClientEntityType::Character, ClientEntityType::Monster],
+                ) {
+                    if chat_command_user.entity != defender {
+                        chat_command_params
+                            .damage_events
+                            .send(DamageEvent::with_immediate(
+                                chat_command_user.entity,
+                                defender,
+                                damage,
+                            ));
+                    }
+                }
             }
         }
         _ => return Err(ChatCommandError::InvalidCommand),
