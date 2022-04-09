@@ -888,6 +888,18 @@ impl TryFrom<&Packet> for PacketClientMoveToggle {
     }
 }
 
+impl From<&PacketClientMoveToggle> for Packet {
+    fn from(packet: &PacketClientMoveToggle) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::MoveToggle as u16);
+        match packet.toggle_type {
+            PacketClientMoveToggleType::Run => writer.write_u8(0),
+            PacketClientMoveToggleType::Sit => writer.write_u8(1),
+            PacketClientMoveToggleType::Drive => writer.write_u8(2),
+        }
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientEmote {
     pub motion_id: MotionId,

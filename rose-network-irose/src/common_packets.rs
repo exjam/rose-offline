@@ -622,7 +622,6 @@ impl PacketWriteSkillSlot for PacketWriter {
         self.write_u8(encode_skill_slot(slot) as u8)
     }
 }
-
 pub trait PacketReadMoveMode {
     fn read_move_mode_u8(&mut self) -> Result<MoveMode, PacketError>;
 }
@@ -640,7 +639,6 @@ impl<'a> PacketReadMoveMode for PacketReader<'a> {
 
 pub trait PacketWriteMoveMode {
     fn write_move_mode_u8(&mut self, move_mode: MoveMode);
-    fn write_move_mode_toggle_u8(&mut self, move_mode: MoveMode);
 }
 
 impl PacketWriteMoveMode for PacketWriter {
@@ -649,14 +647,6 @@ impl PacketWriteMoveMode for PacketWriter {
             MoveMode::Walk => 0,
             MoveMode::Run => 1,
             MoveMode::Drive => 2,
-        })
-    }
-
-    fn write_move_mode_toggle_u8(&mut self, move_mode: MoveMode) {
-        self.write_u8(match move_mode {
-            MoveMode::Walk => 2,
-            MoveMode::Run => 3,
-            MoveMode::Drive => 4,
         })
     }
 }

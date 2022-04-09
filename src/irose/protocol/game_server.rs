@@ -4,21 +4,24 @@ use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
 use rose_data::QuestTriggerHash;
-use rose_game_common::messages::{
-    client::{
-        Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, LogoutRequest, Move,
-        NpcStoreTransaction, PersonalStoreBuyItem, QuestDelete, SetHotbarSlot,
-    },
-    server::{
-        AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
-        CastSkillTargetPosition, LevelUpSkillResult, LocalChat, LogoutReply, MoveToggle,
-        OpenPersonalStore, PartyMemberLeave, PersonalStoreTransactionCancelled,
-        PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-        PersonalStoreTransactionSuccess, PickupItemDropResult, QuestDeleteResult,
-        QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop,
-        SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat, UpdateEquipment,
-        UpdateLevel, UpdateSpeed, UpdateStatusEffects, UpdateVehiclePart, UpdateXpStamina,
-        UseEmote, UseInventoryItem, UseItem, Whisper,
+use rose_game_common::{
+    components::MoveMode,
+    messages::{
+        client::{
+            Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, LogoutRequest, Move,
+            NpcStoreTransaction, PersonalStoreBuyItem, QuestDelete, SetHotbarSlot,
+        },
+        server::{
+            AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
+            CastSkillTargetPosition, LevelUpSkillResult, LocalChat, LogoutReply, MoveToggle,
+            OpenPersonalStore, PartyMemberLeave, PersonalStoreTransactionCancelled,
+            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
+            PersonalStoreTransactionSuccess, PickupItemDropResult, QuestDeleteResult,
+            QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop,
+            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
+            UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects, UpdateVehiclePart,
+            UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
+        },
     },
 };
 use rose_network_common::Packet;
@@ -1058,7 +1061,11 @@ impl GameServer {
                     .connection
                     .write_packet(Packet::from(&PacketServerMoveToggle {
                         entity_id,
-                        move_mode,
+                        move_toggle_type: match move_mode {
+                            MoveMode::Walk => PacketServerMoveToggleType::Walk,
+                            MoveMode::Run => PacketServerMoveToggleType::Run,
+                            MoveMode::Drive => PacketServerMoveToggleType::Drive,
+                        },
                         run_speed,
                     }))
                     .await?;
@@ -1066,7 +1073,11 @@ impl GameServer {
             ServerMessage::SitToggle(entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerSitToggle { entity_id }))
+                    .write_packet(Packet::from(&PacketServerMoveToggle {
+                        entity_id,
+                        move_toggle_type: PacketServerMoveToggleType::Sit,
+                        run_speed: None,
+                    }))
                     .await?;
             }
             ServerMessage::UseEmote(UseEmote {

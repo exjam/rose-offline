@@ -3089,33 +3089,60 @@ impl From<&PacketServerNpcStoreTransactionError> for Packet {
     }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum PacketServerMoveToggleType {
+    Walk,
+    Run,
+    Drive,
+    Sit,
+}
+
 pub struct PacketServerMoveToggle {
     pub entity_id: ClientEntityId,
-    pub move_mode: MoveMode,
+    pub move_toggle_type: PacketServerMoveToggleType,
     pub run_speed: Option<i32>,
+}
+
+impl TryFrom<&Packet> for PacketServerMoveToggle {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::MoveToggle as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let move_toggle_type = match reader.read_u8()? {
+            1 => PacketServerMoveToggleType::Sit,
+            2 => PacketServerMoveToggleType::Walk,
+            3 => PacketServerMoveToggleType::Run,
+            4 => PacketServerMoveToggleType::Drive,
+            _ => return Err(PacketError::InvalidPacket),
+        };
+        let run_speed = reader.read_u16().ok().map(|x| x as i32);
+
+        Ok(Self {
+            entity_id,
+            move_toggle_type,
+            run_speed,
+        })
+    }
 }
 
 impl From<&PacketServerMoveToggle> for Packet {
     fn from(packet: &PacketServerMoveToggle) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::MoveToggle as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_move_mode_toggle_u8(packet.move_mode);
+        writer.write_u8(match packet.move_toggle_type {
+            PacketServerMoveToggleType::Sit => 1,
+            PacketServerMoveToggleType::Walk => 2,
+            PacketServerMoveToggleType::Run => 3,
+            PacketServerMoveToggleType::Drive => 4,
+        });
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed as u16);
         }
-        writer.into()
-    }
-}
-
-pub struct PacketServerSitToggle {
-    pub entity_id: ClientEntityId,
-}
-
-impl From<&PacketServerSitToggle> for Packet {
-    fn from(packet: &PacketServerSitToggle) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::MoveToggle as u16);
-        writer.write_entity_id(packet.entity_id);
-        writer.write_u8(1);
         writer.into()
     }
 }
