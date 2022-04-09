@@ -324,6 +324,7 @@ pub struct DamageEntity {
     pub defender_entity_id: ClientEntityId,
     pub damage: Damage,
     pub is_killed: bool,
+    pub is_immediate: bool,
     pub from_skill: Option<(SkillId, i32)>,
 }
 

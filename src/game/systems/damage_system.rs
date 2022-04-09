@@ -33,6 +33,11 @@ pub fn damage_system(
                 defender: defender_entity,
                 damage,
             }) => (attacker_entity, defender_entity, damage, None),
+            DamageEvent::Immediate(DamageEventAttack {
+                attacker: attacker_entity,
+                defender: defender_entity,
+                damage,
+            }) => (attacker_entity, defender_entity, damage, None),
             DamageEvent::Skill(DamageEventSkill {
                 attacker: attacker_entity,
                 defender: defender_entity,
@@ -88,6 +93,7 @@ pub fn damage_system(
                             defender_entity_id: client_entity.id,
                             damage,
                             is_killed: health_points.hp == 0,
+                            is_immediate: matches!(damage_event, DamageEvent::Immediate(_)),
                             from_skill,
                         }),
                     );

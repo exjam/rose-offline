@@ -25,6 +25,7 @@ pub struct DamageEventTagged {
 
 pub enum DamageEvent {
     Attack(DamageEventAttack),
+    Immediate(DamageEventAttack),
     Skill(DamageEventSkill),
     Tagged(DamageEventTagged),
 }
@@ -32,6 +33,14 @@ pub enum DamageEvent {
 impl DamageEvent {
     pub fn with_attack(attacker: Entity, defender: Entity, damage: Damage) -> Self {
         Self::Attack(DamageEventAttack {
+            attacker,
+            defender,
+            damage,
+        })
+    }
+
+    pub fn with_immediate(attacker: Entity, defender: Entity, damage: Damage) -> Self {
+        Self::Immediate(DamageEventAttack {
             attacker,
             defender,
             damage,

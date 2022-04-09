@@ -815,17 +815,18 @@ pub struct PacketServerDamage {
 }
 
 pub trait PacketReadDamage {
-    fn read_damage_u16(&mut self) -> Result<(Damage, bool), PacketError>;
+    fn read_damage_u16(&mut self) -> Result<(Damage, bool, bool), PacketError>;
 }
 
 impl<'a> PacketReadDamage for PacketReader<'a> {
-    fn read_damage_u16(&mut self) -> Result<(Damage, bool), PacketError> {
+    fn read_damage_u16(&mut self) -> Result<(Damage, bool, bool), PacketError> {
         let server_damage =
             PacketServerDamage::from_bytes(self.read_fixed_length_bytes(2)?.try_into().unwrap());
         let action = server_damage.action();
 
-        let is_critical = (action & 0x08) != 0;
+        let is_immediate = (action & 0x02) != 0;
         let apply_hit_stun = (action & 0x04) != 0;
+        let is_critical = (action & 0x08) != 0;
         let is_killed = (action & 0x10) != 0;
 
         Ok((
@@ -835,24 +836,29 @@ impl<'a> PacketReadDamage for PacketReader<'a> {
                 apply_hit_stun,
             },
             is_killed,
+            is_immediate,
         ))
     }
 }
 
 pub trait PacketWriteDamage {
-    fn write_damage_u16(&mut self, damage: &Damage, is_killed: bool);
+    fn write_damage_u16(&mut self, damage: &Damage, is_killed: bool, is_immediate: bool);
 }
 
 impl PacketWriteDamage for PacketWriter {
-    fn write_damage_u16(&mut self, damage: &Damage, is_killed: bool) {
+    fn write_damage_u16(&mut self, damage: &Damage, is_killed: bool, is_immediate: bool) {
         let mut action = 0u8;
 
-        if damage.is_critical {
-            action |= 0x08;
+        if is_immediate {
+            action |= 0x02;
         }
 
         if damage.apply_hit_stun {
             action |= 0x04;
+        }
+
+        if damage.is_critical {
+            action |= 0x08;
         }
 
         if is_killed {
@@ -860,7 +866,7 @@ impl PacketWriteDamage for PacketWriter {
         }
 
         let damage = PacketServerDamage::new()
-            .with_amount(damage.amount as u16)
+            .with_amount(damage.amount.min(2047) as u16)
             .with_action(action);
 
         for b in damage.into_bytes().iter() {

@@ -421,6 +421,7 @@ impl GameServer {
                             defender_entity_id: message.defender_entity_id,
                             damage: message.damage,
                             is_killed: message.is_killed,
+                            is_immediate: message.is_immediate,
                         }))
                         .await?;
                 } else if let Some((skill_id, caster_intelligence)) = message.from_skill {
@@ -434,6 +435,7 @@ impl GameServer {
                             effect_success: [false, false],
                             damage: message.damage,
                             is_killed: message.is_killed,
+                            is_immediate: message.is_immediate,
                         }))
                         .await?;
                 }
