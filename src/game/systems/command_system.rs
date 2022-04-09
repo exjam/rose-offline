@@ -438,13 +438,22 @@ pub fn command_system(
                             };
 
                             if let Some(required_distance) = required_distance {
-                                let offset = (target_position.position.xy()
-                                    - position.position.xy())
-                                .normalize()
-                                    * required_distance;
-                                destination.x = target_position.position.x - offset.x;
-                                destination.y = target_position.position.y - offset.y;
-                                destination.z = target_position.position.z;
+                                let distance = position
+                                    .position
+                                    .xy()
+                                    .distance(target_position.position.xy());
+                                if distance < required_distance {
+                                    // We are already within required distance, so no need to move further
+                                    *destination = position.position;
+                                } else {
+                                    let offset = (target_position.position.xy()
+                                        - position.position.xy())
+                                    .normalize()
+                                        * required_distance;
+                                    destination.x = target_position.position.x - offset.x;
+                                    destination.y = target_position.position.y - offset.y;
+                                    destination.z = target_position.position.z;
+                                }
                             } else {
                                 *destination = target_position.position;
                             }
