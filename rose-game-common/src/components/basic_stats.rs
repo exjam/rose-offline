@@ -33,3 +33,27 @@ impl Default for BasicStats {
         }
     }
 }
+
+impl BasicStats {
+    pub fn get(&self, basic_stat_type: BasicStatType) -> i32 {
+        match basic_stat_type {
+            BasicStatType::Strength => self.strength,
+            BasicStatType::Dexterity => self.dexterity,
+            BasicStatType::Intelligence => self.intelligence,
+            BasicStatType::Concentration => self.concentration,
+            BasicStatType::Charm => self.charm,
+            BasicStatType::Sense => self.sense,
+        }
+    }
+
+    pub fn set(&mut self, basic_stat_type: BasicStatType, value: i32) {
+        match basic_stat_type {
+            BasicStatType::Strength => self.strength = value,
+            BasicStatType::Dexterity => self.dexterity = value,
+            BasicStatType::Intelligence => self.intelligence = value,
+            BasicStatType::Concentration => self.concentration = value,
+            BasicStatType::Charm => self.charm = value,
+            BasicStatType::Sense => self.sense = value,
+        }
+    }
+}
