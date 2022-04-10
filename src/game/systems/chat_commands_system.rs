@@ -11,20 +11,23 @@ use std::{
     num::{ParseFloatError, ParseIntError},
 };
 
-use rose_data::{AbilityType, EquipmentIndex, Item, ItemReference, ItemType, SkillId, ZoneId};
+use rose_data::{
+    AbilityType, EquipmentIndex, Item, ItemReference, ItemType, NpcId, SkillId, ZoneId,
+};
 use rose_game_common::{components::CharacterGender, data::Damage};
 
 use crate::game::{
     bundles::{
         ability_values_add_value, ability_values_set_value, client_entity_join_zone,
-        client_entity_teleport_zone, CharacterBundle,
+        client_entity_teleport_zone, CharacterBundle, MonsterBundle,
     },
     components::{
         AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
         ClientEntitySector, ClientEntityType, Command, EquipmentItemDatabase, GameClient,
         Inventory, Level, Money, MotionData, MoveMode, MoveSpeed, NextCommand, PartyMembership,
-        PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints, Stamina, StatPoints,
-        StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+        PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints, SpawnOrigin, Stamina,
+        StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+        PERSONAL_STORE_ITEM_SLOTS,
     },
     events::{ChatCommandEvent, DamageEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
@@ -78,6 +81,13 @@ lazy_static! {
                     .arg(Arg::new("zone").required(true))
                     .arg(Arg::new("x"))
                     .arg(Arg::new("y")),
+            )
+            .subcommand(
+                clap::Command::new("mon")
+                    .arg(Arg::new("id").required(true))
+                    .arg(Arg::new("count").required(true))
+                    .arg(Arg::new("distance").required(false))
+                    .arg(Arg::new("team").required(false)),
             )
             .subcommand(clap::Command::new("level").arg(Arg::new("level").required(true)))
             .subcommand(clap::Command::new("bot").arg(Arg::new("n").required(true)))
@@ -328,6 +338,9 @@ fn handle_chat_command(
         .subcommand()
         .ok_or(ChatCommandError::InvalidCommand)?
     {
+        ("help", _) => {
+            send_chat_commands_help(chat_command_user.game_client);
+        }
         ("where", _) => {
             let sector = chat_command_params
                 .client_entity_list
@@ -690,6 +703,37 @@ fn handle_chat_command(
                             ));
                     }
                 }
+            }
+        }
+        ("mon", arg_matches) => {
+            let npc_id = NpcId::new(arg_matches.value_of("id").unwrap().parse::<u16>()?)
+                .ok_or(ChatCommandError::InvalidArguments)?;
+            let count = arg_matches.value_of("count").unwrap().parse::<usize>()?;
+            let spawn_range = arg_matches
+                .value_of("distance")
+                .and_then(|str| str.parse::<i32>().ok())
+                .unwrap_or(250);
+            let team = arg_matches
+                .value_of("team")
+                .and_then(|x| x.parse::<u32>().ok())
+                .map_or_else(Team::default_monster, Team::new);
+
+            for _ in 0..count {
+                MonsterBundle::spawn(
+                    &mut chat_command_params.commands,
+                    &mut chat_command_params.client_entity_list,
+                    &chat_command_params.game_data,
+                    npc_id,
+                    chat_command_user.position.zone_id,
+                    SpawnOrigin::Summoned(
+                        chat_command_user.entity,
+                        chat_command_user.position.position,
+                    ),
+                    spawn_range,
+                    team.clone(),
+                    None,
+                    None,
+                );
             }
         }
         _ => return Err(ChatCommandError::InvalidCommand),

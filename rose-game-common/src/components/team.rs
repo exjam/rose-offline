@@ -10,7 +10,7 @@ impl Team {
     pub const DEFAULT_NPC_TEAM_ID: u32 = 1;
     pub const DEFAULT_CHARACTER_TEAM_ID: u32 = 2;
     pub const DEFAULT_MONSTER_TEAM_ID: u32 = 100;
-    pub const UNIQUE_TEAM_ID_BASE: u32 = 100;
+    pub const UNIQUE_TEAM_ID_BASE: u32 = 101;
 
     pub fn new(id: u32) -> Self {
         Self { id }
