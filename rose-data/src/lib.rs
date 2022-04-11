@@ -97,8 +97,9 @@ pub use npc_database::{
 };
 pub use quest_database::{QuestData, QuestDatabase, QuestTrigger, QuestTriggerHash};
 pub use skill_database::{
-    SkillActionMode, SkillAddAbility, SkillBasicCommand, SkillCooldown, SkillCooldownGroup,
-    SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SkillType,
+    SkillActionMode, SkillAddAbility, SkillBasicCommand, SkillCastingEffect, SkillCooldown,
+    SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
+    SkillType,
 };
 pub use status_effect_database::{
     StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,

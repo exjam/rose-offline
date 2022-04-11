@@ -129,6 +129,12 @@ pub enum SkillCooldown {
     Group(SkillCooldownGroup, Duration),
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct SkillCastingEffect {
+    pub effect_id: NonZeroUsize,
+    pub effect_dummy_bone_id: Option<usize>,
+}
+
 // TODO: Make SkillData an enum on SkillType with relevant fields only?
 #[derive(Debug)]
 pub struct SkillData {
@@ -161,6 +167,7 @@ pub struct SkillData {
     pub casting_motion_speed: f32,
     pub casting_repeat_motion_id: Option<MotionId>,
     pub casting_repeat_motion_count: u32,
+    pub casting_effects: [Option<SkillCastingEffect>; 4],
     pub cooldown: SkillCooldown,
     pub damage_type: i32,
     pub harm: u32,

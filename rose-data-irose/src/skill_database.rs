@@ -7,9 +7,9 @@ use std::{
 };
 
 use rose_data::{
-    AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCooldown,
-    SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
-    StatusEffectId, ZoneId,
+    AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCastingEffect,
+    SkillCooldown, SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType,
+    SkillTargetFilter, StatusEffectId, ZoneId,
 };
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
@@ -146,6 +146,23 @@ impl StbSkill {
     stb_column! { (57..=67).step_by(3), get_casting_effect_bone_index, [Option<usize>; 4] }
     stb_column! { (58..=67).step_by(3), get_casting_sound_index, [Option<usize>; 4] }
 
+    pub fn get_casting_effects(&self, id: usize) -> [Option<SkillCastingEffect>; 4] {
+        let mut result: [Option<SkillCastingEffect>; 4] = Default::default();
+        let effect_ids = self.get_casting_effect_index(id);
+        let bone_ids = self.get_casting_effect_bone_index(id);
+
+        for i in 0..4 {
+            if let Some(effect_id) = effect_ids[i] {
+                result[i] = Some(SkillCastingEffect {
+                    effect_id,
+                    effect_dummy_bone_id: bone_ids[i].filter(|x| *x != 999),
+                });
+            }
+        }
+
+        result
+    }
+
     stb_column! { 68, get_action_motion_id, MotionId }
     stb_column! { 69, get_action_motion_speed, NonZeroU32 }
     stb_column! { 70, get_action_motion_hit_count, i32 }
@@ -211,6 +228,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
             .map(|x| x.get())
             .unwrap_or(1),
         casting_repeat_motion_id: data.get_casting_repeat_motion_id(id),
+        casting_effects: data.get_casting_effects(id),
         cooldown: data.get_cooldown(id),
         damage_type: data.get_damage_type(id).unwrap_or(0),
         harm: data.get_harm(id).unwrap_or(0),
