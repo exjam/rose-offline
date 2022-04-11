@@ -33,30 +33,65 @@ pub fn login_server_authentication_system(
                         .ok();
                 }
                 ClientMessage::LoginRequest(message) => {
-                    let response = if login_tokens
+                    let login_result = if login_tokens
                         .find_username_token(&message.username)
                         .is_some()
                     {
                         Err(LoginError::AlreadyLoggedIn)
                     } else {
                         match AccountStorage::try_load(&message.username, &message.password_md5) {
-                            Ok(account) => {
-                                commands.entity(entity).insert(Account::from(account));
-                                let mut servers = Vec::new();
-                                for (id, server) in server_list.world_servers.iter().enumerate() {
-                                    servers.push((id as u32, server.name.clone()));
+                            Ok(account) => Ok(account),
+                            Err(error) => match error.downcast_ref::<AccountStorageError>() {
+                                Some(AccountStorageError::NotFound) => {
+                                    match AccountStorage::create(
+                                        &message.username,
+                                        &message.password_md5,
+                                    ) {
+                                        Ok(account) => {
+                                            log::info!("Created account {}", &message.username);
+                                            Ok(account)
+                                        }
+                                        Err(error) => {
+                                            log::info!(
+                                                "Failed to create account {} with error {}",
+                                                &message.username,
+                                                error
+                                            );
+                                            Err(LoginError::InvalidAccount)
+                                        }
+                                    }
                                 }
-                                Ok(LoginResponse {
-                                    server_list: servers,
-                                })
-                            }
-                            Err(error) => Err(match error {
-                                AccountStorageError::NotFound => LoginError::InvalidAccount,
-                                AccountStorageError::InvalidPassword => LoginError::InvalidPassword,
-                                _ => LoginError::Failed,
-                            }),
+                                Some(AccountStorageError::InvalidPassword) => {
+                                    Err(LoginError::InvalidPassword)
+                                }
+                                _ => {
+                                    log::error!(
+                                        "Failed to load account {} with error {}",
+                                        &message.username,
+                                        error
+                                    );
+                                    Err(LoginError::Failed)
+                                }
+                            },
                         }
                     };
+
+                    let response = match login_result {
+                        Ok(account) => {
+                            commands.entity(entity).insert(Account::from(account));
+
+                            let mut servers = Vec::new();
+                            for (id, server) in server_list.world_servers.iter().enumerate() {
+                                servers.push((id as u32, server.name.clone()));
+                            }
+
+                            Ok(LoginResponse {
+                                server_list: servers,
+                            })
+                        }
+                        Err(error) => Err(error),
+                    };
+
                     login_client
                         .server_message_tx
                         .send(ServerMessage::LoginResponse(response))

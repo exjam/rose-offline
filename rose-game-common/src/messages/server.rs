@@ -89,11 +89,18 @@ pub struct CharacterListItem {
     pub equipment: Equipment,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Error, Serialize, Deserialize)]
 pub enum CreateCharacterError {
+    #[error("Failed")]
     Failed,
+
+    #[error("Character name already exists")]
     AlreadyExists,
+
+    #[error("Invalid value")]
     InvalidValue,
+
+    #[error("No more free character slots")]
     NoMoreSlots,
 }
 

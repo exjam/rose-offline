@@ -1,35 +1,19 @@
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::io::Write;
 use std::path::PathBuf;
+use thiserror::Error;
 
 use crate::game::storage::ACCOUNT_STORAGE_DIR;
 
-#[allow(dead_code)]
+#[derive(Error, Debug)]
 pub enum AccountStorageError {
-    Failed,
-    NotFound,
+    #[error("Invalid password")]
     InvalidPassword,
-    MaxCharacters,
-    IoError,
-}
 
-impl From<std::io::Error> for AccountStorageError {
-    fn from(_: std::io::Error) -> AccountStorageError {
-        AccountStorageError::IoError
-    }
-}
-
-impl From<serde_json::Error> for AccountStorageError {
-    fn from(_: serde_json::Error) -> AccountStorageError {
-        AccountStorageError::IoError
-    }
-}
-
-impl From<tempfile::PersistError> for AccountStorageError {
-    fn from(_: tempfile::PersistError) -> AccountStorageError {
-        AccountStorageError::IoError
-    }
+    #[error("Account not found")]
+    NotFound,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -50,48 +34,93 @@ fn hash_md5_password(password_md5: &str) -> String {
 }
 
 impl AccountStorage {
-    pub fn try_load(name: &str, password_md5: &str) -> Result<Self, AccountStorageError> {
+    pub fn create(name: &str, password_md5: &str) -> Result<Self, anyhow::Error> {
+        let account = Self {
+            name: String::from(name),
+            password_md5_sha256: hash_md5_password(password_md5),
+            character_names: Vec::new(),
+        };
+        account.save_impl(false)?;
+        Ok(account)
+    }
+
+    pub fn try_load(name: &str, password_md5: &str) -> Result<Self, anyhow::Error> {
         let path = get_account_path(name);
         if path.exists() {
-            let str = std::fs::read_to_string(path)?;
-            let account: Self = serde_json::from_str(&str)?;
+            let str = std::fs::read_to_string(&path)
+                .with_context(|| format!("Failed to read file {}", path.to_string_lossy()))?;
+            let account: Self = serde_json::from_str(&str).with_context(|| {
+                format!(
+                    "Failed to deserialise AccountStorage from file {}",
+                    path.to_string_lossy()
+                )
+            })?;
             account.check_password(password_md5)?;
             Ok(account)
         } else {
-            let account = Self {
-                name: String::from(name),
-                password_md5_sha256: hash_md5_password(password_md5),
-                character_names: Vec::new(),
-            };
-            account.save_impl(false)?;
-            Ok(account)
+            Err(AccountStorageError::NotFound.into())
         }
     }
 
-    pub fn check_password(&self, password_md5: &str) -> Result<(), AccountStorageError> {
+    pub fn check_password(&self, password_md5: &str) -> Result<(), anyhow::Error> {
         if self.password_md5_sha256 == hash_md5_password(password_md5) {
             Ok(())
         } else {
-            Err(AccountStorageError::InvalidPassword)
+            Err(AccountStorageError::InvalidPassword.into())
         }
     }
 
-    pub fn save(&self) -> Result<(), AccountStorageError> {
+    pub fn save(&self) -> Result<(), anyhow::Error> {
         self.save_impl(true)
     }
 
-    fn save_impl(&self, allow_overwrite: bool) -> Result<(), AccountStorageError> {
+    fn save_impl(&self, allow_overwrite: bool) -> Result<(), anyhow::Error> {
         let path = get_account_path(&self.name);
-        std::fs::create_dir_all(path.parent().unwrap()).map_err(|_| AccountStorageError::Failed)?;
+        let storage_dir = path.parent().unwrap();
 
-        let json = serde_json::to_string_pretty(&self)?;
-        let mut file = tempfile::NamedTempFile::new()?;
-        file.write_all(json.as_bytes())?;
+        std::fs::create_dir_all(storage_dir).with_context(|| {
+            format!(
+                "Failed to create account storage directory {}",
+                storage_dir.to_string_lossy()
+            )
+        })?;
+
+        let json = serde_json::to_string_pretty(&self).with_context(|| {
+            format!(
+                "Failed to serialise AccountStorage whilst saving account {}",
+                &self.name
+            )
+        })?;
+
+        let mut file = tempfile::NamedTempFile::new().with_context(|| {
+            format!(
+                "Failed to create temporary file whilst saving account {}",
+                &self.name
+            )
+        })?;
+        file.write_all(json.as_bytes()).with_context(|| {
+            format!(
+                "Failed to write data to temporary file whilst saving account {}",
+                &self.name
+            )
+        })?;
+
         if allow_overwrite {
-            file.persist(path)?;
+            file.persist(&path).with_context(|| {
+                format!(
+                    "Failed to persist temporary account file to path {}",
+                    path.to_string_lossy()
+                )
+            })?;
         } else {
-            file.persist_noclobber(path)?;
+            file.persist_noclobber(&path).with_context(|| {
+                format!(
+                    "Failed to persist_noclobber temporary account file to path {}",
+                    path.to_string_lossy()
+                )
+            })?;
         }
+
         Ok(())
     }
 }

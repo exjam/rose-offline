@@ -33,32 +33,58 @@ fn handle_world_connection_request(
         return Err(ConnectionRequestError::InvalidToken);
     }
 
-    let mut account = AccountStorage::try_load(&login_token.username, password_md5).map_err(
-        |error| match error {
-            AccountStorageError::InvalidPassword => ConnectionRequestError::InvalidPassword,
-            _ => ConnectionRequestError::Failed,
-        },
-    )?;
+    let mut account =
+        AccountStorage::try_load(&login_token.username, password_md5).map_err(|error| {
+            match error.downcast_ref::<AccountStorageError>() {
+                Some(AccountStorageError::InvalidPassword) => {
+                    ConnectionRequestError::InvalidPassword
+                }
+                _ => {
+                    log::error!(
+                        "Failed to load account {} with error {}",
+                        &login_token.username,
+                        error
+                    );
+                    ConnectionRequestError::Failed
+                }
+            }
+        })?;
 
     // Load character list, deleting any characters ready for deletion
     let mut character_list = CharacterList::new();
-    account.character_names.retain(|name| {
-        CharacterStorage::try_load(name).map_or(false, |character| {
-            if character
-                .delete_time
-                .as_ref()
-                .map(|x| x.get_time_until_delete())
-                .filter(|x| x.as_nanos() == 0)
-                .is_some()
-            {
-                CharacterStorage::delete(&character.info.name).ok();
-                false
-            } else {
-                character_list.characters.push(character);
-                true
+    account
+        .character_names
+        .retain(|name| match CharacterStorage::try_load(name) {
+            Ok(character) => {
+                if character
+                    .delete_time
+                    .as_ref()
+                    .map(|x| x.get_time_until_delete())
+                    .filter(|x| x.as_nanos() == 0)
+                    .is_some()
+                {
+                    match CharacterStorage::delete(&character.info.name) {
+                        Ok(_) => log::error!(
+                            "Deleted character {} as delete timer has expired.",
+                            &character.info.name
+                        ),
+                        Err(error) => log::error!(
+                            "Failed to delete character {} with error {}",
+                            &character.info.name,
+                            error
+                        ),
+                    }
+                    false
+                } else {
+                    character_list.characters.push(character);
+                    true
+                }
             }
-        })
-    });
+            Err(error) => {
+                log::error!("Failed to load character {} with error {}", name, error);
+                false
+            }
+        });
     account.save().ok();
 
     // Update entity
@@ -106,7 +132,7 @@ pub fn world_server_authentication_system(
 fn create_character(
     game_data: &GameData,
     message: &CreateCharacter,
-) -> Result<CharacterStorage, CreateCharacterError> {
+) -> Result<CharacterStorage, anyhow::Error> {
     let character = game_data
         .character_creator
         .create(
@@ -117,9 +143,9 @@ fn create_character(
             message.hair,
         )
         .map_err(|_| CreateCharacterError::InvalidValue)?;
-    character
-        .try_create()
-        .map_err(|_| CreateCharacterError::Failed)?;
+
+    character.try_create()?;
+
     Ok(character)
 }
 
@@ -155,15 +181,28 @@ pub fn world_server_system(
                     } else if CharacterStorage::exists(&message.name) {
                         Err(CreateCharacterError::AlreadyExists)
                     } else {
-                        create_character(&game_data, &message)
-                    }
-                    .map(|character| {
-                        let character_slot = account.character_names.len();
-                        account.character_names.push(character.info.name.clone());
-                        AccountStorage::from(&*account).save().ok();
-                        character_list.characters.push(character);
-                        CreateCharacterResponse { character_slot }
-                    });
+                        match create_character(&game_data, &message) {
+                            Ok(character) => {
+                                let character_slot = account.character_names.len();
+                                account.character_names.push(character.info.name.clone());
+                                AccountStorage::from(&*account).save().ok();
+                                character_list.characters.push(character);
+                                Ok(CreateCharacterResponse { character_slot })
+                            }
+                            Err(error) => {
+                                log::error!(
+                                    "Failed to create character {} with error {}",
+                                    &message.name,
+                                    error
+                                );
+                                Err(error
+                                    .downcast_ref::<CreateCharacterError>()
+                                    .unwrap_or(&CreateCharacterError::Failed)
+                                    .clone())
+                            }
+                        }
+                    };
+
                     world_client
                         .server_message_tx
                         .send(ServerMessage::CreateCharacter(response))
@@ -184,7 +223,16 @@ pub fn world_server_system(
                                 } else {
                                     character.delete_time = None;
                                 }
-                                character.save().ok();
+
+                                match character.save() {
+                                    Ok(_) => log::info!("Saved character {}", character.info.name),
+                                    Err(error) => log::error!(
+                                        "Failed to save character {} with error: {}",
+                                        character.info.name,
+                                        error
+                                    ),
+                                }
+
                                 Ok(DeleteCharacterResponse {
                                     name: message.name.clone(),
                                     delete_time: character.delete_time.clone(),

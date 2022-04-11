@@ -1,3 +1,4 @@
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::{io::Write, path::PathBuf};
 
@@ -11,34 +12,6 @@ use crate::game::{
     },
     storage::CHARACTER_STORAGE_DIR,
 };
-
-#[derive(Debug)]
-pub enum CharacterStorageError {
-    NotFound,
-    IoError,
-}
-
-impl From<std::io::Error> for CharacterStorageError {
-    fn from(err: std::io::Error) -> Self {
-        if err.kind() == std::io::ErrorKind::NotFound {
-            CharacterStorageError::NotFound
-        } else {
-            CharacterStorageError::IoError
-        }
-    }
-}
-
-impl From<serde_json::Error> for CharacterStorageError {
-    fn from(_: serde_json::Error) -> Self {
-        CharacterStorageError::IoError
-    }
-}
-
-impl From<tempfile::PersistError> for CharacterStorageError {
-    fn from(_: tempfile::PersistError) -> Self {
-        CharacterStorageError::IoError
-    }
-}
 
 #[derive(Deserialize, Serialize)]
 pub struct CharacterStorage {
@@ -89,36 +62,73 @@ pub trait CharacterCreator {
 }
 
 impl CharacterStorage {
-    pub fn try_create(&self) -> Result<(), CharacterStorageError> {
+    pub fn try_create(&self) -> Result<(), anyhow::Error> {
         self.save_character_impl(false)
     }
 
-    pub fn try_load(name: &str) -> Result<Self, CharacterStorageError> {
+    pub fn try_load(name: &str) -> Result<Self, anyhow::Error> {
         let path = get_character_path(name);
-        let str = std::fs::read_to_string(path)?;
-        let character: CharacterStorage = serde_json::from_str(&str)?;
+        let str = std::fs::read_to_string(&path)
+            .with_context(|| format!("Failed to read file {}", path.to_string_lossy()))?;
+        let character: CharacterStorage = serde_json::from_str(&str).with_context(|| {
+            format!(
+                "Failed to deserialise CharacterStorage from file {}",
+                path.to_string_lossy()
+            )
+        })?;
         Ok(character)
     }
 
-    pub fn save(&self) -> Result<(), CharacterStorageError> {
+    pub fn save(&self) -> Result<(), anyhow::Error> {
         self.save_character_impl(true)
     }
 
-    fn save_character_impl(&self, allow_overwrite: bool) -> Result<(), CharacterStorageError> {
+    fn save_character_impl(&self, allow_overwrite: bool) -> Result<(), anyhow::Error> {
         let path = get_character_path(&self.info.name);
+        let storage_dir = path.parent().unwrap();
 
-        std::fs::create_dir_all(path.parent().unwrap())
-            .map_err(|_| CharacterStorageError::IoError)?;
+        std::fs::create_dir_all(storage_dir).with_context(|| {
+            format!(
+                "Failed to create character storage directory {}",
+                storage_dir.to_string_lossy()
+            )
+        })?;
 
-        let json = serde_json::to_string_pretty(self)?;
-        let mut file = tempfile::NamedTempFile::new()?;
-        file.write_all(json.as_bytes())?;
+        let json = serde_json::to_string_pretty(self).with_context(|| {
+            format!(
+                "Failed to serialise CharacterStorage whilst saving character {}",
+                &self.info.name
+            )
+        })?;
+        let mut file = tempfile::NamedTempFile::new().with_context(|| {
+            format!(
+                "Failed to create temporary file whilst saving character {}",
+                &self.info.name
+            )
+        })?;
+        file.write_all(json.as_bytes()).with_context(|| {
+            format!(
+                "Failed to write data to temporary file whilst saving character {}",
+                &self.info.name
+            )
+        })?;
 
         if allow_overwrite {
-            file.persist(path)?;
+            file.persist(&path).with_context(|| {
+                format!(
+                    "Failed to persist temporary character file to path {}",
+                    path.to_string_lossy()
+                )
+            })?;
         } else {
-            file.persist_noclobber(path)?;
+            file.persist_noclobber(&path).with_context(|| {
+                format!(
+                    "Failed to persist_noclobber temporary character file to path {}",
+                    path.to_string_lossy()
+                )
+            })?;
         }
+
         Ok(())
     }
 
@@ -126,7 +136,7 @@ impl CharacterStorage {
         get_character_path(name).exists()
     }
 
-    pub fn delete(name: &str) -> Result<(), CharacterStorageError> {
+    pub fn delete(name: &str) -> Result<(), anyhow::Error> {
         let path = get_character_path(name);
         if path.exists() {
             std::fs::remove_file(path)?;

@@ -70,12 +70,25 @@ fn handle_game_connection_request(
     }
 
     // Verify account password
-    let _ = AccountStorage::try_load(&login_token.username, password_md5)
-        .map_err(|_| ConnectionRequestError::InvalidPassword)?;
+    let _ = AccountStorage::try_load(&login_token.username, password_md5).map_err(|error| {
+        log::error!(
+            "Failed to load account {} with error {}",
+            &login_token.username,
+            error
+        );
+        ConnectionRequestError::InvalidPassword
+    })?;
 
     // Try load character
-    let character = CharacterStorage::try_load(&login_token.selected_character)
-        .map_err(|_| ConnectionRequestError::Failed)?;
+    let character =
+        CharacterStorage::try_load(&login_token.selected_character).map_err(|error| {
+            log::error!(
+                "Failed to load character {} with error {}",
+                &login_token.selected_character,
+                error
+            );
+            ConnectionRequestError::Failed
+        })?;
 
     // Update token
     login_token.game_client = Some(entity);

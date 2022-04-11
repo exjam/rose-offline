@@ -92,7 +92,7 @@ pub fn save_system(
                     match storage.save() {
                         Ok(_) => info!("Saved character {}", character_info.name),
                         Err(error) => error!(
-                            "Failed to save character {} with error: {:?}",
+                            "Failed to save character {} with error: {}",
                             character_info.name, error
                         ),
                     }
