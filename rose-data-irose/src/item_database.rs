@@ -1,6 +1,6 @@
 use arrayvec::ArrayVec;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
-use std::time::Duration;
+use std::{num::NonZeroUsize, time::Duration};
 
 use rose_data::{
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData,
@@ -149,8 +149,8 @@ impl StbItem {
     stb_column! { 20, get_consumeable_learn_skill_id, SkillId }
     stb_column! { 20, get_consumeable_use_skill_id, SkillId }
     stb_column! { 21, get_consumeable_use_script_index, usize }
-    stb_column! { 22, get_consumeable_use_effect_index, usize }
-    stb_column! { 23, get_consumeable_use_sound_index, usize }
+    stb_column! { 22, get_consumeable_use_effect_index, NonZeroUsize }
+    stb_column! { 23, get_consumeable_use_sound_index, NonZeroUsize }
 
     pub fn get_consumeable_apply_status_effect(&self, id: usize) -> Option<(StatusEffectId, i32)> {
         let status_effect_id: Option<StatusEffectId> = self
@@ -318,6 +318,8 @@ fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Con
             data.get_consumeable_cooldown_duration_seconds(id)
                 .unwrap_or(0) as u64,
         ),
+        effect_id: data.get_consumeable_use_effect_index(id),
+        sound_effect_id: data.get_consumeable_use_effect_index(id),
     })
 }
 
