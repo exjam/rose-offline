@@ -41,7 +41,7 @@ fn handle_world_connection_request(
                 }
                 _ => {
                     log::error!(
-                        "Failed to load account {} with error {}",
+                        "Failed to load account {} with error {:?}",
                         &login_token.username,
                         error
                     );
@@ -69,7 +69,7 @@ fn handle_world_connection_request(
                             &character.info.name
                         ),
                         Err(error) => log::error!(
-                            "Failed to delete character {} with error {}",
+                            "Failed to delete character {} with error {:?}",
                             &character.info.name,
                             error
                         ),
@@ -81,7 +81,7 @@ fn handle_world_connection_request(
                 }
             }
             Err(error) => {
-                log::error!("Failed to load character {} with error {}", name, error);
+                log::error!("Failed to load character {} with error {:?}", name, error);
                 false
             }
         });
@@ -191,7 +191,7 @@ pub fn world_server_system(
                             }
                             Err(error) => {
                                 log::error!(
-                                    "Failed to create character {} with error {}",
+                                    "Failed to create character {} with error {:?}",
                                     &message.name,
                                     error
                                 );
@@ -227,7 +227,7 @@ pub fn world_server_system(
                                 match character.save() {
                                     Ok(_) => log::info!("Saved character {}", character.info.name),
                                     Err(error) => log::error!(
-                                        "Failed to save character {} with error: {}",
+                                        "Failed to save character {} with error {:?}",
                                         character.info.name,
                                         error
                                     ),

@@ -53,7 +53,7 @@ pub fn login_server_authentication_system(
                                         }
                                         Err(error) => {
                                             log::info!(
-                                                "Failed to create account {} with error {}",
+                                                "Failed to create account {} with error {:?}",
                                                 &message.username,
                                                 error
                                             );
@@ -66,7 +66,7 @@ pub fn login_server_authentication_system(
                                 }
                                 _ => {
                                     log::error!(
-                                        "Failed to load account {} with error {}",
+                                        "Failed to load account {} with error {:?}",
                                         &message.username,
                                         error
                                     );
