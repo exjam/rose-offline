@@ -3,6 +3,8 @@ use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
+use crate::EffectId;
+
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct StatusEffectId(NonZeroU16);
 
@@ -109,6 +111,7 @@ pub struct StatusEffectData {
     pub cleared_by_type: StatusEffectClearedByType,
     pub apply_status_effects: ArrayVec<(StatusEffectId, i32), 2>,
     pub apply_per_second_value: i32,
+    pub effect_id: Option<EffectId>,
 }
 
 pub struct StatusEffectDatabase {

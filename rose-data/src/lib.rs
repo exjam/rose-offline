@@ -62,6 +62,7 @@ mod ability;
 mod ai_database;
 mod character_motion_database;
 mod data_decoder;
+mod effect_database;
 mod item;
 mod item_database;
 mod motion_file_data;
@@ -80,6 +81,7 @@ pub use character_motion_database::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions,
 };
 pub use data_decoder::DataDecoder;
+pub use effect_database::{EffectDatabase, EffectId};
 pub use item::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemSlotBehaviour, ItemWeaponType, StackError,
     StackableItem, StackableSlotBehaviour, VehiclePartIndex,

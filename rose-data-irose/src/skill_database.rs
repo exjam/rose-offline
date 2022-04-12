@@ -7,9 +7,9 @@ use std::{
 };
 
 use rose_data::{
-    AbilityType, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility, SkillCastingEffect,
-    SkillCooldown, SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType,
-    SkillTargetFilter, StatusEffectId, ZoneId,
+    AbilityType, EffectId, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility,
+    SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData, SkillDatabase, SkillId,
+    SkillPageType, SkillTargetFilter, StatusEffectId, ZoneId,
 };
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
@@ -142,7 +142,7 @@ impl StbSkill {
     stb_column! { 54, get_casting_repeat_motion_id, MotionId }
     stb_column! { 55, get_casting_repeat_motion_count, NonZeroU32 }
 
-    stb_column! { (56..=67).step_by(3), get_casting_effect_index, [Option<NonZeroUsize>; 4] }
+    stb_column! { (56..=67).step_by(3), get_casting_effect_index, [Option<EffectId>; 4] }
     stb_column! { (57..=67).step_by(3), get_casting_effect_bone_index, [Option<usize>; 4] }
     stb_column! { (58..=67).step_by(3), get_casting_sound_index, [Option<usize>; 4] }
 

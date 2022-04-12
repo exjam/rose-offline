@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use crate::{AbilityType, ItemClass, MotionId, NpcId, StatusEffectId, ZoneId};
+use crate::{AbilityType, EffectId, ItemClass, MotionId, NpcId, StatusEffectId, ZoneId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct SkillId(NonZeroU16);
@@ -131,7 +131,7 @@ pub enum SkillCooldown {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SkillCastingEffect {
-    pub effect_id: NonZeroUsize,
+    pub effect_id: EffectId,
     pub effect_dummy_bone_id: Option<usize>,
 }
 
