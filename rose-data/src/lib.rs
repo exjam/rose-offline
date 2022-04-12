@@ -60,6 +60,7 @@ macro_rules! id_wrapper_impl {
 
 mod ability;
 mod ai_database;
+mod animation_event_flags;
 mod character_motion_database;
 mod data_decoder;
 mod effect_database;
@@ -77,6 +78,7 @@ mod zone_list;
 
 pub use ability::AbilityType;
 pub use ai_database::AiDatabase;
+pub use animation_event_flags::AnimationEventFlags;
 pub use character_motion_database::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions,
 };

@@ -1,4 +1,5 @@
 mod ai_database;
+mod animation_event_flags;
 mod character_motion_database;
 mod data_decoder;
 mod effect_database;
@@ -11,6 +12,7 @@ mod warp_gate_database;
 mod zone_database;
 
 pub use ai_database::get_ai_database;
+pub use animation_event_flags::get_animation_event_flags;
 pub use character_motion_database::get_character_motion_database;
 pub use data_decoder::get_data_decoder;
 pub use effect_database::get_effect_database;
