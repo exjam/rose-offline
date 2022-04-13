@@ -44,7 +44,7 @@ pub use ifo::{
 };
 pub use lit::{LitFile, LitObject, LitObjectPart};
 pub use ltb::LtbFile;
-pub use ptl::{PtlFile, PtlKeyframe, PtlKeyframeData, PtlSequence};
+pub use ptl::{PtlFile, PtlKeyframe, PtlKeyframeData, PtlSequence, PtlUpdateCoords};
 pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadOptions};
