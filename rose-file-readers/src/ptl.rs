@@ -37,6 +37,13 @@ pub struct PtlKeyframe {
     pub data: PtlKeyframeData,
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum PtlUpdateCoords {
+    World,
+    LocalPosition,
+    Local,
+}
+
 #[derive(Debug)]
 pub struct PtlSequence {
     pub name: String,
@@ -52,7 +59,7 @@ pub struct PtlSequence {
     pub texture_path: VfsPathBuf,
     pub num_particles: u32,
     pub align_type: u32,
-    pub update_coords: u32,
+    pub update_coords: PtlUpdateCoords,
     pub texture_atlas_cols: u32,
     pub texture_atlas_rows: u32,
     pub dst_blend_mode: u32,
@@ -89,7 +96,12 @@ impl RoseFile for PtlFile {
             let texture_path = VfsPathBuf::new(&reader.read_u32_length_string()?);
             let num_particles = reader.read_u32()?;
             let align_type = reader.read_u32()?;
-            let update_coords = reader.read_u32()?;
+            let update_coords = match reader.read_u32()? {
+                0 => PtlUpdateCoords::World,
+                1 => PtlUpdateCoords::LocalPosition,
+                2 => PtlUpdateCoords::Local,
+                _ => PtlUpdateCoords::Local,
+            };
             let texture_atlas_cols = reader.read_u32()?;
             let texture_atlas_rows = reader.read_u32()?;
             let _sprite_type = reader.read_u32()?; // Unused
