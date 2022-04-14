@@ -7,9 +7,9 @@ use std::{
 };
 
 use rose_data::{
-    AbilityType, EffectId, ItemClass, MotionId, NpcId, SkillActionMode, SkillAddAbility,
-    SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData, SkillDatabase, SkillId,
-    SkillPageType, SkillTargetFilter, StatusEffectId, ZoneId,
+    AbilityType, EffectFileId, EffectId, ItemClass, MotionId, NpcId, SkillActionMode,
+    SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData,
+    SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, StatusEffectId, ZoneId,
 };
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
@@ -142,19 +142,19 @@ impl StbSkill {
     stb_column! { 54, get_casting_repeat_motion_id, MotionId }
     stb_column! { 55, get_casting_repeat_motion_count, NonZeroU32 }
 
-    stb_column! { (56..=67).step_by(3), get_casting_effect_index, [Option<EffectId>; 4] }
+    stb_column! { (56..=67).step_by(3), get_casting_effect_file_ids, [Option<EffectFileId>; 4] }
     stb_column! { (57..=67).step_by(3), get_casting_effect_bone_index, [Option<usize>; 4] }
     stb_column! { (58..=67).step_by(3), get_casting_sound_index, [Option<usize>; 4] }
 
     pub fn get_casting_effects(&self, id: usize) -> [Option<SkillCastingEffect>; 4] {
         let mut result: [Option<SkillCastingEffect>; 4] = Default::default();
-        let effect_ids = self.get_casting_effect_index(id);
+        let effect_file_ids = self.get_casting_effect_file_ids(id);
         let bone_ids = self.get_casting_effect_bone_index(id);
 
         for i in 0..4 {
-            if let Some(effect_id) = effect_ids[i] {
+            if let Some(effect_file_id) = effect_file_ids[i] {
                 result[i] = Some(SkillCastingEffect {
-                    effect_id,
+                    effect_file_id,
                     effect_dummy_bone_id: bone_ids[i].filter(|x| *x != 999),
                 });
             }
@@ -166,9 +166,9 @@ impl StbSkill {
     stb_column! { 68, get_action_motion_id, MotionId }
     stb_column! { 69, get_action_motion_speed, NonZeroU32 }
     stb_column! { 70, get_action_motion_hit_count, i32 }
-    stb_column! { 71, get_bullet_no, i32 }
-    stb_column! { 72, get_bullet_linked_point, i32 }
-    stb_column! { 73, get_bullet_fire_sound, i32 }
+    stb_column! { 71, get_bullet_effect_id, EffectId }
+    stb_column! { 72, get_bullet_link_dummy_bone_id, u32 }
+    stb_column! { 73, get_bullet_fire_sound_id, u32 }
     stb_column! { 74, get_hit_effect, i32 }
     stb_column! { 75, get_hit_effect_linked_point, i32 }
     stb_column! { 76, get_hit_sound, i32 }
@@ -216,6 +216,9 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
             / 100.0,
         add_ability: data.get_add_ability(id),
         basic_command: data.get_basic_command(id).and_then(|x| x.try_into().ok()),
+        bullet_effect_id: data.get_bullet_effect_id(id),
+        bullet_link_dummy_bone_id: data.get_bullet_link_dummy_bone_id(id).unwrap_or(0),
+        bullet_fire_sound_id: data.get_bullet_fire_sound_id(id).unwrap_or(0),
         cast_range: data.get_cast_range(id).unwrap_or(0),
         casting_motion_id: data.get_casting_motion_id(id),
         casting_motion_speed: data

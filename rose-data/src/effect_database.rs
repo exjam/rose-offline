@@ -1,30 +1,72 @@
+use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
-use std::{num::NonZeroU16, str::FromStr};
+use std::{num::NonZeroU16, str::FromStr, time::Duration};
 
 use rose_file_readers::VfsPathBuf;
+
+use crate::SoundId;
 
 #[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct EffectId(NonZeroU16);
 
 id_wrapper_impl!(EffectId, NonZeroU16, u16);
 
+#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+pub struct EffectFileId(NonZeroU16);
+
+id_wrapper_impl!(EffectFileId, NonZeroU16, u16);
+
+pub enum EffectBulletMoveType {
+    Linear,
+    Parabola,
+    Immediate,
+}
+
+pub struct EffectData {
+    pub point_effects: ArrayVec<EffectFileId, 4>,
+    pub trail_normal: Option<EffectFileId>,
+    pub trail_critical: Option<EffectFileId>,
+    pub trail_duration: Duration,
+    pub hit_normal: Option<EffectFileId>,
+    pub hit_critical: Option<EffectFileId>,
+    pub bullet_normal: Option<EffectFileId>,
+    pub bullet_critical: Option<EffectFileId>,
+    pub bullet_move_type: Option<EffectBulletMoveType>,
+    pub bullet_speed: f32,
+    pub fire_sound_id: Option<SoundId>,
+    pub hit_sound_id: Option<SoundId>,
+}
+
 pub struct EffectDatabase {
-    effects: Vec<Option<VfsPathBuf>>,
+    effects: Vec<Option<EffectData>>,
+    effect_files: Vec<Option<VfsPathBuf>>,
 }
 
 impl EffectDatabase {
-    pub fn new(effects: Vec<Option<VfsPathBuf>>) -> Self {
-        Self { effects }
+    pub fn new(effects: Vec<Option<EffectData>>, effect_files: Vec<Option<VfsPathBuf>>) -> Self {
+        Self {
+            effects,
+            effect_files,
+        }
     }
 
-    pub fn get_effect(&self, id: EffectId) -> Option<&VfsPathBuf> {
+    pub fn get_effect(&self, id: EffectId) -> Option<&EffectData> {
         self.effects.get(id.get() as usize).and_then(|x| x.as_ref())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (EffectId, &VfsPathBuf)> {
-        self.effects.iter().enumerate().filter_map(|(id, path)| {
-            path.as_ref()
-                .map(|path| (EffectId::new(id as u16).unwrap(), path))
-        })
+    pub fn get_effect_file(&self, id: EffectFileId) -> Option<&VfsPathBuf> {
+        self.effect_files
+            .get(id.get() as usize)
+            .and_then(|x| x.as_ref())
+    }
+
+    pub fn iter_files(&self) -> impl Iterator<Item = (EffectFileId, &VfsPathBuf)> {
+        self.effect_files
+            .iter()
+            .enumerate()
+            .filter_map(|(id, path)| {
+                path.as_ref()
+                    .map(|path| (EffectFileId::new(id as u16).unwrap(), path))
+            })
     }
 }

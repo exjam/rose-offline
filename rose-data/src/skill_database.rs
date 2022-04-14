@@ -7,7 +7,10 @@ use std::{
     time::Duration,
 };
 
-use crate::{AbilityType, EffectId, ItemClass, MotionId, NpcId, StatusEffectId, ZoneId};
+use crate::{
+    effect_database::EffectId, AbilityType, EffectFileId, ItemClass, MotionId, NpcId,
+    StatusEffectId, ZoneId,
+};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct SkillId(NonZeroU16);
@@ -131,7 +134,7 @@ pub enum SkillCooldown {
 
 #[derive(Copy, Clone, Debug)]
 pub struct SkillCastingEffect {
-    pub effect_id: EffectId,
+    pub effect_file_id: EffectFileId,
     pub effect_dummy_bone_id: Option<usize>,
 }
 
@@ -162,6 +165,9 @@ pub struct SkillData {
     pub action_motion_speed: f32,
     pub add_ability: [Option<SkillAddAbility>; 2],
     pub basic_command: Option<SkillBasicCommand>,
+    pub bullet_effect_id: Option<EffectId>,
+    pub bullet_link_dummy_bone_id: u32,
+    pub bullet_fire_sound_id: u32,
     pub cast_range: u32,
     pub casting_motion_id: Option<MotionId>,
     pub casting_motion_speed: f32,

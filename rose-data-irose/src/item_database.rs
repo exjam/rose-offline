@@ -1,12 +1,12 @@
 use arrayvec::ArrayVec;
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
-use std::{num::NonZeroUsize, time::Duration};
+use std::time::Duration;
 
 use rose_data::{
-    AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, EffectId,
-    FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemClass, ItemDatabase,
-    ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId, StatusEffectId,
-    SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
+    AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, EffectFileId,
+    EffectId, FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemClass,
+    ItemDatabase, ItemGradeData, JewelleryItemData, MaterialItemData, QuestItemData, SkillId,
+    SoundId, StatusEffectId, SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
 };
 
 use crate::data_decoder::{decode_ability_type, IroseItemClass};
@@ -108,11 +108,11 @@ impl StbItem {
     stb_column! { 35, get_weapon_attack_power, i32 }
     stb_column! { 36, get_weapon_attack_speed, i32 }
     stb_column! { 37, get_weapon_is_magic_damage, bool }
-    stb_column! { 38, get_weapon_bullet_effect_index, u32 }
-    stb_column! { 39, get_weapon_default_effect_index, u32 }
-    stb_column! { 40, get_weapon_attack_start_sound_index, u32 }
-    stb_column! { 41, get_weapon_attack_fire_sound_index, u32 }
-    stb_column! { 42, get_weapon_attack_hit_sound_index, u32 }
+    stb_column! { 38, get_weapon_bullet_effect_id, EffectId }
+    stb_column! { 39, get_weapon_hit_effect_id, EffectId }
+    stb_column! { 40, get_weapon_attack_start_sound_id, SoundId }
+    stb_column! { 41, get_weapon_attack_fire_sound_id, SoundId }
+    stb_column! { 42, get_weapon_attack_hit_sound_id, SoundId }
     stb_column! { 43, get_weapon_gem_position, u32 }
 
     // LIST_SUBWEAPON
@@ -149,8 +149,8 @@ impl StbItem {
     stb_column! { 20, get_consumeable_learn_skill_id, SkillId }
     stb_column! { 20, get_consumeable_use_skill_id, SkillId }
     stb_column! { 21, get_consumeable_use_script_index, usize }
-    stb_column! { 22, get_consumeable_use_effect_id, EffectId }
-    stb_column! { 23, get_consumeable_use_sound_index, NonZeroUsize }
+    stb_column! { 22, get_consumeable_use_effect_file_id, EffectFileId }
+    stb_column! { 23, get_consumeable_use_effect_sound_id, SoundId }
 
     pub fn get_consumeable_apply_status_effect(&self, id: usize) -> Option<(StatusEffectId, i32)> {
         let status_effect_id: Option<StatusEffectId> = self
@@ -318,8 +318,8 @@ fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Con
             data.get_consumeable_cooldown_duration_seconds(id)
                 .unwrap_or(0) as u64,
         ),
-        effect_id: data.get_consumeable_use_effect_id(id),
-        sound_effect_id: data.get_consumeable_use_sound_index(id),
+        effect_file_id: data.get_consumeable_use_effect_file_id(id),
+        effect_sound_id: data.get_consumeable_use_effect_sound_id(id),
     })
 }
 

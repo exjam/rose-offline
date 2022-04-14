@@ -4,9 +4,9 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use rose_data::{
-    AbilityType, AmmoIndex, DataDecoder, EquipmentIndex, ItemClass, ItemReference, ItemType,
-    SkillActionMode, SkillBasicCommand, SkillPageType, SkillTargetFilter, SkillType,
-    StatusEffectClearedByType, StatusEffectType, VehiclePartIndex,
+    AbilityType, AmmoIndex, DataDecoder, EffectBulletMoveType, EquipmentIndex, ItemClass,
+    ItemReference, ItemType, SkillActionMode, SkillBasicCommand, SkillPageType, SkillTargetFilter,
+    SkillType, StatusEffectClearedByType, StatusEffectType, VehiclePartIndex,
 };
 
 macro_rules! impl_conversions {
@@ -141,6 +141,18 @@ pub enum IroseAbilityType {
     PassiveImmunity = 103,
 }
 impl_conversions!(IroseAbilityType, AbilityType, decode_ability_type);
+
+#[derive(FromPrimitive)]
+pub enum IroseEffectBulletMoveType {
+    Linear = 1,
+    Parabola = 2,
+    Immediate = 3,
+}
+impl_conversions!(
+    IroseEffectBulletMoveType,
+    EffectBulletMoveType,
+    decode_effect_bullet_move_type
+);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseItemClass {
@@ -710,6 +722,14 @@ pub fn encode_ability_type(from: AbilityType) -> Option<usize> {
         AbilityType::PassiveAvoid => IroseAbilityType::PassiveAvoid.to_usize(),
         AbilityType::PassiveShieldDefence => IroseAbilityType::PassiveShieldDefence.to_usize(),
         AbilityType::PassiveImmunity => IroseAbilityType::PassiveImmunity.to_usize(),
+    }
+}
+
+pub fn decode_effect_bullet_move_type(id: usize) -> Option<EffectBulletMoveType> {
+    match FromPrimitive::from_usize(id)? {
+        IroseEffectBulletMoveType::Linear => Some(EffectBulletMoveType::Linear),
+        IroseEffectBulletMoveType::Parabola => Some(EffectBulletMoveType::Parabola),
+        IroseEffectBulletMoveType::Immediate => Some(EffectBulletMoveType::Immediate),
     }
 }
 

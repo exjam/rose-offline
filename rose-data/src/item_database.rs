@@ -1,8 +1,8 @@
 use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
-use std::{num::NonZeroUsize, time::Duration};
+use std::time::Duration;
 
-use crate::{AbilityType, EffectId, SkillId, StatusEffectId};
+use crate::{AbilityType, EffectFileId, SkillId, SoundId, StatusEffectId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ItemReference {
@@ -284,8 +284,8 @@ pub struct ConsumableItemData {
     pub apply_status_effect: Option<(StatusEffectId, i32)>,
     pub cooldown_type_id: usize,
     pub cooldown_duration: Duration,
-    pub effect_id: Option<EffectId>,
-    pub sound_effect_id: Option<NonZeroUsize>,
+    pub effect_file_id: Option<EffectFileId>,
+    pub effect_sound_id: Option<SoundId>,
 }
 
 #[derive(Debug)]

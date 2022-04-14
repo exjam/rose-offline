@@ -70,6 +70,7 @@ mod motion_file_data;
 mod npc_database;
 mod quest_database;
 mod skill_database;
+mod sound_database;
 mod status_effect_database;
 mod warp_gate_database;
 mod world;
@@ -83,7 +84,9 @@ pub use character_motion_database::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions,
 };
 pub use data_decoder::DataDecoder;
-pub use effect_database::{EffectDatabase, EffectId};
+pub use effect_database::{
+    EffectBulletMoveType, EffectData, EffectDatabase, EffectFileId, EffectId,
+};
 pub use item::{
     AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemSlotBehaviour, ItemWeaponType, StackError,
     StackableItem, StackableSlotBehaviour, VehiclePartIndex,
