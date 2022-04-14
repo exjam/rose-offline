@@ -109,7 +109,7 @@ impl StbItem {
     stb_column! { 36, get_weapon_attack_speed, i32 }
     stb_column! { 37, get_weapon_is_magic_damage, bool }
     stb_column! { 38, get_weapon_bullet_effect_id, EffectId }
-    stb_column! { 39, get_weapon_hit_effect_id, EffectId }
+    stb_column! { 39, get_weapon_effect_id, EffectId }
     stb_column! { 40, get_weapon_attack_start_sound_id, SoundId }
     stb_column! { 41, get_weapon_attack_fire_sound_id, SoundId }
     stb_column! { 42, get_weapon_attack_hit_sound_id, SoundId }
@@ -299,6 +299,12 @@ fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponIt
         attack_speed: data.get_weapon_attack_speed(id).unwrap_or(0),
         motion_type: data.get_weapon_motion_type(id).unwrap_or(0),
         is_magic_damage: data.get_weapon_is_magic_damage(id).unwrap_or(false),
+        bullet_effect_id: data.get_weapon_bullet_effect_id(id),
+        effect_id: data.get_weapon_effect_id(id),
+        attack_start_sound_id: data.get_weapon_attack_start_sound_id(id),
+        attack_fire_sound_id: data.get_weapon_attack_fire_sound_id(id),
+        attack_hit_sound_id: data.get_weapon_attack_hit_sound_id(id),
+        gem_position: data.get_weapon_gem_position(id).unwrap_or(0),
     })
 }
 

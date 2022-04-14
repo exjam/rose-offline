@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-use crate::{AbilityType, EffectFileId, SkillId, SoundId, StatusEffectId};
+use crate::{AbilityType, EffectFileId, EffectId, SkillId, SoundId, StatusEffectId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct ItemReference {
@@ -265,6 +265,12 @@ pub struct WeaponItemData {
     pub attack_speed: i32,
     pub motion_type: u32,
     pub is_magic_damage: bool,
+    pub bullet_effect_id: Option<EffectId>,
+    pub effect_id: Option<EffectId>,
+    pub attack_start_sound_id: Option<SoundId>,
+    pub attack_fire_sound_id: Option<SoundId>,
+    pub attack_hit_sound_id: Option<SoundId>,
+    pub gem_position: u32,
 }
 
 #[derive(Debug)]
