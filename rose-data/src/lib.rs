@@ -105,6 +105,7 @@ pub use skill_database::{
     SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
     SkillType,
 };
+pub use sound_database::SoundId;
 pub use status_effect_database::{
     StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
     StatusEffectType,
