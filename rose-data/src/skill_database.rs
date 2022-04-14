@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    effect_database::EffectId, AbilityType, EffectFileId, ItemClass, MotionId, NpcId,
+    effect_database::EffectId, AbilityType, EffectFileId, ItemClass, MotionId, NpcId, SoundId,
     StatusEffectId, ZoneId,
 };
 
@@ -167,7 +167,7 @@ pub struct SkillData {
     pub basic_command: Option<SkillBasicCommand>,
     pub bullet_effect_id: Option<EffectId>,
     pub bullet_link_dummy_bone_id: u32,
-    pub bullet_fire_sound_id: u32,
+    pub bullet_fire_sound_id: Option<SoundId>,
     pub cast_range: u32,
     pub casting_motion_id: Option<MotionId>,
     pub casting_motion_speed: f32,
@@ -177,6 +177,9 @@ pub struct SkillData {
     pub cooldown: SkillCooldown,
     pub damage_type: i32,
     pub harm: u32,
+    pub hit_effect_file_id: Option<EffectFileId>,
+    pub hit_link_dummy_bone_id: u32,
+    pub hit_sound_id: Option<SoundId>,
     pub item_make_number: u32,
     pub power: u32,
     pub scope: u32,

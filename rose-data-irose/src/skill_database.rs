@@ -9,7 +9,7 @@ use std::{
 use rose_data::{
     AbilityType, EffectFileId, EffectId, ItemClass, MotionId, NpcId, SkillActionMode,
     SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData,
-    SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, StatusEffectId, ZoneId,
+    SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId, ZoneId,
 };
 use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 
@@ -168,14 +168,14 @@ impl StbSkill {
     stb_column! { 70, get_action_motion_hit_count, i32 }
     stb_column! { 71, get_bullet_effect_id, EffectId }
     stb_column! { 72, get_bullet_link_dummy_bone_id, u32 }
-    stb_column! { 73, get_bullet_fire_sound_id, u32 }
-    stb_column! { 74, get_hit_effect, i32 }
-    stb_column! { 75, get_hit_effect_linked_point, i32 }
-    stb_column! { 76, get_hit_sound, i32 }
+    stb_column! { 73, get_bullet_fire_sound_id, SoundId }
+    stb_column! { 74, get_hit_effect_id, EffectFileId }
+    stb_column! { 75, get_hit_effect_dummy_bone_id, u32 }
+    stb_column! { 76, get_hit_sound_id, SoundId }
 
-    stb_column! { (77..=82).step_by(3), get_hit_dummy_effect_index, [Option<NonZeroUsize>; 2] }
-    stb_column! { (78..=82).step_by(3), get_hit_dummy_effect_bone_index, [Option<usize>; 2] }
-    stb_column! { (79..=82).step_by(3), get_hit_dummy_sound_index, [Option<usize>; 2] }
+    stb_column! { (77..=82).step_by(3), get_hit_dummy_effect_id, [Option<EffectId>; 2] }
+    stb_column! { (78..=82).step_by(3), get_hit_dummy_effect_dummy_bone_index, [Option<u32>; 2] }
+    stb_column! { (79..=82).step_by(3), get_hit_dummy_sound_id, [Option<SoundId>; 2] }
 
     stb_column! { 83, get_area_hit_effect, i32 }
     stb_column! { 84, get_area_hit_sound, i32 }
@@ -218,7 +218,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         basic_command: data.get_basic_command(id).and_then(|x| x.try_into().ok()),
         bullet_effect_id: data.get_bullet_effect_id(id),
         bullet_link_dummy_bone_id: data.get_bullet_link_dummy_bone_id(id).unwrap_or(0),
-        bullet_fire_sound_id: data.get_bullet_fire_sound_id(id).unwrap_or(0),
+        bullet_fire_sound_id: data.get_bullet_fire_sound_id(id),
         cast_range: data.get_cast_range(id).unwrap_or(0),
         casting_motion_id: data.get_casting_motion_id(id),
         casting_motion_speed: data
@@ -235,6 +235,9 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         cooldown: data.get_cooldown(id),
         damage_type: data.get_damage_type(id).unwrap_or(0),
         harm: data.get_harm(id).unwrap_or(0),
+        hit_effect_file_id: data.get_hit_effect_id(id),
+        hit_link_dummy_bone_id: data.get_hit_effect_dummy_bone_id(id).unwrap_or(0),
+        hit_sound_id: data.get_hit_sound_id(id),
         icon_number,
         item_make_number: data.get_item_make_number(id).unwrap_or(0),
         level: data.get_skill_level(id).unwrap_or(1),
