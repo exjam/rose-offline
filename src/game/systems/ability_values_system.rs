@@ -1,4 +1,7 @@
-use bevy_ecs::prelude::{Changed, Or, QuerySet, QueryState, Res};
+use bevy_ecs::{
+    prelude::{Changed, Or, ParamSet, Res},
+    system::Query,
+};
 
 use crate::game::{
     components::{
@@ -9,8 +12,8 @@ use crate::game::{
 };
 
 pub fn ability_values_system(
-    mut query_set: QuerySet<(
-        QueryState<
+    mut query_set: ParamSet<(
+        Query<
             (
                 &mut AbilityValues,
                 &CharacterInfo,
@@ -29,11 +32,11 @@ pub fn ability_values_system(
                 Changed<StatusEffects>,
             )>,
         >,
-        QueryState<
+        Query<
             (&mut AbilityValues, &Npc, &StatusEffects),
             Or<(Changed<Npc>, Changed<StatusEffects>)>,
         >,
-        QueryState<
+        Query<
             (
                 &AbilityValues,
                 &MoveMode,
@@ -46,7 +49,7 @@ pub fn ability_values_system(
     )>,
     game_data: Res<GameData>,
 ) {
-    query_set.q0().for_each_mut(
+    query_set.p0().for_each_mut(
         |(
             mut ability_values,
             character_info,
@@ -68,7 +71,7 @@ pub fn ability_values_system(
     );
 
     query_set
-        .q1()
+        .p1()
         .for_each_mut(|(mut ability_values, npc, status_effects)| {
             *ability_values = game_data
                 .ability_value_calculator
@@ -81,7 +84,7 @@ pub fn ability_values_system(
                 .unwrap();
         });
 
-    query_set.q2().for_each_mut(
+    query_set.p2().for_each_mut(
         |(ability_values, move_mode, mut move_speed, mut health_points, mana_points)| {
             // Limit hp to max health
             let max_hp = ability_values.get_max_health();

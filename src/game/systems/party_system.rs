@@ -1,6 +1,6 @@
 use bevy_ecs::{
-    prelude::{Changed, Commands, Entity, EventReader, Or, Query, QueryState},
-    system::QuerySet,
+    prelude::{Changed, Commands, Entity, EventReader, Or, Query},
+    system::ParamSet,
 };
 
 use crate::game::{
@@ -782,14 +782,14 @@ fn handle_party_member_update_info(
 pub fn party_system(
     mut commands: Commands,
     mut party_query: Query<&mut Party>,
-    mut party_member_query_set: QuerySet<(
-        QueryState<(
+    mut party_member_query_set: ParamSet<(
+        Query<(
             &ClientEntity,
             &CharacterInfo,
             &mut PartyMembership,
             Option<&GameClient>,
         )>,
-        QueryState<
+        Query<
             (Entity, &PartyMembership),
             Or<(
                 Changed<AbilityValues>,
@@ -813,7 +813,7 @@ pub fn party_system(
     let party_events: Vec<PartyEvent> = party_events.iter().cloned().collect();
 
     // First handle member disconnects / reconnects
-    let mut party_member_query = party_member_query_set.q0();
+    let mut party_member_query = party_member_query_set.p0();
     for event in party_events.iter() {
         match event {
             PartyEvent::MemberDisconnect(PartyMemberDisconnect {
@@ -930,7 +930,7 @@ pub fn party_system(
         }
     }
 
-    let party_member_info_changed_query = party_member_query_set.q1();
+    let party_member_info_changed_query = party_member_query_set.p1();
     for (member_entity, party_membership) in party_member_info_changed_query.iter() {
         if let PartyMembership::Member(party_entity) = party_membership {
             handle_party_member_update_info(
