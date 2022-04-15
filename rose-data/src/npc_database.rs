@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{ItemReference, MotionFileData, MotionId};
+use crate::{EffectId, ItemReference, MotionFileData, MotionId};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpcId(NonZeroU16);
@@ -73,7 +73,7 @@ pub struct NpcData {
     pub normal_effect_sound_index: u32,
     pub attack_sound_index: u32,
     pub hitted_sound_index: u32,
-    pub hand_hit_effect_index: u32,
+    pub hand_hit_effect_id: Option<EffectId>,
     pub dead_effect_index: u32,
     pub die_sound_index: u32,
     pub npc_quest_type: u32,
