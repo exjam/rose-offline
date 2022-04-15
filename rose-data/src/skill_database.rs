@@ -1,7 +1,6 @@
 use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
     num::{NonZeroU16, NonZeroUsize},
     str::FromStr,
     time::Duration,
@@ -194,15 +193,19 @@ pub struct SkillData {
 }
 
 pub struct SkillDatabase {
-    skills: HashMap<u16, SkillData>,
+    skills: Vec<Option<SkillData>>,
 }
 
 impl SkillDatabase {
-    pub fn new(skills: HashMap<u16, SkillData>) -> Self {
+    pub fn new(skills: Vec<Option<SkillData>>) -> Self {
         Self { skills }
     }
 
     pub fn get_skill(&self, id: SkillId) -> Option<&SkillData> {
-        self.skills.get(&id.get())
+        self.skills.get(id.get() as usize).and_then(|x| x.as_ref())
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &SkillData> {
+        self.skills.iter().filter_map(|x| x.as_ref())
     }
 }

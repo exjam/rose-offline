@@ -1,7 +1,6 @@
 use arrayvec::ArrayVec;
 use log::debug;
 use std::{
-    collections::HashMap,
     num::{NonZeroU32, NonZeroUsize},
     time::Duration,
 };
@@ -194,7 +193,7 @@ impl StbSkill {
 
 fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
     let skill_id = SkillId::new(id as u16)?;
-    let icon_number = data.get_icon_number(id).filter(|icon| *icon != 0)?;
+    let icon_number = data.get_icon_number(id)?;
     let skill_type = data.get_skill_type(id).and_then(|x| x.try_into().ok())?;
 
     Some(SkillData {
@@ -281,11 +280,10 @@ pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
         vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")
             .ok()?,
     );
-    let mut skills = HashMap::new();
+    let mut skills = Vec::with_capacity(data.rows());
+    skills.push(None); // SkillId 0
     for id in 1..data.rows() {
-        if let Some(skill) = load_skill(&data, &stl, id) {
-            skills.insert(id as u16, skill);
-        }
+        skills.push(load_skill(&data, &stl, id));
     }
 
     debug!("Loaded {} skills", skills.len());
