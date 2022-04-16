@@ -1,4 +1,4 @@
-use bevy_ecs::{
+use bevy::ecs::{
     prelude::{Changed, Or, ParamSet, Res},
     system::Query,
 };

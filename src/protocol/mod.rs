@@ -7,7 +7,7 @@ use rose_network_common::{Connection, PacketCodec};
 use crate::game::messages::control::ClientType;
 
 pub struct Client<'a> {
-    pub entity: bevy_ecs::prelude::Entity,
+    pub entity: bevy::ecs::prelude::Entity,
     pub connection: Connection<'a>,
     pub client_message_tx: crossbeam_channel::Sender<ClientMessage>,
     pub server_message_rx: tokio::sync::mpsc::UnboundedReceiver<ServerMessage>,

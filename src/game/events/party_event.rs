@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Entity;
+use bevy::ecs::prelude::Entity;
 
 use crate::game::components::CharacterUniqueId;
 

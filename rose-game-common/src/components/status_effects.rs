@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Component;
+use bevy::ecs::prelude::Component;
 use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};

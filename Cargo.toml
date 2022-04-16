@@ -10,8 +10,7 @@ edition = "2021"
 arrayvec = "0.7"
 anyhow = "1.0"
 async-trait = "0.1"
-bevy_ecs = { version = "0.7.0-dev" }
-bevy_math = { version = "0.7.0-dev" }
+bevy = { version = "0.7.0-dev", default-features = false }
 bitvec = { version = "1.0", features = ["serde"] }
 bytes = "1.1"
 chrono = "0.4"
@@ -46,8 +45,7 @@ rose-network-common = { path = "rose-network-common" }
 rose-network-irose = { path = "rose-network-irose" }
 
 [patch.crates-io]
-bevy_ecs = { git = "https://github.com/exjam/bevy", rev = "20e5f3a1e664537f1fbb06a852f8c34a8d9ce510" }
-bevy_math = { git = "https://github.com/exjam/bevy", rev = "20e5f3a1e664537f1fbb06a852f8c34a8d9ce510" }
+bevy = { git = "https://github.com/exjam/bevy", rev = "20e5f3a1e664537f1fbb06a852f8c34a8d9ce510" }
 
 [workspace]
 members = [

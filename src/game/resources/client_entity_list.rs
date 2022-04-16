@@ -1,5 +1,5 @@
-use bevy_ecs::{change_detection::Mut, prelude::Entity};
-use bevy_math::{UVec2, Vec2, Vec3, Vec3Swizzles};
+use bevy::ecs::{change_detection::Mut, prelude::Entity};
+use bevy::math::{UVec2, Vec2, Vec3, Vec3Swizzles};
 use bitvec::prelude::*;
 use std::collections::HashMap;
 

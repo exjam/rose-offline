@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Query, ResMut};
+use bevy::ecs::prelude::{Query, ResMut};
 
 use crate::game::{
     components::{ClientEntityVisibility, GameClient, Position},

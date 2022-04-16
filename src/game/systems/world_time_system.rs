@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Res, ResMut};
+use bevy::ecs::prelude::{Res, ResMut};
 
 use rose_data::{WorldTicks, WORLD_TICK_DURATION};
 

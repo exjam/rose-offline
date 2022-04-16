@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Bundle, Commands, Entity};
-use bevy_math::Vec3;
+use bevy::ecs::prelude::{Bundle, Commands, Entity};
+use bevy::math::Vec3;
 use rand::Rng;
 use std::time::Duration;
 

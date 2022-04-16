@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Mut;
+use bevy::ecs::prelude::Mut;
 
 use rose_data::{SkillData, SkillDatabase, SkillId};
 

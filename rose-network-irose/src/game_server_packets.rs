@@ -1,4 +1,4 @@
-use bevy_math::{Vec2, Vec3};
+use bevy::math::{Vec2, Vec3};
 use bitvec::array::BitArray;
 use modular_bitfield::prelude::*;
 use num_derive::FromPrimitive;

@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Component, Entity};
-use bevy_math::{Vec2, Vec3};
+use bevy::ecs::prelude::{Component, Entity};
+use bevy::math::{Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

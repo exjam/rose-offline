@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
-use bevy_math::Vec3;
+use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
+use bevy::math::Vec3;
 use log::warn;
 
 use rose_data::{

@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Entity;
+use bevy::ecs::prelude::Entity;
 use lazy_static::__Deref;
 use log::info;
 use std::sync::Arc;

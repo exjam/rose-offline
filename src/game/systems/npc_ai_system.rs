@@ -1,8 +1,8 @@
-use bevy_ecs::{
+use bevy::ecs::{
     prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
     system::SystemParam,
 };
-use bevy_math::{Vec3, Vec3Swizzles};
+use bevy::math::{Vec3, Vec3Swizzles};
 use chrono::{Datelike, Timelike};
 use rand::{prelude::SliceRandom, Rng};
 use std::{

@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Entity, EventReader, Mut, Query, Res};
-use bevy_math::Vec3Swizzles;
+use bevy::ecs::prelude::{Entity, EventReader, Mut, Query, Res};
+use bevy::math::Vec3Swizzles;
 use log::warn;
 use std::collections::HashSet;
 

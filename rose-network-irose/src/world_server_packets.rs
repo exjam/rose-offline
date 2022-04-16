@@ -1,4 +1,4 @@
-use bevy_math::Vec3;
+use bevy::math::Vec3;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 

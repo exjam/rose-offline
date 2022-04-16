@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
-use bevy_math::Vec3Swizzles;
+use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy::math::Vec3Swizzles;
 
 use crate::game::{
     components::{ClientEntity, ClientEntitySector, Destination, MoveSpeed, Position},

@@ -1,8 +1,8 @@
-use bevy_ecs::{
+use bevy::ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
-use bevy_math::{UVec2, Vec3, Vec3Swizzles};
+use bevy::math::{UVec2, Vec3, Vec3Swizzles};
 use clap::{Arg, PossibleValue};
 use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;

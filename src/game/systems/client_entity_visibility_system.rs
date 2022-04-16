@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Query, Res, ResMut};
+use bevy::ecs::prelude::{Query, Res, ResMut};
 
 use crate::game::{
     components::{

@@ -1,4 +1,4 @@
-use bevy_ecs::{
+use bevy::ecs::{
     entity::Entity,
     event::EventWriter,
     prelude::{Query, Res, ResMut},

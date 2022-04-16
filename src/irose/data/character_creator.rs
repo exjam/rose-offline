@@ -1,4 +1,4 @@
-use bevy_math::Vec3;
+use bevy::math::Vec3;
 use enum_map::EnumMap;
 use rose_game_common::components::CharacterGender;
 use std::sync::Arc;

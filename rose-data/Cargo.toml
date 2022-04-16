@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 arrayvec = "0.7"
-bevy_math = { version = "0.7.0-dev" }
+bevy = { version = "0.7.0-dev", default-features = false }
 bitflags = "1.2"
 enum-map = { version = "2.0", features = ["serde"] }
 num-derive = "0.3"

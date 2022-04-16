@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Commands, Entity, EventWriter, Query, Res};
-use bevy_math::Vec3Swizzles;
+use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res};
+use bevy::math::Vec3Swizzles;
 use rand::seq::SliceRandom;
 
 use crate::game::{

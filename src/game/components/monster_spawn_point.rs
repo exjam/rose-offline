@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Component;
+use bevy::ecs::prelude::Component;
 use std::time::Duration;
 
 use rose_data::{NpcId, ZoneMonsterSpawnPoint};

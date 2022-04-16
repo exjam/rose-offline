@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use bevy_ecs::prelude::Component;
+use bevy::ecs::prelude::Component;
 
 #[derive(Component)]
 pub struct OwnerExpireTime {

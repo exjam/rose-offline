@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
-use bevy_math::{Vec3, Vec3Swizzles};
+use bevy::ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
+use bevy::math::{Vec3, Vec3Swizzles};
 use std::time::Duration;
 
 use rose_data::{

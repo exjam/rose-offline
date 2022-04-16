@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::Component;
-use bevy_math::Vec3;
+use bevy::ecs::prelude::Component;
+use bevy::math::Vec3;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Clone, Debug, Deserialize, Serialize)]

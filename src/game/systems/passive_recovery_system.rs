@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::{Query, Res};
+use bevy::ecs::prelude::{Query, Res};
 use rose_game_common::data::PassiveRecoveryState;
 
 use crate::game::{

@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Component;
+use bevy::ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 pub const MAX_STAMINA: u32 = 5000;

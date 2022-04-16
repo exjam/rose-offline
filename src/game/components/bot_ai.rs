@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::{Component, Entity};
+use bevy::ecs::prelude::{Component, Entity};
 use rand::Rng;
 
 pub const BOT_IDLE_CHECK_DURATION: Duration = Duration::from_secs(3);

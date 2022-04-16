@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{EventReader, Query};
+use bevy::ecs::prelude::{EventReader, Query};
 
 use rose_data::ItemSlotBehaviour;
 

@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Mut;
+use bevy::ecs::prelude::Mut;
 use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
 use std::num::NonZeroUsize;

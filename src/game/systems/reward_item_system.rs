@@ -5,7 +5,7 @@ use crate::game::{
     messages::server::ServerMessage,
     resources::{ClientEntityList, ServerTime},
 };
-use bevy_ecs::{
+use bevy::ecs::{
     prelude::{Commands, EventReader, Query, ResMut},
     system::Res,
 };

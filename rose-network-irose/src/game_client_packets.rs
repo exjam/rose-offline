@@ -1,4 +1,4 @@
-use bevy_math::Vec2;
+use bevy::math::Vec2;
 use modular_bitfield::{
     bitfield,
     prelude::{B14, B2},

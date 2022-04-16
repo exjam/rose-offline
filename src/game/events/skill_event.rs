@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::Entity;
-use bevy_math::Vec2;
+use bevy::ecs::prelude::Entity;
+use bevy::math::Vec2;
 use std::time::Instant;
 
 use rose_data::{Item, SkillId};

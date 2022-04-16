@@ -1,4 +1,4 @@
-use bevy_ecs::{
+use bevy::ecs::{
     event::EventWriter,
     prelude::{Commands, EventReader, Query, ResMut},
 };

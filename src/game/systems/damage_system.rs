@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use bevy_ecs::prelude::{Commands, EventReader, Query, Res, ResMut};
+use bevy::ecs::prelude::{Commands, EventReader, Query, Res, ResMut};
 use rose_game_common::data::Damage;
 
 use crate::game::{

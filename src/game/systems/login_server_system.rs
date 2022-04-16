@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
+use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
 use log::warn;
 
 use crate::game::{

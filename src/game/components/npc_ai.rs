@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Component, Entity};
+use bevy::ecs::prelude::{Component, Entity};
 use std::time::Duration;
 
 use rose_game_common::data::Damage;

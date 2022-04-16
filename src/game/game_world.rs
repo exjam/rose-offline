@@ -1,4 +1,4 @@
-use bevy_ecs::{
+use bevy::ecs::{
     event::Events,
     prelude::{Schedule, StageLabel, World},
     schedule::{RunOnce, SystemStage},

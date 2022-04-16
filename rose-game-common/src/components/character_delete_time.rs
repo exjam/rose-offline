@@ -1,6 +1,6 @@
 use std::time::{Duration, SystemTime};
 
-use bevy_ecs::prelude::Component;
+use bevy::ecs::prelude::Component;
 use serde::{Deserialize, Serialize};
 
 const DELETE_CHARACTER_DURATION: Duration = Duration::from_secs(60 * 60);

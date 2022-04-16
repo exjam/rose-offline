@@ -1,8 +1,8 @@
-use bevy_ecs::{
+use bevy::ecs::{
     prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut},
     system::SystemParam,
 };
-use bevy_math::Vec3;
+use bevy::math::Vec3;
 use log::warn;
 use std::time::Duration;
 

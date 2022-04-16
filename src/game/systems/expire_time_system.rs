@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use crate::game::{
     bundles::client_entity_leave_zone,

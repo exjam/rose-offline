@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut};
 
 use rose_data::NpcId;
 

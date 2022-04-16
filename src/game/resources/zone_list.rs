@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Entity;
+use bevy::ecs::prelude::Entity;
 use std::collections::HashMap;
 
 use rose_data::{NpcId, ZoneId};

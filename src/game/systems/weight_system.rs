@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Changed, Commands, Entity, Or, Query, Res};
+use bevy::ecs::prelude::{Changed, Commands, Entity, Or, Query, Res};
 
 use crate::game::{
     components::{Equipment, Inventory, Weight},

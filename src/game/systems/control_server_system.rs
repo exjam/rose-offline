@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Commands, EventWriter, Res, ResMut};
+use bevy::ecs::prelude::{Commands, EventWriter, Res, ResMut};
 
 use crate::game::{
     components::{GameClient, LoginClient, ServerInfo, WorldClient},

@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Component;
+use bevy::ecs::prelude::Component;
 use crossbeam_channel::Receiver;
 use tokio::sync::mpsc::UnboundedSender;
 

@@ -1,4 +1,4 @@
-use bevy_math::{Quat, Vec2, Vec3, Vec3Swizzles};
+use bevy::math::{Quat, Vec2, Vec3, Vec3Swizzles};
 use log::debug;
 
 use rose_data::{
@@ -102,7 +102,7 @@ fn create_npc_spawn(npc: &IfoNpc, object_offset: Vec3) -> ZoneNpcSpawn {
             npc.object.rotation.z,
             npc.object.rotation.w,
         )
-        .to_euler(bevy_math::EulerRot::XYZ)
+        .to_euler(bevy::math::EulerRot::XYZ)
         .2
         .to_degrees(),
         conversation: NpcConversationId::new(npc.quest_file_name.to_string()),

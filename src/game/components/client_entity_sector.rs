@@ -1,5 +1,5 @@
-use bevy_ecs::prelude::Component;
-use bevy_math::UVec2;
+use bevy::ecs::prelude::Component;
+use bevy::math::UVec2;
 
 #[derive(Component, Clone, Debug)]
 pub struct ClientEntitySector {

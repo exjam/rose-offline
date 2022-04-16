@@ -1,4 +1,4 @@
-use bevy_math::{Vec2, Vec3, Vec3Swizzles};
+use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 

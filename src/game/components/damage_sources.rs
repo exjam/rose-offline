@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use bevy_ecs::prelude::{Component, Entity};
+use bevy::ecs::prelude::{Component, Entity};
 
 pub struct DamageSource {
     pub entity: Entity,

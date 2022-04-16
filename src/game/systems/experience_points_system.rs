@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::{Entity, EventReader, EventWriter, Query, Res, ResMut};
+use bevy::ecs::prelude::{Entity, EventReader, EventWriter, Query, Res, ResMut};
 
 use crate::game::{
     components::{
