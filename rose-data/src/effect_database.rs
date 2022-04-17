@@ -16,12 +16,14 @@ pub struct EffectFileId(NonZeroU16);
 
 id_wrapper_impl!(EffectFileId, NonZeroU16, u16);
 
+#[derive(Copy, Clone, Debug)]
 pub enum EffectBulletMoveType {
     Linear,
     Parabola,
     Immediate,
 }
 
+#[derive(Debug)]
 pub struct EffectData {
     pub point_effects: ArrayVec<EffectFileId, 4>,
     pub trail_normal: Option<EffectFileId>,
@@ -37,6 +39,7 @@ pub struct EffectData {
     pub hit_sound_id: Option<SoundId>,
 }
 
+#[derive(Debug)]
 pub struct EffectDatabase {
     effects: Vec<Option<EffectData>>,
     effect_files: Vec<Option<VfsPathBuf>>,
