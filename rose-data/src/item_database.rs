@@ -297,6 +297,7 @@ pub struct ConsumableItemData {
 #[derive(Debug)]
 pub struct MaterialItemData {
     pub item_data: BaseItemData,
+    pub bullet_effect_id: Option<EffectId>,
 }
 
 #[derive(Debug)]

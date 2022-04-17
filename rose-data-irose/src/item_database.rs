@@ -183,6 +183,9 @@ impl StbItem {
         add_ability
     }
 
+    // LIST_NATURAL
+    stb_column! { 17, get_material_bullet_effect_id, EffectId }
+
     // LIST_PAT
     pub fn get_vehicle_part(&self, id: usize) -> Option<VehicleItemPart> {
         match self.0.try_get_int(id, 2)? {
@@ -337,6 +340,14 @@ fn load_gem_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<GemItemData
     })
 }
 
+fn load_material_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<MaterialItemData> {
+    let base_item_data = load_base_item(data, stl, id, true)?;
+    Some(MaterialItemData {
+        item_data: base_item_data,
+        bullet_effect_id: data.get_material_bullet_effect_id(id),
+    })
+}
+
 fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<VehicleItemData> {
     let base_item_data = load_base_item(data, stl, id, true)?;
     Some(VehicleItemData {
@@ -383,7 +394,7 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
     let subweapon = load_items! { vfs, "3DDATA/STB/LIST_SUBWPN.STB", "3DDATA/STB/LIST_SUBWPN_S.STL", load_base_item, SubWeaponItemData };
     let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA/STB/LIST_USEITEM_S.STL", load_consumeable_item, ConsumableItemData };
     let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA/STB/LIST_JEMITEM_S.STL", load_gem_item, GemItemData };
-    let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA/STB/LIST_NATURAL_S.STL", load_base_item, MaterialItemData };
+    let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA/STB/LIST_NATURAL_S.STL", load_material_item, MaterialItemData };
     let quest = load_items! { vfs, "3DDATA/STB/LIST_QUESTITEM.STB", "3DDATA/STB/LIST_QUESTITEM_S.STL", load_base_item, QuestItemData };
     let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA/STB/LIST_PAT_S.STL", load_vehicle_item, VehicleItemData };
 
