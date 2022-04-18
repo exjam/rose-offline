@@ -39,11 +39,11 @@ pub fn get_animation_event_flags() -> Vec<AnimationEventFlags> {
 
     animation_event_flags[44] = AnimationEventFlags::EFFECT_SKILL_CASTING_0;
 
-    animation_event_flags[56] = AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
+    animation_event_flags[56] = AnimationEventFlags::EFFECT_SKILL_FIRE_DUMMY_BULLET;
 
     animation_event_flags[64] = AnimationEventFlags::EFFECT_SKILL_CASTING_1;
 
-    animation_event_flags[66] = AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
+    animation_event_flags[66] = AnimationEventFlags::EFFECT_SKILL_FIRE_DUMMY_BULLET;
 
     animation_event_flags[74] = AnimationEventFlags::EFFECT_SKILL_CASTING_2;
 
