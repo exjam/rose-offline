@@ -25,14 +25,13 @@ pub enum EffectBulletMoveType {
 
 #[derive(Debug)]
 pub struct EffectData {
+    pub id: EffectId,
     pub point_effects: ArrayVec<EffectFileId, 4>,
-    pub trail_normal: Option<EffectFileId>,
-    pub trail_critical: Option<EffectFileId>,
+    pub trail_effect: Option<EffectFileId>,
     pub trail_duration: Duration,
-    pub hit_normal: Option<EffectFileId>,
-    pub hit_critical: Option<EffectFileId>,
-    pub bullet_normal: Option<EffectFileId>,
-    pub bullet_critical: Option<EffectFileId>,
+    pub hit_effect_normal: Option<EffectFileId>,
+    pub hit_effect_critical: Option<EffectFileId>,
+    pub bullet_effect: Option<EffectFileId>,
     pub bullet_move_type: Option<EffectBulletMoveType>,
     pub bullet_speed: f32,
     pub fire_sound_id: Option<SoundId>,

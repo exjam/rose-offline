@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use rose_data::{EffectData, EffectDatabase, EffectFileId, SoundId};
+use rose_data::{EffectData, EffectDatabase, EffectFileId, EffectId, SoundId};
 use rose_file_readers::{stb_column, StbFile, VfsIndex, VfsPathBuf};
 
 use crate::data_decoder::IroseEffectBulletMoveType;
@@ -16,14 +16,12 @@ impl StbEffect {
     stb_column! { (2..=5), get_effect_points, [Option<EffectFileId>; 4] }
 
     stb_column! { 6, get_trail_normal, EffectFileId }
-    stb_column! { 7, get_trail_critical, EffectFileId }
     stb_column! { 8, get_trail_duration, u32 }
 
     stb_column! { 9, get_hit_normal, EffectFileId }
     stb_column! { 10, get_hit_critical, EffectFileId }
 
     stb_column! { 11, get_bullet_normal, EffectFileId }
-    stb_column! { 12, get_bullet_critical, EffectFileId }
     stb_column! { 13, get_bullet_move_type, IroseEffectBulletMoveType }
     stb_column! { 15, get_bullet_speed, f32 }
 
@@ -33,19 +31,18 @@ impl StbEffect {
 
 fn load_effect(data: &StbEffect, id: usize) -> Option<EffectData> {
     Some(EffectData {
+        id: EffectId::new(id as u16)?,
         point_effects: data
             .get_effect_points(id)
             .iter()
             .filter_map(|x| x.as_ref())
             .copied()
             .collect(),
-        trail_normal: data.get_trail_normal(id),
-        trail_critical: data.get_trail_critical(id),
+        trail_effect: data.get_trail_normal(id),
         trail_duration: Duration::from_millis(data.get_trail_duration(id).unwrap_or(0) as u64),
-        hit_normal: data.get_hit_normal(id),
-        hit_critical: data.get_hit_critical(id),
-        bullet_normal: data.get_bullet_normal(id),
-        bullet_critical: data.get_bullet_critical(id),
+        hit_effect_normal: data.get_hit_normal(id),
+        hit_effect_critical: data.get_hit_critical(id),
+        bullet_effect: data.get_bullet_normal(id),
         bullet_move_type: data
             .get_bullet_move_type(id)
             .and_then(|x| x.try_into().ok()),
