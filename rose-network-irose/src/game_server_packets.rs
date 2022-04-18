@@ -2273,7 +2273,7 @@ impl TryFrom<&Packet> for PacketServerUpdateAbilityValue {
 
     fn try_from(packet: &Packet) -> Result<Self, PacketError> {
         if packet.command != ServerPackets::UpdateAbilityValueRewardAdd as u16
-            || packet.command != ServerPackets::UpdateAbilityValueRewardSet as u16
+            && packet.command != ServerPackets::UpdateAbilityValueRewardSet as u16
         {
             return Err(PacketError::InvalidPacket);
         }
