@@ -5,6 +5,7 @@ use std::time::Duration;
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, ItemClass, SkillActionMode, StackableSlotBehaviour,
 };
+use rose_game_common::components::{CharacterGender, CharacterInfo};
 
 use crate::game::{
     bundles::client_entity_leave_zone,
@@ -160,6 +161,7 @@ pub fn command_system(
         &mut Command,
         &mut NextCommand,
         Option<&GameClient>,
+        Option<&CharacterInfo>,
         Option<&mut Equipment>,
         Option<&mut Inventory>,
         Option<&Npc>,
@@ -192,6 +194,7 @@ pub fn command_system(
             mut command,
             mut next_command,
             game_client,
+            character_info,
             equipment,
             inventory,
             npc,
@@ -402,6 +405,25 @@ pub fn command_system(
                     .send_entity_message(client_entity, ServerMessage::SitToggle(client_entity.id));
                 return;
             }
+
+            let weapon_item_data = equipment.as_ref().and_then(|equipment| {
+                equipment
+                    .get_equipment_item(EquipmentIndex::WeaponRight)
+                    .and_then(|weapon_item| {
+                        game_data
+                            .items
+                            .get_weapon_item(weapon_item.item.item_number)
+                    })
+            });
+            let weapon_motion_type = weapon_item_data
+                .map(|weapon_item_data| weapon_item_data.motion_type as usize)
+                .unwrap_or(0);
+            let weapon_motion_gender = character_info
+                .map(|character_info| match character_info.gender {
+                    CharacterGender::Male => 0,
+                    CharacterGender::Female => 1,
+                })
+                .unwrap_or(0);
 
             match next_command.command.as_mut().unwrap() {
                 &mut CommandData::Stop(CommandStop { send_message }) => {
@@ -619,13 +641,8 @@ pub fn command_system(
                             let mut cancel_attack = false;
 
                             if let Some(mut equipment) = equipment {
-                                if let Some(weapon_data) = equipment
-                                    .get_equipment_item(EquipmentIndex::WeaponRight)
-                                    .and_then(|weapon_item| {
-                                        game_data.items.get_base_item(weapon_item.item)
-                                    })
-                                {
-                                    let ammo_index = match weapon_data.class {
+                                if let Some(weapon_item_data) = weapon_item_data {
+                                    let ammo_index = match weapon_item_data.item_data.class {
                                         ItemClass::Bow | ItemClass::Crossbow => {
                                             Some(AmmoIndex::Arrow)
                                         }
@@ -782,7 +799,11 @@ pub fn command_system(
                                     if let Some(npc) = npc {
                                         game_data.npcs.get_npc_motion(npc.id, motion_id)
                                     } else {
-                                        game_data.motions.find_first_character_motion(motion_id)
+                                        game_data.motions.find_first_character_motion(
+                                            motion_id,
+                                            weapon_motion_type,
+                                            weapon_motion_gender,
+                                        )
                                     }
                                 })
                                 .map(|motion_data| motion_data.duration)
@@ -795,7 +816,11 @@ pub fn command_system(
                                     if let Some(npc) = npc {
                                         game_data.npcs.get_npc_motion(npc.id, motion_id)
                                     } else {
-                                        game_data.motions.find_first_character_motion(motion_id)
+                                        game_data.motions.find_first_character_motion(
+                                            motion_id,
+                                            weapon_motion_type,
+                                            weapon_motion_gender,
+                                        )
                                     }
                                 })
                                 .map(|motion_data| motion_data.duration)
@@ -931,7 +956,11 @@ pub fn command_system(
                     let motion_data = if let Some(npc) = npc {
                         game_data.npcs.get_npc_motion(npc.id, motion_id)
                     } else {
-                        game_data.motions.find_first_character_motion(motion_id)
+                        game_data.motions.find_first_character_motion(
+                            motion_id,
+                            weapon_motion_type,
+                            weapon_motion_gender,
+                        )
                     };
 
                     // We wait to send emote message until now as client applies it immediately
