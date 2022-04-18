@@ -177,7 +177,7 @@ pub struct SkillData {
     pub damage_type: i32,
     pub harm: u32,
     pub hit_effect_file_id: Option<EffectFileId>,
-    pub hit_link_dummy_bone_id: u32,
+    pub hit_link_dummy_bone_id: Option<usize>,
     pub hit_sound_id: Option<SoundId>,
     pub item_make_number: u32,
     pub power: u32,

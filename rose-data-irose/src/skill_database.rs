@@ -235,7 +235,10 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         damage_type: data.get_damage_type(id).unwrap_or(0),
         harm: data.get_harm(id).unwrap_or(0),
         hit_effect_file_id: data.get_hit_effect_id(id),
-        hit_link_dummy_bone_id: data.get_hit_effect_dummy_bone_id(id).unwrap_or(0),
+        hit_link_dummy_bone_id: data
+            .get_hit_effect_dummy_bone_id(id)
+            .filter(|x| *x != 999)
+            .map(|x| x as usize),
         hit_sound_id: data.get_hit_sound_id(id),
         icon_number,
         item_make_number: data.get_item_make_number(id).unwrap_or(0),
