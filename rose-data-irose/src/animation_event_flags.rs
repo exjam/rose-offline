@@ -9,31 +9,25 @@ pub fn get_animation_event_flags() -> Vec<AnimationEventFlags> {
     animation_event_flags[20] = AnimationEventFlags::EFFECT_SKILL_DUMMY_HIT_1
         | AnimationEventFlags::SOUND_SKILL_DUMMY_HIT_1;
 
-    animation_event_flags[21] = AnimationEventFlags::APPLY_PENDING_DAMAGE
-        | AnimationEventFlags::EFFECT_WEAPON_ATTACK_HIT
+    animation_event_flags[21] = AnimationEventFlags::EFFECT_WEAPON_ATTACK_HIT
         | AnimationEventFlags::SOUND_WEAPON_ATTACK_HIT;
 
-    animation_event_flags[22] = AnimationEventFlags::APPLY_PENDING_DAMAGE
-        | AnimationEventFlags::EFFECT_WEAPON_FIRE_BULLET
+    animation_event_flags[22] = AnimationEventFlags::EFFECT_WEAPON_FIRE_BULLET
         | AnimationEventFlags::SOUND_WEAPON_FIRE_BULLET;
 
-    animation_event_flags[23] = AnimationEventFlags::APPLY_PENDING_DAMAGE
-        | AnimationEventFlags::EFFECT_WEAPON_FIRE_BULLET
+    animation_event_flags[23] = AnimationEventFlags::EFFECT_WEAPON_FIRE_BULLET
         | AnimationEventFlags::SOUND_WEAPON_FIRE_BULLET;
 
-    animation_event_flags[24] = AnimationEventFlags::APPLY_PENDING_DAMAGE
-        | AnimationEventFlags::APPLY_PENDING_SKILL_EFFECT
+    animation_event_flags[24] = AnimationEventFlags::APPLY_PENDING_SKILL_EFFECT
         | AnimationEventFlags::SOUND_SKILL_FIRE_BULLET
         | AnimationEventFlags::EFFECT_SKILL_ACTION;
 
-    animation_event_flags[25] = AnimationEventFlags::APPLY_PENDING_DAMAGE
-        | AnimationEventFlags::APPLY_PENDING_SKILL_EFFECT
+    animation_event_flags[25] = AnimationEventFlags::APPLY_PENDING_SKILL_EFFECT
         | AnimationEventFlags::EFFECT_SKILL_HIT
         | AnimationEventFlags::SOUND_SKILL_HIT
         | AnimationEventFlags::EFFECT_SKILL_ACTION;
 
-    animation_event_flags[26] =
-        AnimationEventFlags::APPLY_PENDING_DAMAGE | AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
+    animation_event_flags[26] = AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
 
     animation_event_flags[31] = AnimationEventFlags::SOUND_WEAPON_ATTACK_START;
 
@@ -45,13 +39,11 @@ pub fn get_animation_event_flags() -> Vec<AnimationEventFlags> {
 
     animation_event_flags[44] = AnimationEventFlags::EFFECT_SKILL_CASTING_0;
 
-    animation_event_flags[56] =
-        AnimationEventFlags::APPLY_PENDING_DAMAGE | AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
+    animation_event_flags[56] = AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
 
     animation_event_flags[64] = AnimationEventFlags::EFFECT_SKILL_CASTING_1;
 
-    animation_event_flags[66] =
-        AnimationEventFlags::APPLY_PENDING_DAMAGE | AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
+    animation_event_flags[66] = AnimationEventFlags::EFFECT_SKILL_FIRE_BULLET;
 
     animation_event_flags[74] = AnimationEventFlags::EFFECT_SKILL_CASTING_2;
 

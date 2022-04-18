@@ -26,7 +26,6 @@ bitflags::bitflags! {
         const EFFECT_SKILL_ACTION        = 1 << 22;
 
         const APPLY_RESSURRECTON         = 1 << 29;
-        const APPLY_PENDING_DAMAGE       = 1 << 30;
         const APPLY_PENDING_SKILL_EFFECT = 1 << 31;
     }
 }
