@@ -110,7 +110,7 @@ pub use skill_database::{
     SkillType,
 };
 pub use skybox_database::{SkyboxData, SkyboxDatabase, SkyboxId, SkyboxState};
-pub use sound_database::SoundId;
+pub use sound_database::{SoundData, SoundDatabase, SoundId};
 pub use status_effect_database::{
     StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
     StatusEffectType,

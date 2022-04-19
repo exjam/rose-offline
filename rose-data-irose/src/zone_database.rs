@@ -356,6 +356,10 @@ fn load_zone_list_entry(
             .get_zone_night_time(id)
             .unwrap_or((5 * WORLD_TICKS_PER_DAY / 6) as u32),
         skybox_id: data.get_zone_skybox_id(id),
+        background_music_day: data.get_zone_background_music_day(id).map(VfsPathBuf::new),
+        background_music_night: data
+            .get_zone_background_music_night(id)
+            .map(VfsPathBuf::new),
     })
 }
 
