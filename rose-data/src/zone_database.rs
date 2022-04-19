@@ -2,7 +2,7 @@ use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
-use crate::{NpcConversationId, NpcId};
+use crate::{NpcConversationId, NpcId, SkyboxId};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct ZoneId(pub NonZeroU16);
@@ -53,6 +53,7 @@ pub struct ZoneData {
     pub day_time: u32,
     pub evening_time: u32,
     pub night_time: u32,
+    pub skybox_id: Option<SkyboxId>,
 }
 
 impl ZoneData {

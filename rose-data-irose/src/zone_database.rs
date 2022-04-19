@@ -2,7 +2,7 @@ use bevy::math::{Quat, Vec2, Vec3, Vec3Swizzles};
 use log::debug;
 
 use rose_data::{
-    NpcConversationId, NpcId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneList,
+    NpcConversationId, NpcId, SkyboxId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneList,
     ZoneListEntry, ZoneMonsterSpawnPoint, ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
 };
 use rose_file_readers::{
@@ -27,7 +27,7 @@ impl StbZone {
     stb_column! { 0, get_zone_is_underground, bool }
     stb_column! { 5, get_zone_background_music_day, &str }
     stb_column! { 6, get_zone_background_music_night, &str }
-    stb_column! { 7, get_zone_skybox_index, u32 }
+    stb_column! { 7, get_zone_skybox_id, SkyboxId }
     stb_column! { 8, get_zone_minimap_filename, &str }
     stb_column! { 9, get_zone_minimap_start_x, u32 }
     stb_column! { 10, get_zone_minimap_start_y, u32 }
@@ -305,6 +305,7 @@ fn load_zone(
         night_time: data
             .get_zone_night_time(id)
             .unwrap_or((5 * WORLD_TICKS_PER_DAY / 6) as u32),
+        skybox_id: data.get_zone_skybox_id(id),
     })
 }
 
@@ -339,6 +340,22 @@ fn load_zone_list_entry(
         zon_file_path: VfsPathBuf::new(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?),
         zsc_cnst_path: VfsPathBuf::new(data.get_zone_cnst_table(id).unwrap_or("")),
         zsc_deco_path: VfsPathBuf::new(data.get_zone_deco_table(id).unwrap_or("")),
+        day_cycle: data
+            .get_zone_day_cycle_time(id)
+            .unwrap_or(WORLD_TICKS_PER_DAY as u32),
+        morning_time: data
+            .get_zone_morning_time(id)
+            .unwrap_or((WORLD_TICKS_PER_DAY / 6) as u32),
+        day_time: data
+            .get_zone_day_time(id)
+            .unwrap_or((2 * WORLD_TICKS_PER_DAY / 6) as u32),
+        evening_time: data
+            .get_zone_evening_time(id)
+            .unwrap_or((4 * WORLD_TICKS_PER_DAY / 6) as u32),
+        night_time: data
+            .get_zone_night_time(id)
+            .unwrap_or((5 * WORLD_TICKS_PER_DAY / 6) as u32),
+        skybox_id: data.get_zone_skybox_id(id),
     })
 }
 

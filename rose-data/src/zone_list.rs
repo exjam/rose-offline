@@ -1,6 +1,6 @@
 use rose_file_readers::VfsPathBuf;
 
-use crate::ZoneId;
+use crate::{SkyboxId, ZoneId};
 
 pub struct ZoneListEntry {
     pub id: ZoneId,
@@ -8,6 +8,12 @@ pub struct ZoneListEntry {
     pub zon_file_path: VfsPathBuf,
     pub zsc_cnst_path: VfsPathBuf,
     pub zsc_deco_path: VfsPathBuf,
+    pub day_cycle: u32,
+    pub morning_time: u32,
+    pub day_time: u32,
+    pub evening_time: u32,
+    pub night_time: u32,
+    pub skybox_id: Option<SkyboxId>,
 }
 
 pub struct ZoneList {

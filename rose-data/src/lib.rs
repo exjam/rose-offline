@@ -70,6 +70,7 @@ mod motion_file_data;
 mod npc_database;
 mod quest_database;
 mod skill_database;
+mod skybox_database;
 mod sound_database;
 mod status_effect_database;
 mod warp_gate_database;
@@ -108,6 +109,7 @@ pub use skill_database::{
     SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
     SkillType,
 };
+pub use skybox_database::{SkyboxData, SkyboxDatabase, SkyboxId, SkyboxState};
 pub use sound_database::SoundId;
 pub use status_effect_database::{
     StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
