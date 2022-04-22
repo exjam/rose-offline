@@ -1848,7 +1848,7 @@ impl TryFrom<&Packet> for PacketServerUpdateAmmo {
             decode_ammo_index(ammo_part.item_type() as usize).ok_or(PacketError::InvalidPacket)?;
 
         let item = StackableItem::new(
-            &ItemReference::new(ItemType::Material, ammo_part.item_number() as usize),
+            ItemReference::new(ItemType::Material, ammo_part.item_number() as usize),
             999,
         );
 

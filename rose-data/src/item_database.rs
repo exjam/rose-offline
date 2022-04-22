@@ -190,6 +190,7 @@ impl ItemClass {
 
 #[derive(Debug)]
 pub struct BaseItemData {
+    pub id: ItemReference,
     pub name: String,
     pub class: ItemClass,
     pub base_price: u32,
@@ -208,7 +209,7 @@ pub struct BaseItemData {
     pub equip_ability_requirement: ArrayVec<(AbilityType, u32), 2>,
     pub add_ability_union_requirement: ArrayVec<u32, 2>,
     pub add_ability: ArrayVec<(AbilityType, i32), 2>,
-    pub durability: u32,
+    pub durability: u8,
     pub rare_type: u32,
     pub defence: u32,
     pub resistance: u32,

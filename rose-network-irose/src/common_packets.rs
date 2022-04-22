@@ -182,15 +182,15 @@ fn decode_item_full_bytes(item_bytes: &[u8]) -> Result<Option<Item>, PacketError
         if item_type.is_stackable_item() {
             let stackable_item =
                 PacketStackableItemFull::from_bytes(item_bytes.try_into().unwrap());
-            if let Some(item) = StackableItem::new(&item_reference, stackable_item.quantity()) {
+            if let Some(item) = StackableItem::new(item_reference, stackable_item.quantity()) {
                 return Ok(Some(Item::Stackable(item)));
             }
         } else {
             let equipment_item =
                 PacketEquipmentItemFull::from_bytes(item_bytes.try_into().unwrap());
-            if let Some(mut item) = EquipmentItem::new(&item_reference) {
+            if let Some(mut item) = EquipmentItem::new(item_reference, equipment_item.durability())
+            {
                 item.gem = equipment_item.gem();
-                item.durability = equipment_item.durability();
                 item.life = equipment_item.life();
                 item.grade = equipment_item.grade();
                 item.is_crafted = equipment_item.is_crafted();
@@ -230,12 +230,12 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         );
 
         if let Some(item_type) = decode_item_type(item.item_type() as usize) {
-            if let Some(mut equipment) =
-                EquipmentItem::new(&ItemReference::new(item_type, item.item_number() as usize))
-            {
+            if let Some(mut equipment) = EquipmentItem::new(
+                ItemReference::new(item_type, item.item_number() as usize),
+                item.durability(),
+            ) {
                 equipment.is_crafted = item.is_crafted();
                 equipment.gem = item.gem();
-                equipment.durability = item.durability();
                 equipment.life = item.life();
                 equipment.has_socket = item.has_socket();
                 equipment.is_appraised = item.is_appraised();
@@ -254,7 +254,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
 
         if let Some(item_type) = decode_item_type(item.item_type() as usize) {
             return Ok(StackableItem::new(
-                &ItemReference::new(item_type, item.item_number() as usize),
+                ItemReference::new(item_type, item.item_number() as usize),
                 item.quantity() as u32,
             ));
         }
@@ -271,10 +271,10 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         );
         self.read_u8()?;
 
-        if let Some(mut item) = EquipmentItem::new(&ItemReference::new(
-            item_type,
-            item_part.item_number() as usize,
-        )) {
+        if let Some(mut item) = EquipmentItem::new(
+            ItemReference::new(item_type, item_part.item_number() as usize),
+            0,
+        ) {
             item.gem = item_part.gem();
             item.grade = item_part.grade();
             item.has_socket = item_part.has_socket();
@@ -310,7 +310,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
 
         if let Some(item_type) = decode_item_type(ammo_part.item_type() as usize) {
             if let Some(item) = StackableItem::new(
-                &ItemReference::new(item_type, ammo_part.item_number() as usize),
+                ItemReference::new(item_type, ammo_part.item_number() as usize),
                 999,
             ) {
                 Ok(Some(item))

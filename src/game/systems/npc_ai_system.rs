@@ -1338,7 +1338,13 @@ fn ai_action_drop_random_item(
                 .data_decoder
                 .decode_item_base1000(*item_base1000 as usize)
         })
-        .and_then(|item_reference| Item::new(&item_reference, 1))
+        .and_then(|item_reference| {
+            ai_system_resources
+                .game_data
+                .items
+                .get_base_item(item_reference)
+        })
+        .and_then(|item_data| Item::from_item_data(item_data, 1))
     {
         ItemDropBundle::spawn(
             &mut ai_system_parameters.commands,
@@ -1362,7 +1368,13 @@ fn ai_action_give_item_to_owner(
         .game_data
         .data_decoder
         .decode_item_base1000(item_base1000 as usize)
-        .and_then(|item_reference| Item::new(&item_reference, quantity as u32))
+        .and_then(|item_reference| {
+            ai_system_resources
+                .game_data
+                .items
+                .get_base_item(item_reference)
+        })
+        .and_then(|item_data| Item::from_item_data(item_data, quantity as u32))
     {
         ai_system_parameters
             .reward_item_events

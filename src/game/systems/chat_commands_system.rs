@@ -12,7 +12,8 @@ use std::{
 };
 
 use rose_data::{
-    AbilityType, EquipmentIndex, Item, ItemReference, ItemType, NpcId, SkillId, ZoneId,
+    AbilityType, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, NpcId, SkillId,
+    StackableItem, ZoneId,
 };
 use rose_game_common::{components::CharacterGender, data::Damage};
 
@@ -453,7 +454,9 @@ fn handle_chat_command(
                 let mut inventory = Inventory::new();
                 inventory
                     .try_add_item(
-                        Item::new(&ItemReference::new(ItemType::Consumable, 326), 999).unwrap(),
+                        StackableItem::new(ItemReference::new(ItemType::Consumable, 326), 999)
+                            .unwrap()
+                            .into(),
                     )
                     .ok();
 
@@ -477,12 +480,23 @@ fn handle_chat_command(
                     ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_id))
                 })?;
 
-            let mut all_items: Vec<ItemReference> = chat_command_params
+            let mut all_items: Vec<(ItemReference, u8)> = chat_command_params
                 .game_data
                 .items
                 .iter_items(item_type)
+                .map(|item| {
+                    (
+                        item,
+                        chat_command_params
+                            .game_data
+                            .items
+                            .get_base_item(item)
+                            .map(|x| x.durability)
+                            .unwrap_or(0),
+                    )
+                })
                 .collect();
-            all_items.sort_by(|a, b| a.item_number.cmp(&b.item_number));
+            all_items.sort_by(|(a, _), (b, _)| a.item_number.cmp(&b.item_number));
 
             let num_bots =
                 (all_items.len() + PERSONAL_STORE_ITEM_SLOTS - 1) / PERSONAL_STORE_ITEM_SLOTS;
@@ -499,7 +513,13 @@ fn handle_chat_command(
                 let mut inventory = Inventory::new();
 
                 for i in index..index + PERSONAL_STORE_ITEM_SLOTS {
-                    if let Some(item) = all_items.get(i).and_then(|item| Item::new(item, 999)) {
+                    if let Some(item) = all_items.get(i).and_then(|(item, durability)| {
+                        if item_type.is_stackable_item() {
+                            StackableItem::new(*item, 999).map(Item::from)
+                        } else {
+                            EquipmentItem::new(*item, *durability).map(Item::from)
+                        }
+                    }) {
                         if let Ok((slot, _)) = inventory.try_add_item(item) {
                             store.add_sell_item(slot, Money(1)).ok();
                         }
@@ -760,7 +780,16 @@ fn handle_chat_command(
                 .and_then(|str| str.parse::<u32>().ok())
                 .unwrap_or(1);
 
-            let item = Item::new(&ItemReference::new(item_type, item_number), quantity)
+            let item_reference = ItemReference::new(item_type, item_number);
+            let item_data = chat_command_params
+                .game_data
+                .items
+                .get_base_item(item_reference)
+                .ok_or_else(|| {
+                    ChatCommandError::WithMessage(format!("Invalid item {:?}", item_reference))
+                })?;
+
+            let item = Item::from_item_data(item_data, quantity)
                 .ok_or(ChatCommandError::InvalidArguments)?;
 
             chat_command_params

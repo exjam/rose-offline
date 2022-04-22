@@ -2,7 +2,7 @@ use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
-use crate::{ItemClass, ItemReference, ItemType};
+use crate::{BaseItemData, ItemClass, ItemReference, ItemType};
 
 const MAX_STACKABLE_ITEM_QUANTITY: u32 = 999;
 
@@ -127,12 +127,12 @@ pub struct EquipmentItem {
 }
 
 impl EquipmentItem {
-    pub fn new(item: &ItemReference) -> Option<EquipmentItem> {
+    pub fn new(item: ItemReference, durability: u8) -> Option<EquipmentItem> {
         if item.item_type.is_equipment_item() && item.item_number != 0 {
             Some(EquipmentItem {
-                item: *item,
+                item,
                 gem: 0,
-                durability: 100,
+                durability,
                 life: 1000,
                 grade: 0,
                 is_crafted: false,
@@ -142,6 +142,10 @@ impl EquipmentItem {
         } else {
             None
         }
+    }
+
+    pub fn from_item_data(item: &BaseItemData) -> Option<EquipmentItem> {
+        Self::new(item.id, item.durability)
     }
 
     pub fn is_broken(&self) -> bool {
@@ -169,15 +173,16 @@ pub enum StackError {
 }
 
 impl StackableItem {
-    pub fn new(item: &ItemReference, quantity: u32) -> Option<StackableItem> {
+    pub fn new(item: ItemReference, quantity: u32) -> Option<StackableItem> {
         if item.item_type.is_stackable_item() && item.item_number != 0 && quantity > 0 {
-            Some(StackableItem {
-                item: *item,
-                quantity,
-            })
+            Some(StackableItem { item, quantity })
         } else {
             None
         }
+    }
+
+    pub fn from_item_data(item: &BaseItemData, quantity: u32) -> Option<StackableItem> {
+        Self::new(item.id, quantity)
     }
 
     pub fn can_stack_with(&self, stackable: &StackableItem) -> Result<(), StackError> {
@@ -223,14 +228,28 @@ pub enum Item {
     Stackable(StackableItem),
 }
 
+impl From<EquipmentItem> for Item {
+    fn from(item: EquipmentItem) -> Self {
+        Item::Equipment(item)
+    }
+}
+
+impl From<StackableItem> for Item {
+    fn from(item: StackableItem) -> Self {
+        Item::Stackable(item)
+    }
+}
+
 impl Item {
-    pub fn new(item: &ItemReference, quantity: u32) -> Option<Item> {
-        if item.item_type.is_stackable_item() {
-            StackableItem::new(item, quantity).map(Item::Stackable)
-        } else if item.item_type.is_equipment_item() {
-            EquipmentItem::new(item).map(Item::Equipment)
+    pub fn new<T: Into<Item>>(item: T) -> Self {
+        item.into()
+    }
+
+    pub fn from_item_data(item_data: &BaseItemData, quantity: u32) -> Option<Self> {
+        if item_data.id.item_type.is_stackable_item() {
+            StackableItem::new(item_data.id, quantity).map(Item::Stackable)
         } else {
-            None
+            EquipmentItem::new(item_data.id, item_data.durability).map(Item::Equipment)
         }
     }
 

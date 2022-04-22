@@ -2,7 +2,7 @@ use rand::Rng;
 use rose_file_readers::{StbFile, VfsIndex};
 use std::sync::Arc;
 
-use rose_data::{EquipmentItem, Item, ItemDatabase, ItemType, NpcDatabase, NpcId, ZoneId};
+use rose_data::{EquipmentItem, ItemDatabase, ItemType, NpcDatabase, NpcId, StackableItem, ZoneId};
 use rose_data_irose::decode_item_base1000;
 use rose_game_common::{
     components::{DroppedItem, Money},
@@ -63,7 +63,7 @@ impl DropTable for DropTableData {
                 return None;
             }
 
-            return Some(DroppedItem::Money(Money(amount as i64)));
+            return Some(Money(amount as i64).into());
         }
 
         let drop_table_row = if rng.gen_range(1..=100) <= npc_drop_item_rate {
@@ -83,6 +83,9 @@ impl DropTable for DropTableData {
         }
 
         let item_reference = decode_item_base1000(drop_value as usize)?;
+        let item_data = self.item_database.get_base_item(item_reference);
+        let item_durability = item_data.map(|x| x.durability).unwrap_or(0);
+
         match item_reference.item_type {
             ItemType::Face
             | ItemType::Head
@@ -93,9 +96,8 @@ impl DropTable for DropTableData {
             | ItemType::Jewellery
             | ItemType::Weapon
             | ItemType::SubWeapon => {
-                let item_data = self.item_database.get_base_item(item_reference);
                 let item_rare_type = item_data.map(|x| x.rare_type).unwrap_or(0);
-                let mut item = EquipmentItem::new(&item_reference)?;
+                let mut item = EquipmentItem::new(item_reference, item_durability)?;
 
                 match item_rare_type {
                     3 => {
@@ -136,7 +138,6 @@ impl DropTable for DropTableData {
                     _ => {}
                 }
 
-                let item_durability = item_data.map(|x| x.durability).unwrap_or(0);
                 let durability = ((item_durability as f32
                     * (npc_level as f32 * 0.3 + npc_drop_item_rate as f32 * 2.0 + 320.0)
                     * 0.5)
@@ -167,16 +168,17 @@ impl DropTable for DropTableData {
                     item.grade = item_grade.min(3).max(0) as u8;
                 }
 
-                Some(DroppedItem::Item(Item::Equipment(item)))
+                Some(item.into())
             }
-            ItemType::Consumable | ItemType::Vehicle => {
-                Item::new(&item_reference, 1).map(DroppedItem::Item)
+            ItemType::Vehicle => {
+                EquipmentItem::new(item_reference, item_durability).map(Into::into)
             }
+            ItemType::Consumable => StackableItem::new(item_reference, 1).map(Into::into),
             ItemType::Gem | ItemType::Material | ItemType::Quest => {
                 let quantity = (1
                     + ((npc_level + 10) / 9 + rng.gen_range(1..=20) + character_drop_rate)
                         / (drop_var + 4)) as u32;
-                Item::new(&item_reference, quantity.min(10)).map(DroppedItem::Item)
+                StackableItem::new(item_reference, quantity.min(10)).map(Into::into)
             }
         }
     }

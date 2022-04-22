@@ -46,6 +46,7 @@ pub fn get_game_data(data_idx_path: Option<&Path>, data_extracted_path: Option<&
     GameData {
         character_creator: get_character_creator(
             &vfs_index,
+            item_database.clone(),
             skill_database.clone(),
             &zone_database,
         )

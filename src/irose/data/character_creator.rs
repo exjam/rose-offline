@@ -4,7 +4,8 @@ use rose_game_common::components::CharacterGender;
 use std::sync::Arc;
 
 use rose_data::{
-    EquipmentItem, Item, QuestTriggerHash, SkillDatabase, SkillId, ZoneDatabase, ZoneId,
+    EquipmentItem, ItemDatabase, ItemReference, QuestTriggerHash, SkillDatabase, SkillId,
+    StackableItem, ZoneDatabase, ZoneId,
 };
 use rose_data_irose::decode_item_base1000;
 use rose_file_readers::{stb_column, StbFile, VfsIndex};
@@ -20,11 +21,14 @@ use crate::game::{
 
 struct CharacterGenderData {
     basic_stats: BasicStats,
-    inventory_items: Vec<Item>,
-    equipped_items: Vec<EquipmentItem>,
+    equipped_items: Vec<ItemReference>,
+    inventory_equipment: Vec<ItemReference>,
+    inventory_consumables: Vec<(ItemReference, usize)>,
+    inventory_materials: Vec<(ItemReference, usize)>,
 }
 
 struct CharacterCreatorData {
+    item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     gender_data: EnumMap<CharacterGender, CharacterGenderData>,
     skills: Vec<SkillId>,
@@ -53,62 +57,49 @@ impl StbInitAvatar {
         })
     }
 
-    pub fn get_equipment(&self, row: usize) -> Vec<EquipmentItem> {
+    pub fn get_equipment(&self, row: usize) -> Vec<ItemReference> {
         let mut items = Vec::new();
         for i in 6..=13 {
             let item = self.0.try_get_int(row, i).unwrap_or(0) as usize;
-            if let Some(item) =
-                decode_item_base1000(item).and_then(|item| EquipmentItem::new(&item))
-            {
+            if let Some(item) = decode_item_base1000(item) {
                 items.push(item);
             }
         }
         items
     }
 
-    fn get_inventory_equipment(&self, row: usize) -> Vec<Item> {
+    fn get_inventory_equipment(&self, row: usize) -> Vec<ItemReference> {
         let mut items = Vec::new();
         for i in 0..10 {
             let item = self.0.try_get_int(row, 14 + i).unwrap_or(0) as usize;
-            if let Some(item) = decode_item_base1000(item).and_then(|item| Item::new(&item, 1)) {
+            if let Some(item) = decode_item_base1000(item) {
                 items.push(item);
             }
         }
         items
     }
 
-    fn get_inventory_consumables(&self, row: usize) -> Vec<Item> {
+    fn get_inventory_consumables(&self, row: usize) -> Vec<(ItemReference, usize)> {
         let mut items = Vec::new();
         for i in 0..5 {
             let item = self.0.try_get_int(row, 24 + i * 2).unwrap_or(0) as usize;
-            let quantity = self.0.try_get_int(row, 25 + i * 2).unwrap_or(0) as u32;
-            if let Some(item) =
-                decode_item_base1000(item).and_then(|item| Item::new(&item, quantity))
-            {
-                items.push(item);
+            let quantity = self.0.try_get_int(row, 25 + i * 2).unwrap_or(0) as usize;
+            if let Some(item) = decode_item_base1000(item) {
+                items.push((item, quantity));
             }
         }
         items
     }
 
-    fn get_inventory_materials(&self, row: usize) -> Vec<Item> {
+    fn get_inventory_materials(&self, row: usize) -> Vec<(ItemReference, usize)> {
         let mut items = Vec::new();
         for i in 0..5 {
             let item = self.0.try_get_int(row, 34 + i * 2).unwrap_or(0) as usize;
-            let quantity = self.0.try_get_int(row, 35 + i * 2).unwrap_or(0) as u32;
-            if let Some(item) =
-                decode_item_base1000(item).and_then(|item| Item::new(&item, quantity))
-            {
-                items.push(item);
+            let quantity = self.0.try_get_int(row, 35 + i * 2).unwrap_or(0) as usize;
+            if let Some(item) = decode_item_base1000(item) {
+                items.push((item, quantity));
             }
         }
-        items
-    }
-
-    pub fn get_inventory_items(&self, row: usize) -> Vec<Item> {
-        let mut items = self.get_inventory_equipment(row);
-        items.append(&mut self.get_inventory_consumables(row));
-        items.append(&mut self.get_inventory_materials(row));
         items
     }
 }
@@ -168,12 +159,36 @@ impl CharacterCreator for CharacterCreatorData {
             }
         }
 
-        character
-            .equipment
-            .equip_items(gender_data.equipped_items.clone());
+        for item_reference in gender_data.equipped_items.iter().cloned() {
+            if let Some(item_data) = self.item_database.get_base_item(item_reference) {
+                if let Some(item) = EquipmentItem::from_item_data(item_data) {
+                    character.equipment.equip_item(item).ok();
+                }
+            }
+        }
 
-        for item in gender_data.inventory_items.clone() {
-            character.inventory.try_add_item(item).ok();
+        for item_reference in gender_data.inventory_equipment.iter().cloned() {
+            if let Some(item_data) = self.item_database.get_base_item(item_reference) {
+                if let Some(item) = EquipmentItem::from_item_data(item_data) {
+                    character.inventory.try_add_item(item.into()).ok();
+                }
+            }
+        }
+
+        for (item_reference, quantity) in gender_data.inventory_consumables.iter().cloned() {
+            if let Some(item_data) = self.item_database.get_base_item(item_reference) {
+                if let Some(item) = StackableItem::from_item_data(item_data, quantity as u32) {
+                    character.inventory.try_add_item(item.into()).ok();
+                }
+            }
+        }
+
+        for (item_reference, quantity) in gender_data.inventory_materials.iter().cloned() {
+            if let Some(item_data) = self.item_database.get_base_item(item_reference) {
+                if let Some(item) = StackableItem::from_item_data(item_data, quantity as u32) {
+                    character.inventory.try_add_item(item.into()).ok();
+                }
+            }
         }
 
         Ok(character)
@@ -189,19 +204,18 @@ impl CharacterCreator for CharacterCreatorData {
 }
 
 fn load_gender(data: &StbInitAvatar, id: usize) -> Option<CharacterGenderData> {
-    let basic_stats = data.get_basic_stats(id)?;
-    let inventory_items = data.get_inventory_items(id);
-    let equipped_items = data.get_equipment(id);
-
     Some(CharacterGenderData {
-        basic_stats,
-        inventory_items,
-        equipped_items,
+        basic_stats: data.get_basic_stats(id)?,
+        equipped_items: data.get_equipment(id),
+        inventory_consumables: data.get_inventory_consumables(id),
+        inventory_equipment: data.get_inventory_equipment(id),
+        inventory_materials: data.get_inventory_materials(id),
     })
 }
 
 pub fn get_character_creator(
     vfs: &VfsIndex,
+    item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     zone_database: &ZoneDatabase,
 ) -> Option<Box<impl CharacterCreator + Send + Sync>> {
@@ -231,6 +245,7 @@ pub fn get_character_creator(
     let start_position = Vec3::new(530500.0, 539500.0, 0.0);
 
     Some(Box::new(CharacterCreatorData {
+        item_database,
         skill_database,
         gender_data,
         skills,

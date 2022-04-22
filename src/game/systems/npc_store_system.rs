@@ -108,6 +108,11 @@ fn npc_store_do_transaction(
             .get(&(buy_item.item_index as u16))
             .ok_or(NpcStoreTransactionError::NpcNotFound)?;
 
+        let store_item_data = game_data
+            .items
+            .get_base_item(store_item_reference)
+            .ok_or(NpcStoreTransactionError::NpcNotFound)?;
+
         let item_price = game_data
             .ability_value_calculator
             .calculate_npc_store_item_buy_price(
@@ -125,7 +130,7 @@ fn npc_store_do_transaction(
             1
         } as i64;
 
-        let item = Item::new(&store_item_reference, buy_quantity as u32)
+        let item = Item::from_item_data(store_item_data, buy_quantity as u32)
             .ok_or(NpcStoreTransactionError::NpcNotFound)?;
 
         let (inventory_slot, _) = transaction_inventory

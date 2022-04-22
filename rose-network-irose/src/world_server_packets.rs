@@ -109,7 +109,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
                 let grade = reader.read_u16()?;
                 if item_number != 0 {
                     if let Some(mut item) =
-                        EquipmentItem::new(&ItemReference::new(index.into(), item_number))
+                        EquipmentItem::new(ItemReference::new(index.into(), item_number), 0)
                     {
                         item.grade = grade as u8;
                         equipment.equip_item(item).ok();

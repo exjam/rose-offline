@@ -876,6 +876,16 @@ fn quest_reward_calculated_item(
         return false;
     }
     let reward_item = reward_item.unwrap();
+
+    let reward_item_data = quest_system_resources
+        .game_data
+        .items
+        .get_base_item(reward_item);
+    if reward_item_data.is_none() {
+        return false;
+    }
+    let reward_item_data = reward_item_data.unwrap();
+
     let reward_gem = reward_gem_base1000.and_then(|item_base1000| {
         quest_system_resources
             .game_data
@@ -884,7 +894,7 @@ fn quest_reward_calculated_item(
     });
 
     let item = if reward_item.item_type.is_stackable_item() {
-        let reward_value = quest_system_resources
+        let reward_quantity = quest_system_resources
             .game_data
             .ability_value_calculator
             .calculate_reward_value(
@@ -906,12 +916,12 @@ fn quest_reward_calculated_item(
                     .unwrap_or(0) as i32,
                 quest_system_resources.world_rates.reward_rate,
             );
-        if reward_value > 0 {
-            Item::new(&reward_item, reward_value as u32)
+        if reward_quantity > 0 {
+            Item::from_item_data(reward_item_data, reward_quantity as u32)
         } else {
             None
         }
-    } else if let Some(mut item) = EquipmentItem::new(&reward_item) {
+    } else if let Some(mut item) = EquipmentItem::new(reward_item, reward_item_data.durability) {
         if let Some(gem) = reward_gem {
             if gem.item_number < 300 {
                 item.is_appraised = true;
@@ -1111,6 +1121,15 @@ fn quest_reward_add_item(
     }
     let item_reference = item_reference.unwrap();
 
+    let item_data = quest_system_resources
+        .game_data
+        .items
+        .get_base_item(item_reference);
+    if item_data.is_none() {
+        return false;
+    }
+    let item_data = item_data.unwrap();
+
     if item_reference.item_type.is_quest_item() {
         // Add to quest items
         if let (Some(quest_state), Some(selected_quest_index)) = (
@@ -1120,14 +1139,14 @@ fn quest_reward_add_item(
             return quest_state
                 .get_quest_mut(selected_quest_index)
                 .and_then(|active_quest| {
-                    Item::new(&item_reference, quantity as u32)
+                    Item::from_item_data(item_data, quantity as u32)
                         .and_then(|item| active_quest.try_add_item(item).ok())
                 })
                 .is_some();
         }
     } else {
         // Add to inventory
-        if let Some(item) = Item::new(&item_reference, quantity as u32) {
+        if let Some(item) = Item::from_item_data(item_data, quantity as u32) {
             quest_system_parameters
                 .reward_item_events
                 .send(RewardItemEvent::new(

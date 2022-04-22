@@ -11,6 +11,18 @@ pub enum DroppedItem {
     Money(Money),
 }
 
+impl<T: Into<Item>> From<T> for DroppedItem {
+    fn from(item: T) -> Self {
+        DroppedItem::Item(item.into())
+    }
+}
+
+impl From<Money> for DroppedItem {
+    fn from(money: Money) -> Self {
+        DroppedItem::Money(money)
+    }
+}
+
 #[derive(Component, Clone)]
 pub struct ItemDrop {
     pub item: Option<DroppedItem>,
