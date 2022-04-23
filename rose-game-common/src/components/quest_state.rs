@@ -99,6 +99,18 @@ impl QuestState {
         None
     }
 
+    pub fn find_active_quest(&self, quest_id: usize) -> Option<&ActiveQuest> {
+        for i in 0..self.active_quests.len() {
+            if let Some(active_quest) = &self.active_quests[i] {
+                if active_quest.quest_id == quest_id {
+                    return Some(active_quest);
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn try_add_quest(&mut self, quest: ActiveQuest) -> Option<usize> {
         for i in 0..self.active_quests.len() {
             if self.active_quests[i].is_none() {
