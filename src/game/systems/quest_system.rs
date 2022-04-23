@@ -2004,16 +2004,17 @@ pub fn quest_system(
                     quest_trigger,
                 ) {
                     success = true;
-                    break;
-                }
 
-                if quest_parameters.next_trigger_name.is_some() {
-                    trigger = quest_parameters.next_trigger_name.take().and_then(|name| {
-                        quest_system_resources
-                            .game_data
-                            .quests
-                            .get_trigger_by_name(&name)
-                    });
+                    if quest_parameters.next_trigger_name.is_some() {
+                        trigger = quest_parameters.next_trigger_name.take().and_then(|name| {
+                            quest_system_resources
+                                .game_data
+                                .quests
+                                .get_trigger_by_name(&name)
+                        });
+                    } else {
+                        trigger = None;
+                    }
                 } else {
                     trigger = trigger
                         .unwrap()
