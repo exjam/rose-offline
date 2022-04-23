@@ -28,9 +28,10 @@ async fn async_main() {
         LevelFilter::Trace,
         ConfigBuilder::new()
             .set_location_level(LevelFilter::Trace)
+            .add_filter_ignore_str("mio")
             .add_filter_ignore_str("npc_ai")
             .add_filter_ignore_str("packets")
-            .add_filter_ignore_str("mio")
+            .add_filter_ignore_str("quest")
             .build(),
         TerminalMode::Stdout,
         ColorChoice::Auto,

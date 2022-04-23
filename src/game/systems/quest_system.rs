@@ -793,7 +793,10 @@ fn quest_trigger_check_conditions(
         };
 
         if !result {
+            log::trace!(target: "quest", "Condition Failed {:?}", condition);
             return false;
+        } else {
+            log::trace!(target: "quest", "Condition Success {:?}", condition);
         }
     }
 
@@ -1872,7 +1875,10 @@ fn quest_trigger_apply_rewards(
         };
 
         if !result {
+            log::trace!(target: "quest", "Reward Failed {:?}", reward);
             return false;
+        } else {
+            log::trace!(target: "quest", "Reward Success {:?}", reward);
         }
     }
 
