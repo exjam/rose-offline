@@ -65,8 +65,8 @@ pub struct IfoMonsterSpawnPoint {
 
 pub struct IfoEventObject {
     pub object: IfoObject,
-    pub function_name: String,
-    pub file_name: String,
+    pub quest_trigger_name: String,
+    pub script_function_name: String,
 }
 
 pub struct IfoNpc {
@@ -175,12 +175,12 @@ impl RoseFile for IfoFile {
 
                         for _ in 0..object_count {
                             let object = read_object(&mut reader)?;
-                            let function_name = reader.read_u8_length_string()?;
-                            let file_name = reader.read_u8_length_string()?;
+                            let quest_trigger_name = reader.read_u8_length_string()?;
+                            let script_function_name = reader.read_u8_length_string()?;
                             event_objects.push(IfoEventObject {
                                 object,
-                                function_name: String::from(function_name),
-                                file_name: String::from(file_name),
+                                quest_trigger_name: String::from(quest_trigger_name),
+                                script_function_name: String::from(script_function_name),
                             })
                         }
                     }
