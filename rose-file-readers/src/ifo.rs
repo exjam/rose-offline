@@ -80,10 +80,12 @@ pub struct IfoFile {
     pub npcs: Vec<IfoNpc>,
     pub event_objects: Vec<IfoEventObject>,
     pub animated_objects: Vec<IfoObject>,
+    pub collision_objects: Vec<IfoObject>,
     pub deco_objects: Vec<IfoObject>,
     pub cnst_objects: Vec<IfoObject>,
     pub water_size: f32,
     pub water_planes: Vec<(Vec3<f32>, Vec3<f32>)>,
+    pub warps: Vec<IfoObject>,
 }
 
 #[derive(FromPrimitive)]
@@ -108,10 +110,12 @@ pub struct IfoReadOptions {
     pub skip_monster_spawns: bool,
     pub skip_npcs: bool,
     pub skip_animated_objects: bool,
+    pub skip_collision_objects: bool,
     pub skip_event_objects: bool,
     pub skip_cnst_objects: bool,
     pub skip_deco_objects: bool,
     pub skip_water_planes: bool,
+    pub skip_warp_objects: bool,
 }
 
 impl RoseFile for IfoFile {
@@ -125,10 +129,12 @@ impl RoseFile for IfoFile {
         let mut npcs = Vec::new();
         let mut event_objects = Vec::new();
         let mut animated_objects = Vec::new();
+        let mut collision_objects = Vec::new();
         let mut cnst_objects = Vec::new();
         let mut deco_objects = Vec::new();
         let mut water_size = 0.0;
         let mut water_planes = Vec::new();
+        let mut warps = Vec::new();
 
         let block_count = reader.read_u32()?;
         for _ in 0..block_count {
@@ -145,6 +151,17 @@ impl RoseFile for IfoFile {
 
                         for _ in 0..object_count {
                             animated_objects.push(read_object(&mut reader)?);
+                        }
+                    }
+                }
+                Some(BlockType::CollisionObject) => {
+                    if !read_options.skip_collision_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        collision_objects.reserve_exact(object_count);
+
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            collision_objects.push(object);
                         }
                     }
                 }
@@ -265,6 +282,17 @@ impl RoseFile for IfoFile {
                         }
                     }
                 }
+                Some(BlockType::Warp) => {
+                    if !read_options.skip_warp_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        warps.reserve_exact(object_count);
+
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            warps.push(object);
+                        }
+                    }
+                }
                 _ => {} // We do not need every block when reading for server
             }
 
@@ -276,10 +304,12 @@ impl RoseFile for IfoFile {
             npcs,
             event_objects,
             animated_objects,
+            collision_objects,
             deco_objects,
             cnst_objects,
             water_size,
             water_planes,
+            warps,
         })
     }
 }

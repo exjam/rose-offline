@@ -170,10 +170,15 @@ fn load_zone(
     );
 
     let ifo_read_options = IfoReadOptions {
+        skip_event_objects: false,
+        skip_monster_spawns: false,
+        skip_npcs: false,
+        skip_animated_objects: true,
+        skip_collision_objects: true,
         skip_cnst_objects: true,
         skip_deco_objects: true,
         skip_water_planes: true,
-        ..Default::default()
+        skip_warp_objects: true,
     };
 
     for block_y in 0..64u32 {
