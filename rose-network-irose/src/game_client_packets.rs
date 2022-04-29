@@ -774,7 +774,7 @@ impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
         }
         let mut reader = PacketReader::from(packet);
 
-        let npc_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let npc_entity_id = reader.read_entity_id()?;
         let buy_item_count = reader.read_u8()?;
         let sell_item_count = reader.read_u8()?;
         let _economy_time = reader.read_u32()?;
@@ -803,6 +803,29 @@ impl TryFrom<&Packet> for PacketClientNpcStoreTransaction {
             buy_items,
             sell_items,
         })
+    }
+}
+
+impl From<&PacketClientNpcStoreTransaction> for Packet {
+    fn from(packet: &PacketClientNpcStoreTransaction) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::NpcStoreTransaction as u16);
+        writer.write_entity_id(packet.npc_entity_id);
+        writer.write_u8(packet.buy_items.len() as u8);
+        writer.write_u8(packet.sell_items.len() as u8);
+        writer.write_u32(0); // economy time
+
+        for buy_item in packet.buy_items.iter() {
+            writer.write_u8(buy_item.tab_index as u8);
+            writer.write_u8(buy_item.item_index as u8);
+            writer.write_u16(buy_item.quantity as u16);
+        }
+
+        for &(item_slot, quantity) in packet.sell_items.iter() {
+            writer.write_item_slot_u8(item_slot);
+            writer.write_u16(quantity as u16);
+        }
+
+        writer.into()
     }
 }
 

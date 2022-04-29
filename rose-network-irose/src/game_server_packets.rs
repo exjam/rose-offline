@@ -77,6 +77,7 @@ pub enum ServerPackets {
     MoveEntity = 0x79a,
     UpdateXpStamina = 0x79b,
     UpdateLevel = 0x79e,
+    NpcStoreTransactionError = 0x7a1,
     UseItem = 0x7a3,
     UpdateEquipment = 0x7a5,
     SpawnEntityItemDrop = 0x7a6,
@@ -3084,9 +3085,34 @@ pub struct PacketServerNpcStoreTransactionError {
     pub error: NpcStoreTransactionError,
 }
 
+impl TryFrom<&Packet> for PacketServerNpcStoreTransactionError {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::NpcStoreTransactionError as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let error = match reader.read_u8()? {
+            1 => NpcStoreTransactionError::PriceDifference,
+            2 => NpcStoreTransactionError::NpcNotFound,
+            3 => NpcStoreTransactionError::NpcTooFarAway,
+            4 => NpcStoreTransactionError::NotEnoughMoney,
+            5 => NpcStoreTransactionError::NotSameUnion,
+            6 => NpcStoreTransactionError::NotEnoughUnionPoints,
+            _ => {
+                return Err(PacketError::InvalidPacket);
+            }
+        };
+
+        Ok(PacketServerNpcStoreTransactionError { error })
+    }
+}
+
 impl From<&PacketServerNpcStoreTransactionError> for Packet {
     fn from(packet: &PacketServerNpcStoreTransactionError) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::UpdateSpeed as u16);
+        let mut writer = PacketWriter::new(ServerPackets::NpcStoreTransactionError as u16);
 
         let error = match packet.error {
             NpcStoreTransactionError::PriceDifference => 1,
