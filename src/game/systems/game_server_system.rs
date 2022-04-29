@@ -38,7 +38,9 @@ use crate::game::{
             ServerMessage, UpdateBasicStat,
         },
     },
-    resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldTime},
+    resources::{
+        ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldRates, WorldTime,
+    },
     storage::{account::AccountStorage, character::CharacterStorage},
 };
 
@@ -298,6 +300,7 @@ pub fn game_server_join_system(
         Without<ClientEntity>,
     >,
     mut client_entity_list: ResMut<ClientEntityList>,
+    world_rates: Res<WorldRates>,
     world_time: Res<WorldTime>,
 ) {
     query.for_each(
@@ -326,6 +329,10 @@ pub fn game_server_join_system(
                                     health_points: *health_points,
                                     mana_points: *mana_points,
                                     world_ticks: world_time.ticks,
+                                    craft_rate: world_rates.craft_rate,
+                                    world_price_rate: world_rates.world_price_rate,
+                                    item_price_rate: world_rates.item_price_rate,
+                                    town_price_rate: world_rates.town_price_rate,
                                 }))
                                 .ok();
                         }

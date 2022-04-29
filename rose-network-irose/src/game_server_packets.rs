@@ -922,6 +922,10 @@ pub struct PacketServerJoinZone {
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,
     pub world_ticks: WorldTicks,
+    pub craft_rate: i32,
+    pub world_price_rate: i32,
+    pub item_price_rate: i32,
+    pub town_price_rate: i32,
 }
 
 impl TryFrom<&Packet> for PacketServerJoinZone {
@@ -941,12 +945,13 @@ impl TryFrom<&Packet> for PacketServerJoinZone {
         let _penalty_xp = reader.read_u32();
 
         // tagVAR_GLOBAL
-        let _crate_rate = reader.read_u16()?;
+        let craft_rate = reader.read_u16()? as i32;
         let _update_time = reader.read_u32()?;
-        let _world_price_rate = reader.read_u16()?;
-        let _town_rate = reader.read_u8()?;
-        for _ in 0..11 {
-            let _item_rate = reader.read_u8()?;
+        let world_price_rate = reader.read_u16()? as i32;
+        let town_price_rate = reader.read_u8()? as i32;
+        let item_price_rate_0 = reader.read_u8()? as i32;
+        for _ in 1..11 {
+            let _item_price_rate_n = reader.read_u8()?;
         }
         let _global_flags = reader.read_u32()?;
 
@@ -960,6 +965,10 @@ impl TryFrom<&Packet> for PacketServerJoinZone {
             health_points,
             mana_points,
             world_ticks,
+            craft_rate,
+            world_price_rate,
+            town_price_rate,
+            item_price_rate: item_price_rate_0,
         })
     }
 }
@@ -975,12 +984,12 @@ impl From<&PacketServerJoinZone> for Packet {
         writer.write_u32(0); // penalty xp
 
         // tagVAR_GLOBAL
-        writer.write_u16(100); // craft rate
+        writer.write_u16(packet.craft_rate as u16);
         writer.write_u32(0); // update time
-        writer.write_u16(100); // world price rate
-        writer.write_u8(100); // town rate
+        writer.write_u16(packet.world_price_rate as u16);
+        writer.write_u8(packet.town_price_rate as u8);
         for _ in 0..11 {
-            writer.write_u8(50); // item rate
+            writer.write_u8(packet.item_price_rate as u8);
         }
         writer.write_u32(0); // global flags (0x1 = pvp allowed)
 

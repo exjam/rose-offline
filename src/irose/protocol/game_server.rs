@@ -382,6 +382,10 @@ impl GameServer {
                         health_points: response.health_points,
                         mana_points: response.mana_points,
                         world_ticks: response.world_ticks,
+                        craft_rate: response.craft_rate,
+                        world_price_rate: response.world_price_rate,
+                        item_price_rate: response.item_price_rate,
+                        town_price_rate: response.town_price_rate,
                     }))
                     .await?;
             }

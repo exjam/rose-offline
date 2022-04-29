@@ -163,6 +163,10 @@ pub struct JoinZoneResponse {
     pub health_points: HealthPoints,
     pub mana_points: ManaPoints,
     pub world_ticks: WorldTicks,
+    pub craft_rate: i32,
+    pub world_price_rate: i32,
+    pub item_price_rate: i32,
+    pub town_price_rate: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
