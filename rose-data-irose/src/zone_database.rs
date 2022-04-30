@@ -342,6 +342,9 @@ fn load_zone_list_entry(
             .get_text_string(1, data.get_zone_string_id(id).unwrap_or(""))
             .unwrap_or("")
             .to_string(),
+        minimap_path: data.get_zone_minimap_filename(id).map(VfsPathBuf::new),
+        minimap_start_x: data.get_zone_minimap_start_x(id).unwrap_or(0),
+        minimap_start_y: data.get_zone_minimap_start_y(id).unwrap_or(0),
         zon_file_path: VfsPathBuf::new(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?),
         zsc_cnst_path: VfsPathBuf::new(data.get_zone_cnst_table(id).unwrap_or("")),
         zsc_deco_path: VfsPathBuf::new(data.get_zone_deco_table(id).unwrap_or("")),
