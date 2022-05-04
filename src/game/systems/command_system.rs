@@ -371,6 +371,10 @@ pub fn command_system(
             match command.command {
                 CommandData::Die(_) => {
                     // We can't perform NextCommand if we are dead!
+                    commands
+                        .entity(entity)
+                        .remove::<Target>()
+                        .remove::<Destination>();
                     return;
                 }
                 CommandData::Sit(CommandSit::Sitting) => {
