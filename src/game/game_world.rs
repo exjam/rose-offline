@@ -1,7 +1,7 @@
 use bevy::ecs::{
     event::Events,
     prelude::{Schedule, StageLabel, World},
-    schedule::{RunOnce, SystemStage},
+    schedule::{ShouldRun, SystemStage},
 };
 use chrono::Local;
 use crossbeam_channel::Receiver;
@@ -85,7 +85,7 @@ impl GameWorld {
         schedule.add_stage(
             GameStages::Startup,
             SystemStage::single_threaded()
-                .with_run_criteria(RunOnce::default())
+                .with_run_criteria(ShouldRun::once)
                 .with_system(startup_zones_system),
         );
         schedule.add_stage_after(
