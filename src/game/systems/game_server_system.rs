@@ -151,7 +151,7 @@ fn handle_game_connection_request(
 
     let weapon_motion_type = game_data
         .items
-        .get_equipped_weapon_item_data(&character.equipment, EquipmentIndex::WeaponRight)
+        .get_equipped_weapon_item_data(&character.equipment, EquipmentIndex::Weapon)
         .map(|item_data| item_data.motion_type)
         .unwrap_or(0) as usize;
 
@@ -434,8 +434,8 @@ fn equip_from_inventory(
             equipment_index,
             EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring
         ),
-        ItemType::Weapon => matches!(equipment_index, EquipmentIndex::WeaponRight),
-        ItemType::SubWeapon => matches!(equipment_index, EquipmentIndex::WeaponLeft),
+        ItemType::Weapon => matches!(equipment_index, EquipmentIndex::Weapon),
+        ItemType::SubWeapon => matches!(equipment_index, EquipmentIndex::SubWeapon),
         _ => false,
     };
     if !correct_equipment_index {
@@ -448,14 +448,14 @@ fn equip_from_inventory(
 
     // If we are equipping a two handed weapon, we must unequip offhand first
     if item_data.class.is_two_handed_weapon() {
-        let equipment_slot = equipment.get_equipment_slot_mut(EquipmentIndex::WeaponLeft);
+        let equipment_slot = equipment.get_equipment_slot_mut(EquipmentIndex::SubWeapon);
         if equipment_slot.is_some() {
             let item = equipment_slot.take();
             if let Some(item) = item {
                 match inventory.try_add_equipment_item(item) {
                     Ok((inventory_slot, item)) => {
                         updated_inventory_items
-                            .push((ItemSlot::Equipment(EquipmentIndex::WeaponLeft), None));
+                            .push((ItemSlot::Equipment(EquipmentIndex::SubWeapon), None));
                         updated_inventory_items.push((inventory_slot, Some(item.clone())));
                     }
                     Err(item) => {

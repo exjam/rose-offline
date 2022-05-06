@@ -453,8 +453,8 @@ impl TryFrom<&Packet> for PacketServerCharacterInventory {
             EquipmentIndex::Back,
             EquipmentIndex::Hands,
             EquipmentIndex::Feet,
-            EquipmentIndex::WeaponRight,
-            EquipmentIndex::WeaponLeft,
+            EquipmentIndex::Weapon,
+            EquipmentIndex::SubWeapon,
             EquipmentIndex::Necklace,
             EquipmentIndex::Ring,
             EquipmentIndex::Earring,
@@ -513,8 +513,8 @@ impl From<&PacketServerCharacterInventory> for Packet {
             EquipmentIndex::Back,
             EquipmentIndex::Hands,
             EquipmentIndex::Feet,
-            EquipmentIndex::WeaponRight,
-            EquipmentIndex::WeaponLeft,
+            EquipmentIndex::Weapon,
+            EquipmentIndex::SubWeapon,
             EquipmentIndex::Necklace,
             EquipmentIndex::Ring,
             EquipmentIndex::Earring,
@@ -1917,8 +1917,8 @@ impl TryFrom<&Packet> for PacketServerUpdateEquipment {
             EquipmentIndex::Back => ItemType::Back,
             EquipmentIndex::Hands => ItemType::Hands,
             EquipmentIndex::Feet => ItemType::Feet,
-            EquipmentIndex::WeaponRight => ItemType::Weapon,
-            EquipmentIndex::WeaponLeft => ItemType::SubWeapon,
+            EquipmentIndex::Weapon => ItemType::Weapon,
+            EquipmentIndex::SubWeapon => ItemType::SubWeapon,
             EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring => {
                 ItemType::Jewellery
             }

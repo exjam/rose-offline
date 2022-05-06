@@ -294,8 +294,8 @@ impl<'a> PacketReadItems for PacketReader<'a> {
             EquipmentIndex::Feet,
             EquipmentIndex::Face,
             EquipmentIndex::Back,
-            EquipmentIndex::WeaponRight,
-            EquipmentIndex::WeaponLeft,
+            EquipmentIndex::Weapon,
+            EquipmentIndex::SubWeapon,
         ] {
             equipment.equipped_items[index] = self.read_equipment_item_part(index.into())?;
         }
@@ -375,8 +375,8 @@ impl PacketWriteItems for PacketWriter {
             EquipmentIndex::Feet,
             EquipmentIndex::Face,
             EquipmentIndex::Back,
-            EquipmentIndex::WeaponRight,
-            EquipmentIndex::WeaponLeft,
+            EquipmentIndex::Weapon,
+            EquipmentIndex::SubWeapon,
         ] {
             self.write_equipment_item_part(equipment.get_equipment_item(*index));
         }

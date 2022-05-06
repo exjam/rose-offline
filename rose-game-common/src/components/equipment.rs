@@ -92,9 +92,8 @@ impl Equipment {
                 // TODO: Lookup in STB which type of jewellery this is
                 return Err(item);
             }
-            // TODO: Support dual wielding of weapons
-            ItemType::Weapon => EquipmentIndex::WeaponRight,
-            ItemType::SubWeapon => EquipmentIndex::WeaponLeft,
+            ItemType::Weapon => EquipmentIndex::Weapon,
+            ItemType::SubWeapon => EquipmentIndex::SubWeapon,
             _ => return Err(item),
         };
 

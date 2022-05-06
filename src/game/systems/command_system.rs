@@ -412,7 +412,7 @@ pub fn command_system(
 
             let weapon_item_data = equipment.as_ref().and_then(|equipment| {
                 equipment
-                    .get_equipment_item(EquipmentIndex::WeaponRight)
+                    .get_equipment_item(EquipmentIndex::Weapon)
                     .and_then(|weapon_item| {
                         game_data
                             .items

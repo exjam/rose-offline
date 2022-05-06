@@ -216,7 +216,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                     as i32,
             attack_damage_type: self
                 .item_database
-                .get_equipped_weapon_item_data(equipment, EquipmentIndex::WeaponRight)
+                .get_equipped_weapon_item_data(equipment, EquipmentIndex::Weapon)
                 .map(|item| {
                     if item.is_magic_damage {
                         DamageType::Magic
@@ -1610,7 +1610,7 @@ fn calculate_attack_power(
     };
 
     let weapon = equipment
-        .get_equipment_item(EquipmentIndex::WeaponRight)
+        .get_equipment_item(EquipmentIndex::Weapon)
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
@@ -1704,7 +1704,7 @@ fn calculate_attack_speed(
     let (weapon_attack_speed, weapon_item_class) = item_database
         .get_weapon_item(
             equipment
-                .get_equipment_item(EquipmentIndex::WeaponRight)
+                .get_equipment_item(EquipmentIndex::Weapon)
                 .map(|item| item.item.item_number)
                 .unwrap_or(0),
         )
@@ -1741,7 +1741,7 @@ fn calculate_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -
     let weapon_attack_range = item_database
         .get_weapon_item(
             equipment
-                .get_equipment_item(EquipmentIndex::WeaponRight)
+                .get_equipment_item(EquipmentIndex::Weapon)
                 .map(|item| item.item.item_number)
                 .unwrap_or(0),
         )
@@ -1763,7 +1763,7 @@ fn calculate_hit(
     let concentration = basic_stats.concentration as f32;
 
     let hit = if let Some((weapon, weapon_data)) = equipment
-        .get_equipment_item(EquipmentIndex::WeaponRight)
+        .get_equipment_item(EquipmentIndex::Weapon)
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
@@ -1823,7 +1823,7 @@ fn calculate_defence(
 
     let mut defence = (defence + passive_defence) as i32;
 
-    if let Some(offhand_item) = equipment.get_equipment_item(EquipmentIndex::WeaponLeft) {
+    if let Some(offhand_item) = equipment.get_equipment_item(EquipmentIndex::SubWeapon) {
         if let Some(ItemClass::Shield) = item_database
             .get_base_item(offhand_item.into())
             .map(|x| x.class)
@@ -1905,7 +1905,7 @@ fn calculate_avoid(
         EquipmentIndex::Back,
         EquipmentIndex::Hands,
         EquipmentIndex::Feet,
-        EquipmentIndex::WeaponLeft,
+        EquipmentIndex::SubWeapon,
     ];
 
     // Get total durability for specific set of equipment

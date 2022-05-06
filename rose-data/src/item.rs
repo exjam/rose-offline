@@ -14,8 +14,8 @@ pub enum EquipmentIndex {
     Back,
     Hands,
     Feet,
-    WeaponRight,
-    WeaponLeft,
+    Weapon,
+    SubWeapon,
     Necklace,
     Ring,
     Earring,
@@ -30,8 +30,8 @@ impl From<EquipmentIndex> for ItemType {
             EquipmentIndex::Back => ItemType::Back,
             EquipmentIndex::Hands => ItemType::Hands,
             EquipmentIndex::Feet => ItemType::Feet,
-            EquipmentIndex::WeaponRight => ItemType::Weapon,
-            EquipmentIndex::WeaponLeft => ItemType::SubWeapon,
+            EquipmentIndex::Weapon => ItemType::Weapon,
+            EquipmentIndex::SubWeapon => ItemType::SubWeapon,
             EquipmentIndex::Necklace | EquipmentIndex::Ring | EquipmentIndex::Earring => {
                 ItemType::Jewellery
             }
@@ -55,8 +55,8 @@ impl TryFrom<ItemType> for EquipmentIndex {
                 Err(())
             }
             // TODO: Support dual wielding of weapons
-            ItemType::Weapon => Ok(EquipmentIndex::WeaponRight),
-            ItemType::SubWeapon => Ok(EquipmentIndex::WeaponLeft),
+            ItemType::Weapon => Ok(EquipmentIndex::Weapon),
+            ItemType::SubWeapon => Ok(EquipmentIndex::SubWeapon),
             _ => Err(()),
         }
     }

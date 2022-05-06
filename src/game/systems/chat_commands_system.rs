@@ -234,7 +234,7 @@ fn create_bot_entity(
     let weapon_motion_type = chat_command_params
         .game_data
         .items
-        .get_equipped_weapon_item_data(&bot_data.equipment, EquipmentIndex::WeaponRight)
+        .get_equipped_weapon_item_data(&bot_data.equipment, EquipmentIndex::Weapon)
         .map(|item_data| item_data.motion_type)
         .unwrap_or(0) as usize;
 

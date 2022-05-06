@@ -102,8 +102,8 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
                 EquipmentIndex::Feet,
                 EquipmentIndex::Face,
                 EquipmentIndex::Back,
-                EquipmentIndex::WeaponLeft,
-                EquipmentIndex::WeaponRight,
+                EquipmentIndex::SubWeapon,
+                EquipmentIndex::Weapon,
             ] {
                 let item_number = reader.read_u16()? as usize;
                 let grade = reader.read_u16()?;
@@ -180,8 +180,8 @@ impl From<&PacketServerCharacterList> for Packet {
                 EquipmentIndex::Feet,
                 EquipmentIndex::Face,
                 EquipmentIndex::Back,
-                EquipmentIndex::WeaponLeft,
-                EquipmentIndex::WeaponRight,
+                EquipmentIndex::SubWeapon,
+                EquipmentIndex::Weapon,
             ]
             .iter()
             {
