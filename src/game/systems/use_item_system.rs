@@ -1,5 +1,6 @@
 use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, Mut, Query, Res, ResMut},
+    prelude::{Commands, Entity, EventReader, Query, Res, ResMut},
+    query::WorldQuery,
     system::SystemParam,
 };
 use bevy::math::Vec3;
@@ -34,27 +35,29 @@ pub struct UseItemSystemParameters<'w, 's> {
     server_time: Res<'w, ServerTime>,
 }
 
-struct UseItemUser<'a, 'world> {
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct UseItemUserQuery<'w> {
     entity: Entity,
-    ability_values: &'a AbilityValues,
-    basic_stats: &'a mut Mut<'world, BasicStats>,
-    character_info: &'a CharacterInfo,
-    client_entity: &'a ClientEntity,
-    client_entity_sector: &'a ClientEntitySector,
-    experience_points: &'a ExperiencePoints,
-    game_client: Option<&'a GameClient>,
-    inventory: &'a mut Mut<'world, Inventory>,
-    level: &'a Level,
-    move_speed: &'a MoveSpeed,
-    position: &'a Position,
-    skill_list: &'a mut Mut<'world, SkillList>,
-    skill_points: &'a mut Mut<'world, SkillPoints>,
-    stamina: &'a mut Mut<'world, Stamina>,
-    stat_points: &'a mut Mut<'world, StatPoints>,
-    status_effects: &'a mut Mut<'world, StatusEffects>,
-    status_effects_regen: &'a mut Mut<'world, StatusEffectsRegen>,
-    team_number: &'a Team,
-    union_membership: &'a mut Mut<'world, UnionMembership>,
+    ability_values: &'w AbilityValues,
+    basic_stats: &'w mut BasicStats,
+    character_info: &'w CharacterInfo,
+    client_entity: &'w ClientEntity,
+    client_entity_sector: &'w ClientEntitySector,
+    experience_points: &'w ExperiencePoints,
+    game_client: Option<&'w GameClient>,
+    inventory: &'w mut Inventory,
+    level: &'w Level,
+    move_speed: &'w MoveSpeed,
+    position: &'w Position,
+    skill_list: &'w mut SkillList,
+    skill_points: &'w mut SkillPoints,
+    stamina: &'w mut Stamina,
+    stat_points: &'w mut StatPoints,
+    status_effects: &'w mut StatusEffects,
+    status_effects_regen: &'w mut StatusEffectsRegen,
+    team_number: &'w Team,
+    union_membership: &'w mut UnionMembership,
 }
 
 enum UseItemError {
@@ -64,7 +67,7 @@ enum UseItemError {
 
 fn use_inventory_item(
     use_item_system_parameters: &mut UseItemSystemParameters,
-    use_item_user: &mut UseItemUser,
+    use_item_user: &mut UseItemUserQueryItem,
     item_slot: ItemSlot,
     target_entity: Option<Entity>,
     _repair_item_slot: Option<ItemSlot>,
@@ -95,11 +98,11 @@ fn use_inventory_item(
             use_item_user.team_number,
             Some(use_item_user.character_info),
             Some(use_item_user.experience_points),
-            Some(use_item_user.inventory),
-            Some(use_item_user.skill_points),
-            Some(use_item_user.stamina),
-            Some(use_item_user.stat_points),
-            Some(use_item_user.union_membership),
+            Some(&use_item_user.inventory),
+            Some(&use_item_user.skill_points),
+            Some(&use_item_user.stamina),
+            Some(&use_item_user.stat_points),
+            Some(&use_item_user.union_membership),
         )
         .unwrap_or(0);
 
@@ -192,8 +195,8 @@ fn use_inventory_item(
                     skill_list_try_learn_skill(
                         use_item_system_parameters.game_data.skills.as_ref(),
                         skill_id,
-                        use_item_user.skill_list,
-                        Some(use_item_user.skill_points),
+                        &mut use_item_user.skill_list,
+                        Some(&mut use_item_user.skill_points),
                         use_item_user.game_client,
                     )
                     .is_ok(),
@@ -234,7 +237,7 @@ fn use_inventory_item(
                             .can_apply(status_effect_data, status_effect_data.id.get() as i32)
                         {
                             use_item_user.status_effects.apply_potion(
-                                use_item_user.status_effects_regen,
+                                &mut use_item_user.status_effects_regen,
                                 status_effect_data,
                                 use_item_system_parameters.server_time.now
                                     + Duration::from_micros(
@@ -251,12 +254,12 @@ fn use_inventory_item(
                 ability_values_add_value(
                     add_ability_type,
                     add_ability_value,
-                    Some(use_item_user.basic_stats),
-                    Some(use_item_user.inventory),
-                    Some(use_item_user.skill_points),
-                    Some(use_item_user.stamina),
-                    Some(use_item_user.stat_points),
-                    Some(use_item_user.union_membership),
+                    Some(&mut use_item_user.basic_stats),
+                    Some(&mut use_item_user.inventory),
+                    Some(&mut use_item_user.skill_points),
+                    Some(&mut use_item_user.stamina),
+                    Some(&mut use_item_user.stat_points),
+                    Some(&mut use_item_user.union_membership),
                     use_item_user.game_client,
                 );
             }
@@ -315,29 +318,7 @@ fn use_inventory_item(
 
 pub fn use_item_system(
     mut use_item_system_parameters: UseItemSystemParameters,
-    mut query: Query<(
-        &AbilityValues,
-        &CharacterInfo,
-        &ClientEntity,
-        &ClientEntitySector,
-        &ExperiencePoints,
-        &Level,
-        &MoveSpeed,
-        &Position,
-        &Team,
-        (
-            &mut BasicStats,
-            &mut Inventory,
-            &mut SkillList,
-            &mut SkillPoints,
-            &mut Stamina,
-            &mut StatPoints,
-            &mut StatusEffects,
-            &mut StatusEffectsRegen,
-            &mut UnionMembership,
-        ),
-        Option<&GameClient>,
-    )>,
+    mut query_user: Query<UseItemUserQuery>,
     mut use_item_events: EventReader<UseItemEvent>,
 ) {
     for &UseItemEvent {
@@ -346,53 +327,7 @@ pub fn use_item_system(
         target_entity,
     } in use_item_events.iter()
     {
-        if let Ok((
-            ability_values,
-            character_info,
-            client_entity,
-            client_entity_sector,
-            experience_points,
-            level,
-            move_speed,
-            position,
-            team_number,
-            (
-                mut basic_stats,
-                mut inventory,
-                mut skill_list,
-                mut skill_points,
-                mut stamina,
-                mut stat_points,
-                mut status_effects,
-                mut status_effects_regen,
-                mut union_membership,
-            ),
-            game_client,
-        )) = query.get_mut(entity)
-        {
-            let mut use_item_user = UseItemUser {
-                entity,
-                ability_values,
-                basic_stats: &mut basic_stats,
-                character_info,
-                client_entity,
-                client_entity_sector,
-                experience_points,
-                inventory: &mut inventory,
-                level,
-                move_speed,
-                position,
-                skill_list: &mut skill_list,
-                skill_points: &mut skill_points,
-                stamina: &mut stamina,
-                stat_points: &mut stat_points,
-                status_effects: &mut status_effects,
-                status_effects_regen: &mut status_effects_regen,
-                team_number,
-                union_membership: &mut union_membership,
-                game_client,
-            };
-
+        if let Ok(mut use_item_user) = query_user.get_mut(entity) {
             use_inventory_item(
                 &mut use_item_system_parameters,
                 &mut use_item_user,
