@@ -1,5 +1,6 @@
 use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, EventWriter, Local, Mut, Query, Res, ResMut},
+    prelude::{Commands, Entity, EventReader, EventWriter, Local, Query, Res, ResMut},
+    query::WorldQuery,
     system::SystemParam,
 };
 use bevy::math::Vec3Swizzles;
@@ -50,104 +51,46 @@ pub struct SkillSystemResources<'w, 's> {
     _secret: PhantomData<&'s ()>,
 }
 
-struct SkillCaster<'a> {
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct SkillCasterQuery<'w> {
     entity: Entity,
-    client_entity: &'a ClientEntity,
-    position: &'a Position,
-    ability_values: &'a AbilityValues,
-    level: &'a Level,
-    team: &'a Team,
+    client_entity: &'w ClientEntity,
+    position: &'w Position,
+    ability_values: &'w AbilityValues,
+    level: &'w Level,
+    team: &'w Team,
+    game_client: Option<&'w GameClient>,
+    inventory: Option<&'w mut Inventory>,
 }
 
-#[allow(dead_code)]
-struct SkillTargetData<'a> {
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct SkillTargetQuery<'w> {
     entity: Entity,
-    client_entity: &'a ClientEntity,
-    position: &'a Position,
-    ability_values: &'a AbilityValues,
-    status_effects: Mut<'a, StatusEffects>,
-    team: &'a Team,
-    health_points: Mut<'a, HealthPoints>,
-    mana_points: Option<Mut<'a, ManaPoints>>,
-    level: &'a Level,
-    move_speed: &'a MoveSpeed,
+    client_entity: &'w ClientEntity,
+    position: &'w Position,
+    ability_values: &'w AbilityValues,
+    status_effects: &'w mut StatusEffects,
+    team: &'w Team,
+    health_points: &'w mut HealthPoints,
+    mana_points: Option<&'w mut ManaPoints>,
+    level: &'w Level,
+    move_speed: &'w MoveSpeed,
 
     // To update character ability_values
-    character_info: Option<&'a CharacterInfo>,
-    equipment: Option<&'a Equipment>,
-    basic_stats: Option<&'a BasicStats>,
-    skill_list: Option<&'a SkillList>,
+    character_info: Option<&'w CharacterInfo>,
+    equipment: Option<&'w Equipment>,
+    basic_stats: Option<&'w BasicStats>,
+    skill_list: Option<&'w SkillList>,
 
     // To update NPC ability_values
-    npc: Option<&'a Npc>,
-}
-
-#[derive(SystemParam)]
-pub struct SkillTargetQuery<'w, 's> {
-    query: Query<
-        'w,
-        's,
-        (
-            &'static ClientEntity,
-            &'static Position,
-            &'static AbilityValues,
-            &'static mut StatusEffects,
-            &'static Team,
-            &'static mut HealthPoints,
-            Option<&'static mut ManaPoints>,
-            &'static Level,
-            &'static MoveSpeed,
-            Option<&'static CharacterInfo>,
-            Option<&'static Equipment>,
-            Option<&'static BasicStats>,
-            Option<&'static SkillList>,
-            Option<&'static Npc>,
-        ),
-    >,
-}
-
-impl<'w, 's> SkillTargetQuery<'w, 's> {
-    fn get_skill_target_data(&mut self, entity: Entity) -> Option<SkillTargetData> {
-        let (
-            client_entity,
-            position,
-            ability_values,
-            status_effects,
-            team,
-            health_points,
-            mana_points,
-            level,
-            move_speed,
-            character_info,
-            equipment,
-            basic_stats,
-            skill_list,
-            npc,
-        ) = self.query.get_mut(entity).ok()?;
-
-        Some(SkillTargetData {
-            entity,
-            client_entity,
-            position,
-            ability_values,
-            status_effects,
-            team,
-            health_points,
-            mana_points,
-            level,
-            move_speed,
-            character_info,
-            equipment,
-            basic_stats,
-            skill_list,
-            npc,
-        })
-    }
+    npc: Option<&'w Npc>,
 }
 
 fn check_skill_target_filter(
-    skill_caster: &SkillCaster,
-    skill_target: &mut SkillTargetData,
+    skill_caster: &SkillCasterQueryItem,
+    skill_target: &mut SkillTargetQueryItem,
     skill_data: &SkillData,
 ) -> bool {
     match skill_data.target_filter {
@@ -196,8 +139,8 @@ fn check_skill_target_filter(
 fn apply_skill_status_effects_to_entity(
     skill_system_parameters: &mut SkillSystemParameters,
     skill_system_resources: &SkillSystemResources,
-    skill_caster: &SkillCaster,
-    skill_target: &mut SkillTargetData,
+    skill_caster: &SkillCasterQueryItem,
+    skill_target: &mut SkillTargetQueryItem,
     skill_data: &SkillData,
 ) -> Result<(), SkillCastError> {
     if !check_skill_target_filter(skill_caster, skill_target, skill_data) {
@@ -376,10 +319,10 @@ fn apply_skill_status_effects(
     skill_system_parameters: &mut SkillSystemParameters,
     skill_system_resources: &SkillSystemResources,
     client_entity_list: &ClientEntityList,
-    skill_caster: &SkillCaster,
+    skill_caster: &SkillCasterQueryItem,
     skill_target: &SkillEventTarget,
     skill_data: &SkillData,
-    skill_target_query: &mut SkillTargetQuery,
+    skill_target_query: &mut Query<SkillTargetQuery>,
 ) -> Result<(), SkillCastError> {
     if skill_data.scope > 0 {
         // Apply in AOE around target position
@@ -389,8 +332,7 @@ fn apply_skill_status_effects(
 
         let skill_position = match *skill_target {
             SkillEventTarget::Entity(target_entity) => {
-                if let Some(skill_target) = skill_target_query.get_skill_target_data(target_entity)
-                {
+                if let Ok(skill_target) = skill_target_query.get_mut(target_entity) {
                     Some(skill_target.position.position.xy())
                 } else {
                     None
@@ -403,8 +345,7 @@ fn apply_skill_status_effects(
         for (target_entity, _) in client_entity_zone
             .iter_entities_within_distance(skill_position, skill_data.scope as f32)
         {
-            if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity)
-            {
+            if let Ok(mut skill_target) = skill_target_query.get_mut(target_entity) {
                 apply_skill_status_effects_to_entity(
                     skill_system_parameters,
                     skill_system_resources,
@@ -418,7 +359,7 @@ fn apply_skill_status_effects(
 
         Ok(())
     } else if let SkillEventTarget::Entity(target_entity) = *skill_target {
-        if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity) {
+        if let Ok(mut skill_target) = skill_target_query.get_mut(target_entity) {
             apply_skill_status_effects_to_entity(
                 skill_system_parameters,
                 skill_system_resources,
@@ -439,8 +380,8 @@ fn apply_skill_status_effects(
 fn apply_skill_damage_to_entity(
     skill_system_parameters: &mut SkillSystemParameters,
     skill_system_resources: &SkillSystemResources,
-    skill_caster: &SkillCaster,
-    skill_target: &mut SkillTargetData,
+    skill_caster: &SkillCasterQueryItem,
+    skill_target: &mut SkillTargetQueryItem,
     skill_data: &SkillData,
 ) -> Result<Damage, SkillCastError> {
     if !check_skill_target_filter(skill_caster, skill_target, skill_data) {
@@ -485,10 +426,10 @@ fn apply_skill_damage(
     skill_system_parameters: &mut SkillSystemParameters,
     skill_system_resources: &SkillSystemResources,
     client_entity_list: &ClientEntityList,
-    skill_caster: &SkillCaster,
+    skill_caster: &SkillCasterQueryItem,
     skill_target: &SkillEventTarget,
     skill_data: &SkillData,
-    skill_target_query: &mut SkillTargetQuery,
+    skill_target_query: &mut Query<SkillTargetQuery>,
 ) -> Result<(), SkillCastError> {
     if skill_data.scope > 0 {
         // Apply in AOE around target position
@@ -498,8 +439,7 @@ fn apply_skill_damage(
 
         let skill_position = match *skill_target {
             SkillEventTarget::Entity(target_entity) => {
-                if let Some(skill_target) = skill_target_query.get_skill_target_data(target_entity)
-                {
+                if let Ok(skill_target) = skill_target_query.get_mut(target_entity) {
                     Some(skill_target.position.position.xy())
                 } else {
                     None
@@ -512,8 +452,7 @@ fn apply_skill_damage(
         for (target_entity, _) in client_entity_zone
             .iter_entities_within_distance(skill_position, skill_data.scope as f32)
         {
-            if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity)
-            {
+            if let Ok(mut skill_target) = skill_target_query.get_mut(target_entity) {
                 apply_skill_damage_to_entity(
                     skill_system_parameters,
                     skill_system_resources,
@@ -528,7 +467,7 @@ fn apply_skill_damage(
         Ok(())
     } else if let SkillEventTarget::Entity(target_entity) = *skill_target {
         // Apply directly to entity
-        if let Some(mut skill_target) = skill_target_query.get_skill_target_data(target_entity) {
+        if let Ok(mut skill_target) = skill_target_query.get_mut(target_entity) {
             apply_skill_damage_to_entity(
                 skill_system_parameters,
                 skill_system_resources,
@@ -547,20 +486,11 @@ fn apply_skill_damage(
 }
 
 pub fn skill_effect_system(
+    mut commands: Commands,
     mut skill_system_parameters: SkillSystemParameters,
     skill_system_resources: SkillSystemResources,
-    mut skill_target_query: SkillTargetQuery,
-
-    mut commands: Commands,
-    mut caster_query: Query<(
-        &ClientEntity,
-        &Position,
-        &AbilityValues,
-        &Team,
-        &Level,
-        Option<&GameClient>,
-        Option<&mut Inventory>,
-    )>,
+    mut skill_caster_query: Query<SkillCasterQuery>,
+    mut skill_target_query: Query<SkillTargetQuery>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut skill_events: EventReader<SkillEvent>,
     mut pending_skill_events: Local<Vec<SkillEvent>>,
@@ -592,31 +522,13 @@ pub fn skill_effect_system(
         }
         let skill_data = skill_data.unwrap();
 
-        if let Ok((
-            caster_client_entity,
-            caster_position,
-            caster_ability_values,
-            caster_team,
-            caster_level,
-            caster_game_client,
-            mut caster_inventory,
-        )) = caster_query.get_mut(caster_entity)
-        {
-            let skill_caster = SkillCaster {
-                entity: caster_entity,
-                client_entity: caster_client_entity,
-                level: caster_level,
-                position: caster_position,
-                ability_values: caster_ability_values,
-                team: caster_team,
-            };
-
+        if let Ok(mut skill_caster) = skill_caster_query.get_mut(caster_entity) {
             let mut consumed_item = None;
             let mut result = Ok(());
 
             // If the skill is to use an item, try take it from inventory now
             if let Some((item_slot, item)) = use_item {
-                if let Some(caster_inventory) = caster_inventory.as_mut() {
+                if let Some(caster_inventory) = skill_caster.inventory.as_mut() {
                     if let Some(inventory_item) = caster_inventory.get_item(item_slot) {
                         if item.is_same_item(inventory_item) {
                             if let Some(item) = caster_inventory.try_take_quantity(item_slot, 1) {
@@ -678,8 +590,8 @@ pub fn skill_effect_system(
                     SkillType::SelfAndTarget => {
                         // Only applies status effect if damage > 0
                         if let SkillEventTarget::Entity(target_entity) = skill_target {
-                            if let Some(mut skill_target_data) =
-                                skill_target_query.get_skill_target_data(target_entity)
+                            if let Ok(mut skill_target_data) =
+                                skill_target_query.get_mut(target_entity)
                             {
                                 match apply_skill_damage_to_entity(
                                     &mut skill_system_parameters,
@@ -763,7 +675,7 @@ pub fn skill_effect_system(
                     // Send message notifying client of consumption of item
                     if let Some((item_slot, _)) = consumed_item {
                         if let (Some(caster_inventory), Some(caster_game_client)) =
-                            (caster_inventory, caster_game_client)
+                            (skill_caster.inventory, skill_caster.game_client)
                         {
                             match caster_inventory.get_item(item_slot) {
                                 None => {
@@ -792,23 +704,24 @@ pub fn skill_effect_system(
                     }
 
                     skill_system_parameters.server_messages.send_entity_message(
-                        caster_client_entity,
-                        ServerMessage::FinishCastingSkill(caster_client_entity.id, skill_id),
+                        skill_caster.client_entity,
+                        ServerMessage::FinishCastingSkill(skill_caster.client_entity.id, skill_id),
                     )
                 }
                 Err(error) => {
                     // Return unused item to inventory
                     if let Some((item_slot, item)) = consumed_item {
-                        caster_inventory
+                        skill_caster
+                            .inventory
                             .unwrap()
                             .try_stack_with_item(item_slot, item)
                             .expect("Unexpected error returning unconsumed item to inventory");
                     }
 
                     skill_system_parameters.server_messages.send_entity_message(
-                        caster_client_entity,
+                        skill_caster.client_entity,
                         ServerMessage::CancelCastingSkill(
-                            caster_client_entity.id,
+                            skill_caster.client_entity.id,
                             match error {
                                 SkillCastError::NotEnoughUseAbility => {
                                     CancelCastingSkillReason::NeedAbility
