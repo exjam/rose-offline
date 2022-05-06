@@ -1,4 +1,5 @@
-use bevy::ecs::prelude::{Commands, Entity, EventWriter, Mut, Query, Res, ResMut};
+use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
+use bevy::ecs::query::WorldQuery;
 use bevy::math::{Vec3, Vec3Swizzles};
 use std::time::Duration;
 
@@ -27,6 +28,38 @@ const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
 const CHARACTER_MOVE_TO_DISTANCE: f32 = 1000.0;
 const DROPPED_ITEM_MOVE_TO_DISTANCE: f32 = 150.0;
 const DROPPED_ITEM_PICKUP_DISTANCE: f32 = 200.0;
+
+#[derive(WorldQuery)]
+pub struct CommandAttackTargetQuery<'w> {
+    ability_values: &'w AbilityValues,
+    client_entity: &'w ClientEntity,
+    health_points: &'w HealthPoints,
+    position: &'w Position,
+}
+
+#[derive(WorldQuery)]
+pub struct CommandMoveTargetQuery<'w> {
+    client_entity: &'w ClientEntity,
+    position: &'w Position,
+}
+
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct CommandPickupItemTargetQuery<'w> {
+    client_entity: &'w ClientEntity,
+    client_entity_sector: &'w ClientEntitySector,
+    item_drop: &'w mut ItemDrop,
+    position: &'w Position,
+    owner: Option<&'w Owner>,
+}
+
+#[derive(WorldQuery)]
+pub struct CommandSkillTargetQuery<'w> {
+    ability_values: &'w AbilityValues,
+    client_entity: &'w ClientEntity,
+    health_points: &'w HealthPoints,
+    position: &'w Position,
+}
 
 fn command_stop(
     commands: &mut Commands,
@@ -57,96 +90,52 @@ fn command_stop(
     *command = Command::with_stop();
 }
 
-fn is_valid_move_target<'a>(
-    position: &Position,
-    target_entity: Entity,
-    move_target_query: &'a Query<(&ClientEntity, &Position)>,
-) -> Option<(&'a ClientEntity, &'a Position)> {
-    if let Ok((target_client_entity, target_position)) = move_target_query.get(target_entity) {
-        if target_position.zone_id == position.zone_id {
-            return Some((target_client_entity, target_position));
-        }
+fn is_valid_move_target(target: &CommandMoveTargetQueryItem, position: &Position) -> bool {
+    if target.position.zone_id != position.zone_id {
+        return false;
     }
 
-    None
+    true
 }
 
-fn is_valid_attack_target<'a>(
-    position: &Position,
-    target_entity: Entity,
-    attack_target_query: &'a Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
-) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
+fn is_valid_attack_target(target: &CommandAttackTargetQueryItem, position: &Position) -> bool {
     // TODO: Check Team
-    if let Ok((target_client_entity, target_position, target_ability_values, target_health)) =
-        attack_target_query.get(target_entity)
-    {
-        if target_position.zone_id == position.zone_id && target_health.hp > 0 {
-            return Some((target_client_entity, target_position, target_ability_values));
-        }
+    if target.position.zone_id != position.zone_id {
+        return false;
     }
 
-    None
+    if target.health_points.hp <= 0 {
+        return false;
+    }
+
+    true
 }
 
-fn is_valid_skill_target<'a>(
-    position: &Position,
-    target_entity: Entity,
-    attack_target_query: &'a Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
-) -> Option<(&'a ClientEntity, &'a Position, &'a AbilityValues)> {
+fn is_valid_skill_target(target: &CommandSkillTargetQueryItem, position: &Position) -> bool {
     // TODO: Check Team
-    if let Ok((target_client_entity, target_position, target_ability_values, _target_health)) =
-        attack_target_query.get(target_entity)
-    {
-        if target_position.zone_id == position.zone_id {
-            return Some((target_client_entity, target_position, target_ability_values));
-        }
+    if target.position.zone_id != position.zone_id {
+        return false;
     }
 
-    None
+    // TODO: If is anything but res, then verify hp > 0
+
+    true
 }
 
-fn is_valid_pickup_target<'a>(
-    position: &Position,
-    target_entity: Entity,
-    query: &'a mut Query<(
-        &ClientEntity,
-        &ClientEntitySector,
-        &Position,
-        &mut ItemDrop,
-        Option<&Owner>,
-    )>,
-) -> Option<(
-    &'a ClientEntity,
-    &'a ClientEntitySector,
-    &'a Position,
-    Mut<'a, ItemDrop>,
-    Option<&'a Owner>,
-)> {
-    if let Ok((
-        target_client_entity,
-        target_client_entity_sector,
-        target_position,
-        target_item_drop,
-        target_owner,
-    )) = query.get_mut(target_entity)
-    {
-        // Check distance to target
-        let distance = position
-            .position
-            .xy()
-            .distance(target_position.position.xy());
-        if position.zone_id == target_position.zone_id && distance <= DROPPED_ITEM_PICKUP_DISTANCE {
-            return Some((
-                target_client_entity,
-                target_client_entity_sector,
-                target_position,
-                target_item_drop,
-                target_owner,
-            ));
-        }
+fn is_valid_pickup_target(target: &CommandPickupItemTargetQueryItem, position: &Position) -> bool {
+    if target.position.zone_id != position.zone_id {
+        return false;
     }
 
-    None
+    let distance = position
+        .position
+        .xy()
+        .distance(target.position.position.xy());
+    if distance > DROPPED_ITEM_PICKUP_DISTANCE {
+        return false;
+    }
+
+    true
 }
 
 pub fn command_system(
@@ -167,21 +156,16 @@ pub fn command_system(
         Option<&Npc>,
         Option<&PersonalStore>,
     )>,
-    move_target_query: Query<(&ClientEntity, &Position)>,
-    attack_target_query: Query<(&ClientEntity, &Position, &AbilityValues, &HealthPoints)>,
-    mut pickup_item_drop_target_query: Query<(
-        &ClientEntity,
-        &ClientEntitySector,
-        &Position,
-        &mut ItemDrop,
-        Option<&Owner>,
-    )>,
+    query_move_target: Query<CommandMoveTargetQuery>,
+    query_attack_target: Query<CommandAttackTargetQuery>,
+    mut query_pickup_item: Query<CommandPickupItemTargetQuery>,
+    query_skill_target: Query<CommandSkillTargetQuery>,
+    game_data: Res<GameData>,
     server_time: Res<ServerTime>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut damage_events: EventWriter<DamageEvent>,
     mut skill_events: EventWriter<SkillEvent>,
     mut server_messages: ResMut<ServerMessages>,
-    game_data: Res<GameData>,
 ) {
     query.for_each_mut(
         |(
@@ -217,12 +201,14 @@ pub fn command_system(
                         move_mode: command_move_mode,
                     }) => {
                         let mut target_entity_id = None;
-                        if let Some(target_entity) = target {
-                            if let Some((target_client_entity, target_position)) =
-                                is_valid_move_target(position, *target_entity, &move_target_query)
+                        if let Some(target_entity) = *target {
+                            if let Some(target) = query_move_target
+                                .get(target_entity)
+                                .ok()
+                                .filter(|target| is_valid_move_target(target, position))
                             {
-                                *destination = target_position.position;
-                                target_entity_id = Some(target_client_entity.id);
+                                *destination = target.position.position;
+                                target_entity_id = Some(target.client_entity.id);
                             } else {
                                 *target = None;
                             }
@@ -242,33 +228,35 @@ pub fn command_system(
                             }),
                         );
                     }
-                    CommandData::Attack(CommandAttack {
+                    &mut CommandData::Attack(CommandAttack {
                         target: target_entity,
                     }) => {
-                        if let Some((target_client_entity, target_position, ..)) =
-                            is_valid_attack_target(position, *target_entity, &attack_target_query)
+                        if let Some(target) = query_attack_target
+                            .get(target_entity)
+                            .ok()
+                            .filter(|target| is_valid_attack_target(target, position))
                         {
                             let distance = position
                                 .position
                                 .xy()
-                                .distance(target_position.position.xy());
+                                .distance(target.position.position.xy());
 
                             server_messages.send_entity_message(
                                 client_entity,
                                 ServerMessage::AttackEntity(server::AttackEntity {
                                     entity_id: client_entity.id,
-                                    target_entity_id: target_client_entity.id,
+                                    target_entity_id: target.client_entity.id,
                                     distance: distance as u16,
-                                    x: target_position.position.x,
-                                    y: target_position.position.y,
-                                    z: target_position.position.z as u16,
+                                    x: target.position.position.x,
+                                    y: target.position.position.y,
+                                    z: target.position.position.z as u16,
                                 }),
                             );
                         } else {
                             *next_command = NextCommand::with_stop(true);
                         }
                     }
-                    CommandData::CastSkill(CommandCastSkill {
+                    &mut CommandData::CastSkill(CommandCastSkill {
                         skill_id,
                         skill_target: None,
                         cast_motion_id,
@@ -278,35 +266,37 @@ pub fn command_system(
                             client_entity,
                             ServerMessage::CastSkillSelf(server::CastSkillSelf {
                                 entity_id: client_entity.id,
-                                skill_id: *skill_id,
-                                cast_motion_id: *cast_motion_id,
+                                skill_id,
+                                cast_motion_id,
                             }),
                         );
                     }
-                    CommandData::CastSkill(CommandCastSkill {
+                    &mut CommandData::CastSkill(CommandCastSkill {
                         skill_id,
                         skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                         cast_motion_id,
                         ..
                     }) => {
-                        if let Some((target_client_entity, target_position, ..)) =
-                            is_valid_skill_target(position, *target_entity, &attack_target_query)
+                        if let Some(target) = query_skill_target
+                            .get(target_entity)
+                            .ok()
+                            .filter(|target| is_valid_skill_target(target, position))
                         {
                             let distance = position
                                 .position
                                 .xy()
-                                .distance(target_position.position.xy());
+                                .distance(target.position.position.xy());
 
                             server_messages.send_entity_message(
                                 client_entity,
                                 ServerMessage::CastSkillTargetEntity(
                                     server::CastSkillTargetEntity {
                                         entity_id: client_entity.id,
-                                        skill_id: *skill_id,
-                                        target_entity_id: target_client_entity.id,
+                                        skill_id,
+                                        target_entity_id: target.client_entity.id,
                                         target_distance: distance,
-                                        target_position: target_position.position.xy(),
-                                        cast_motion_id: *cast_motion_id,
+                                        target_position: target.position.position.xy(),
+                                        cast_motion_id,
                                     },
                                 ),
                             );
@@ -453,10 +443,12 @@ pub fn command_system(
                     let mut entity_commands = commands.entity(entity);
 
                     if let Some(target_entity) = *target {
-                        if let Some((target_client_entity, target_position)) =
-                            is_valid_move_target(position, target_entity, &move_target_query)
+                        if let Some(target) = query_move_target
+                            .get(target_entity)
+                            .ok()
+                            .filter(|target| is_valid_move_target(target, position))
                         {
-                            let required_distance = match target_client_entity.entity_type {
+                            let required_distance = match target.client_entity.entity_type {
                                 ClientEntityType::Character => Some(CHARACTER_MOVE_TO_DISTANCE),
                                 ClientEntityType::Npc => Some(NPC_MOVE_TO_DISTANCE),
                                 ClientEntityType::ItemDrop => Some(DROPPED_ITEM_MOVE_TO_DISTANCE),
@@ -467,21 +459,21 @@ pub fn command_system(
                                 let distance = position
                                     .position
                                     .xy()
-                                    .distance(target_position.position.xy());
+                                    .distance(target.position.position.xy());
                                 if distance < required_distance {
                                     // We are already within required distance, so no need to move further
                                     *destination = position.position;
                                 } else {
-                                    let offset = (target_position.position.xy()
+                                    let offset = (target.position.position.xy()
                                         - position.position.xy())
                                     .normalize()
                                         * required_distance;
-                                    destination.x = target_position.position.x - offset.x;
-                                    destination.y = target_position.position.y - offset.y;
-                                    destination.z = target_position.position.z;
+                                    destination.x = target.position.position.x - offset.x;
+                                    destination.y = target.position.position.y - offset.y;
+                                    destination.z = target.position.position.z;
                                 }
                             } else {
-                                *destination = target_position.position;
+                                *destination = target.position.position;
                             }
                         } else {
                             *target = None;
@@ -531,48 +523,42 @@ pub fn command_system(
                     target: target_entity,
                 }) => {
                     if let Some(mut inventory) = inventory {
-                        if let Some((
-                            target_client_entity,
-                            target_client_entity_sector,
-                            target_position,
-                            mut target_item_drop,
-                            target_owner,
-                        )) = is_valid_pickup_target(
-                            position,
-                            target_entity,
-                            &mut pickup_item_drop_target_query,
-                        ) {
-                            let result = if !target_owner
-                                .map_or(true, |owner| owner.entity == entity)
-                            {
-                                // Not owner
-                                Err(PickupItemDropError::NoPermission)
-                            } else {
-                                // Try add to inventory
-                                match target_item_drop.item.take() {
-                                    None => Err(PickupItemDropError::NotExist),
-                                    Some(DroppedItem::Item(item)) => {
-                                        match inventory.try_add_item(item) {
-                                            Ok((slot, item)) => {
-                                                Ok(PickupItemDropContent::Item(slot, item.clone()))
+                        if let Some(mut target) = query_pickup_item
+                            .get_mut(target_entity)
+                            .ok()
+                            .filter(|target| is_valid_pickup_target(target, position))
+                        {
+                            let result =
+                                if !target.owner.map_or(true, |owner| owner.entity == entity) {
+                                    // Not owner
+                                    Err(PickupItemDropError::NoPermission)
+                                } else {
+                                    // Try add to inventory
+                                    match target.item_drop.item.take() {
+                                        None => Err(PickupItemDropError::NotExist),
+                                        Some(DroppedItem::Item(item)) => {
+                                            match inventory.try_add_item(item) {
+                                                Ok((slot, item)) => Ok(
+                                                    PickupItemDropContent::Item(slot, item.clone()),
+                                                ),
+                                                Err(item) => {
+                                                    target.item_drop.item =
+                                                        Some(DroppedItem::Item(item));
+                                                    Err(PickupItemDropError::InventoryFull)
+                                                }
                                             }
-                                            Err(item) => {
-                                                target_item_drop.item =
-                                                    Some(DroppedItem::Item(item));
+                                        }
+                                        Some(DroppedItem::Money(money)) => {
+                                            if inventory.try_add_money(money).is_ok() {
+                                                Ok(PickupItemDropContent::Money(money))
+                                            } else {
+                                                target.item_drop.item =
+                                                    Some(DroppedItem::Money(money));
                                                 Err(PickupItemDropError::InventoryFull)
                                             }
                                         }
                                     }
-                                    Some(DroppedItem::Money(money)) => {
-                                        if inventory.try_add_money(money).is_ok() {
-                                            Ok(PickupItemDropContent::Money(money))
-                                        } else {
-                                            target_item_drop.item = Some(DroppedItem::Money(money));
-                                            Err(PickupItemDropError::InventoryFull)
-                                        }
-                                    }
-                                }
-                            };
+                                };
 
                             if result.is_ok() {
                                 // Delete picked up item
@@ -580,9 +566,9 @@ pub fn command_system(
                                     &mut commands,
                                     &mut client_entity_list,
                                     target_entity,
-                                    target_client_entity,
-                                    target_client_entity_sector,
-                                    target_position,
+                                    target.client_entity,
+                                    target.client_entity_sector,
+                                    target.position,
                                 );
                                 commands.entity(target_entity).despawn();
 
@@ -607,7 +593,7 @@ pub fn command_system(
                                     .server_message_tx
                                     .send(ServerMessage::PickupItemDropResult(
                                         PickupItemDropResult {
-                                            item_entity_id: target_client_entity.id,
+                                            item_entity_id: target.client_entity.id,
                                             result,
                                         },
                                     ))
@@ -621,14 +607,16 @@ pub fn command_system(
                 &mut CommandData::Attack(CommandAttack {
                     target: target_entity,
                 }) => {
-                    if let Some((_, target_position, target_ability_values)) =
-                        is_valid_attack_target(position, target_entity, &attack_target_query)
+                    if let Some(target) = query_attack_target
+                        .get(target_entity)
+                        .ok()
+                        .filter(|target| is_valid_attack_target(target, position))
                     {
                         let mut entity_commands = commands.entity(entity);
                         let distance = position
                             .position
                             .xy()
-                            .distance(target_position.position.xy());
+                            .distance(target.position.position.xy());
 
                         // Check if we are in attack range
                         let attack_range = ability_values.get_attack_range() as f32;
@@ -725,7 +713,7 @@ pub fn command_system(
                                     target_entity,
                                     game_data.ability_value_calculator.calculate_damage(
                                         ability_values,
-                                        target_ability_values,
+                                        target.ability_values,
                                         hit_count as i32,
                                     ),
                                 ));
@@ -733,13 +721,13 @@ pub fn command_system(
                         } else {
                             // Not in range, set current command to move
                             *command = Command::with_move(
-                                target_position.position,
+                                target.position.position,
                                 Some(target_entity),
                                 Some(MoveMode::Run),
                             );
 
                             // Set destination to move towards
-                            entity_commands.insert(Destination::new(target_position.position));
+                            entity_commands.insert(Destination::new(target.position.position));
 
                             // Update target
                             entity_commands.insert(Target::new(target_entity));
@@ -767,12 +755,12 @@ pub fn command_system(
                         let mut entity_commands = commands.entity(entity);
                         let (target_position, target_entity) = match skill_target {
                             Some(CommandCastSkillTarget::Entity(target_entity)) => {
-                                if let Some((_, target_position, _)) = is_valid_skill_target(
-                                    position,
-                                    target_entity,
-                                    &attack_target_query,
-                                ) {
-                                    (Some(target_position.position), Some(target_entity))
+                                if let Some(target) = query_skill_target
+                                    .get(target_entity)
+                                    .ok()
+                                    .filter(|target| is_valid_skill_target(target, position))
+                                {
+                                    (Some(target.position.position), Some(target_entity))
                                 } else {
                                     (None, None)
                                 }
