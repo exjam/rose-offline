@@ -11,9 +11,9 @@ use crate::game::{
 
 fn check_skill_point_requirements(
     skill_data: &SkillData,
-    skill_points: &Option<&mut Mut<SkillPoints>>,
+    skill_points: Option<&SkillPoints>,
 ) -> bool {
-    skill_points.as_ref().map_or(true, |skill_points| {
+    skill_points.map_or(true, |skill_points| {
         skill_points.points >= skill_data.learn_point_cost
     })
 }
@@ -32,7 +32,7 @@ fn try_learn_skill(
         return Err(LearnSkillError::AlreadyLearnt);
     }
 
-    if !check_skill_point_requirements(skill_data, &skill_points) {
+    if !check_skill_point_requirements(skill_data, skill_points.as_deref().map(|x| &**x)) {
         return Err(LearnSkillError::SkillPointRequirement);
     }
 
@@ -55,7 +55,7 @@ fn try_level_up_skill(
     skill_database: &SkillDatabase,
     skill_slot: SkillSlot,
     skill_list: &mut SkillList,
-    skill_points: Option<&mut Mut<SkillPoints>>,
+    mut skill_points: Option<&mut Mut<SkillPoints>>,
 ) -> Result<SkillId, LevelUpSkillError> {
     let current_skill_id = skill_list
         .get_skill(skill_slot)
@@ -77,7 +77,7 @@ fn try_level_up_skill(
         return Err(LevelUpSkillError::Failed);
     }
 
-    if !check_skill_point_requirements(next_skill_data, &skill_points) {
+    if !check_skill_point_requirements(next_skill_data, skill_points.as_deref().map(|x| &**x)) {
         return Err(LevelUpSkillError::SkillPointRequirement);
     }
 
@@ -90,7 +90,7 @@ fn try_level_up_skill(
         .ok_or(LevelUpSkillError::Failed)?;
     *skill_list_slot = Some(next_skill_id);
 
-    if let Some(skill_points) = skill_points {
+    if let Some(skill_points) = skill_points.as_deref_mut() {
         skill_points.points -= next_skill_data.learn_point_cost;
     }
 
@@ -100,7 +100,7 @@ fn try_level_up_skill(
 pub fn skill_list_try_learn_skill(
     skill_database: &SkillDatabase,
     skill_id: SkillId,
-    skill_list: &mut SkillList,
+    skill_list: &mut Mut<SkillList>,
     mut skill_points: Option<&mut Mut<SkillPoints>>,
     game_client: Option<&GameClient>,
 ) -> Result<SkillSlot, LearnSkillError> {
@@ -120,6 +120,7 @@ pub fn skill_list_try_learn_skill(
                         skill_slot,
                         skill_id: Some(skill_id),
                         updated_skill_points: skill_points
+                            .as_deref()
                             .map_or_else(SkillPoints::default, |skill_points| **skill_points),
                     })))
                     .ok();
@@ -151,8 +152,9 @@ pub fn skill_list_try_level_up_skill(
     );
 
     if let Some(game_client) = game_client {
-        let updated_skill_points =
-            skill_points.map_or_else(SkillPoints::default, |skill_points| **skill_points);
+        let updated_skill_points = skill_points
+            .as_deref()
+            .map_or_else(SkillPoints::default, |skill_points| **skill_points);
 
         match result {
             Ok(skill_id) => {

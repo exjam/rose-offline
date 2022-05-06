@@ -1,5 +1,6 @@
 use bevy::ecs::{
     prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
+    query::WorldQuery,
     system::SystemParam,
 };
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
@@ -60,35 +61,37 @@ pub struct QuestSystemResources<'w, 's> {
     _secret: PhantomData<&'s ()>,
 }
 
-struct QuestSourceEntity<'world, 'a> {
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct QuestSourceEntityQuery<'w> {
     entity: Entity,
-    game_client: Option<&'a GameClient>,
-    ability_values: &'a AbilityValues,
-    basic_stats: Option<&'a mut Mut<'world, BasicStats>>,
-    character_info: Option<&'a mut Mut<'world, CharacterInfo>>,
-    client_entity: &'a ClientEntity,
-    client_entity_sector: &'a ClientEntitySector,
-    equipment: Option<&'a Equipment>,
-    experience_points: Option<&'a mut Mut<'world, ExperiencePoints>>,
-    health_points: Option<&'a mut Mut<'world, HealthPoints>>,
-    inventory: Option<&'a mut Mut<'world, Inventory>>,
-    level: &'a Level,
-    mana_points: Option<&'a mut Mut<'world, ManaPoints>>,
-    move_speed: &'a MoveSpeed,
-    npc: Option<&'a Npc>,
-    party_membership: Option<&'a PartyMembership>,
-    position: &'a Position,
-    quest_state: Option<&'a mut Mut<'world, QuestState>>,
-    skill_list: Option<&'a mut Mut<'world, SkillList>>,
-    skill_points: Option<&'a mut Mut<'world, SkillPoints>>,
-    stamina: Option<&'a mut Mut<'world, Stamina>>,
-    stat_points: Option<&'a mut Mut<'world, StatPoints>>,
-    team: &'a mut Mut<'world, Team>,
-    union_membership: Option<&'a mut Mut<'world, UnionMembership>>,
+    ability_values: &'w AbilityValues,
+    basic_stats: Option<&'w mut BasicStats>,
+    character_info: Option<&'w mut CharacterInfo>,
+    client_entity: &'w ClientEntity,
+    client_entity_sector: &'w ClientEntitySector,
+    equipment: Option<&'w Equipment>,
+    experience_points: Option<&'w mut ExperiencePoints>,
+    game_client: Option<&'w GameClient>,
+    health_points: Option<&'w mut HealthPoints>,
+    inventory: Option<&'w mut Inventory>,
+    level: &'w Level,
+    mana_points: Option<&'w mut ManaPoints>,
+    move_speed: &'w MoveSpeed,
+    npc: Option<&'w Npc>,
+    party_membership: Option<&'w PartyMembership>,
+    position: &'w Position,
+    quest_state: Option<&'w mut QuestState>,
+    skill_list: Option<&'w mut SkillList>,
+    skill_points: Option<&'w mut SkillPoints>,
+    stamina: Option<&'w mut Stamina>,
+    stat_points: Option<&'w mut StatPoints>,
+    team: &'w mut Team,
+    union_membership: Option<&'w mut UnionMembership>,
 }
 
-struct QuestParameters<'a, 'world, 'b> {
-    source: &'a mut QuestSourceEntity<'world, 'b>,
+struct QuestParameters<'a, 'b, 'w> {
+    source: &'a mut QuestSourceEntityQueryItem<'b, 'w>,
     selected_event_object: Option<Entity>,
     selected_npc: Option<Entity>,
     selected_quest_index: Option<usize>,
@@ -260,30 +263,14 @@ fn quest_condition_ability_values(
             quest_parameters.source.ability_values,
             quest_parameters.source.level,
             quest_parameters.source.move_speed,
-            quest_parameters.source.team,
-            quest_parameters
-                .source
-                .character_info
-                .as_deref()
-                .map(|x| &**x),
-            quest_parameters
-                .source
-                .experience_points
-                .as_deref()
-                .map(|x| &**x),
-            quest_parameters.source.inventory.as_deref().map(|x| &**x),
-            quest_parameters
-                .source
-                .skill_points
-                .as_deref()
-                .map(|x| &**x),
-            quest_parameters.source.stamina.as_deref().map(|x| &**x),
-            quest_parameters.source.stat_points.as_deref().map(|x| &**x),
-            quest_parameters
-                .source
-                .union_membership
-                .as_deref()
-                .map(|x| &**x),
+            quest_parameters.source.team.as_ref(),
+            quest_parameters.source.character_info.as_deref(),
+            quest_parameters.source.experience_points.as_deref(),
+            quest_parameters.source.inventory.as_deref(),
+            quest_parameters.source.skill_points.as_deref(),
+            quest_parameters.source.stamina.as_deref(),
+            quest_parameters.source.stat_points.as_deref(),
+            quest_parameters.source.union_membership.as_deref(),
         )
         .unwrap_or(0);
 
@@ -976,22 +963,21 @@ fn quest_reward_calculated_item(
 
 fn reset_quest_calculated_money_dup_count_var(
     selected_quest_index: Option<usize>,
-    quest_state: &mut Option<&mut Mut<QuestState>>,
+    quest_state: Option<&mut Mut<QuestState>>,
 ) -> Option<()> {
     let quest_index = selected_quest_index?;
-    let quest_state = quest_state.as_mut()?;
+    let quest_state = quest_state?;
     let active_quest = quest_state.get_quest_mut(quest_index)?;
     *active_quest.variables.last_mut()? = 0;
     Some(())
 }
 
-fn get_quest_calculated_money_dup_count_var<'a, 'world>(
+fn get_quest_calculated_money_dup_count_var(
     selected_quest_index: Option<usize>,
-    quest_state: &'a Option<&'a mut Mut<'world, QuestState>>,
-) -> Option<&'a u16> {
+    quest_state: Option<&QuestState>,
+) -> Option<&u16> {
     let quest_index = selected_quest_index?;
-    let quest_state = quest_state.as_ref()?;
-    let active_quest = quest_state.get_quest(quest_index)?;
+    let active_quest = quest_state?.get_quest(quest_index)?;
     active_quest.variables.last()
 }
 
@@ -1004,7 +990,7 @@ fn quest_reward_calculated_money(
 ) -> bool {
     let dup_count_var = get_quest_calculated_money_dup_count_var(
         quest_parameters.selected_quest_index,
-        &quest_parameters.source.quest_state,
+        quest_parameters.source.quest_state.as_deref(),
     );
 
     let reward_value = quest_system_resources
@@ -1035,7 +1021,7 @@ fn quest_reward_calculated_money(
         if inventory.try_add_money(money).is_ok() {
             reset_quest_calculated_money_dup_count_var(
                 quest_parameters.selected_quest_index,
-                &mut quest_parameters.source.quest_state,
+                quest_parameters.source.quest_state.as_mut(),
             );
 
             if let Some(game_client) = quest_parameters.source.game_client {
@@ -1209,12 +1195,12 @@ fn quest_reward_add_skill(
 ) -> Option<()> {
     let skill_id = SkillId::new(skill_id as u16)?;
 
-    if let Some(skill_list) = quest_parameters.source.skill_list.as_deref_mut() {
+    if let Some(skill_list) = quest_parameters.source.skill_list.as_mut() {
         skill_list_try_learn_skill(
             quest_system_resources.game_data.skills.as_ref(),
             skill_id,
             skill_list,
-            quest_parameters.source.skill_points.as_deref_mut(),
+            quest_parameters.source.skill_points.as_mut(),
             quest_parameters.source.game_client,
         )
         .ok()
@@ -1234,7 +1220,7 @@ fn quest_reward_remove_skill(
         .game_data
         .skills
         .get_skill(skill_id)?;
-    let skill_list = quest_parameters.source.skill_list.as_deref_mut()?;
+    let skill_list = quest_parameters.source.skill_list.as_mut()?;
     let (skill_slot, _) = skill_list.find_skill(skill_data)?;
     let skill_slot = skill_list.get_slot_mut(skill_slot)?;
     *skill_slot = None;
@@ -1259,11 +1245,11 @@ fn quest_reward_reset_basic_stats(
                     .calculate_levelup_reward_stat_points(level);
             }
 
-            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_deref_mut() {
+            if let Some(basic_stats) = quest_parameters.source.basic_stats.as_mut() {
                 **basic_stats = reset_basic_stats;
             }
 
-            if let Some(stat_points) = quest_parameters.source.stat_points.as_deref_mut() {
+            if let Some(stat_points) = quest_parameters.source.stat_points.as_mut() {
                 stat_points.points = total_stat_points;
             }
 
@@ -1278,7 +1264,7 @@ fn quest_reward_reset_skills(
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
 ) -> bool {
-    if let Some(skill_list) = quest_parameters.source.skill_list.as_deref_mut() {
+    if let Some(skill_list) = quest_parameters.source.skill_list.as_mut() {
         skill_list.active.skills = Default::default();
         skill_list.passive.skills = Default::default();
         skill_list.clan.skills = Default::default();
@@ -1291,7 +1277,7 @@ fn quest_reward_reset_skills(
                 .calculate_levelup_reward_skill_points(level);
         }
 
-        if let Some(skill_points) = quest_parameters.source.skill_points.as_deref_mut() {
+        if let Some(skill_points) = quest_parameters.source.skill_points.as_mut() {
             skill_points.points = total_skill_points;
         }
 
@@ -1339,48 +1325,48 @@ fn quest_reward_ability_value(
         QsdRewardOperator::Set => ability_values_set_value(
             ability_type.unwrap(),
             value,
-            quest_parameters.source.basic_stats.as_deref_mut(),
-            quest_parameters.source.character_info.as_deref_mut(),
-            quest_parameters.source.union_membership.as_deref_mut(),
-            quest_parameters.source.game_client.as_deref(),
+            quest_parameters.source.basic_stats.as_mut(),
+            quest_parameters.source.character_info.as_mut(),
+            quest_parameters.source.union_membership.as_mut(),
+            quest_parameters.source.game_client,
         ),
         QsdRewardOperator::Add => ability_values_add_value(
             ability_type.unwrap(),
             value,
-            quest_parameters.source.basic_stats.as_deref_mut(),
-            quest_parameters.source.inventory.as_deref_mut(),
-            quest_parameters.source.skill_points.as_deref_mut(),
-            quest_parameters.source.stamina.as_deref_mut(),
-            quest_parameters.source.stat_points.as_deref_mut(),
-            quest_parameters.source.union_membership.as_deref_mut(),
-            quest_parameters.source.game_client.as_deref(),
+            quest_parameters.source.basic_stats.as_mut(),
+            quest_parameters.source.inventory.as_mut(),
+            quest_parameters.source.skill_points.as_mut(),
+            quest_parameters.source.stamina.as_mut(),
+            quest_parameters.source.stat_points.as_mut(),
+            quest_parameters.source.union_membership.as_mut(),
+            quest_parameters.source.game_client,
         ),
         QsdRewardOperator::Subtract => ability_values_add_value(
             ability_type.unwrap(),
             -value,
-            quest_parameters.source.basic_stats.as_deref_mut(),
-            quest_parameters.source.inventory.as_deref_mut(),
-            quest_parameters.source.skill_points.as_deref_mut(),
-            quest_parameters.source.stamina.as_deref_mut(),
-            quest_parameters.source.stat_points.as_deref_mut(),
-            quest_parameters.source.union_membership.as_deref_mut(),
-            quest_parameters.source.game_client.as_deref(),
+            quest_parameters.source.basic_stats.as_mut(),
+            quest_parameters.source.inventory.as_mut(),
+            quest_parameters.source.skill_points.as_mut(),
+            quest_parameters.source.stamina.as_mut(),
+            quest_parameters.source.stat_points.as_mut(),
+            quest_parameters.source.union_membership.as_mut(),
+            quest_parameters.source.game_client,
         ),
         QsdRewardOperator::Zero => ability_values_set_value(
             ability_type.unwrap(),
             0,
-            quest_parameters.source.basic_stats.as_deref_mut(),
-            quest_parameters.source.character_info.as_deref_mut(),
-            quest_parameters.source.union_membership.as_deref_mut(),
-            quest_parameters.source.game_client.as_deref(),
+            quest_parameters.source.basic_stats.as_mut(),
+            quest_parameters.source.character_info.as_mut(),
+            quest_parameters.source.union_membership.as_mut(),
+            quest_parameters.source.game_client,
         ),
         QsdRewardOperator::One => ability_values_set_value(
             ability_type.unwrap(),
             1,
-            quest_parameters.source.basic_stats.as_deref_mut(),
-            quest_parameters.source.character_info.as_deref_mut(),
-            quest_parameters.source.union_membership.as_deref_mut(),
-            quest_parameters.source.game_client.as_deref(),
+            quest_parameters.source.basic_stats.as_mut(),
+            quest_parameters.source.character_info.as_mut(),
+            quest_parameters.source.union_membership.as_mut(),
+            quest_parameters.source.game_client,
         ),
     }
 }
@@ -1401,7 +1387,7 @@ fn set_quest_variable(
     variable_id: usize,
     value: i32,
 ) {
-    if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
         let active_quest = quest_parameters
             .selected_quest_index
             .and_then(|quest_index| quest_state.get_quest_mut(quest_index));
@@ -1566,7 +1552,7 @@ fn quest_reward_spawn_monster(
 }
 
 fn quest_reward_clear_all_switches(quest_parameters: &mut QuestParameters) -> bool {
-    if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
         quest_state.quest_switches.fill(false);
         true
     } else {
@@ -1575,7 +1561,7 @@ fn quest_reward_clear_all_switches(quest_parameters: &mut QuestParameters) -> bo
 }
 
 fn quest_reward_clear_switch_group(quest_parameters: &mut QuestParameters, group: usize) -> bool {
-    if let Some(quest_state) = quest_parameters.source.quest_state.as_deref_mut() {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
         for i in (32 * group)..(32 * (group + 1)) {
             if let Some(mut switch) = quest_state.quest_switches.get_mut(i) {
                 *switch = false;
@@ -1601,7 +1587,7 @@ fn quest_reward_set_team_number(
         }
     };
 
-    **quest_parameters.source.team = team;
+    *quest_parameters.source.team = team;
     true
 }
 
@@ -1888,33 +1874,7 @@ fn quest_trigger_apply_rewards(
 pub fn quest_system(
     mut quest_system_parameters: QuestSystemParameters,
     quest_system_resources: QuestSystemResources,
-    mut query: Query<(
-        &ClientEntity,
-        &ClientEntitySector,
-        &AbilityValues,
-        &Level,
-        &MoveSpeed,
-        &Position,
-        Option<&Equipment>,
-        Option<&Npc>,
-        Option<&PartyMembership>,
-        (
-            &mut Team,
-            Option<&mut BasicStats>,
-            Option<&mut CharacterInfo>,
-            Option<&mut ExperiencePoints>,
-            Option<&mut HealthPoints>,
-            Option<&mut Inventory>,
-            Option<&mut ManaPoints>,
-            Option<&mut QuestState>,
-            Option<&mut SkillList>,
-            Option<&mut SkillPoints>,
-            Option<&mut Stamina>,
-            Option<&mut StatPoints>,
-            Option<&mut UnionMembership>,
-        ),
-        Option<&GameClient>,
-    )>,
+    mut query: Query<QuestSourceEntityQuery>,
     mut quest_trigger_events: EventReader<QuestTriggerEvent>,
 ) {
     for &QuestTriggerEvent {
@@ -1928,61 +1888,9 @@ pub fn quest_system(
             .get_trigger_by_hash(trigger_hash);
         let mut success = false;
 
-        if let Ok((
-            client_entity,
-            client_entity_sector,
-            ability_values,
-            level,
-            move_speed,
-            position,
-            equipment,
-            npc,
-            party_membership,
-            (
-                mut team,
-                mut basic_stats,
-                mut character_info,
-                mut experience_points,
-                mut health_points,
-                mut inventory,
-                mut mana_points,
-                mut quest_state,
-                mut skill_list,
-                mut skill_points,
-                mut stamina,
-                mut stat_points,
-                mut union_membership,
-            ),
-            game_client,
-        )) = query.get_mut(trigger_entity)
-        {
+        if let Ok(mut quest_source_entity) = query.get_mut(trigger_entity) {
             let mut quest_parameters = QuestParameters {
-                source: &mut QuestSourceEntity {
-                    entity: trigger_entity,
-                    game_client,
-                    ability_values,
-                    basic_stats: basic_stats.as_mut(),
-                    character_info: character_info.as_mut(),
-                    client_entity,
-                    client_entity_sector,
-                    equipment,
-                    experience_points: experience_points.as_mut(),
-                    health_points: health_points.as_mut(),
-                    inventory: inventory.as_mut(),
-                    level,
-                    mana_points: mana_points.as_mut(),
-                    move_speed,
-                    npc,
-                    party_membership,
-                    position,
-                    quest_state: quest_state.as_mut(),
-                    skill_list: skill_list.as_mut(),
-                    skill_points: skill_points.as_mut(),
-                    stamina: stamina.as_mut(),
-                    stat_points: stat_points.as_mut(),
-                    team: &mut team,
-                    union_membership: union_membership.as_mut(),
-                },
+                source: &mut quest_source_entity,
                 selected_event_object: None,
                 selected_npc: None,
                 selected_quest_index: None,
@@ -2029,7 +1937,7 @@ pub fn quest_system(
                 }
             }
 
-            if let Some(game_client) = game_client {
+            if let Some(game_client) = quest_source_entity.game_client {
                 game_client
                     .server_message_tx
                     .send(ServerMessage::QuestTriggerResult(QuestTriggerResult {
