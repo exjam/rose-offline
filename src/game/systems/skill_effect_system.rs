@@ -541,6 +541,63 @@ pub fn skill_effect_system(
                 }
             }
 
+            // Check and subtract skill usage requirements
+            if matches!(skill_data.skill_type, SkillType::SummonPet) {
+                let summon_point_requirement = skill_data
+                    .summon_npc_id
+                    .and_then(|npc_id| skill_system_resources.game_data.npcs.get_npc(npc_id))
+                    .map_or(0, |npc_data| npc_data.summon_point_requirement);
+                if summon_point_requirement > 0 {
+                    // TODO: Check summon_point_requirement and update summon points
+                }
+            }
+
+            for &(use_ability_type, use_ability_value) in skill_data.use_ability.iter() {
+                // We use the skill_target_query to access the other required components
+                let mut skill_caster2 = skill_target_query.get_mut(caster_entity).unwrap();
+                let ability_value = ability_values_get_value(
+                    use_ability_type,
+                    Some(skill_caster.ability_values),
+                    Some(skill_caster.level),
+                    None,
+                    None,
+                    None,
+                    skill_caster.experience_points.as_deref(),
+                    skill_caster.inventory.as_deref(),
+                    None,
+                    skill_caster2.stamina.as_deref(),
+                    None,
+                    None,
+                    Some(skill_caster2.health_points.as_ref()),
+                    skill_caster2.mana_points.as_deref(),
+                    // TODO: Fuel
+                );
+
+                if let Some(ability_value) = ability_value {
+                    if ability_value < use_ability_value {
+                        // Not enough use ability, cancel the skill
+                        result = Err(SkillCastError::NotEnoughUseAbility);
+                    } else {
+                        ability_values_add_value(
+                            use_ability_type,
+                            -use_ability_value,
+                            Some(skill_caster.ability_values),
+                            None,
+                            skill_caster.experience_points.as_mut(),
+                            Some(&mut skill_caster2.health_points),
+                            skill_caster.inventory.as_mut(), // For money
+                            skill_caster2.mana_points.as_mut(),
+                            None,
+                            skill_caster2.stamina.as_mut(),
+                            None,
+                            None,
+                            None,
+                            // TODO: Fuel
+                        );
+                    }
+                }
+            }
+
             if result.is_ok() {
                 result = match skill_data.skill_type {
                     SkillType::Immediate
