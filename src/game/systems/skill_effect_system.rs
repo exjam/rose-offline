@@ -1,9 +1,11 @@
-use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, EventWriter, Local, Query, Res, ResMut},
-    query::WorldQuery,
-    system::SystemParam,
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventReader, EventWriter, Local, Query, Res, ResMut},
+        query::WorldQuery,
+        system::SystemParam,
+    },
+    math::Vec3Swizzles,
 };
-use bevy::math::Vec3Swizzles;
 use log::warn;
 use rand::Rng;
 use std::marker::PhantomData;
@@ -15,11 +17,11 @@ use rose_data::{
 use rose_game_common::data::Damage;
 
 use crate::game::{
-    bundles::{ability_values_get_value, MonsterBundle},
+    bundles::{ability_values_add_value, ability_values_get_value, MonsterBundle},
     components::{
-        AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityType, Equipment,
-        GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, Npc, Position,
-        SkillList, SpawnOrigin, StatusEffects, Team,
+        AbilityValues, ClientEntity, ClientEntityType, ExperiencePoints, GameClient, HealthPoints,
+        Inventory, Level, ManaPoints, MoveSpeed, Position, SpawnOrigin, Stamina, StatusEffects,
+        Team,
     },
     events::{DamageEvent, SkillEvent, SkillEventTarget},
     messages::server::{
@@ -58,6 +60,7 @@ pub struct SkillCasterQuery<'w> {
     client_entity: &'w ClientEntity,
     position: &'w Position,
     ability_values: &'w AbilityValues,
+    experience_points: Option<&'w mut ExperiencePoints>,
     level: &'w Level,
     team: &'w Team,
     game_client: Option<&'w GameClient>,
@@ -77,15 +80,7 @@ pub struct SkillTargetQuery<'w> {
     mana_points: Option<&'w mut ManaPoints>,
     level: &'w Level,
     move_speed: &'w MoveSpeed,
-
-    // To update character ability_values
-    character_info: Option<&'w CharacterInfo>,
-    equipment: Option<&'w Equipment>,
-    basic_stats: Option<&'w BasicStats>,
-    skill_list: Option<&'w SkillList>,
-
-    // To update NPC ability_values
-    npc: Option<&'w Npc>,
+    stamina: Option<&'w mut Stamina>,
 }
 
 fn check_skill_target_filter(
@@ -205,11 +200,13 @@ fn apply_skill_status_effects_to_entity(
         } else if let Some(skill_add_ability) = skill_data.add_ability[effect_index].as_ref() {
             let ability_value = ability_values_get_value(
                 skill_add_ability.ability_type,
-                skill_target.ability_values,
-                skill_target.level,
-                skill_target.move_speed,
-                skill_target.team,
-                skill_target.character_info,
+                Some(skill_target.ability_values),
+                Some(skill_target.level),
+                Some(skill_target.move_speed),
+                Some(skill_target.team),
+                None,
+                None,
+                None,
                 None,
                 None,
                 None,

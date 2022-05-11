@@ -1,5 +1,6 @@
 use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
+    prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut},
+    query::WorldQuery,
     system::SystemParam,
 };
 use bevy::math::{UVec2, Vec3, Vec3Swizzles};
@@ -15,7 +16,7 @@ use rose_data::{
     AbilityType, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, NpcId, SkillId,
     StackableItem, ZoneId,
 };
-use rose_game_common::{components::CharacterGender, data::Damage};
+use rose_game_common::{components::ExperiencePoints, data::Damage};
 
 use crate::game::{
     bundles::{
@@ -23,12 +24,12 @@ use crate::game::{
         client_entity_teleport_zone, CharacterBundle, MonsterBundle,
     },
     components::{
-        AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClientEntity,
+        AbilityValues, BasicStats, BotAi, BotAiState, CharacterGender, CharacterInfo, ClientEntity,
         ClientEntitySector, ClientEntityType, Command, EquipmentItemDatabase, GameClient,
-        Inventory, Level, Money, MotionData, MoveMode, MoveSpeed, NextCommand, PartyMembership,
-        PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints, SpawnOrigin, Stamina,
-        StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
-        PERSONAL_STORE_ITEM_SLOTS,
+        HealthPoints, Inventory, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
+        NextCommand, PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList,
+        SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
+        UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
     },
     events::{ChatCommandEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
@@ -48,22 +49,27 @@ pub struct ChatCommandParams<'w, 's> {
     server_messages: ResMut<'w, ServerMessages>,
 }
 
-pub struct ChatCommandUser<'w, 's> {
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct ChatCommandUserQuery<'w> {
     entity: Entity,
-    ability_values: &'s AbilityValues,
-    client_entity: &'s ClientEntity,
-    client_entity_sector: &'s ClientEntitySector,
-    game_client: &'s GameClient,
-    level: &'s Level,
-    position: &'s Position,
-    basic_stats: &'s mut Mut<'w, BasicStats>,
-    character_info: &'s mut Mut<'w, CharacterInfo>,
-    inventory: &'s mut Mut<'w, Inventory>,
-    skill_list: &'s mut Mut<'w, SkillList>,
-    skill_points: &'s mut Mut<'w, SkillPoints>,
-    stamina: &'s mut Mut<'w, Stamina>,
-    stat_points: &'s mut Mut<'w, StatPoints>,
-    union_membership: &'s mut Mut<'w, UnionMembership>,
+    ability_values: &'w AbilityValues,
+    client_entity: &'w ClientEntity,
+    client_entity_sector: &'w ClientEntitySector,
+    game_client: &'w GameClient,
+    level: &'w Level,
+    position: &'w Position,
+    basic_stats: &'w mut BasicStats,
+    character_info: &'w mut CharacterInfo,
+    experience_points: &'w mut ExperiencePoints,
+    health_points: &'w mut HealthPoints,
+    inventory: &'w mut Inventory,
+    mana_points: &'w mut ManaPoints,
+    skill_list: &'w mut SkillList,
+    skill_points: &'w mut SkillPoints,
+    stamina: &'w mut Stamina,
+    stat_points: &'w mut StatPoints,
+    union_membership: &'w mut UnionMembership,
 }
 
 lazy_static! {
@@ -335,7 +341,7 @@ fn create_random_bot_entities(
 
 fn handle_chat_command(
     chat_command_params: &mut ChatCommandParams,
-    chat_command_user: &mut ChatCommandUser,
+    chat_command_user: &mut ChatCommandUserQueryItem,
     command_text: &str,
 ) -> Result<(), ChatCommandError> {
     let mut args = shellwords::split(command_text)?;
@@ -575,12 +581,16 @@ fn handle_chat_command(
             ability_values_add_value(
                 ability_type,
                 value,
-                Some(chat_command_user.basic_stats),
-                Some(chat_command_user.inventory),
-                Some(chat_command_user.skill_points),
-                Some(chat_command_user.stamina),
-                Some(chat_command_user.stat_points),
-                Some(chat_command_user.union_membership),
+                Some(chat_command_user.ability_values),
+                Some(&mut chat_command_user.basic_stats),
+                Some(&mut chat_command_user.experience_points),
+                Some(&mut chat_command_user.health_points),
+                Some(&mut chat_command_user.inventory),
+                Some(&mut chat_command_user.mana_points),
+                Some(&mut chat_command_user.skill_points),
+                Some(&mut chat_command_user.stamina),
+                Some(&mut chat_command_user.stat_points),
+                Some(&mut chat_command_user.union_membership),
                 Some(chat_command_user.game_client),
             );
         }
@@ -626,9 +636,13 @@ fn handle_chat_command(
             ability_values_set_value(
                 ability_type,
                 value,
-                Some(chat_command_user.basic_stats),
-                Some(chat_command_user.character_info),
-                Some(chat_command_user.union_membership),
+                Some(chat_command_user.ability_values),
+                Some(&mut chat_command_user.basic_stats),
+                Some(&mut chat_command_user.character_info),
+                Some(&mut chat_command_user.experience_points),
+                Some(&mut chat_command_user.health_points),
+                Some(&mut chat_command_user.mana_points),
+                Some(&mut chat_command_user.union_membership),
                 Some(chat_command_user.game_client),
             );
         }
@@ -688,7 +702,7 @@ fn handle_chat_command(
                     .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
                         skill_slot,
                         skill_id,
-                        updated_skill_points: **chat_command_user.skill_points,
+                        updated_skill_points: *chat_command_user.skill_points,
                     })))
                     .ok();
             } else {
@@ -804,22 +818,7 @@ fn handle_chat_command(
 
 pub fn chat_commands_system(
     mut chat_command_params: ChatCommandParams,
-    mut user_query: Query<(
-        &AbilityValues,
-        &ClientEntity,
-        &ClientEntitySector,
-        &GameClient,
-        &Level,
-        &Position,
-        &mut BasicStats,
-        &mut CharacterInfo,
-        &mut Inventory,
-        &mut SkillList,
-        &mut SkillPoints,
-        &mut Stamina,
-        &mut StatPoints,
-        &mut UnionMembership,
-    )>,
+    mut user_query: Query<ChatCommandUserQuery>,
     mut chat_command_events: EventReader<ChatCommandEvent>,
 ) {
     for &ChatCommandEvent {
@@ -827,41 +826,7 @@ pub fn chat_commands_system(
         ref command,
     } in chat_command_events.iter()
     {
-        if let Ok((
-            ability_values,
-            client_entity,
-            client_entity_sector,
-            game_client,
-            level,
-            position,
-            mut basic_stats,
-            mut character_info,
-            mut inventory,
-            mut skill_list,
-            mut skill_points,
-            mut stamina,
-            mut stat_points,
-            mut union_membership,
-        )) = user_query.get_mut(entity)
-        {
-            let mut chat_command_user = ChatCommandUser {
-                entity,
-                ability_values,
-                client_entity,
-                client_entity_sector,
-                game_client,
-                level,
-                position,
-                basic_stats: &mut basic_stats,
-                character_info: &mut character_info,
-                inventory: &mut inventory,
-                skill_list: &mut skill_list,
-                skill_points: &mut skill_points,
-                stamina: &mut stamina,
-                stat_points: &mut stat_points,
-                union_membership: &mut union_membership,
-            };
-
+        if let Ok(mut chat_command_user) = user_query.get_mut(entity) {
             match handle_chat_command(
                 &mut chat_command_params,
                 &mut chat_command_user,

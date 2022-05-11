@@ -8,6 +8,7 @@ use log::warn;
 use std::time::Duration;
 
 use rose_data::{AbilityType, ItemClass, ItemType, SkillType};
+use rose_game_common::components::{HealthPoints, ManaPoints};
 
 use crate::game::{
     bundles::{
@@ -44,10 +45,12 @@ pub struct UseItemUserQuery<'w> {
     character_info: &'w CharacterInfo,
     client_entity: &'w ClientEntity,
     client_entity_sector: &'w ClientEntitySector,
-    experience_points: &'w ExperiencePoints,
+    experience_points: &'w mut ExperiencePoints,
     game_client: Option<&'w GameClient>,
+    health_points: &'w mut HealthPoints,
     inventory: &'w mut Inventory,
     level: &'w Level,
+    mana_points: &'w mut ManaPoints,
     move_speed: &'w MoveSpeed,
     position: &'w Position,
     skill_list: &'w mut SkillList,
@@ -92,17 +95,19 @@ fn use_inventory_item(
     if let Some((require_ability_type, require_ability_value)) = item_data.ability_requirement {
         let ability_value = ability_values_get_value(
             require_ability_type,
-            use_item_user.ability_values,
-            use_item_user.level,
-            use_item_user.move_speed,
-            use_item_user.team_number,
+            Some(use_item_user.ability_values),
+            Some(use_item_user.level),
+            Some(use_item_user.move_speed),
+            Some(use_item_user.team_number),
             Some(use_item_user.character_info),
-            Some(use_item_user.experience_points),
+            Some(&use_item_user.experience_points),
             Some(&use_item_user.inventory),
             Some(&use_item_user.skill_points),
             Some(&use_item_user.stamina),
             Some(&use_item_user.stat_points),
             Some(&use_item_user.union_membership),
+            Some(&use_item_user.health_points),
+            Some(&use_item_user.mana_points),
         )
         .unwrap_or(0);
 
@@ -254,8 +259,12 @@ fn use_inventory_item(
                 ability_values_add_value(
                     add_ability_type,
                     add_ability_value,
+                    Some(use_item_user.ability_values),
                     Some(&mut use_item_user.basic_stats),
+                    Some(&mut use_item_user.experience_points),
+                    Some(&mut use_item_user.health_points),
                     Some(&mut use_item_user.inventory),
+                    Some(&mut use_item_user.mana_points),
                     Some(&mut use_item_user.skill_points),
                     Some(&mut use_item_user.stamina),
                     Some(&mut use_item_user.stat_points),

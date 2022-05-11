@@ -1,6 +1,7 @@
 use bevy::ecs::prelude::Mut;
 use log::warn;
 use num_traits::{AsPrimitive, Saturating, Signed};
+use rose_game_common::components::{HealthPoints, ManaPoints};
 use std::num::NonZeroUsize;
 
 use rose_data::AbilityType;
@@ -28,11 +29,10 @@ fn add_value<T: Saturating + Copy + 'static, U: Signed + AsPrimitive<T>>(
 // TODO: Should all ability values be i64? XP + Money potentially do not fit into i32
 pub fn ability_values_get_value(
     ability_type: AbilityType,
-    ability_values: &AbilityValues,
-    level: &Level,
-    move_speed: &MoveSpeed,
-    team_number: &Team,
-    // For characters only
+    ability_values: Option<&AbilityValues>,
+    level: Option<&Level>,
+    move_speed: Option<&MoveSpeed>,
+    team_number: Option<&Team>,
     character_info: Option<&CharacterInfo>,
     experience_points: Option<&ExperiencePoints>,
     inventory: Option<&Inventory>,
@@ -40,6 +40,8 @@ pub fn ability_values_get_value(
     stamina: Option<&Stamina>,
     stat_points: Option<&StatPoints>,
     union_membership: Option<&UnionMembership>,
+    health_points: Option<&HealthPoints>,
+    mana_points: Option<&ManaPoints>,
 ) -> Option<i32> {
     match ability_type {
         AbilityType::Gender => character_info.map(|x| match x.gender {
@@ -55,26 +57,26 @@ pub fn ability_values_get_value(
         AbilityType::FameG => character_info.map(|x| x.fame_g as i32),
         AbilityType::Face => character_info.map(|x| x.face as i32),
         AbilityType::Hair => character_info.map(|x| x.hair as i32),
-        AbilityType::Strength => Some(ability_values.get_strength()),
-        AbilityType::Dexterity => Some(ability_values.get_dexterity()),
-        AbilityType::Intelligence => Some(ability_values.get_intelligence()),
-        AbilityType::Concentration => Some(ability_values.get_concentration()),
-        AbilityType::Charm => Some(ability_values.get_charm()),
-        AbilityType::Sense => Some(ability_values.get_sense()),
-        AbilityType::Attack => Some(ability_values.get_attack_power()),
-        AbilityType::Defence => Some(ability_values.get_defence()),
-        AbilityType::Hit => Some(ability_values.get_hit()),
-        AbilityType::Resistance => Some(ability_values.get_resistance()),
-        AbilityType::Avoid => Some(ability_values.get_avoid()),
-        AbilityType::AttackSpeed => Some(ability_values.get_attack_speed()),
-        AbilityType::Critical => Some(ability_values.get_critical()),
-        AbilityType::Speed => Some(move_speed.speed as i32),
+        AbilityType::Strength => ability_values.map(|x| x.get_strength()),
+        AbilityType::Dexterity => ability_values.map(|x| x.get_dexterity()),
+        AbilityType::Intelligence => ability_values.map(|x| x.get_intelligence()),
+        AbilityType::Concentration => ability_values.map(|x| x.get_concentration()),
+        AbilityType::Charm => ability_values.map(|x| x.get_charm()),
+        AbilityType::Sense => ability_values.map(|x| x.get_sense()),
+        AbilityType::Attack => ability_values.map(|x| x.get_attack_power()),
+        AbilityType::Defence => ability_values.map(|x| x.get_defence()),
+        AbilityType::Hit => ability_values.map(|x| x.get_hit()),
+        AbilityType::Resistance => ability_values.map(|x| x.get_resistance()),
+        AbilityType::Avoid => ability_values.map(|x| x.get_avoid()),
+        AbilityType::AttackSpeed => ability_values.map(|x| x.get_attack_speed()),
+        AbilityType::Critical => ability_values.map(|x| x.get_critical()),
+        AbilityType::Speed => move_speed.map(|x| x.speed as i32),
         AbilityType::Skillpoint => skill_points.map(|x| x.points as i32),
         AbilityType::BonusPoint => stat_points.map(|x| x.points as i32),
         AbilityType::Experience => experience_points.map(|x| x.xp as i32),
-        AbilityType::Level => Some(level.level as i32),
+        AbilityType::Level => level.map(|x| x.level as i32),
         AbilityType::Money => inventory.map(|x| x.money.0 as i32),
-        AbilityType::TeamNumber => Some(team_number.id as i32),
+        AbilityType::TeamNumber => team_number.map(|x| x.id as i32),
         AbilityType::Union => {
             union_membership.map(|x| x.current_union.map(|x| x.get() as i32).unwrap_or(0))
         }
@@ -89,12 +91,12 @@ pub fn ability_values_get_value(
         AbilityType::UnionPoint9 => union_membership.map(|x| x.points[8] as i32),
         AbilityType::UnionPoint10 => union_membership.map(|x| x.points[9] as i32),
         AbilityType::Stamina => stamina.map(|x| x.stamina as i32),
-        AbilityType::MaxHealth => Some(ability_values.get_max_health()),
-        AbilityType::MaxMana => Some(ability_values.get_max_mana()),
+        AbilityType::MaxHealth => ability_values.map(|x| x.get_max_health()),
+        AbilityType::MaxMana => ability_values.map(|x| x.get_max_mana()),
+        AbilityType::Health => health_points.map(|x| x.hp),
+        AbilityType::Mana => mana_points.map(|x| x.mp),
         /*
         TODO: Implement remaining get ability types.
-        AbilityType::Health => todo!(),
-        AbilityType::Mana => todo!(),
         AbilityType::Weight => todo!(),
         AbilityType::SaveMana => todo!(),
         AbilityType::PvpFlag => todo!(),
@@ -119,8 +121,12 @@ pub fn ability_values_get_value(
 pub fn ability_values_add_value(
     ability_type: AbilityType,
     value: i32,
+    ability_values: Option<&AbilityValues>,
     mut basic_stats: Option<&mut Mut<BasicStats>>,
+    mut experience_points: Option<&mut Mut<ExperiencePoints>>,
+    mut health_points: Option<&mut Mut<HealthPoints>>,
     mut inventory: Option<&mut Mut<Inventory>>,
+    mut mana_points: Option<&mut Mut<ManaPoints>>,
     mut skill_points: Option<&mut Mut<SkillPoints>>,
     mut stamina: Option<&mut Mut<Stamina>>,
     mut stat_points: Option<&mut Mut<StatPoints>>,
@@ -287,11 +293,54 @@ pub fn ability_values_add_value(
                 false
             }
         }
+        AbilityType::Health => {
+            if let Some(health_points) = health_points.as_mut() {
+                health_points.hp = add_value(health_points.hp, value);
+
+                if let Some(max_hp) =
+                    ability_values.map(|ability_values| ability_values.get_max_health())
+                {
+                    if health_points.hp > max_hp {
+                        health_points.hp = max_hp;
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
+        }
+        AbilityType::Mana => {
+            if let Some(mana_points) = mana_points.as_mut() {
+                mana_points.mp = add_value(mana_points.mp, value);
+
+                if let Some(max_mp) =
+                    ability_values.map(|ability_values| ability_values.get_max_mana())
+                {
+                    if mana_points.mp > max_mp {
+                        mana_points.mp = max_mp;
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
+        }
+        AbilityType::Experience => {
+            if let Some(experience_points) = experience_points.as_mut() {
+                // TODO: Maybe instead of RewardXp event we should use Changed<ExperiencePoints>?
+                //       Currently adding XP here will not lead to level up until next reward xp event
+                experience_points.xp = add_value(experience_points.xp, value);
+                true
+            } else {
+                false
+            }
+        }
         /*
-        TODO: Implement remaining add ability types
-        AbilityType::Health => false,
-        AbilityType::Mana => false,
-        AbilityType::Experience => false,
+        XXX: Technically original ROSE supports using Level in ability_values_add_value,
+        but I doubt it is used anywhere? Just doing level += value here is going to
+        miss performing actual level up stuff like adjusting xp, restoring hp/mp etc.
         AbilityType::Level => false,
         */
         _ => {
@@ -327,8 +376,12 @@ pub fn ability_values_add_value(
 pub fn ability_values_set_value(
     ability_type: AbilityType,
     value: i32,
+    ability_values: Option<&AbilityValues>,
     mut basic_stats: Option<&mut Mut<BasicStats>>,
     mut character_info: Option<&mut Mut<CharacterInfo>>,
+    mut experience_points: Option<&mut Mut<ExperiencePoints>>,
+    mut health_points: Option<&mut Mut<HealthPoints>>,
+    mut mana_points: Option<&mut Mut<ManaPoints>>,
     mut union_membership: Option<&mut Mut<UnionMembership>>,
     game_client: Option<&GameClient>,
 ) -> bool {
@@ -505,11 +558,50 @@ pub fn ability_values_set_value(
                 false
             }
         }
+        AbilityType::Health => {
+            if let Some(health_points) = health_points.as_mut() {
+                health_points.hp = value;
+
+                if let Some(max_hp) =
+                    ability_values.map(|ability_values| ability_values.get_max_health())
+                {
+                    if health_points.hp > max_hp {
+                        health_points.hp = max_hp;
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
+        }
+        AbilityType::Mana => {
+            if let Some(mana_points) = mana_points.as_mut() {
+                mana_points.mp = value;
+
+                if let Some(max_mp) =
+                    ability_values.map(|ability_values| ability_values.get_max_mana())
+                {
+                    if mana_points.mp > max_mp {
+                        mana_points.mp = max_mp;
+                    }
+                }
+
+                true
+            } else {
+                false
+            }
+        }
+        AbilityType::Experience => {
+            if let Some(experience_points) = experience_points.as_mut() {
+                experience_points.xp = value as u64;
+                true
+            } else {
+                false
+            }
+        }
         /*
         TODO: Implement remaining set ability types
-        AbilityType::Health => false,
-        AbilityType::Mana => false,
-        AbilityType::Experience => false,
         AbilityType::Level => false,
         AbilityType::PvpFlag => false,
         AbilityType::TeamNumber => false,
