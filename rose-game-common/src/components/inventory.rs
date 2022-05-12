@@ -234,6 +234,7 @@ impl Default for Inventory {
     }
 }
 
+#[derive(Debug)]
 pub enum InventoryError {
     NotEnoughMoney,
 }
