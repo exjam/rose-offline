@@ -45,7 +45,7 @@ rose-network-common = { path = "rose-network-common" }
 rose-network-irose = { path = "rose-network-irose" }
 
 [patch.crates-io]
-bevy = { git = "https://github.com/exjam/bevy", rev = "9eb8ea5864c5b20ac06120ceed52b3ef9a7d47dc" }
+bevy = { git = "https://github.com/exjam/bevy", rev = "8e4f6968899dfa2c1d697899df588fd3725299c1" }
 
 [workspace]
 members = [
