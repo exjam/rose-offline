@@ -131,6 +131,7 @@ pub struct AbilityValues {
     pub adjust: AbilityValuesAdjust,
     pub npc_store_buy_rate: i32,
     pub npc_store_sell_rate: i32,
+    pub save_mana: i32,
 }
 
 #[allow(dead_code)]
@@ -257,5 +258,9 @@ impl AbilityValues {
 
     pub fn get_drive_speed(&self) -> f32 {
         self.drive_speed + self.adjust.run_speed
+    }
+
+    pub fn get_save_mana(&self) -> i32 {
+        self.save_mana
     }
 }

@@ -552,7 +552,13 @@ pub fn skill_effect_system(
                 }
             }
 
-            for &(use_ability_type, use_ability_value) in skill_data.use_ability.iter() {
+            for &(use_ability_type, mut use_ability_value) in skill_data.use_ability.iter() {
+                if use_ability_type == AbilityType::Mana {
+                    let use_mana_rate =
+                        (100 - skill_caster.ability_values.get_save_mana()) as f32 / 100.0;
+                    use_ability_value = (use_ability_value as f32 * use_mana_rate) as i32;
+                }
+
                 // We use the skill_target_query to access the other required components
                 let mut skill_caster2 = skill_target_query.get_mut(caster_entity).unwrap();
                 let ability_value = ability_values_get_value(

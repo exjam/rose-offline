@@ -104,6 +104,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             adjust: status_effects.into(),
             npc_store_buy_rate: 0,
             npc_store_sell_rate: 0,
+            save_mana: 0,
         })
     }
 
@@ -274,6 +275,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             ),
             max_damage_sources: 0,
             drop_rate: calculate_drop_rate(&equipment_ability_values, &passive_ability_values),
+            save_mana: calculate_save_mana(&equipment_ability_values, &passive_ability_values),
             max_weight: calculate_max_weight(
                 &self.item_database,
                 level,
@@ -1949,6 +1951,17 @@ fn calculate_drop_rate(
         + (drop_rate * passive_ability_values.rate.drop_rate as f32 / 100.0);
 
     (drop_rate + passive_drop_rate) as i32
+}
+
+fn calculate_save_mana(
+    equipment_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let save_mana = equipment_ability_values.save_mana as f32;
+    let passive_save_mana = passive_ability_values.value.save_mana as f32
+        + (save_mana * passive_ability_values.rate.save_mana as f32 / 100.0);
+
+    (save_mana + passive_save_mana) as i32
 }
 
 fn calculate_max_weight(

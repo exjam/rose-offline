@@ -95,14 +95,14 @@ pub fn ability_values_get_value(
         AbilityType::MaxMana => ability_values.map(|x| x.get_max_mana()),
         AbilityType::Health => health_points.map(|x| x.hp),
         AbilityType::Mana => mana_points.map(|x| x.mp),
+        AbilityType::SaveMana => ability_values.map(|x| x.get_save_mana()),
+        AbilityType::DropRate => ability_values.map(|x| x.get_drop_rate()),
         /*
         TODO: Implement remaining get ability types.
         AbilityType::Weight => todo!(),
-        AbilityType::SaveMana => todo!(),
         AbilityType::PvpFlag => todo!(),
         AbilityType::HeadSize => todo!(),
         AbilityType::BodySize => todo!(),
-        AbilityType::DropRate => todo!(),
         AbilityType::CurrentPlanet => todo!(),
         AbilityType::GuildNumber => todo!(),
         AbilityType::GuildScore => todo!(),
