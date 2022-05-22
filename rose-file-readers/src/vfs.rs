@@ -233,7 +233,7 @@ impl VfsIndex {
         }
 
         if let Some(extracted_path) = self.extracted_path.as_ref() {
-            return extracted_path.exists();
+            return extracted_path.join(vfs_path.path()).exists();
         }
 
         false
