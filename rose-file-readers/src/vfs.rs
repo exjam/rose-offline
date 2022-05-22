@@ -223,6 +223,22 @@ impl VfsIndex {
         Ok(index)
     }
 
+    pub fn exists<'a, P: Into<VfsPath<'a>>>(&self, path: P) -> bool {
+        let vfs_path: VfsPath = path.into();
+
+        for vfs in &self.storages {
+            if vfs.files.get(vfs_path.path()).is_some() {
+                return true;
+            }
+        }
+
+        if let Some(extracted_path) = self.extracted_path.as_ref() {
+            return extracted_path.exists();
+        }
+
+        false
+    }
+
     pub fn open_file<'a, P: Into<VfsPath<'a>>>(&self, path: P) -> Option<VfsFile> {
         let vfs_path: VfsPath = path.into();
 
