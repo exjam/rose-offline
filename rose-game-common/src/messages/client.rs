@@ -5,7 +5,7 @@ use crate::{
     components::{
         BasicStatType, CharacterGender, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot,
     },
-    messages::ClientEntityId,
+    messages::{ClientEntityId, PartyRejectInviteReason},
 };
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
@@ -127,22 +127,6 @@ pub struct NpcStoreTransaction {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum PartyRequest {
-    Create(ClientEntityId),
-    Invite(ClientEntityId),
-    Leave,
-    ChangeOwner(ClientEntityId),
-    Kick(CharacterUniqueId),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum PartyReply {
-    Busy(ClientEntityId),
-    Accept(ClientEntityId),
-    Reject(ClientEntityId),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientMessage {
     ConnectionRequest(ConnectionRequest),
     LoginRequest(LoginRequest),
@@ -183,6 +167,12 @@ pub enum ClientMessage {
     DriveToggle,
     UseEmote(MotionId, bool),
     WarpGateRequest(WarpGateId),
-    PartyRequest(PartyRequest),
-    PartyReply(PartyReply),
+    PartyCreate(ClientEntityId),
+    PartyInvite(ClientEntityId),
+    PartyLeave,
+    PartyChangeOwner(ClientEntityId),
+    PartyKick(CharacterUniqueId),
+    PartyAcceptCreateInvite(ClientEntityId),
+    PartyAcceptJoinInvite(ClientEntityId),
+    PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
 }

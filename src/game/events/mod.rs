@@ -15,7 +15,7 @@ pub use damage_event::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageE
 pub use npc_store_event::NpcStoreEvent;
 pub use party_event::{
     PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-    PartyMemberDisconnect, PartyMemberReconnect,
+    PartyMemberDisconnect, PartyMemberEvent, PartyMemberReconnect,
 };
 pub use personal_store_event::{
     PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems,

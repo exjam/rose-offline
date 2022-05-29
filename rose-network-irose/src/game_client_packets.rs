@@ -9,10 +9,10 @@ use std::convert::{TryFrom, TryInto};
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, SkillId, VehiclePartIndex, WarpGateId};
 use rose_data_irose::{decode_ammo_index, encode_ammo_index};
 use rose_game_common::{
-    components::{BasicStatType, HotbarSlot, ItemSlot, SkillSlot},
+    components::{BasicStatType, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot},
     messages::{
-        client::{NpcStoreBuyItem, PartyReply, PartyRequest, ReviveRequestType},
-        ClientEntityId,
+        client::{NpcStoreBuyItem, ReviveRequestType},
+        ClientEntityId, PartyRejectInviteReason,
     },
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
@@ -982,8 +982,12 @@ impl From<&PacketClientWarpGateRequest> for Packet {
 }
 
 #[derive(Debug)]
-pub struct PacketClientPartyRequest {
-    pub request: PartyRequest,
+pub enum PacketClientPartyRequest {
+    Create(ClientEntityId),
+    Invite(ClientEntityId),
+    Leave,
+    ChangeOwner(ClientEntityId),
+    Kick(CharacterUniqueId),
 }
 
 impl TryFrom<&Packet> for PacketClientPartyRequest {
@@ -996,20 +1000,54 @@ impl TryFrom<&Packet> for PacketClientPartyRequest {
 
         let mut reader = PacketReader::from(packet);
         let request = match reader.read_u8()? {
-            0 => PartyRequest::Create(ClientEntityId(reader.read_u16()? as usize)),
-            1 => PartyRequest::Invite(ClientEntityId(reader.read_u16()? as usize)),
-            2 => PartyRequest::Leave,
-            3 => PartyRequest::ChangeOwner(ClientEntityId(reader.read_u16()? as usize)),
-            0x81 => PartyRequest::Kick(reader.read_u32()?),
+            0 => PacketClientPartyRequest::Create(ClientEntityId(reader.read_u16()? as usize)),
+            1 => PacketClientPartyRequest::Invite(ClientEntityId(reader.read_u16()? as usize)),
+            2 => PacketClientPartyRequest::Leave,
+            3 => PacketClientPartyRequest::ChangeOwner(ClientEntityId(reader.read_u16()? as usize)),
+            0x81 => PacketClientPartyRequest::Kick(reader.read_u32()?),
             _ => return Err(PacketError::InvalidPacket),
         };
-        Ok(PacketClientPartyRequest { request })
+        Ok(request)
+    }
+}
+
+impl From<&PacketClientPartyRequest> for Packet {
+    fn from(packet: &PacketClientPartyRequest) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PartyRequest as u16);
+        match *packet {
+            PacketClientPartyRequest::Create(entity_id) => {
+                writer.write_u8(0);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PacketClientPartyRequest::Invite(entity_id) => {
+                writer.write_u8(1);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PacketClientPartyRequest::Leave => {
+                writer.write_u8(2);
+                writer.write_u32(0);
+            }
+            PacketClientPartyRequest::ChangeOwner(entity_id) => {
+                writer.write_u8(3);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PacketClientPartyRequest::Kick(unique_id) => {
+                writer.write_u8(0x81);
+                writer.write_u32(unique_id);
+            }
+        }
+        writer.into()
     }
 }
 
 #[derive(Debug)]
-pub struct PacketClientPartyReply {
-    pub reply: PartyReply,
+pub enum PacketClientPartyReply {
+    AcceptCreate(ClientEntityId),
+    AcceptJoin(ClientEntityId),
+    Reject(PartyRejectInviteReason, ClientEntityId),
 }
 
 impl TryFrom<&Packet> for PacketClientPartyReply {
@@ -1022,11 +1060,45 @@ impl TryFrom<&Packet> for PacketClientPartyReply {
 
         let mut reader = PacketReader::from(packet);
         let reply = match reader.read_u8()? {
-            1 => PartyReply::Busy(ClientEntityId(reader.read_u16()? as usize)),
-            2 | 3 => PartyReply::Accept(ClientEntityId(reader.read_u16()? as usize)),
-            4 => PartyReply::Reject(ClientEntityId(reader.read_u16()? as usize)),
+            1 => PacketClientPartyReply::Reject(
+                PartyRejectInviteReason::Busy,
+                ClientEntityId(reader.read_u16()? as usize),
+            ),
+            2 => PacketClientPartyReply::AcceptCreate(ClientEntityId(reader.read_u16()? as usize)),
+            3 => PacketClientPartyReply::AcceptJoin(ClientEntityId(reader.read_u16()? as usize)),
+            4 => PacketClientPartyReply::Reject(
+                PartyRejectInviteReason::Reject,
+                ClientEntityId(reader.read_u16()? as usize),
+            ),
             _ => return Err(PacketError::InvalidPacket),
         };
-        Ok(PacketClientPartyReply { reply })
+        Ok(reply)
+    }
+}
+
+impl From<&PacketClientPartyReply> for Packet {
+    fn from(packet: &PacketClientPartyReply) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PartyReply as u16);
+        match *packet {
+            PacketClientPartyReply::AcceptCreate(entity_id) => {
+                writer.write_u8(2);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PacketClientPartyReply::AcceptJoin(entity_id) => {
+                writer.write_u8(3);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PacketClientPartyReply::Reject(reason, entity_id) => {
+                match reason {
+                    PartyRejectInviteReason::Busy => writer.write_u8(1),
+                    PartyRejectInviteReason::Reject => writer.write_u8(4),
+                }
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+        }
+        writer.into()
     }
 }

@@ -18,7 +18,7 @@ use crate::{
         QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
-    messages::ClientEntityId,
+    messages::{ClientEntityId, PartyRejectInviteReason},
 };
 
 #[derive(Clone, Debug, Error, Serialize, Deserialize)]
@@ -592,20 +592,6 @@ pub struct UseEmote {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum PartyRequest {
-    Create(ClientEntityId),
-    Invite(ClientEntityId),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum PartyReply {
-    AcceptCreate(ClientEntityId),
-    AcceptInvite(ClientEntityId),
-    RejectInvite(ClientEntityId),
-    DeleteParty,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartyMemberInfoOnline {
     pub character_id: CharacterUniqueId,
     pub name: String,
@@ -718,14 +704,18 @@ pub enum ServerMessage {
     MoveToggle(MoveToggle),
     SitToggle(ClientEntityId),
     UseEmote(UseEmote),
-    PartyRequest(PartyRequest),
-    PartyReply(PartyReply),
+    PartyCreate(ClientEntityId),
+    PartyInvite(ClientEntityId),
+    PartyAcceptCreate(ClientEntityId),
+    PartyAcceptInvite(ClientEntityId),
+    PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
+    PartyChangeOwner(ClientEntityId),
+    PartyDelete,
     PartyMemberList(PartyMemberList),
     PartyMemberLeave(PartyMemberLeave),
     PartyMemberDisconnect(CharacterUniqueId),
     PartyMemberKicked(CharacterUniqueId),
     PartyMemberUpdateInfo(PartyMemberInfoOnline),
-    PartyChangeOwner(ClientEntityId),
     ChangeNpcId(ClientEntityId, NpcId),
     SetHotbarSlot(usize, Option<HotbarSlot>),
 }

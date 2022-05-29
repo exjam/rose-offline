@@ -10,6 +10,7 @@ use rose_game_common::messages::server::{
     CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
 };
 
+use crate::game::events::PartyMemberEvent;
 use crate::game::{
     bundles::{
         client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
@@ -30,8 +31,8 @@ use crate::game::{
     },
     messages::{
         client::{
-            ChangeEquipment, ClientMessage, LogoutRequest, NpcStoreTransaction, PartyReply,
-            PartyRequest, PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
+            ChangeEquipment, ClientMessage, LogoutRequest, NpcStoreTransaction,
+            PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
         },
         server::{
             self, ConnectionRequestError, JoinZoneResponse, LogoutReply, QuestDeleteResult,
@@ -48,8 +49,6 @@ fn handle_game_connection_request(
     commands: &mut Commands,
     game_data: &GameData,
     login_tokens: &mut LoginTokens,
-    party_query: &mut Query<(Entity, &mut Party)>,
-    party_events: &mut EventWriter<PartyEvent>,
     entity: Entity,
     game_client: &mut GameClient,
     token_id: u32,
@@ -126,29 +125,6 @@ fn handle_game_connection_request(
         )
     };
 
-    // See if we are in a party as an offline member
-    let mut party_membership = PartyMembership::default();
-    for (party_entity, mut party) in party_query.iter_mut() {
-        for party_member in party.members.iter_mut() {
-            if let PartyMember::Offline(party_member_character_id, party_member_name) = party_member
-            {
-                if *party_member_character_id == character.info.unique_id
-                    && party_member_name == &character.info.name
-                {
-                    *party_member = PartyMember::Online(entity);
-                    party_membership = PartyMembership::new(party_entity);
-                    party_events.send(PartyEvent::MemberReconnect(PartyMemberReconnect {
-                        party_entity,
-                        reconnect_entity: entity,
-                        character_id: character.info.unique_id,
-                        name: character.info.name.clone(),
-                    }));
-                    break;
-                }
-            }
-        }
-    }
-
     let weapon_motion_type = game_data
         .items
         .get_equipped_weapon_item_data(&character.equipment, EquipmentIndex::Weapon)
@@ -180,7 +156,7 @@ fn handle_game_connection_request(
         move_mode,
         move_speed,
         next_command: NextCommand::default(),
-        party_membership,
+        party_membership: PartyMembership::None,
         passive_recovery_time: PassiveRecoveryTime::default(),
         position: position.clone(),
         quest_state: character.quest_state.clone(),
@@ -228,10 +204,8 @@ fn handle_game_connection_request(
 pub fn game_server_authentication_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
-    mut party_query: Query<(Entity, &mut Party)>,
     mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,
-    mut party_events: EventWriter<PartyEvent>,
 ) {
     query.for_each_mut(|(entity, mut game_client)| {
         if let Ok(message) = game_client.client_message_rx.try_recv() {
@@ -241,8 +215,6 @@ pub fn game_server_authentication_system(
                         &mut commands,
                         game_data.as_ref(),
                         login_tokens.as_mut(),
-                        &mut party_query,
-                        &mut party_events,
                         entity,
                         game_client.as_mut(),
                         message.login_token,
@@ -291,6 +263,7 @@ pub fn game_server_join_system(
         (
             Entity,
             &GameClient,
+            &CharacterInfo,
             &ExperiencePoints,
             &Team,
             &HealthPoints,
@@ -302,9 +275,20 @@ pub fn game_server_join_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     world_rates: Res<WorldRates>,
     world_time: Res<WorldTime>,
+    mut party_query: Query<(Entity, &mut Party)>,
+    mut party_member_events: EventWriter<PartyMemberEvent>,
 ) {
     query.for_each(
-        |(entity, game_client, experience_points, team, health_points, mana_points, position)| {
+        |(
+            entity,
+            game_client,
+            character_info,
+            experience_points,
+            team,
+            health_points,
+            mana_points,
+            position,
+        )| {
             if let Ok(message) = game_client.client_message_rx.try_recv() {
                 match message {
                     ClientMessage::JoinZoneRequest => {
@@ -315,8 +299,37 @@ pub fn game_server_join_system(
                             ClientEntityType::Character,
                             position,
                         ) {
+                            // See if we are in a party as an offline member
+                            let mut party_membership = PartyMembership::default();
+                            for (party_entity, mut party) in party_query.iter_mut() {
+                                for party_member in party.members.iter_mut() {
+                                    if let PartyMember::Offline(
+                                        party_member_character_id,
+                                        party_member_name,
+                                    ) = party_member
+                                    {
+                                        if *party_member_character_id == character_info.unique_id
+                                            && party_member_name == &character_info.name
+                                        {
+                                            *party_member = PartyMember::Online(entity);
+                                            party_membership = PartyMembership::new(party_entity);
+                                            party_member_events.send(PartyMemberEvent::Reconnect(
+                                                PartyMemberReconnect {
+                                                    party_entity,
+                                                    reconnect_entity: entity,
+                                                    character_id: character_info.unique_id,
+                                                    name: character_info.name.clone(),
+                                                },
+                                            ));
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
                             commands
                                 .entity(entity)
+                                .insert(party_membership)
                                 .insert(ClientEntityVisibility::new())
                                 .insert(PassiveRecoveryTime::default());
 
@@ -1187,66 +1200,66 @@ pub fn game_server_main_system(
                             }
                         }
                     }
-                    ClientMessage::PartyRequest(request) => match request {
-                        PartyRequest::Create(invited_entity_id)
-                        | PartyRequest::Invite(invited_entity_id) => {
-                            if let Some(&(invited_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone_id)
-                                .and_then(|zone| zone.get_entity(invited_entity_id))
-                            {
-                                party_events.send(PartyEvent::Invite(PartyEventInvite {
-                                    owner_entity: entity,
-                                    invited_entity,
-                                }));
-                            }
-                        }
-                        PartyRequest::Leave => {
-                            party_events.send(PartyEvent::Leave(PartyEventLeave {
-                                leaver_entity: entity,
-                            }));
-                        }
-                        PartyRequest::ChangeOwner(new_owner_entity_id) => {
-                            if let Some(&(new_owner_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone_id)
-                                .and_then(|zone| zone.get_entity(new_owner_entity_id))
-                            {
-                                party_events.send(PartyEvent::ChangeOwner(PartyEventChangeOwner {
-                                    owner_entity: entity,
-                                    new_owner_entity,
-                                }));
-                            }
-                        }
-                        PartyRequest::Kick(character_id) => {
-                            party_events.send(PartyEvent::Kick(PartyEventKick {
+                    ClientMessage::PartyCreate(invited_entity_id)
+                    | ClientMessage::PartyInvite(invited_entity_id) => {
+                        if let Some(&(invited_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone_id)
+                            .and_then(|zone| zone.get_entity(invited_entity_id))
+                        {
+                            party_events.send(PartyEvent::Invite(PartyEventInvite {
                                 owner_entity: entity,
-                                kick_character_id: character_id,
+                                invited_entity,
                             }));
                         }
-                    },
-                    ClientMessage::PartyReply(reply) => match reply {
-                        PartyReply::Accept(owner_entity_id) => {
-                            if let Some(&(owner_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone_id)
-                                .and_then(|zone| zone.get_entity(owner_entity_id))
-                            {
-                                party_events.send(PartyEvent::AcceptInvite(PartyEventInvite {
+                    }
+                    ClientMessage::PartyLeave => {
+                        party_events.send(PartyEvent::Leave(PartyEventLeave {
+                            leaver_entity: entity,
+                        }));
+                    }
+                    ClientMessage::PartyChangeOwner(new_owner_entity_id) => {
+                        if let Some(&(new_owner_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone_id)
+                            .and_then(|zone| zone.get_entity(new_owner_entity_id))
+                        {
+                            party_events.send(PartyEvent::ChangeOwner(PartyEventChangeOwner {
+                                owner_entity: entity,
+                                new_owner_entity,
+                            }));
+                        }
+                    }
+                    ClientMessage::PartyKick(character_id) => {
+                        party_events.send(PartyEvent::Kick(PartyEventKick {
+                            owner_entity: entity,
+                            kick_character_id: character_id,
+                        }));
+                    }
+                    ClientMessage::PartyAcceptCreateInvite(owner_entity_id)
+                    | ClientMessage::PartyAcceptJoinInvite(owner_entity_id) => {
+                        if let Some(&(owner_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone_id)
+                            .and_then(|zone| zone.get_entity(owner_entity_id))
+                        {
+                            party_events.send(PartyEvent::AcceptInvite(PartyEventInvite {
+                                owner_entity,
+                                invited_entity: entity,
+                            }));
+                        }
+                    }
+                    ClientMessage::PartyRejectInvite(reason, owner_entity_id) => {
+                        if let Some(&(owner_entity, _, _)) = client_entity_list
+                            .get_zone(position.zone_id)
+                            .and_then(|zone| zone.get_entity(owner_entity_id))
+                        {
+                            party_events.send(PartyEvent::RejectInvite(
+                                reason,
+                                PartyEventInvite {
                                     owner_entity,
                                     invited_entity: entity,
-                                }));
-                            }
+                                },
+                            ));
                         }
-                        PartyReply::Busy(owner_entity_id) | PartyReply::Reject(owner_entity_id) => {
-                            if let Some(&(owner_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone_id)
-                                .and_then(|zone| zone.get_entity(owner_entity_id))
-                            {
-                                party_events.send(PartyEvent::RejectInvite(PartyEventInvite {
-                                    owner_entity,
-                                    invited_entity: entity,
-                                }));
-                            }
-                        }
-                    },
+                    }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
             }

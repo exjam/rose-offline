@@ -39,7 +39,7 @@ pub use rose_game_common::components::{
 };
 
 pub use account::Account;
-pub use bot_ai::{BotAi, BotAiState, BOT_IDLE_CHECK_DURATION};
+pub use bot_ai::{BotAi, BotAiState, BotMessage, BOT_IDLE_CHECK_DURATION};
 pub use character_list::CharacterList;
 pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};
 pub use client_entity_sector::ClientEntitySector;

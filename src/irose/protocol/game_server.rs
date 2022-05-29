@@ -14,13 +14,12 @@ use rose_game_common::{
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
             CastSkillTargetPosition, LevelUpSkillResult, LocalChat, LogoutReply, MoveToggle,
-            OpenPersonalStore, PartyMemberLeave, PersonalStoreTransactionCancelled,
-            PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-            PersonalStoreTransactionSuccess, PickupItemDropResult, QuestDeleteResult,
-            QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop,
-            SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat,
-            UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects, UpdateVehiclePart,
-            UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
+            OpenPersonalStore, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
+            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess, PickupItemDropResult,
+            QuestDeleteResult, QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat,
+            SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue,
+            UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects,
+            UpdateVehiclePart, UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
         },
     },
 };
@@ -283,16 +282,38 @@ impl GameServer {
                     .send(ClientMessage::WarpGateRequest(packet.warp_gate_id))?;
             }
             Some(ClientPackets::PartyRequest) => {
-                let packet = PacketClientPartyRequest::try_from(&packet)?;
-                client
-                    .client_message_tx
-                    .send(ClientMessage::PartyRequest(packet.request))?;
+                let message = match PacketClientPartyRequest::try_from(&packet)? {
+                    PacketClientPartyRequest::Create(client_entity_id) => {
+                        ClientMessage::PartyCreate(client_entity_id)
+                    }
+                    PacketClientPartyRequest::Invite(client_entity_id) => {
+                        ClientMessage::PartyInvite(client_entity_id)
+                    }
+                    PacketClientPartyRequest::Leave => ClientMessage::PartyLeave,
+                    PacketClientPartyRequest::ChangeOwner(client_entity_id) => {
+                        ClientMessage::PartyChangeOwner(client_entity_id)
+                    }
+                    PacketClientPartyRequest::Kick(character_id) => {
+                        ClientMessage::PartyKick(character_id)
+                    }
+                };
+
+                client.client_message_tx.send(message)?;
             }
             Some(ClientPackets::PartyReply) => {
-                let packet = PacketClientPartyReply::try_from(&packet)?;
-                client
-                    .client_message_tx
-                    .send(ClientMessage::PartyReply(packet.reply))?;
+                let message = match PacketClientPartyReply::try_from(&packet)? {
+                    PacketClientPartyReply::AcceptCreate(client_entity_id) => {
+                        ClientMessage::PartyAcceptCreateInvite(client_entity_id)
+                    }
+                    PacketClientPartyReply::AcceptJoin(client_entity_id) => {
+                        ClientMessage::PartyAcceptJoinInvite(client_entity_id)
+                    }
+                    PacketClientPartyReply::Reject(reason, client_entity_id) => {
+                        ClientMessage::PartyRejectInvite(reason, client_entity_id)
+                    }
+                };
+
+                client.client_message_tx.send(message)?;
             }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
@@ -1100,61 +1121,91 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::PartyRequest(party_request) => {
+            ServerMessage::PartyCreate(client_entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyRequest { party_request }))
+                    .write_packet(Packet::from(&PacketServerPartyRequest::Create(
+                        client_entity_id,
+                    )))
                     .await?;
             }
-            ServerMessage::PartyReply(party_reply) => {
+            ServerMessage::PartyInvite(client_entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyReply { party_reply }))
+                    .write_packet(Packet::from(&PacketServerPartyRequest::Invite(
+                        client_entity_id,
+                    )))
                     .await?;
             }
-            ServerMessage::PartyMemberList(party_member_list) => {
+            ServerMessage::PartyAcceptCreate(client_entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyMembers {
-                        owner_character_id: party_member_list.owner_character_id,
-                        party_members: &party_member_list.members,
-                    }))
+                    .write_packet(Packet::from(&PacketServerPartyReply::AcceptCreate(
+                        client_entity_id,
+                    )))
                     .await?;
             }
-            ServerMessage::PartyMemberLeave(PartyMemberLeave {
-                leaver_character_id,
-                owner_character_id,
-            }) => {
+            ServerMessage::PartyAcceptInvite(client_entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyMemberLeave {
-                        leaver_character_id,
-                        owner_character_id,
-                    }))
+                    .write_packet(Packet::from(&PacketServerPartyReply::AcceptInvite(
+                        client_entity_id,
+                    )))
                     .await?;
             }
-            ServerMessage::PartyMemberKicked(kicked_character_id) => {
+            ServerMessage::PartyRejectInvite(reason, client_entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyMemberKicked {
-                        kicked_character_id,
-                    }))
+                    .write_packet(Packet::from(&PacketServerPartyReply::RejectInvite(
+                        reason,
+                        client_entity_id,
+                    )))
+                    .await?;
+            }
+            ServerMessage::PartyDelete => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyReply::Delete))
                     .await?;
             }
             ServerMessage::PartyChangeOwner(client_entity_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyChangeOwner {
+                    .write_packet(Packet::from(&PacketServerPartyReply::ChangeOwner(
                         client_entity_id,
-                    }))
+                    )))
+                    .await?;
+            }
+            ServerMessage::PartyMemberList(party_member_list) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMembers::List(
+                        party_member_list,
+                    )))
+                    .await?;
+            }
+            ServerMessage::PartyMemberLeave(party_member_leave) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMembers::Leave(
+                        party_member_leave,
+                    )))
+                    .await?;
+            }
+            ServerMessage::PartyMemberKicked(kicked_character_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyReply::MemberKicked(
+                        kicked_character_id,
+                    )))
                     .await?;
             }
             ServerMessage::PartyMemberDisconnect(character_id) => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerPartyMemberDisconnect {
+                    .write_packet(Packet::from(&PacketServerPartyReply::MemberDisconnect(
                         character_id,
-                    }))
+                    )))
                     .await?;
             }
             ServerMessage::PartyMemberUpdateInfo(member_info) => {

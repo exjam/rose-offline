@@ -14,20 +14,19 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, DroppedItem,
-        Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level,
-        ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints,
-        SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, DroppedItem, Equipment,
+        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
+        Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot,
+        Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::{
         server::{
             ActiveStatusEffects, CancelCastingSkillReason, CommandState, LearnSkillError,
-            LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfo,
-            PartyMemberInfoOnline, PartyReply, PartyRequest, PickupItemDropContent,
-            PickupItemDropError,
+            LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline,
+            PartyMemberLeave, PartyMemberList, PickupItemDropContent, PickupItemDropError,
         },
-        ClientEntityId,
+        ClientEntityId, PartyRejectInviteReason,
     },
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
@@ -35,11 +34,12 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 use crate::common_packets::{
     PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
     PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-    PacketReadItems, PacketReadMoveMode, PacketReadSkillSlot, PacketReadStatusEffects,
-    PacketReadVehiclePartIndex, PacketWriteCharacterGender, PacketWriteCommandState,
-    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
-    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWriteSkillSlot,
-    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    PacketReadItems, PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadSkillSlot,
+    PacketReadStatusEffects, PacketReadVehiclePartIndex, PacketWriteCharacterGender,
+    PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
+    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
+    PacketWritePartyMemberInfo, PacketWriteSkillSlot, PacketWriteStatusEffects,
+    PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -3223,20 +3223,46 @@ impl From<&PacketServerUseEmote> for Packet {
     }
 }
 
-pub struct PacketServerPartyRequest {
-    pub party_request: PartyRequest,
+pub enum PacketServerPartyRequest {
+    Create(ClientEntityId),
+    Invite(ClientEntityId),
+}
+
+impl TryFrom<&Packet> for PacketServerPartyRequest {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PartyRequest as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let party_request = match reader.read_u8()? {
+            0 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyRequest::Create(entity_id)
+            }
+            1 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyRequest::Invite(entity_id)
+            }
+            _ => return Err(PacketError::InvalidPacket),
+        };
+
+        Ok(party_request)
+    }
 }
 
 impl From<&PacketServerPartyRequest> for Packet {
     fn from(packet: &PacketServerPartyRequest) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PartyRequest as u16);
-        match packet.party_request {
-            PartyRequest::Create(entity_id) => {
+        match *packet {
+            PacketServerPartyRequest::Create(entity_id) => {
                 writer.write_u8(0);
                 writer.write_entity_id(entity_id);
                 writer.write_u16(0);
             }
-            PartyRequest::Invite(entity_id) => {
+            PacketServerPartyRequest::Invite(entity_id) => {
                 writer.write_u8(1);
                 writer.write_entity_id(entity_id);
                 writer.write_u16(0);
@@ -3246,133 +3272,179 @@ impl From<&PacketServerPartyRequest> for Packet {
     }
 }
 
-pub struct PacketServerPartyReply {
-    pub party_reply: PartyReply,
+pub enum PacketServerPartyReply {
+    AcceptCreate(ClientEntityId),
+    AcceptInvite(ClientEntityId),
+    RejectInvite(PartyRejectInviteReason, ClientEntityId),
+    Delete,
+    ChangeOwner(ClientEntityId),
+    MemberKicked(u32),
+    MemberDisconnect(u32),
+}
+
+impl TryFrom<&Packet> for PacketServerPartyReply {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PartyReply as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let party_reply = match reader.read_u8()? {
+            1 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyReply::RejectInvite(PartyRejectInviteReason::Busy, entity_id)
+            }
+            2 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyReply::AcceptCreate(entity_id)
+            }
+            3 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyReply::AcceptInvite(entity_id)
+            }
+            4 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyReply::RejectInvite(PartyRejectInviteReason::Reject, entity_id)
+            }
+            5 => PacketServerPartyReply::Delete,
+            8 => {
+                let entity_id = reader.read_entity_id()?;
+                PacketServerPartyReply::ChangeOwner(entity_id)
+            }
+            0x80 => {
+                let character_id = reader.read_u32()?;
+                PacketServerPartyReply::MemberKicked(character_id)
+            }
+            0x81 => {
+                let character_id = reader.read_u32()?;
+                PacketServerPartyReply::MemberDisconnect(character_id)
+            }
+            _ => return Err(PacketError::InvalidPacket),
+        };
+
+        Ok(party_reply)
+    }
 }
 
 impl From<&PacketServerPartyReply> for Packet {
     fn from(packet: &PacketServerPartyReply) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
-        match packet.party_reply {
-            PartyReply::AcceptCreate(entity_id) => {
+        match *packet {
+            PacketServerPartyReply::AcceptCreate(entity_id) => {
                 writer.write_u8(2);
                 writer.write_entity_id(entity_id);
                 writer.write_u16(0);
             }
-            PartyReply::AcceptInvite(entity_id) => {
+            PacketServerPartyReply::AcceptInvite(entity_id) => {
                 writer.write_u8(3);
                 writer.write_entity_id(entity_id);
                 writer.write_u16(0);
             }
-            PartyReply::RejectInvite(entity_id) => {
-                writer.write_u8(4);
+            PacketServerPartyReply::RejectInvite(reason, entity_id) => {
+                match reason {
+                    PartyRejectInviteReason::Busy => writer.write_u8(1),
+                    PartyRejectInviteReason::Reject => writer.write_u8(4),
+                }
                 writer.write_entity_id(entity_id);
                 writer.write_u16(0);
             }
-            PartyReply::DeleteParty => {
+            PacketServerPartyReply::Delete => {
                 writer.write_u8(5);
                 writer.write_u32(0);
             }
+            PacketServerPartyReply::ChangeOwner(entity_id) => {
+                writer.write_u8(8);
+                writer.write_entity_id(entity_id);
+                writer.write_u16(0);
+            }
+            PacketServerPartyReply::MemberKicked(character_id) => {
+                writer.write_u8(0x80);
+                writer.write_u32(character_id);
+            }
+            PacketServerPartyReply::MemberDisconnect(character_id) => {
+                writer.write_u8(0x81);
+                writer.write_u32(character_id);
+            }
         }
         writer.into()
     }
 }
 
-pub struct PacketServerPartyMemberKicked {
-    pub kicked_character_id: u32,
+pub enum PacketServerPartyMembers {
+    List(PartyMemberList),
+    Leave(PartyMemberLeave),
 }
 
-impl From<&PacketServerPartyMemberKicked> for Packet {
-    fn from(packet: &PacketServerPartyMemberKicked) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
-        writer.write_u8(0x80);
-        writer.write_u32(packet.kicked_character_id);
-        writer.into()
-    }
-}
+impl TryFrom<&Packet> for PacketServerPartyMembers {
+    type Error = PacketError;
 
-pub struct PacketServerPartyChangeOwner {
-    pub client_entity_id: ClientEntityId,
-}
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PartyMembers as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
 
-impl From<&PacketServerPartyChangeOwner> for Packet {
-    fn from(packet: &PacketServerPartyChangeOwner) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
-        writer.write_u8(0x08);
-        writer.write_entity_id(packet.client_entity_id);
-        writer.write_u16(0);
-        writer.into()
-    }
-}
+        let mut reader = PacketReader::from(packet);
+        let _party_rules = reader.read_u8()?; // TODO: Party rules
+        let num_members = reader.read_u8()?;
 
-pub struct PacketServerPartyMemberDisconnect {
-    pub character_id: u32,
-}
+        if num_members == 255 {
+            let leaver_character_id = reader.read_u32()?;
+            let owner_character_id = reader.read_u32()?;
 
-impl From<&PacketServerPartyMemberDisconnect> for Packet {
-    fn from(packet: &PacketServerPartyMemberDisconnect) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::PartyReply as u16);
-        writer.write_u8(0x81);
-        writer.write_u32(packet.character_id);
-        writer.into()
-    }
-}
+            Ok(PacketServerPartyMembers::Leave(PartyMemberLeave {
+                leaver_character_id,
+                owner_character_id,
+            }))
+        } else {
+            let mut members = Vec::with_capacity(num_members as usize);
+            for _ in 0..num_members {
+                members.push(reader.read_party_member_info()?);
+            }
 
-pub struct PacketServerPartyMembers<'a> {
-    pub owner_character_id: CharacterUniqueId,
-    pub party_members: &'a [PartyMemberInfo],
-}
-
-fn write_online_party_member(writer: &mut PacketWriter, party_member: &PartyMemberInfoOnline) {
-    writer.write_u32(party_member.character_id);
-    writer.write_entity_id(party_member.entity_id);
-    writer.write_u16(party_member.max_health as u16);
-    writer.write_u16(party_member.health_points.hp as u16);
-    writer.write_status_effects_flags_u32(&party_member.status_effects);
-    writer.write_u16(party_member.concentration as u16);
-    writer.write_u8(party_member.health_recovery as u8);
-    writer.write_u8(party_member.mana_recovery as u8);
-    writer.write_u16(party_member.stamina.stamina as u16);
-    writer.write_null_terminated_utf8(&party_member.name);
-}
-
-fn write_party_member(writer: &mut PacketWriter, party_member: &PartyMemberInfo) {
-    match party_member {
-        PartyMemberInfo::Online(party_member) => write_online_party_member(writer, party_member),
-        PartyMemberInfo::Offline(party_member) => {
-            writer.write_u32(party_member.character_id);
-            writer.write_option_entity_id(None);
-            writer.write_u16(0);
-            writer.write_u16(0);
-            writer.write_u32(0);
-            writer.write_u16(0);
-            writer.write_u8(0);
-            writer.write_u8(0);
-            writer.write_u16(0);
-            writer.write_null_terminated_utf8(&party_member.name);
+            Ok(PacketServerPartyMembers::List(PartyMemberList {
+                owner_character_id: members[0].get_character_id(),
+                members,
+            }))
         }
     }
 }
 
-impl<'a> From<&'a PacketServerPartyMembers<'a>> for Packet {
-    fn from(packet: &'a PacketServerPartyMembers<'a>) -> Self {
+impl From<&PacketServerPartyMembers> for Packet {
+    fn from(packet: &PacketServerPartyMembers) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
-        writer.write_u8(0); // TODO: Party rules
-        writer.write_u8(packet.party_members.len() as u8);
+        match *packet {
+            PacketServerPartyMembers::List(PartyMemberList {
+                owner_character_id,
+                ref members,
+            }) => {
+                writer.write_u8(0); // TODO: Party rules
+                writer.write_u8(members.len() as u8);
 
-        // Owner is the first member in packet
-        for party_member in packet.party_members {
-            if party_member.get_character_id() == packet.owner_character_id {
-                write_party_member(&mut writer, party_member);
+                // Owner is the first member in packet
+                for party_member in members.iter() {
+                    if party_member.get_character_id() == owner_character_id {
+                        writer.write_party_member_info(party_member);
+                    }
+                }
+
+                for party_member in members.iter() {
+                    if party_member.get_character_id() != owner_character_id {
+                        writer.write_party_member_info(party_member);
+                    }
+                }
+            }
+            PacketServerPartyMembers::Leave(PartyMemberLeave {
+                owner_character_id,
+                leaver_character_id,
+            }) => {
+                writer.write_u8(0); // TODO: Party rules ?
+                writer.write_u8(255); // -1
+                writer.write_u32(leaver_character_id);
+                writer.write_u32(owner_character_id);
             }
         }
-
-        for party_member in packet.party_members {
-            if party_member.get_character_id() != packet.owner_character_id {
-                write_party_member(&mut writer, party_member);
-            }
-        }
-
         writer.into()
     }
 }
@@ -3381,26 +3453,24 @@ pub struct PacketServerPartyMemberUpdateInfo {
     pub member_info: PartyMemberInfoOnline,
 }
 
-impl From<&PacketServerPartyMemberUpdateInfo> for Packet {
-    fn from(packet: &PacketServerPartyMemberUpdateInfo) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::PartyMemberUpdateInfo as u16);
-        write_online_party_member(&mut writer, &packet.member_info);
-        writer.into()
+impl TryFrom<&Packet> for PacketServerPartyMemberUpdateInfo {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PartyMemberUpdateInfo as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let member_info = reader.read_party_member_info_online()?;
+        Ok(PacketServerPartyMemberUpdateInfo { member_info })
     }
 }
 
-pub struct PacketServerPartyMemberLeave {
-    pub leaver_character_id: u32,
-    pub owner_character_id: u32,
-}
-
-impl From<&PacketServerPartyMemberLeave> for Packet {
-    fn from(packet: &PacketServerPartyMemberLeave) -> Self {
-        let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
-        writer.write_u8(0); // TODO: Party rules ?
-        writer.write_u8(255); // -1
-        writer.write_u32(packet.leaver_character_id);
-        writer.write_u32(packet.owner_character_id);
+impl From<&PacketServerPartyMemberUpdateInfo> for Packet {
+    fn from(packet: &PacketServerPartyMemberUpdateInfo) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyMemberUpdateInfo as u16);
+        writer.write_party_member_info_online(&packet.member_info);
         writer.into()
     }
 }

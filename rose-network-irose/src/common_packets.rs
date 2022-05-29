@@ -11,12 +11,15 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveStatusEffect, CharacterGender, Equipment, HotbarSlot, InventoryPageType, ItemSlot,
-        Money, MoveMode, SkillSlot,
+        ActiveStatusEffect, CharacterGender, Equipment, HealthPoints, HotbarSlot,
+        InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot, Stamina,
     },
     data::Damage,
     messages::{
-        server::{ActiveStatusEffects, CommandState},
+        server::{
+            ActiveStatusEffects, CommandState, PartyMemberInfo, PartyMemberInfoOffline,
+            PartyMemberInfoOnline,
+        },
         ClientEntityId,
     },
 };
@@ -958,5 +961,106 @@ impl PacketWriteCommandState for PacketWriter {
             CommandState::PersonalStore => 11,
         };
         self.write_u16(command_id);
+    }
+}
+
+pub trait PacketReadPartyMemberInfo {
+    fn read_party_member_info(&mut self) -> Result<PartyMemberInfo, PacketError>;
+    fn read_party_member_info_online(&mut self) -> Result<PartyMemberInfoOnline, PacketError>;
+    fn read_party_member_info_offline(&mut self) -> Result<PartyMemberInfoOffline, PacketError>;
+}
+
+impl<'a> PacketReadPartyMemberInfo for PacketReader<'a> {
+    fn read_party_member_info(&mut self) -> Result<PartyMemberInfo, PacketError> {
+        let character_id = self.read_u32()?;
+        let entity_id = self.read_option_entity_id()?;
+        let max_health = self.read_u16()?;
+        let health_points = self.read_u16()?;
+        let mut status_effects = ActiveStatusEffects::default();
+        self.read_status_effects_flags_u32(&mut status_effects)?;
+        let concentration = self.read_u16()?;
+        let health_recovery = self.read_u8()?;
+        let mana_recovery = self.read_u8()?;
+        let stamina = self.read_u16()?;
+        let name = self.read_null_terminated_utf8()?.to_string();
+
+        if let Some(entity_id) = entity_id {
+            Ok(PartyMemberInfo::Online(PartyMemberInfoOnline {
+                character_id,
+                name,
+                entity_id,
+                health_points: HealthPoints::new(health_points as i32),
+                status_effects,
+                max_health: max_health as i32,
+                concentration: concentration as i32,
+                health_recovery: health_recovery as i32,
+                mana_recovery: mana_recovery as i32,
+                stamina: Stamina::new(stamina as u32),
+            }))
+        } else {
+            Ok(PartyMemberInfo::Offline(PartyMemberInfoOffline {
+                character_id,
+                name,
+            }))
+        }
+    }
+
+    fn read_party_member_info_online(&mut self) -> Result<PartyMemberInfoOnline, PacketError> {
+        match self.read_party_member_info()? {
+            PartyMemberInfo::Online(online) => Ok(online),
+            PartyMemberInfo::Offline(_) => Err(PacketError::InvalidPacket),
+        }
+    }
+
+    fn read_party_member_info_offline(&mut self) -> Result<PartyMemberInfoOffline, PacketError> {
+        match self.read_party_member_info()? {
+            PartyMemberInfo::Online(_) => Err(PacketError::InvalidPacket),
+            PartyMemberInfo::Offline(offline) => Ok(offline),
+        }
+    }
+}
+
+pub trait PacketWritePartyMemberInfo {
+    fn write_party_member_info(&mut self, party_member: &PartyMemberInfo);
+    fn write_party_member_info_online(&mut self, party_member: &PartyMemberInfoOnline);
+    fn write_party_member_info_offline(&mut self, party_member: &PartyMemberInfoOffline);
+}
+
+impl PacketWritePartyMemberInfo for PacketWriter {
+    fn write_party_member_info_online(&mut self, party_member: &PartyMemberInfoOnline) {
+        self.write_u32(party_member.character_id);
+        self.write_entity_id(party_member.entity_id);
+        self.write_u16(party_member.max_health as u16);
+        self.write_u16(party_member.health_points.hp as u16);
+        self.write_status_effects_flags_u32(&party_member.status_effects);
+        self.write_u16(party_member.concentration as u16);
+        self.write_u8(party_member.health_recovery as u8);
+        self.write_u8(party_member.mana_recovery as u8);
+        self.write_u16(party_member.stamina.stamina as u16);
+        self.write_null_terminated_utf8(&party_member.name);
+    }
+
+    fn write_party_member_info_offline(&mut self, party_member: &PartyMemberInfoOffline) {
+        self.write_u32(party_member.character_id);
+        self.write_option_entity_id(None);
+        self.write_u16(0);
+        self.write_u16(0);
+        self.write_u32(0);
+        self.write_u16(0);
+        self.write_u8(0);
+        self.write_u8(0);
+        self.write_u16(0);
+        self.write_null_terminated_utf8(&party_member.name);
+    }
+
+    fn write_party_member_info(&mut self, party_member: &PartyMemberInfo) {
+        match party_member {
+            PartyMemberInfo::Online(party_member) => {
+                self.write_party_member_info_online(party_member);
+            }
+            PartyMemberInfo::Offline(party_member) => {
+                self.write_party_member_info_offline(party_member);
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 use bevy::ecs::prelude::Entity;
+use rose_game_common::messages::PartyRejectInviteReason;
 
 use crate::game::components::CharacterUniqueId;
 
@@ -42,12 +43,16 @@ pub struct PartyEventKick {
 }
 
 #[derive(Clone)]
+pub enum PartyMemberEvent {
+    Reconnect(PartyMemberReconnect),
+    Disconnect(PartyMemberDisconnect),
+}
+
+#[derive(Clone)]
 pub enum PartyEvent {
-    MemberReconnect(PartyMemberReconnect),
-    MemberDisconnect(PartyMemberDisconnect),
     Invite(PartyEventInvite),
     AcceptInvite(PartyEventInvite),
-    RejectInvite(PartyEventInvite),
+    RejectInvite(PartyRejectInviteReason, PartyEventInvite),
     ChangeOwner(PartyEventChangeOwner),
     Leave(PartyEventLeave),
     Kick(PartyEventKick),

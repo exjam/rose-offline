@@ -14,4 +14,8 @@ impl PartyMembership {
     pub fn new(party_entity: Entity) -> Self {
         Self::Member(party_entity)
     }
+
+    pub fn is_none(&self) -> bool {
+        matches!(self, PartyMembership::None)
+    }
 }

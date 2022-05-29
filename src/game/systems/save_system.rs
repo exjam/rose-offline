@@ -11,7 +11,7 @@ use crate::game::{
         HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership, Position, QuestState,
         SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
     },
-    events::{PartyEvent, PartyMemberDisconnect, SaveEvent, SaveEventCharacter},
+    events::{PartyMemberDisconnect, PartyMemberEvent, SaveEvent, SaveEventCharacter},
     resources::ClientEntityList,
     storage::character::CharacterStorage,
 };
@@ -43,7 +43,7 @@ pub fn save_system(
     )>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut save_events: EventReader<SaveEvent>,
-    mut party_events: EventWriter<PartyEvent>,
+    mut party_member_events: EventWriter<PartyMemberEvent>,
 ) {
     for pending_save in save_events.iter() {
         match *pending_save {
@@ -112,7 +112,7 @@ pub fn save_system(
                         }
 
                         if let PartyMembership::Member(party_entity) = party_membership {
-                            party_events.send(PartyEvent::MemberDisconnect(
+                            party_member_events.send(PartyMemberEvent::Disconnect(
                                 PartyMemberDisconnect {
                                     party_entity: *party_entity,
                                     disconnect_entity: entity,
