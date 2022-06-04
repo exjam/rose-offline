@@ -843,7 +843,7 @@ fn quest_reward_calculated_experience_points(
         .send(RewardXpEvent::new(
             quest_parameters.source.entity,
             reward_value as u64,
-            0,
+            false,
             None,
         ));
 

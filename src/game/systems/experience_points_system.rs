@@ -8,7 +8,7 @@ use crate::game::{
     },
     events::{QuestTriggerEvent, RewardXpEvent},
     messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
-    resources::ServerMessages,
+    resources::{ServerMessages, WorldRates},
     GameData,
 };
 
@@ -34,6 +34,7 @@ pub fn experience_points_system(
     )>,
     source_entity_query: Query<&ClientEntity>,
     game_data: Res<GameData>,
+    world_rates: Res<WorldRates>,
     mut quest_trigger_events: EventWriter<QuestTriggerEvent>,
     mut reward_xp_events: EventReader<RewardXpEvent>,
     mut server_messages: ResMut<ServerMessages>,
@@ -54,11 +55,19 @@ pub fn experience_points_system(
                 .xp
                 .saturating_add(reward_xp_event.xp as u64);
 
-            stamina.stamina = stamina
-                .stamina
-                .saturating_add(reward_xp_event.stamina as u32);
-            if stamina.stamina > MAX_STAMINA {
-                stamina.stamina = MAX_STAMINA;
+            if reward_xp_event.stamina {
+                let reward_stamina = game_data.ability_value_calculator.calculate_give_stamina(
+                    reward_xp_event.xp as i32,
+                    level.level as i32,
+                    world_rates.xp_rate,
+                );
+
+                if reward_stamina > 0 {
+                    stamina.stamina = stamina.stamina.saturating_add(reward_stamina as u32);
+                    if stamina.stamina > MAX_STAMINA {
+                        stamina.stamina = MAX_STAMINA;
+                    }
+                }
             }
 
             // TODO: Apply level cap

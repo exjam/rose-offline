@@ -9,6 +9,15 @@ pub enum PartyMember {
     Offline(CharacterUniqueId, String),
 }
 
+impl PartyMember {
+    pub fn get_entity(&self) -> Option<Entity> {
+        match self {
+            PartyMember::Online(entity) => Some(entity),
+            PartyMember::Offline(_, _) => None,
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct Party {
     pub owner: Entity,
