@@ -163,7 +163,7 @@ pub fn world_server_system(
                     for character in &character_list.characters {
                         characters.push(CharacterListItem {
                             info: character.info.clone(),
-                            level: character.level.clone(),
+                            level: character.level,
                             delete_time: character.delete_time.clone(),
                             equipment: character.equipment.clone(),
                         });

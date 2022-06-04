@@ -150,7 +150,7 @@ fn handle_game_connection_request(
         hotbar: character.hotbar.clone(),
         info: character.info.clone(),
         inventory: character.inventory.clone(),
-        level: character.level.clone(),
+        level: character.level,
         mana_points,
         motion_data,
         move_mode,

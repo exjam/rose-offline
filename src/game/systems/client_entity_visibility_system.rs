@@ -135,7 +135,7 @@ pub fn client_entity_visibility_system(
                                                 health: *spawn_health_points,
                                                 team: spawn_team.clone(),
                                                 equipment: spawn_equipment.clone(),
-                                                level: spawn_level.clone(),
+                                                level: *spawn_level,
                                                 move_mode: *spawn_move_mode,
                                                 move_speed: *spawn_move_speed,
                                                 passive_attack_speed: spawn_ability_values

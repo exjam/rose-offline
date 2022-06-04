@@ -74,7 +74,7 @@ pub fn save_system(
                         basic_stats: basic_stats.clone(),
                         inventory: inventory.clone(),
                         equipment: equipment.clone(),
-                        level: level.clone(),
+                        level: *level,
                         experience_points: experience_points.clone(),
                         position: position.clone(),
                         skill_list: skill_list.clone(),
