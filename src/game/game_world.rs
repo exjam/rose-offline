@@ -29,10 +29,10 @@ use crate::game::{
         game_server_join_system, game_server_main_system, login_server_authentication_system,
         login_server_system, monster_spawn_system, npc_ai_system, npc_store_system,
         party_member_event_system, party_member_update_info_system, party_system,
-        passive_recovery_system, personal_store_system, quest_system, reward_item_system,
-        save_system, server_messages_system, skill_effect_system, startup_zones_system,
-        status_effect_system, update_position_system, use_item_system, weight_system,
-        world_server_authentication_system, world_server_system, world_time_system,
+        party_update_average_level_system, passive_recovery_system, personal_store_system,
+        quest_system, reward_item_system, save_system, server_messages_system, skill_effect_system,
+        startup_zones_system, status_effect_system, update_position_system, use_item_system,
+        weight_system, world_server_authentication_system, world_server_system, world_time_system,
     },
 };
 
@@ -162,6 +162,7 @@ impl GameWorld {
             GameStages::PostUpdate,
             SystemStage::parallel()
                 .with_system(experience_points_system)
+                .with_system(party_update_average_level_system.after(experience_points_system))
                 .with_system(client_entity_visibility_system)
                 .with_system(weight_system),
         );

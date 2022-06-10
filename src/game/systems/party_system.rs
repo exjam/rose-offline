@@ -900,3 +900,26 @@ pub fn party_member_update_info_system(
         }
     }
 }
+
+pub fn party_update_average_level_system(
+    mut query_party: Query<&mut Party>,
+    query_level: Query<&Level>,
+) {
+    for mut party in query_party.iter_mut() {
+        let mut total_levels = 0;
+        let mut num_online = 0;
+
+        for member in party.members.iter() {
+            if let &PartyMember::Online(entity) = member {
+                if let Ok(level) = query_level.get(entity) {
+                    total_levels += level.level;
+                    num_online += 1;
+                }
+            }
+        }
+
+        if num_online != 0 {
+            party.average_member_level = total_levels as i32 / num_online;
+        }
+    }
+}
