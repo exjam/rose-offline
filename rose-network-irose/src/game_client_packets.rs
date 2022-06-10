@@ -12,16 +12,17 @@ use rose_game_common::{
     components::{BasicStatType, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot},
     messages::{
         client::{NpcStoreBuyItem, ReviveRequestType},
-        ClientEntityId, PartyRejectInviteReason,
+        ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
     decode_item_slot, encode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex,
-    PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadSkillSlot,
-    PacketReadVehiclePartIndex, PacketWriteEntityId, PacketWriteEquipmentIndex,
-    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
+    PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadPartyRules,
+    PacketReadSkillSlot, PacketReadVehiclePartIndex, PacketWriteEntityId,
+    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWritePartyRules,
+    PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -57,6 +58,7 @@ pub enum ClientPackets {
     PersonalStoreBuyItem = 0x7c5,
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
+    PartyUpdateRules = 0x7d7,
 }
 
 #[derive(Debug)]
@@ -1099,6 +1101,36 @@ impl From<&PacketClientPartyReply> for Packet {
                 writer.write_u16(0);
             }
         }
+        writer.into()
+    }
+}
+
+pub struct PacketClientPartyUpdateRules {
+    pub item_sharing: PartyItemSharing,
+    pub xp_sharing: PartyXpSharing,
+}
+
+impl TryFrom<&Packet> for PacketClientPartyUpdateRules {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::PartyUpdateRules as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let (item_sharing, xp_sharing) = reader.read_party_rules()?;
+        Ok(PacketClientPartyUpdateRules {
+            item_sharing,
+            xp_sharing,
+        })
+    }
+}
+
+impl From<&PacketClientPartyUpdateRules> for Packet {
+    fn from(packet: &PacketClientPartyUpdateRules) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PartyUpdateRules as u16);
+        writer.write_party_rules(&packet.item_sharing, &packet.xp_sharing);
         writer.into()
     }
 }

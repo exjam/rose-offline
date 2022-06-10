@@ -5,7 +5,7 @@ use crate::{
     components::{
         BasicStatType, CharacterGender, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot,
     },
-    messages::{ClientEntityId, PartyRejectInviteReason},
+    messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
 };
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
@@ -175,4 +175,5 @@ pub enum ClientMessage {
     PartyAcceptCreateInvite(ClientEntityId),
     PartyAcceptJoinInvite(ClientEntityId),
     PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
+    PartyUpdateRules(PartyItemSharing, PartyXpSharing),
 }

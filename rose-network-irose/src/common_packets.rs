@@ -20,7 +20,7 @@ use rose_game_common::{
             ActiveStatusEffects, CommandState, PartyMemberInfo, PartyMemberInfoOffline,
             PartyMemberInfoOnline,
         },
-        ClientEntityId,
+        ClientEntityId, PartyItemSharing, PartyXpSharing,
     },
 };
 use rose_network_common::{PacketError, PacketReader, PacketWriter};
@@ -1062,5 +1062,48 @@ impl PacketWritePartyMemberInfo for PacketWriter {
                 self.write_party_member_info_offline(party_member);
             }
         }
+    }
+}
+
+pub trait PacketReadPartyRules {
+    fn read_party_rules(&mut self) -> Result<(PartyItemSharing, PartyXpSharing), PacketError>;
+}
+
+impl<'a> PacketReadPartyRules for PacketReader<'a> {
+    fn read_party_rules(&mut self) -> Result<(PartyItemSharing, PartyXpSharing), PacketError> {
+        let rules = self.read_u8()?;
+
+        Ok((
+            if (rules & 0x80) == 0 {
+                PartyItemSharing::EqualLootDistribution
+            } else {
+                PartyItemSharing::AcquisitionOrder
+            },
+            if (rules & 0x01) == 0 {
+                PartyXpSharing::EqualShare
+            } else {
+                PartyXpSharing::DistributedByLevel
+            },
+        ))
+    }
+}
+
+pub trait PacketWritePartyRules {
+    fn write_party_rules(&mut self, item_sharing: &PartyItemSharing, xp_sharing: &PartyXpSharing);
+}
+
+impl PacketWritePartyRules for PacketWriter {
+    fn write_party_rules(&mut self, item_sharing: &PartyItemSharing, xp_sharing: &PartyXpSharing) {
+        let mut bits = 0;
+
+        if matches!(item_sharing, PartyItemSharing::AcquisitionOrder) {
+            bits |= 0x80;
+        }
+
+        if matches!(xp_sharing, PartyXpSharing::DistributedByLevel) {
+            bits |= 0x01;
+        }
+
+        self.write_u8(bits);
     }
 }

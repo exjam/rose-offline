@@ -11,3 +11,15 @@ pub enum PartyRejectInviteReason {
     Busy,
     Reject,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum PartyXpSharing {
+    EqualShare,
+    DistributedByLevel,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub enum PartyItemSharing {
+    EqualLootDistribution,
+    AcquisitionOrder,
+}

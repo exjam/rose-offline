@@ -2,7 +2,10 @@ use bevy::ecs::{
     prelude::{Changed, Commands, Entity, EventReader, Or, Query},
     query::WorldQuery,
 };
-use rose_game_common::messages::PartyRejectInviteReason;
+use rose_game_common::{
+    components::Level,
+    messages::{PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
+};
 
 use crate::game::{
     components::{
@@ -11,7 +14,7 @@ use crate::game::{
     },
     events::{
         PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-        PartyMemberDisconnect, PartyMemberEvent, PartyMemberReconnect,
+        PartyEventUpdateRules, PartyMemberDisconnect, PartyMemberEvent, PartyMemberReconnect,
     },
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
@@ -536,6 +539,50 @@ fn handle_party_change_owner(
     Ok(())
 }
 
+enum PartyUpdateRulesError {
+    InvalidEntity,
+    NotOwner,
+    NotInParty,
+}
+
+fn handle_party_update_rules(
+    party_query: &mut Query<&mut Party>,
+    party_membership_query: &Query<PartyMembershipQuery>,
+    party_member_info_query: &Query<PartyMemberInfoQuery>,
+    owner_entity: Entity,
+    item_sharing: PartyItemSharing,
+    xp_sharing: PartyXpSharing,
+) -> Result<(), PartyUpdateRulesError> {
+    let party_membership = party_membership_query
+        .get(owner_entity)
+        .map_err(|_| PartyUpdateRulesError::InvalidEntity)?;
+
+    let party_entity = match *party_membership.party_membership {
+        PartyMembership::None => return Err(PartyUpdateRulesError::NotInParty),
+        PartyMembership::Member(party_entity) => party_entity,
+    };
+
+    let mut party = party_query
+        .get_mut(party_entity)
+        .expect("PartyMembership pointing to invalid party entity");
+
+    if party.owner != owner_entity {
+        return Err(PartyUpdateRulesError::NotOwner);
+    }
+
+    party.item_sharing = item_sharing;
+    party.xp_sharing = xp_sharing;
+
+    send_message_to_members(
+        party_member_info_query,
+        &party.members,
+        ServerMessage::PartyUpdateRules(item_sharing, xp_sharing),
+        None,
+    );
+
+    Ok(())
+}
+
 enum PartyMemberDisconnectError {
     InvalidParty,
 }
@@ -802,6 +849,21 @@ pub fn party_system(
                     &party_member_info_query,
                     owner_entity,
                     new_owner_entity,
+                )
+                .ok();
+            }
+            PartyEvent::UpdateRules(PartyEventUpdateRules {
+                owner_entity,
+                item_sharing,
+                xp_sharing,
+            }) => {
+                handle_party_update_rules(
+                    &mut party_query,
+                    &party_membership_query,
+                    &party_member_info_query,
+                    owner_entity,
+                    item_sharing,
+                    xp_sharing,
                 )
                 .ok();
             }

@@ -18,7 +18,7 @@ use crate::{
         QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
-    messages::{ClientEntityId, PartyRejectInviteReason},
+    messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
 };
 
 #[derive(Clone, Debug, Error, Serialize, Deserialize)]
@@ -711,6 +711,7 @@ pub enum ServerMessage {
     PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
     PartyChangeOwner(ClientEntityId),
     PartyDelete,
+    PartyUpdateRules(PartyItemSharing, PartyXpSharing),
     PartyMemberList(PartyMemberList),
     PartyMemberLeave(PartyMemberLeave),
     PartyMemberDisconnect(CharacterUniqueId),

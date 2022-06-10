@@ -315,6 +315,15 @@ impl GameServer {
 
                 client.client_message_tx.send(message)?;
             }
+            Some(ClientPackets::PartyUpdateRules) => {
+                let message = PacketClientPartyUpdateRules::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::PartyUpdateRules(
+                        message.item_sharing,
+                        message.xp_sharing,
+                    ))?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -1162,18 +1171,27 @@ impl GameServer {
                     )))
                     .await?;
             }
-            ServerMessage::PartyDelete => {
-                client
-                    .connection
-                    .write_packet(Packet::from(&PacketServerPartyReply::Delete))
-                    .await?;
-            }
             ServerMessage::PartyChangeOwner(client_entity_id) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerPartyReply::ChangeOwner(
                         client_entity_id,
                     )))
+                    .await?;
+            }
+            ServerMessage::PartyDelete => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyReply::Delete))
+                    .await?;
+            }
+            ServerMessage::PartyUpdateRules(item_sharing, xp_sharing) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyUpdateRules {
+                        item_sharing,
+                        xp_sharing,
+                    }))
                     .await?;
             }
             ServerMessage::PartyMemberList(party_member_list) => {

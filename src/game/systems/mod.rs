@@ -44,7 +44,10 @@ pub use login_server_system::{login_server_authentication_system, login_server_s
 pub use monster_spawn_system::monster_spawn_system;
 pub use npc_ai_system::npc_ai_system;
 pub use npc_store_system::npc_store_system;
-pub use party_system::{party_member_event_system, party_member_update_info_system, party_system};
+pub use party_system::{
+    party_member_event_system, party_member_update_info_system, party_system,
+    party_update_average_level_system,
+};
 pub use passive_recovery_system::passive_recovery_system;
 pub use personal_store_system::personal_store_system;
 pub use quest_system::quest_system;

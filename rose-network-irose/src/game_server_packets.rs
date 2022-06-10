@@ -26,7 +26,7 @@ use rose_game_common::{
             LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline,
             PartyMemberLeave, PartyMemberList, PickupItemDropContent, PickupItemDropError,
         },
-        ClientEntityId, PartyRejectInviteReason,
+        ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
@@ -34,12 +34,12 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 use crate::common_packets::{
     PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
     PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-    PacketReadItems, PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadSkillSlot,
-    PacketReadStatusEffects, PacketReadVehiclePartIndex, PacketWriteCharacterGender,
-    PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex,
-    PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode,
-    PacketWritePartyMemberInfo, PacketWriteSkillSlot, PacketWriteStatusEffects,
-    PacketWriteVehiclePartIndex,
+    PacketReadItems, PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadPartyRules,
+    PacketReadSkillSlot, PacketReadStatusEffects, PacketReadVehiclePartIndex,
+    PacketWriteCharacterGender, PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId,
+    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+    PacketWriteMoveMode, PacketWritePartyMemberInfo, PacketWritePartyRules, PacketWriteSkillSlot,
+    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -107,6 +107,7 @@ pub enum ServerPackets {
     PartyReply = 0x7d1,
     PartyMembers = 0x7d2,
     PartyMemberUpdateInfo = 0x7d5,
+    PartyUpdateRules = 0x7d7,
 }
 
 #[allow(dead_code)]
@@ -3504,6 +3505,37 @@ impl From<&PacketServerChangeNpcId> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::ChangeNpcId as u16);
         writer.write_entity_id(packet.client_entity_id);
         writer.write_u16(packet.npc_id.get() as u16);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyUpdateRules {
+    pub item_sharing: PartyItemSharing,
+    pub xp_sharing: PartyXpSharing,
+}
+
+impl TryFrom<&Packet> for PacketServerPartyUpdateRules {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PartyUpdateRules as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let (item_sharing, xp_sharing) = reader.read_party_rules()?;
+
+        Ok(Self {
+            item_sharing,
+            xp_sharing,
+        })
+    }
+}
+
+impl From<&PacketServerPartyUpdateRules> for Packet {
+    fn from(packet: &PacketServerPartyUpdateRules) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyUpdateRules as u16);
+        writer.write_party_rules(&packet.item_sharing, &packet.xp_sharing);
         writer.into()
     }
 }

@@ -10,7 +10,7 @@ use rose_game_common::messages::server::{
     CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
 };
 
-use crate::game::events::PartyMemberEvent;
+use crate::game::events::{PartyEventUpdateRules, PartyMemberEvent};
 use crate::game::{
     bundles::{
         client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
@@ -1259,6 +1259,13 @@ pub fn game_server_main_system(
                                 },
                             ));
                         }
+                    }
+                    ClientMessage::PartyUpdateRules(item_sharing, xp_sharing) => {
+                        party_events.send(PartyEvent::UpdateRules(PartyEventUpdateRules {
+                            owner_entity: entity,
+                            item_sharing,
+                            xp_sharing,
+                        }));
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }

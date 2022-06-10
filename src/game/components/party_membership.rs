@@ -15,6 +15,13 @@ impl PartyMembership {
         Self::Member(party_entity)
     }
 
+    pub fn get_party_entity(&self) -> Option<Entity> {
+        match self {
+            PartyMembership::None => None,
+            PartyMembership::Member(party_entity) => Some(*party_entity),
+        }
+    }
+
     pub fn is_none(&self) -> bool {
         matches!(self, PartyMembership::None)
     }
