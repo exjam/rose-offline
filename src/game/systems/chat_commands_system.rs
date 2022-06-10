@@ -434,7 +434,7 @@ fn handle_chat_command(
                 .send(RewardXpEvent::new(
                     chat_command_user.entity,
                     required_xp,
-                    0,
+                    false,
                     None,
                 ));
         }

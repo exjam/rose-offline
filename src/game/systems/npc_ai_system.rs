@@ -1,5 +1,7 @@
+use arrayvec::ArrayVec;
 use bevy::ecs::{
     prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
+    query::WorldQuery,
     system::SystemParam,
 };
 use bevy::math::{Vec3, Vec3Swizzles};
@@ -21,15 +23,15 @@ use rose_file_readers::{
     AipNpcId, AipOperatorType, AipResultOperator, AipSkillId, AipSkillTarget, AipSpawnNpcOrigin,
     AipTrigger, AipVariableType, AipZoneId,
 };
-use rose_game_common::data::Damage;
+use rose_game_common::{data::Damage, messages::PartyXpSharing};
 
 use crate::game::{
     bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
     components::{
         AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command, CommandData,
         CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-        MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Position, SpawnOrigin,
-        StatusEffects, Target, Team,
+        MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Party, PartyMember,
+        PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team,
     },
     events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
@@ -39,25 +41,67 @@ use crate::game::{
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct NpcQuery<'w> {
+    entity: Entity,
+    npc: &'w Npc,
+    ai: &'w mut NpcAi,
+    client_entity: &'w ClientEntity,
+    client_entity_sector: &'w ClientEntitySector,
+    command: &'w Command,
+    position: &'w Position,
+    level: &'w Level,
+    team: &'w Team,
+    health_points: &'w HealthPoints,
+    ability_values: &'w AbilityValues,
+    status_effects: &'w StatusEffects,
+    owner: Option<&'w Owner>,
+    spawn_origin: Option<&'w SpawnOrigin>,
+    target: Option<&'w Target>,
+    damage_sources: Option<&'w DamageSources>,
+}
+
+#[derive(WorldQuery)]
+pub struct AttackerQuery<'w> {
+    entity: Entity,
+    position: &'w Position,
+    level: &'w Level,
+    team: &'w Team,
+    ability_values: &'w AbilityValues,
+    health_points: &'w HealthPoints,
+}
+
+#[derive(WorldQuery)]
+pub struct KillerQuery<'w> {
+    entity: Entity,
+    level: &'w Level,
+    ability_values: &'w AbilityValues,
+    party_membership: Option<&'w PartyMembership>,
+    position: &'w Position,
+    owner: Option<&'w Owner>,
+    game_client: Option<&'w GameClient>,
+}
+
+#[derive(WorldQuery)]
+pub struct TargetQuery<'w> {
+    entity: Entity,
+    position: &'w Position,
+    level: &'w Level,
+    team: &'w Team,
+    ability_values: &'w AbilityValues,
+    health_points: &'w HealthPoints,
+    status_effects: &'w StatusEffects,
+    target: Option<&'w Target>,
+    npc: Option<&'w Npc>,
+}
+
 #[derive(SystemParam)]
 pub struct AiSystemParameters<'w, 's> {
     commands: Commands<'w, 's>,
     client_entity_list: ResMut<'w, ClientEntityList>,
     server_messages: ResMut<'w, ServerMessages>,
-    target_query: Query<
-        'w,
-        's,
-        (
-            &'static Level,
-            &'static Team,
-            &'static AbilityValues,
-            &'static StatusEffects,
-            &'static HealthPoints,
-            &'static Position,
-            Option<&'static Target>,
-            Option<&'static Npc>,
-        ),
-    >,
+    target_query: Query<'w, 's, TargetQuery<'static>>,
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
@@ -76,35 +120,10 @@ pub struct AiSystemResources<'w, 's> {
     _secret: PhantomData<&'s ()>,
 }
 
-struct AiSourceData<'s> {
-    entity: Entity,
-    npc: &'s Npc,
-    client_entity: &'s ClientEntity,
-    ability_values: &'s AbilityValues,
-    health_points: &'s HealthPoints,
-    level: &'s Level,
-    owner: Option<Entity>,
-    position: &'s Position,
-    spawn_origin: Option<&'s SpawnOrigin>,
-    status_effects: &'s StatusEffects,
-    target: Option<Entity>,
-    team: &'s Team,
-}
-
-struct AiAttackerData<'a> {
-    entity: Entity,
-    position: &'a Position,
-    _team: &'a Team,
-    ability_values: &'a AbilityValues,
-    health_points: &'a HealthPoints,
-    level: &'a Level,
-    // TODO: Missing data on if clan master
-}
-
 #[allow(dead_code)]
-struct AiParameters<'a> {
-    source: &'a AiSourceData<'a>,
-    attacker: Option<&'a AiAttackerData<'a>>,
+struct AiParameters<'a, '__w, 'w, '__wa, 'wa> {
+    source: &'a NpcQueryItem<'__w, 'w>,
+    attacker: Option<&'a AttackerQueryItem<'__wa, 'wa>>,
     find_char: Option<(Entity, Vec3)>,
     near_char: Option<(Entity, Vec3)>,
     damage_received: Option<Damage>,
@@ -158,10 +177,11 @@ fn ai_condition_count_nearby_entities(
             ai_system_parameters
                 .target_query
                 .get(entity)
-                .map_or(false, |(level, team, ..)| {
-                    let level_diff = ai_parameters.source.level.level as i32 - level.level as i32;
+                .map_or(false, |target| {
+                    let level_diff =
+                        ai_parameters.source.level.level as i32 - target.level.level as i32;
 
-                    is_allied == (team.id == ai_parameters.source.team.id)
+                    is_allied == (target.team.id == ai_parameters.source.team.id)
                         && level_diff_range.contains(&level_diff)
                 });
         if !meets_requirements {
@@ -234,12 +254,12 @@ fn ai_condition_distance(
         AipDistanceOrigin::Owner => ai_parameters
             .source
             .owner
-            .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
+            .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
             .map(|(position, _)| position.position.xy()),
         AipDistanceOrigin::Target => ai_parameters
             .source
             .target
-            .and_then(|target_entity| ai_system_parameters.owner_query.get(target_entity).ok())
+            .and_then(|target| ai_system_parameters.owner_query.get(target.entity).ok())
             .map(|(position, _)| position.position.xy()),
     }
     .map(|compare_position| {
@@ -276,7 +296,7 @@ fn ai_condition_has_no_owner(
     if let Some(owner_position) = ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
+        .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
         .map(|(position, _)| position.clone())
     {
         // Our owner must be in the same map
@@ -289,7 +309,7 @@ fn ai_condition_has_no_owner(
 fn ai_condition_is_attacker_current_target(ai_parameters: &mut AiParameters) -> bool {
     if let Some(attacker) = ai_parameters.attacker {
         if let Some(target) = ai_parameters.source.target {
-            return attacker.entity == target;
+            return attacker.entity == target.entity;
         }
     }
 
@@ -497,8 +517,8 @@ fn ai_condition_has_status_effect(
         _ => ai_parameters
             .source
             .target
-            .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
-            .map(|(_, _, _, status_effects, _, _, _, _)| status_effects),
+            .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+            .map(|target| target.status_effects),
     };
 
     if let Some(status_effects) = status_effects {
@@ -552,12 +572,16 @@ fn ai_condition_target_ability_value(
     aip_ability_type: AipAbilityType,
     value: i32,
 ) -> bool {
-    if let Some((_, _, ability_values, _, health_points, _, _, _)) = ai_parameters
+    if let Some(target) = ai_parameters
         .source
         .target
-        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
+        .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
     {
-        let ability_value = get_aip_ability_value(ability_values, health_points, aip_ability_type);
+        let ability_value = get_aip_ability_value(
+            target.ability_values,
+            target.health_points,
+            aip_ability_type,
+        );
         compare_aip_value(operator, ability_value, value)
     } else {
         false
@@ -581,9 +605,13 @@ fn ai_condition_attacker_and_target_ability_value(
     let target_ability_value = ai_parameters
         .source
         .target
-        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
-        .map(|(_, _, ability_values, _, health_points, _, _, _)| {
-            get_aip_ability_value(ability_values, health_points, aip_ability_type)
+        .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+        .map(|target| {
+            get_aip_ability_value(
+                target.ability_values,
+                target.health_points,
+                aip_ability_type,
+            )
         });
 
     if let (Some(attacker_ability_value), Some(target_ability_value)) =
@@ -602,7 +630,7 @@ fn ai_condition_owner_has_target(
     ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
+        .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
         .map_or(false, |(_, target)| target.is_some())
 }
 
@@ -794,13 +822,11 @@ fn ai_action_move_away_from_target(
         AipMoveMode::Walk => MoveMode::Walk,
     };
 
-    if let Some(target_entity) = ai_parameters.source.target {
-        if let Ok((_, _, _, _, _, target_position, _, _)) =
-            ai_system_parameters.target_query.get(target_entity)
-        {
+    if let Some(target) = ai_parameters.source.target {
+        if let Ok(target) = ai_system_parameters.target_query.get(target.entity) {
             let source_position = ai_parameters.source.position.position;
             let direction_away_from_target =
-                (source_position.xy() - target_position.position.xy()).normalize();
+                (source_position.xy() - target.position.position.xy()).normalize();
             let move_vector = distance as f32 * direction_away_from_target;
             let destination = source_position + Vec3::new(move_vector.x, move_vector.y, 0.0);
 
@@ -856,7 +882,7 @@ fn ai_action_move_near_owner(
     if let Some(owner_position) = ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
+        .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
         .map(|(position, _)| position.clone())
     {
         // Move 80% of the way towards owner
@@ -883,14 +909,12 @@ fn ai_action_attack_owner_target(
     if let Some(owner_target_entity) = ai_parameters
         .source
         .owner
-        .and_then(|owner_entity| ai_system_parameters.owner_query.get(owner_entity).ok())
+        .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
         .and_then(|(_, target)| target.map(|target| target.entity))
     {
-        if let Ok((_, target_team, _, _, _, _, _, _)) =
-            ai_system_parameters.target_query.get(owner_target_entity)
-        {
-            if target_team.id != Team::DEFAULT_NPC_TEAM_ID
-                && target_team.id != ai_parameters.source.team.id
+        if let Ok(target) = ai_system_parameters.target_query.get(owner_target_entity) {
+            if target.team.id != Team::DEFAULT_NPC_TEAM_ID
+                && target.team.id != ai_parameters.source.team.id
             {
                 ai_system_parameters
                     .commands
@@ -926,17 +950,17 @@ fn ai_action_attack_nearby_entity_by_stat(
             continue;
         }
 
-        if let Ok((level, team, ability_values, _, health_points, _, _, _)) =
-            ai_system_parameters.target_query.get(entity)
-        {
-            if team.id != Team::DEFAULT_NPC_TEAM_ID && team.id != ai_parameters.source.team.id {
+        if let Ok(nearby_target) = ai_system_parameters.target_query.get(entity) {
+            if nearby_target.team.id != Team::DEFAULT_NPC_TEAM_ID
+                && nearby_target.team.id != ai_parameters.source.team.id
+            {
                 let value = match ability_type {
-                    AipAbilityType::Level => level.level as i32,
-                    AipAbilityType::Attack => ability_values.get_attack_power(),
-                    AipAbilityType::Defence => ability_values.get_defence(),
-                    AipAbilityType::Resistance => ability_values.get_resistance(),
-                    AipAbilityType::HealthPoints => health_points.hp,
-                    AipAbilityType::Charm => ability_values.get_charm(),
+                    AipAbilityType::Level => nearby_target.level.level as i32,
+                    AipAbilityType::Attack => nearby_target.ability_values.get_attack_power(),
+                    AipAbilityType::Defence => nearby_target.ability_values.get_defence(),
+                    AipAbilityType::Resistance => nearby_target.ability_values.get_resistance(),
+                    AipAbilityType::HealthPoints => nearby_target.health_points.hp,
+                    AipAbilityType::Charm => nearby_target.ability_values.get_charm(),
                 };
 
                 if min_entity.map_or(true, |(_, min_value)| value < min_value) {
@@ -1016,11 +1040,11 @@ fn ai_action_nearby_allies_attack_target(
     nearby_ally_type: AipNearbyAlly,
     limit: Option<usize>,
 ) {
-    let target_entity = ai_parameters.source.target;
-    if target_entity.is_none() {
+    let target = ai_parameters.source.target;
+    if target.is_none() {
         return;
     }
-    let target_entity = target_entity.unwrap();
+    let target = target.unwrap();
 
     let zone_entities = ai_system_parameters
         .client_entity_list
@@ -1039,17 +1063,15 @@ fn ai_action_nearby_allies_attack_target(
             continue;
         }
 
-        if let Ok((_, nearby_team, _, _, _, _, nearby_target, nearby_npc)) =
-            ai_system_parameters.target_query.get(nearby_entity)
-        {
-            if nearby_target.is_some()
-                || nearby_team.id != ai_parameters.source.team.id
-                || nearby_npc.is_none()
+        if let Ok(nearby_ally) = ai_system_parameters.target_query.get(nearby_entity) {
+            if nearby_ally.target.is_some()
+                || nearby_ally.team.id != ai_parameters.source.team.id
+                || nearby_ally.npc.is_none()
             {
                 continue;
             }
 
-            let nearby_npc = nearby_npc.unwrap();
+            let nearby_npc = nearby_ally.npc.unwrap();
             let valid = match nearby_ally_type {
                 AipNearbyAlly::Ally => true,
                 AipNearbyAlly::WithNpcId(npc_id) => nearby_npc.id.get() == npc_id as u16,
@@ -1062,7 +1084,7 @@ fn ai_action_nearby_allies_attack_target(
             ai_system_parameters
                 .commands
                 .entity(nearby_entity)
-                .insert(NextCommand::with_attack(target_entity));
+                .insert(NextCommand::with_attack(target.entity));
 
             num_attackers += 1;
         }
@@ -1089,15 +1111,13 @@ fn ai_action_spawn_npc(
         AipSpawnNpcOrigin::AttackerPosition => ai_parameters
             .attacker
             .map(|attacker| attacker.position.position),
-        AipSpawnNpcOrigin::TargetPosition => {
-            ai_parameters.source.target.and_then(|target_entity| {
-                ai_system_parameters
-                    .target_query
-                    .get(target_entity)
-                    .map(|(_, _, _, _, _, position, _, _)| position.position)
-                    .ok()
-            })
-        }
+        AipSpawnNpcOrigin::TargetPosition => ai_parameters.source.target.and_then(|target| {
+            ai_system_parameters
+                .target_query
+                .get(target.entity)
+                .map(|target| target.position.position)
+                .ok()
+        }),
     };
 
     let npc_id = NpcId::new(npc_id as u16);
@@ -1169,7 +1189,7 @@ fn ai_action_use_skill(
 ) {
     let target_entity = match target {
         AipSkillTarget::FindChar => ai_parameters.find_char.map(|(entity, _)| entity),
-        AipSkillTarget::Target => ai_parameters.source.target,
+        AipSkillTarget::Target => ai_parameters.source.target.map(|target| target.entity),
         AipSkillTarget::This => Some(ai_parameters.source.entity),
         AipSkillTarget::NearChar => ai_parameters.near_char.map(|(entity, _)| entity),
     };
@@ -1519,8 +1539,8 @@ fn npc_ai_run_trigger(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
     ai_trigger: &AipTrigger,
-    source: &AiSourceData,
-    attacker: Option<AiAttackerData>,
+    source: &NpcQueryItem,
+    attacker: Option<AttackerQueryItem>,
     damage: Option<Damage>,
     is_dead: bool,
 ) {
@@ -1555,361 +1575,370 @@ fn npc_ai_run_trigger(
     }
 }
 
-fn get_attacker_data<'w, 's>(
-    attacker_query: &Query<'w, 's, (&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
-    entity: Entity,
-) -> Option<AiAttackerData<'w>> {
-    if let Ok((
-        attacker_position,
-        attacker_level,
-        attacker_team,
-        attacker_ability_values,
-        attacker_health_points,
-    )) = attacker_query.get_inner(entity)
-    {
-        Some(AiAttackerData::<'w> {
-            entity,
-            position: attacker_position,
-            _team: attacker_team,
-            ability_values: attacker_ability_values,
-            health_points: attacker_health_points,
-            level: attacker_level,
-        })
-    } else {
-        None
-    }
-}
-
 pub fn npc_ai_system(
     mut ai_system_parameters: AiSystemParameters,
     ai_system_resources: AiSystemResources,
-    mut npc_query: Query<(
-        Entity,
-        &Npc,
-        &mut NpcAi,
-        &ClientEntity,
-        &ClientEntitySector,
-        &Command,
-        &Position,
-        &Level,
-        &Team,
-        &HealthPoints,
-        &AbilityValues,
-        &StatusEffects,
-        (
-            Option<&Owner>,
-            Option<&SpawnOrigin>,
-            Option<&Target>,
-            Option<&DamageSources>,
-        ),
-    )>,
+    mut npc_query: Query<NpcQuery>,
     mut spawn_point_query: Query<&mut MonsterSpawnPoint>,
-    attacker_query: Query<(&Position, &Level, &Team, &AbilityValues, &HealthPoints)>,
-    killer_query: Query<(&Level, &AbilityValues, Option<&Owner>, Option<&GameClient>)>,
+    attacker_query: Query<AttackerQuery>,
+    killer_query: Query<KillerQuery>,
+    query_party: Query<&Party>,
     world_rates: Res<WorldRates>,
     mut reward_xp_events: EventWriter<RewardXpEvent>,
 ) {
-    npc_query.for_each_mut(
-        |(
-            entity,
-            npc,
-            mut npc_ai,
-            client_entity,
-            client_entity_sector,
-            command,
-            position,
-            level,
-            team,
-            health_points,
-            ability_values,
-            status_effects,
-            (owner, spawn_origin, target, damage_sources),
-        )| {
-            let ai_source_data = AiSourceData {
-                entity,
-                npc,
-                client_entity,
-                ability_values,
-                health_points,
-                level,
-                owner: owner.map(|owner| owner.entity),
-                position,
-                spawn_origin,
-                status_effects,
-                target: target.map(|target| target.entity),
-                team,
-            };
+    for mut source in npc_query.iter_mut() {
+        if !source.ai.has_run_created_trigger {
+            if let Some(ai_program) = ai_system_resources.game_data.ai.get_ai(source.ai.ai_index) {
+                if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
+                    npc_ai_run_trigger(
+                        &mut ai_system_parameters,
+                        &ai_system_resources,
+                        trigger_on_created,
+                        &source,
+                        None,
+                        None,
+                        false,
+                    );
+                }
+            }
 
-            if !npc_ai.has_run_created_trigger {
-                if let Some(ai_program) = ai_system_resources.game_data.ai.get_ai(npc_ai.ai_index) {
-                    if let Some(trigger_on_created) = ai_program.trigger_on_created.as_ref() {
+            source.ai.has_run_created_trigger = true;
+        }
+
+        if let Some(ai_program) = ai_system_resources.game_data.ai.get_ai(source.ai.ai_index) {
+            if let Some(trigger_on_damaged) = ai_program.trigger_on_damaged.as_ref() {
+                let mut rng = rand::thread_rng();
+                for &(attacker_entity, damage) in source.ai.pending_damage.iter() {
+                    if source.command.get_target().is_some()
+                        && ai_program.damage_trigger_new_target_chance < rng.gen_range(0..100)
+                    {
+                        continue;
+                    }
+
+                    if let Ok(attacker_data) = attacker_query.get(attacker_entity) {
                         npc_ai_run_trigger(
                             &mut ai_system_parameters,
                             &ai_system_resources,
-                            trigger_on_created,
-                            &ai_source_data,
-                            None,
-                            None,
+                            trigger_on_damaged,
+                            &source,
+                            Some(attacker_data),
+                            Some(damage),
                             false,
                         );
                     }
                 }
-
-                (*npc_ai).has_run_created_trigger = true;
             }
+        }
+        source.ai.pending_damage.clear();
 
-            if let Some(ai_program) = ai_system_resources.game_data.ai.get_ai(npc_ai.ai_index) {
-                if let Some(trigger_on_damaged) = ai_program.trigger_on_damaged.as_ref() {
-                    let mut rng = rand::thread_rng();
-                    for &(attacker_entity, damage) in npc_ai.pending_damage.iter() {
-                        if command.get_target().is_some()
-                            && ai_program.damage_trigger_new_target_chance < rng.gen_range(0..100)
-                        {
-                            continue;
-                        }
+        match source.command.command {
+            CommandData::Stop(_) => {
+                if let Some(ai_program) =
+                    ai_system_resources.game_data.ai.get_ai(source.ai.ai_index)
+                {
+                    if let Some(trigger_on_idle) = ai_program.trigger_on_idle.as_ref() {
+                        source.ai.idle_duration += ai_system_resources.server_time.delta;
 
-                        if let Some(attacker_data) =
-                            get_attacker_data(&attacker_query, attacker_entity)
-                        {
+                        if source.ai.idle_duration > ai_program.idle_trigger_interval {
                             npc_ai_run_trigger(
                                 &mut ai_system_parameters,
                                 &ai_system_resources,
-                                trigger_on_damaged,
-                                &ai_source_data,
-                                Some(attacker_data),
-                                Some(damage),
+                                trigger_on_idle,
+                                &source,
+                                None,
+                                None,
                                 false,
                             );
+                            source.ai.idle_duration -= ai_program.idle_trigger_interval;
                         }
                     }
                 }
             }
-            npc_ai.pending_damage.clear();
+            CommandData::Die(CommandDie {
+                killer: killer_entity,
+                damage: killer_damage,
+            }) => {
+                if !source.ai.has_run_dead_ai {
+                    source.ai.has_run_dead_ai = true;
 
-            match command.command {
-                CommandData::Stop(_) => {
-                    if let Some(ai_program) =
-                        ai_system_resources.game_data.ai.get_ai(npc_ai.ai_index)
+                    // Notify spawn point that one of it's monsters died
+                    if let Some(&SpawnOrigin::MonsterSpawnPoint(spawn_point_entity, _)) =
+                        source.spawn_origin
                     {
-                        if let Some(trigger_on_idle) = ai_program.trigger_on_idle.as_ref() {
-                            npc_ai.idle_duration += ai_system_resources.server_time.delta;
-
-                            if npc_ai.idle_duration > ai_program.idle_trigger_interval {
-                                npc_ai_run_trigger(
-                                    &mut ai_system_parameters,
-                                    &ai_system_resources,
-                                    trigger_on_idle,
-                                    &ai_source_data,
-                                    None,
-                                    None,
-                                    false,
-                                );
-                                npc_ai.idle_duration -= ai_program.idle_trigger_interval;
-                            }
-                        }
-                    }
-                }
-                CommandData::Die(CommandDie {
-                    killer: killer_entity,
-                    damage: killer_damage,
-                }) => {
-                    if !npc_ai.has_run_dead_ai {
-                        npc_ai.has_run_dead_ai = true;
-
-                        // Notify spawn point that one of it's monsters died
-                        if let Some(&SpawnOrigin::MonsterSpawnPoint(spawn_point_entity, _)) =
-                            spawn_origin
-                        {
-                            if let Ok(mut spawn_point) =
-                                spawn_point_query.get_mut(spawn_point_entity)
-                            {
-                                let mut spawn_point = &mut *spawn_point;
-                                spawn_point.num_alive_monsters =
-                                    spawn_point.num_alive_monsters.saturating_sub(1);
-                            }
-                        }
-
-                        // Run on dead AI
-                        if let Some(trigger_on_dead) = ai_system_resources
-                            .game_data
-                            .ai
-                            .get_ai(npc_ai.ai_index)
-                            .and_then(|ai_program| ai_program.trigger_on_dead.as_ref())
-                        {
-                            let attacker_data = killer_entity.and_then(|killer_entity| {
-                                get_attacker_data(&attacker_query, killer_entity)
-                            });
-
-                            npc_ai_run_trigger(
-                                &mut ai_system_parameters,
-                                &ai_system_resources,
-                                trigger_on_dead,
-                                &ai_source_data,
-                                attacker_data,
-                                killer_damage,
-                                true,
-                            );
-                        }
-
-                        if let Some(damage_sources) = damage_sources {
-                            if let Some(npc_data) =
-                                ai_system_resources.game_data.npcs.get_npc(npc.id)
-                            {
-                                // Reward XP to all attackers
-                                for damage_source in damage_sources.damage_sources.iter() {
-                                    let time_since_damage = ai_system_resources.server_time.now
-                                        - damage_source.last_damage_time;
-                                    if time_since_damage > DAMAGE_REWARD_EXPIRE_TIME {
-                                        // Damage expired, ignore.
-                                        continue;
-                                    }
-
-                                    if let Ok((damage_source_level, _, damage_source_owner, _)) =
-                                        killer_query.get(damage_source.entity)
-                                    {
-                                        // If the damage source has an owner then the owner gets the reward
-                                        let (reward_xp_entity, reward_xp_entity_level) =
-                                            damage_source_owner
-                                                .and_then(|damage_source_owner| {
-                                                    killer_query
-                                                        .get(damage_source_owner.entity)
-                                                        .map(|(damage_source_owner_level, ..)| {
-                                                            (
-                                                                damage_source_owner.entity,
-                                                                damage_source_owner_level.level,
-                                                            )
-                                                        })
-                                                        .ok()
-                                                })
-                                                .unwrap_or((
-                                                    damage_source.entity,
-                                                    damage_source_level.level,
-                                                ));
-
-                                        let reward_xp = ai_system_resources
-                                            .game_data
-                                            .ability_value_calculator
-                                            .calculate_give_xp(
-                                                reward_xp_entity_level as i32,
-                                                damage_source.total_damage as i32,
-                                                level.level as i32,
-                                                ability_values.get_max_health(),
-                                                npc_data.reward_xp as i32,
-                                                world_rates.xp_rate,
-                                            );
-                                        if reward_xp > 0 {
-                                            let stamina = ai_system_resources
-                                                .game_data
-                                                .ability_value_calculator
-                                                .calculate_give_stamina(
-                                                    reward_xp,
-                                                    level.level as i32,
-                                                    world_rates.xp_rate,
-                                                );
-
-                                            reward_xp_events.send(RewardXpEvent::new(
-                                                reward_xp_entity,
-                                                reward_xp as u64,
-                                                stamina as u32,
-                                                Some(entity),
-                                            ));
-                                        }
-                                    }
-                                }
-
-                                // Reward killer
-                                if let Some(killer_entity) = killer_entity {
-                                    if let Ok((
-                                        killer_level,
-                                        killer_ability_values,
-                                        killer_owner,
-                                        killer_game_client,
-                                    )) = killer_query.get(killer_entity)
-                                    {
-                                        // If the killer has an owner then the owner gets the reward
-                                        let (
-                                            killer_level,
-                                            killer_ability_values,
-                                            killer_game_client,
-                                        ) = killer_owner
-                                            .and_then(|killer_owner| {
-                                                killer_query
-                                                    .get(killer_owner.entity)
-                                                    .ok()
-                                                    .map(|(a, b, _c, d)| (a, b, d))
-                                            })
-                                            .unwrap_or((
-                                                killer_level,
-                                                killer_ability_values,
-                                                killer_game_client,
-                                            ));
-
-                                        // Inform client to execute npc dead event
-                                        if !npc_data.death_quest_trigger_name.is_empty() {
-                                            if let Some(killer_game_client) = killer_game_client {
-                                                // TODO: Send NPC death trigger to whole party
-                                                /*
-                                                if npc_data.npc_quest_type != 0 {
-                                                }
-                                                */
-
-                                                // Send to only client
-                                                killer_game_client
-                                                    .server_message_tx
-                                                    .send(ServerMessage::RunNpcDeathTrigger(npc.id))
-                                                    .ok();
-                                            }
-                                        }
-
-                                        // Drop item owned by killer
-                                        let level_difference =
-                                            killer_level.level as i32 - level.level as i32;
-                                        if let Some(drop_item) =
-                                            ai_system_resources.game_data.drop_table.get_drop(
-                                                world_rates.drop_rate,
-                                                world_rates.drop_money_rate,
-                                                npc.id,
-                                                position.zone_id,
-                                                level_difference,
-                                                killer_ability_values.get_drop_rate(),
-                                                killer_ability_values.get_charm(),
-                                            )
-                                        {
-                                            ItemDropBundle::spawn(
-                                                &mut ai_system_parameters.commands,
-                                                &mut ai_system_parameters.client_entity_list,
-                                                drop_item,
-                                                position,
-                                                Some(killer_entity),
-                                                &ai_system_resources.server_time,
-                                            );
-                                        }
-                                    }
-                                }
-                            }
+                        if let Ok(mut spawn_point) = spawn_point_query.get_mut(spawn_point_entity) {
+                            let mut spawn_point = &mut *spawn_point;
+                            spawn_point.num_alive_monsters =
+                                spawn_point.num_alive_monsters.saturating_sub(1);
                         }
                     }
 
-                    // Once the death animation has completed, we can remove this entity
-                    let command_complete = command
-                        .required_duration
-                        .map_or(false, |required_duration| {
-                            command.duration >= required_duration
-                        });
-                    if command_complete {
-                        client_entity_leave_zone(
-                            &mut ai_system_parameters.commands,
-                            &mut ai_system_parameters.client_entity_list,
-                            entity,
-                            client_entity,
-                            client_entity_sector,
-                            position,
+                    // Run on dead AI
+                    if let Some(trigger_on_dead) = ai_system_resources
+                        .game_data
+                        .ai
+                        .get_ai(source.ai.ai_index)
+                        .and_then(|ai_program| ai_program.trigger_on_dead.as_ref())
+                    {
+                        let attacker_data = killer_entity
+                            .and_then(|killer_entity| attacker_query.get(killer_entity).ok());
+
+                        npc_ai_run_trigger(
+                            &mut ai_system_parameters,
+                            &ai_system_resources,
+                            trigger_on_dead,
+                            &source,
+                            attacker_data,
+                            killer_damage,
+                            true,
                         );
-                        ai_system_parameters.commands.entity(entity).despawn();
+                    }
+
+                    if let Some(damage_sources) = source.damage_sources {
+                        if let Some(npc_data) =
+                            ai_system_resources.game_data.npcs.get_npc(source.npc.id)
+                        {
+                            let mut pending_party_xp: Vec<(Entity, i64, Entity)> = Vec::new();
+
+                            // Reward XP to all attackers
+                            for damage_source in damage_sources.damage_sources.iter() {
+                                let time_since_damage = ai_system_resources.server_time.now
+                                    - damage_source.last_damage_time;
+                                if time_since_damage > DAMAGE_REWARD_EXPIRE_TIME {
+                                    // Damage expired, ignore.
+                                    continue;
+                                }
+
+                                let attacker = killer_query.get(damage_source.entity);
+                                if attacker.is_err() {
+                                    continue;
+                                }
+                                let attacker = attacker.unwrap();
+
+                                // If the damage source has an owner then the owner gets the reward
+                                let (reward_xp_entity, reward_xp_entity_level) = attacker
+                                    .owner
+                                    .and_then(|owner| {
+                                        killer_query
+                                            .get(owner.entity)
+                                            .map(|attacker_owner| {
+                                                (attacker_owner.entity, attacker_owner.level)
+                                            })
+                                            .ok()
+                                    })
+                                    .unwrap_or((attacker.entity, attacker.level));
+
+                                let reward_xp = ai_system_resources
+                                    .game_data
+                                    .ability_value_calculator
+                                    .calculate_give_xp(
+                                        reward_xp_entity_level.level as i32,
+                                        damage_source.total_damage as i32,
+                                        source.level.level as i32,
+                                        source.ability_values.get_max_health(),
+                                        npc_data.reward_xp as i32,
+                                        world_rates.xp_rate,
+                                    );
+
+                                if reward_xp <= 0 {
+                                    continue;
+                                }
+
+                                if let Some(party_entity) =
+                                    attacker.party_membership.and_then(|party_membership| {
+                                        party_membership.get_party_entity()
+                                    })
+                                {
+                                    // Accumulate party XP for later distribution
+                                    if let Some((_, party_total_xp, _)) = pending_party_xp
+                                        .iter_mut()
+                                        .find(|(entity, _, _)| *entity == party_entity)
+                                    {
+                                        *party_total_xp += reward_xp as i64;
+                                    } else {
+                                        pending_party_xp.push((
+                                            party_entity,
+                                            reward_xp as i64,
+                                            attacker.entity,
+                                        ));
+                                    }
+                                } else {
+                                    // Reward XP to attacker
+                                    reward_xp_events.send(RewardXpEvent::new(
+                                        reward_xp_entity,
+                                        reward_xp as u64,
+                                        true,
+                                        Some(source.entity),
+                                    ));
+                                }
+                            }
+
+                            // Reward accumulated party XP
+                            for (party_entity, total_xp, first_party_member) in
+                                pending_party_xp.drain(..)
+                            {
+                                let mut party_members_in_range: ArrayVec<(Entity, Level), 5> =
+                                    ArrayVec::new();
+                                let mut party_share_xp_evenly = true;
+                                let mut party_level = 1;
+                                let mut party_average_member_level = 1;
+
+                                if let Ok(party) = query_party.get(party_entity) {
+                                    for party_member in party
+                                        .members
+                                        .iter()
+                                        .filter_map(PartyMember::get_entity)
+                                        .filter_map(|entity| killer_query.get(entity).ok())
+                                    {
+                                        if source.position.zone_id == party_member.position.zone_id
+                                            && source.position.position.xy().distance_squared(
+                                                party_member.position.position.xy(),
+                                            ) < 5000.0 * 5000.0
+                                        {
+                                            party_members_in_range
+                                                .push((party_member.entity, *party_member.level));
+                                        }
+                                    }
+
+                                    party_share_xp_evenly =
+                                        matches!(party.xp_sharing, PartyXpSharing::EqualShare);
+                                    party_level = party.level;
+                                    party_average_member_level = party.average_member_level;
+                                }
+
+                                if party_members_in_range.is_empty() {
+                                    // Reward XP to first party member which attacked this npc
+                                    reward_xp_events.send(RewardXpEvent::new(
+                                        first_party_member,
+                                        total_xp as u64,
+                                        true,
+                                        Some(source.entity),
+                                    ));
+                                } else if party_members_in_range.len() == 1 {
+                                    // Reward XP to only party member in range
+                                    reward_xp_events.send(RewardXpEvent::new(
+                                        party_members_in_range[0].0,
+                                        total_xp as u64,
+                                        true,
+                                        Some(source.entity),
+                                    ));
+                                } else if party_share_xp_evenly {
+                                    // Reward XP evenly across party members in range
+                                    let reward_xp = total_xp * (party_level as i64 + 101)
+                                        / (party_members_in_range.len() as i64 * 4 + 1)
+                                        / 20;
+
+                                    for (party_member, _) in party_members_in_range.iter() {
+                                        reward_xp_events.send(RewardXpEvent::new(
+                                            *party_member,
+                                            reward_xp as u64,
+                                            true,
+                                            Some(source.entity),
+                                        ));
+                                    }
+                                } else {
+                                    // Reward XP proportional to player level across party members in range
+                                    for (party_member, party_member_level) in
+                                        party_members_in_range.iter()
+                                    {
+                                        let reward_xp = total_xp
+                                            * (party_level as i64 + 101)
+                                            * (party_member_level.level as i64 + 35
+                                                - party_average_member_level as i64)
+                                            / (party_members_in_range.len() as i64 * 4 + 1)
+                                            / 700;
+
+                                        reward_xp_events.send(RewardXpEvent::new(
+                                            *party_member,
+                                            reward_xp as u64,
+                                            true,
+                                            Some(source.entity),
+                                        ));
+                                    }
+                                }
+                            }
+
+                            // Reward killer with item drop
+                            if let Some(killer_entity) = killer_entity {
+                                if let Ok(killer) = killer_query.get(killer_entity) {
+                                    // If the killer has an owner then the owner gets the reward
+                                    let killer = killer
+                                        .owner
+                                        .and_then(|killer_owner| {
+                                            killer_query.get(killer_owner.entity).ok()
+                                        })
+                                        .unwrap_or(killer);
+
+                                    // Inform client to execute npc dead event
+                                    if !npc_data.death_quest_trigger_name.is_empty() {
+                                        if let Some(killer_game_client) = killer.game_client {
+                                            // TODO: Send NPC death trigger to whole party
+                                            /*
+                                            if npc_data.npc_quest_type != 0 {
+                                            }
+                                            */
+
+                                            // Send to only client
+                                            killer_game_client
+                                                .server_message_tx
+                                                .send(ServerMessage::RunNpcDeathTrigger(
+                                                    source.npc.id,
+                                                ))
+                                                .ok();
+                                        }
+                                    }
+
+                                    // Drop item owned by killer
+                                    let level_difference =
+                                        killer.level.level as i32 - source.level.level as i32;
+                                    if let Some(drop_item) =
+                                        ai_system_resources.game_data.drop_table.get_drop(
+                                            world_rates.drop_rate,
+                                            world_rates.drop_money_rate,
+                                            source.npc.id,
+                                            source.position.zone_id,
+                                            level_difference,
+                                            killer.ability_values.get_drop_rate(),
+                                            killer.ability_values.get_charm(),
+                                        )
+                                    {
+                                        ItemDropBundle::spawn(
+                                            &mut ai_system_parameters.commands,
+                                            &mut ai_system_parameters.client_entity_list,
+                                            drop_item,
+                                            source.position,
+                                            Some(killer_entity),
+                                            &ai_system_resources.server_time,
+                                        );
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-                _ => {}
+
+                // Once the death animation has completed, we can remove this entity
+                let command_complete = source
+                    .command
+                    .required_duration
+                    .map_or(false, |required_duration| {
+                        source.command.duration >= required_duration
+                    });
+                if command_complete {
+                    client_entity_leave_zone(
+                        &mut ai_system_parameters.commands,
+                        &mut ai_system_parameters.client_entity_list,
+                        source.entity,
+                        source.client_entity,
+                        source.client_entity_sector,
+                        source.position,
+                    );
+                    ai_system_parameters
+                        .commands
+                        .entity(source.entity)
+                        .despawn();
+                }
             }
-        },
-    );
+            _ => {}
+        }
+    }
 }
