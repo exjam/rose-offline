@@ -1,6 +1,7 @@
 use bevy::ecs::{
     event::EventWriter,
     prelude::{Commands, EventReader, Query, ResMut},
+    query::WorldQuery,
 };
 use log::{error, info};
 
@@ -16,31 +17,32 @@ use crate::game::{
     storage::character::CharacterStorage,
 };
 
+#[derive(WorldQuery)]
+pub struct SaveEntityQuery<'w> {
+    client_entity: Option<&'w ClientEntity>,
+    client_entity_sector: Option<&'w ClientEntitySector>,
+    character_info: &'w CharacterInfo,
+    basic_stats: &'w BasicStats,
+    inventory: &'w Inventory,
+    equipment: &'w Equipment,
+    level: &'w Level,
+    experience_points: &'w ExperiencePoints,
+    position: &'w Position,
+    skill_list: &'w SkillList,
+    hotbar: &'w Hotbar,
+    health_points: &'w HealthPoints,
+    mana_points: &'w ManaPoints,
+    skill_points: &'w SkillPoints,
+    stat_points: &'w StatPoints,
+    quest_state: &'w QuestState,
+    union_membership: &'w UnionMembership,
+    stamina: &'w Stamina,
+    party_membership: &'w PartyMembership,
+}
+
 pub fn save_system(
     mut commands: Commands,
-    query: Query<(
-        Option<&ClientEntity>,
-        Option<&ClientEntitySector>,
-        &CharacterInfo,
-        &BasicStats,
-        &Inventory,
-        &Equipment,
-        &Level,
-        &ExperiencePoints,
-        &Position,
-        &SkillList,
-        &Hotbar,
-        &HealthPoints,
-        &ManaPoints,
-        &SkillPoints,
-        (
-            &StatPoints,
-            &QuestState,
-            &UnionMembership,
-            &Stamina,
-            &PartyMembership,
-        ),
-    )>,
+    query: Query<SaveEntityQuery>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut save_events: EventReader<SaveEvent>,
     mut party_member_events: EventWriter<PartyMemberEvent>,
@@ -51,55 +53,38 @@ pub fn save_system(
                 entity,
                 remove_after_save,
             }) => {
-                if let Ok((
-                    client_entity,
-                    client_entity_sector,
-                    character_info,
-                    basic_stats,
-                    inventory,
-                    equipment,
-                    level,
-                    experience_points,
-                    position,
-                    skill_list,
-                    hotbar,
-                    health_points,
-                    mana_points,
-                    skill_points,
-                    (stat_points, quest_state, union_membership, stamina, party_membership),
-                )) = query.get(entity)
-                {
+                if let Ok(character) = query.get(entity) {
                     let storage = CharacterStorage {
-                        info: character_info.clone(),
-                        basic_stats: basic_stats.clone(),
-                        inventory: inventory.clone(),
-                        equipment: equipment.clone(),
-                        level: *level,
-                        experience_points: experience_points.clone(),
-                        position: position.clone(),
-                        skill_list: skill_list.clone(),
-                        hotbar: hotbar.clone(),
+                        info: character.character_info.clone(),
+                        basic_stats: character.basic_stats.clone(),
+                        inventory: character.inventory.clone(),
+                        equipment: character.equipment.clone(),
+                        level: *character.level,
+                        experience_points: character.experience_points.clone(),
+                        position: character.position.clone(),
+                        skill_list: character.skill_list.clone(),
+                        hotbar: character.hotbar.clone(),
                         delete_time: None,
-                        health_points: *health_points,
-                        mana_points: *mana_points,
-                        stat_points: *stat_points,
-                        skill_points: *skill_points,
-                        quest_state: quest_state.clone(),
-                        union_membership: union_membership.clone(),
-                        stamina: *stamina,
+                        health_points: *character.health_points,
+                        mana_points: *character.mana_points,
+                        stat_points: *character.stat_points,
+                        skill_points: *character.skill_points,
+                        quest_state: character.quest_state.clone(),
+                        union_membership: character.union_membership.clone(),
+                        stamina: *character.stamina,
                     };
 
                     match storage.save() {
-                        Ok(_) => info!("Saved character {}", character_info.name),
+                        Ok(_) => info!("Saved character {}", character.character_info.name),
                         Err(error) => error!(
                             "Failed to save character {} with error {:?}",
-                            character_info.name, error
+                            character.character_info.name, error
                         ),
                     }
 
                     if remove_after_save {
                         if let (Some(client_entity), Some(client_entity_sector)) =
-                            (client_entity, client_entity_sector)
+                            (character.client_entity, character.client_entity_sector)
                         {
                             client_entity_leave_zone(
                                 &mut commands,
@@ -107,17 +92,17 @@ pub fn save_system(
                                 entity,
                                 client_entity,
                                 client_entity_sector,
-                                position,
+                                character.position,
                             );
                         }
 
-                        if let PartyMembership::Member(party_entity) = party_membership {
+                        if let PartyMembership::Member(party_entity) = character.party_membership {
                             party_member_events.send(PartyMemberEvent::Disconnect(
                                 PartyMemberDisconnect {
                                     party_entity: *party_entity,
                                     disconnect_entity: entity,
-                                    character_id: character_info.unique_id,
-                                    name: character_info.name.clone(),
+                                    character_id: character.character_info.unique_id,
+                                    name: character.character_info.name.clone(),
                                 },
                             ));
                         }
