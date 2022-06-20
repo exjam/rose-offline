@@ -29,7 +29,6 @@ pub fn server_messages_system(
         for message in server_messages.pending_entity_messages.iter() {
             if position.zone_id == message.zone_id
                 && client_visibility
-                    .entities
                     .get(message.entity_id.0)
                     .map_or(false, |b| *b)
             {

@@ -1,8 +1,8 @@
-use bevy::ecs::prelude::Component;
+use bevy::prelude::{Component, Deref, DerefMut};
 
 use crate::game::storage::character::CharacterStorage;
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct CharacterList {
     pub characters: Vec<CharacterStorage>,
 }

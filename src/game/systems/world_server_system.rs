@@ -76,7 +76,7 @@ fn handle_world_connection_request(
                     }
                     false
                 } else {
-                    character_list.characters.push(character);
+                    character_list.push(character);
                     true
                 }
             }
@@ -160,7 +160,7 @@ pub fn world_server_system(
             match message {
                 ClientMessage::GetCharacterList => {
                     let mut characters = Vec::new();
-                    for character in &character_list.characters {
+                    for character in character_list.iter() {
                         characters.push(CharacterListItem {
                             info: character.info.clone(),
                             level: character.level,
@@ -186,7 +186,7 @@ pub fn world_server_system(
                                 let character_slot = account.character_names.len();
                                 account.character_names.push(character.info.name.clone());
                                 AccountStorage::from(&*account).save().ok();
-                                character_list.characters.push(character);
+                                character_list.push(character);
                                 Ok(CreateCharacterResponse { character_slot })
                             }
                             Err(error) => {
@@ -210,7 +210,6 @@ pub fn world_server_system(
                 }
                 ClientMessage::DeleteCharacter(message) => {
                     let response = character_list
-                        .characters
                         .get_mut(message.slot as usize)
                         .filter(|character| character.info.name == message.name)
                         .map_or_else(
@@ -246,7 +245,6 @@ pub fn world_server_system(
                 }
                 ClientMessage::SelectCharacter(message) => {
                     let response = character_list
-                        .characters
                         .get_mut(message.slot as usize)
                         .filter(|character| character.info.name == message.name)
                         .map_or(Err(SelectCharacterError::Failed), |selected_character| {
