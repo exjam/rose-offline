@@ -1,4 +1,6 @@
-mod ability_values_system;
+mod ability_values_changed_system;
+mod ability_values_update_character_system;
+mod ability_values_update_npc_system;
 mod bot_ai_system;
 mod chat_commands_system;
 mod client_entity_visibility_system;
@@ -28,7 +30,9 @@ mod weight_system;
 mod world_server_system;
 mod world_time_system;
 
-pub use ability_values_system::ability_values_system;
+pub use ability_values_changed_system::ability_values_changed_system;
+pub use ability_values_update_character_system::ability_values_update_character_system;
+pub use ability_values_update_npc_system::ability_values_update_npc_system;
 pub use bot_ai_system::bot_ai_system;
 pub use chat_commands_system::chat_commands_system;
 pub use client_entity_visibility_system::client_entity_visibility_system;

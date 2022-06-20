@@ -23,7 +23,8 @@ use crate::game::{
         ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList,
     },
     systems::{
-        ability_values_system, bot_ai_system, chat_commands_system,
+        ability_values_changed_system, ability_values_update_character_system,
+        ability_values_update_npc_system, bot_ai_system, chat_commands_system,
         client_entity_visibility_system, command_system, control_server_system, damage_system,
         experience_points_system, expire_time_system, game_server_authentication_system,
         game_server_join_system, game_server_main_system, login_server_authentication_system,
@@ -171,7 +172,11 @@ impl GameWorld {
             GameStages::PostUpdate,
             GameStages::Output,
             SystemStage::parallel()
-                .with_system(ability_values_system)
+                .with_system(
+                    ability_values_update_character_system.before(ability_values_changed_system),
+                )
+                .with_system(ability_values_update_npc_system.before(ability_values_changed_system))
+                .with_system(ability_values_changed_system)
                 .with_system(server_messages_system)
                 .with_system(save_system),
         );
