@@ -199,7 +199,7 @@ fn handle_party_accept_invite(
     }
 
     let is_create_party = matches!(*owner.party_membership, PartyMembership::None);
-    let party_members = match *owner.party_membership {
+    let (item_sharing, xp_sharing, party_members) = match *owner.party_membership {
         PartyMembership::None => {
             // Create a new party
             let party = Party::new(
@@ -209,13 +209,15 @@ fn handle_party_accept_invite(
                     PartyMember::Online(invited_entity),
                 ],
             );
+            let item_sharing = party.item_sharing;
+            let xp_sharing = party.xp_sharing;
             let party_members = party.members.clone();
             let party_entity = commands.spawn().insert(party).id();
 
             *owner.party_membership = PartyMembership::new(party_entity);
             *invited.party_membership = PartyMembership::new(party_entity);
 
-            party_members
+            (item_sharing, xp_sharing, party_members)
         }
         PartyMembership::Member(party_entity) => {
             // Add to current party
@@ -234,7 +236,7 @@ fn handle_party_accept_invite(
             party.members.push(PartyMember::Online(invited_entity));
             *invited.party_membership = PartyMembership::new(party_entity);
 
-            party.members.clone()
+            (party.item_sharing, party.xp_sharing, party.members.clone())
         }
     };
 
@@ -263,6 +265,8 @@ fn handle_party_accept_invite(
         invited_game_client
             .server_message_tx
             .send(ServerMessage::PartyMemberList(PartyMemberList {
+                item_sharing,
+                xp_sharing,
                 owner_character_id: owner.character_info.unique_id,
                 members: other_members_info,
             }))
@@ -274,6 +278,8 @@ fn handle_party_accept_invite(
         party_member_info_query,
         &party_members,
         ServerMessage::PartyMemberList(PartyMemberList {
+            item_sharing,
+            xp_sharing,
             owner_character_id: owner.character_info.unique_id,
             members: invited_member_info,
         }),
@@ -687,6 +693,8 @@ fn handle_party_member_reconnect(
             game_client
                 .server_message_tx
                 .send(ServerMessage::PartyMemberList(PartyMemberList {
+                    item_sharing: party.item_sharing,
+                    xp_sharing: party.xp_sharing,
                     owner_character_id,
                     members: other_members_info,
                 }))

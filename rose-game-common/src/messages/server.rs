@@ -629,6 +629,8 @@ impl PartyMemberInfo {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PartyMemberList {
+    pub item_sharing: PartyItemSharing,
+    pub xp_sharing: PartyXpSharing,
     pub owner_character_id: CharacterUniqueId,
     pub members: Vec<PartyMemberInfo>,
 }

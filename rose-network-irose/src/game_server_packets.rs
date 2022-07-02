@@ -3387,7 +3387,7 @@ impl TryFrom<&Packet> for PacketServerPartyMembers {
         }
 
         let mut reader = PacketReader::from(packet);
-        let _party_rules = reader.read_u8()?; // TODO: Party rules
+        let (item_sharing, xp_sharing) = reader.read_party_rules()?;
         let num_members = reader.read_u8()?;
 
         if num_members == 255 {
@@ -3405,6 +3405,8 @@ impl TryFrom<&Packet> for PacketServerPartyMembers {
             }
 
             Ok(PacketServerPartyMembers::List(PartyMemberList {
+                item_sharing,
+                xp_sharing,
                 owner_character_id: members[0].get_character_id(),
                 members,
             }))
@@ -3417,10 +3419,12 @@ impl From<&PacketServerPartyMembers> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
         match *packet {
             PacketServerPartyMembers::List(PartyMemberList {
+                item_sharing,
+                xp_sharing,
                 owner_character_id,
                 ref members,
             }) => {
-                writer.write_u8(0); // TODO: Party rules
+                writer.write_party_rules(&item_sharing, &xp_sharing);
                 writer.write_u8(members.len() as u8);
 
                 // Owner is the first member in packet
@@ -3440,7 +3444,7 @@ impl From<&PacketServerPartyMembers> for Packet {
                 owner_character_id,
                 leaver_character_id,
             }) => {
-                writer.write_u8(0); // TODO: Party rules ?
+                writer.write_u8(0);
                 writer.write_u8(255); // -1
                 writer.write_u32(leaver_character_id);
                 writer.write_u32(owner_character_id);
