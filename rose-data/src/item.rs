@@ -54,7 +54,6 @@ impl TryFrom<ItemType> for EquipmentIndex {
                 // Requires a lookup in STB which type of jewellery this is
                 Err(())
             }
-            // TODO: Support dual wielding of weapons
             ItemType::Weapon => Ok(EquipmentIndex::Weapon),
             ItemType::SubWeapon => Ok(EquipmentIndex::SubWeapon),
             _ => Err(()),
