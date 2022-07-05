@@ -71,6 +71,13 @@ pub struct Move {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MoveCollision {
+    pub x: f32,
+    pub y: f32,
+    pub z: u16,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Attack {
     pub target_entity_id: ClientEntityId,
 }
@@ -140,6 +147,7 @@ pub enum ClientMessage {
     JoinZoneRequest,
     Chat(String),
     Move(Move),
+    MoveCollision(MoveCollision),
     Attack(Attack),
     SetHotbarSlot(SetHotbarSlot),
     ChangeAmmo(AmmoIndex, Option<ItemSlot>),
