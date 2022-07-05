@@ -1,5 +1,6 @@
 use crate::{reader::RoseFileReader, RoseFile};
 
+#[derive(Clone)]
 pub struct HimFile {
     pub width: u32,
     pub height: u32,
