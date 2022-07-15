@@ -324,6 +324,12 @@ impl GameServer {
                         message.xp_sharing,
                     ))?;
             }
+            Some(ClientPackets::MoveCollision) => {
+                let message = PacketClientMoveCollision::try_from(&packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::MoveCollision(message.position))?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -1249,6 +1255,15 @@ impl GameServer {
                     .write_packet(Packet::from(&PacketServerSetHotbarSlot {
                         slot_index,
                         slot,
+                    }))
+                    .await?;
+            }
+            ServerMessage::AdjustPosition(client_entity_id, position) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerAdjustPosition {
+                        client_entity_id,
+                        position,
                     }))
                     .await?;
             }

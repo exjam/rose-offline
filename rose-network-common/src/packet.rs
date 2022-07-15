@@ -47,11 +47,27 @@ impl<'a> From<&'a Packet> for PacketReader<'a> {
 }
 
 impl<'a> PacketReader<'a> {
+    pub fn read_i8(&mut self) -> Result<i8, PacketError> {
+        if self.cursor.remaining() < 1 {
+            Err(PacketError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_i8())
+        }
+    }
+
     pub fn read_u8(&mut self) -> Result<u8, PacketError> {
         if self.cursor.remaining() < 1 {
             Err(PacketError::UnexpectedEof)
         } else {
             Ok(self.cursor.get_u8())
+        }
+    }
+
+    pub fn read_i16(&mut self) -> Result<i16, PacketError> {
+        if self.cursor.remaining() < 2 {
+            Err(PacketError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_i16_le())
         }
     }
 
@@ -152,8 +168,16 @@ impl PacketWriter {
         self.data.put(value);
     }
 
+    pub fn write_i8(&mut self, value: i8) {
+        self.data.put_i8(value);
+    }
+
     pub fn write_u8(&mut self, value: u8) {
         self.data.put_u8(value);
+    }
+
+    pub fn write_i16(&mut self, value: i16) {
+        self.data.put_i16_le(value);
     }
 
     pub fn write_u16(&mut self, value: u16) {

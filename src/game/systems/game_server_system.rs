@@ -1267,6 +1267,12 @@ pub fn game_server_main_system(
                             xp_sharing,
                         }));
                     }
+                    ClientMessage::MoveCollision(collision_position) => {
+                        // TODO: Sanity check position
+                        entity_commands
+                            .insert(NextCommand::with_move(collision_position, None, None))
+                            .insert(Position::new(collision_position, position.zone_id));
+                    }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }
             }

@@ -1,4 +1,4 @@
-use bevy::math::Vec2;
+use bevy::math::{Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -65,13 +65,6 @@ pub struct GameConnectionRequest {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Move {
     pub target_entity_id: Option<ClientEntityId>,
-    pub x: f32,
-    pub y: f32,
-    pub z: u16,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MoveCollision {
     pub x: f32,
     pub y: f32,
     pub z: u16,
@@ -147,7 +140,7 @@ pub enum ClientMessage {
     JoinZoneRequest,
     Chat(String),
     Move(Move),
-    MoveCollision(MoveCollision),
+    MoveCollision(Vec3),
     Attack(Attack),
     SetHotbarSlot(SetHotbarSlot),
     ChangeAmmo(AmmoIndex, Option<ItemSlot>),

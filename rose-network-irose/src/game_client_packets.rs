@@ -1,4 +1,4 @@
-use bevy::math::Vec2;
+use bevy::math::{Vec2, Vec3};
 use modular_bitfield::{
     bitfield,
     prelude::{B14, B2},
@@ -34,6 +34,7 @@ pub enum ClientPackets {
     JoinZone = 0x753,
     ReviveRequest = 0x755,
     SetReviveZone = 0x756,
+    MoveCollision = 0x771,
     Emote = 0x781,
     MoveToggle = 0x782,
     Chat = 0x783,
@@ -1131,6 +1132,38 @@ impl From<&PacketClientPartyUpdateRules> for Packet {
     fn from(packet: &PacketClientPartyUpdateRules) -> Self {
         let mut writer = PacketWriter::new(ClientPackets::PartyUpdateRules as u16);
         writer.write_party_rules(&packet.item_sharing, &packet.xp_sharing);
+        writer.into()
+    }
+}
+
+pub struct PacketClientMoveCollision {
+    pub position: Vec3,
+}
+
+impl TryFrom<&Packet> for PacketClientMoveCollision {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::MoveCollision as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let z = reader.read_i16()? as f32;
+        Ok(PacketClientMoveCollision {
+            position: Vec3::new(x, y, z),
+        })
+    }
+}
+
+impl From<&PacketClientMoveCollision> for Packet {
+    fn from(packet: &PacketClientMoveCollision) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::MoveCollision as u16);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
+        writer.write_i16(packet.position.z as i16);
         writer.into()
     }
 }

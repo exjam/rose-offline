@@ -60,6 +60,7 @@ pub enum ServerPackets {
     QuestResult = 0x730,
     RunNpcDeathTrigger = 0x731,
     JoinZone = 0x753,
+    AdjustPosition = 0x770,
     ChangeNpcId = 0x774,
     UseEmote = 0x781,
     MoveToggle = 0x782,
@@ -3540,6 +3541,42 @@ impl From<&PacketServerPartyUpdateRules> for Packet {
     fn from(packet: &PacketServerPartyUpdateRules) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PartyUpdateRules as u16);
         writer.write_party_rules(&packet.item_sharing, &packet.xp_sharing);
+        writer.into()
+    }
+}
+
+pub struct PacketServerAdjustPosition {
+    pub client_entity_id: ClientEntityId,
+    pub position: Vec3,
+}
+
+impl TryFrom<&Packet> for PacketServerAdjustPosition {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::AdjustPosition as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let client_entity_id = reader.read_entity_id()?;
+        let x = reader.read_f32()?;
+        let y = reader.read_f32()?;
+        let z = reader.read_i16()? as f32;
+        Ok(Self {
+            client_entity_id,
+            position: Vec3::new(x, y, z),
+        })
+    }
+}
+
+impl From<&PacketServerAdjustPosition> for Packet {
+    fn from(packet: &PacketServerAdjustPosition) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::AdjustPosition as u16);
+        writer.write_entity_id(packet.client_entity_id);
+        writer.write_f32(packet.position.x);
+        writer.write_f32(packet.position.y);
+        writer.write_i16(packet.position.z as i16);
         writer.into()
     }
 }

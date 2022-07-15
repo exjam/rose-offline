@@ -721,4 +721,5 @@ pub enum ServerMessage {
     PartyMemberUpdateInfo(PartyMemberInfoOnline),
     ChangeNpcId(ClientEntityId, NpcId),
     SetHotbarSlot(usize, Option<HotbarSlot>),
+    AdjustPosition(ClientEntityId, Vec3),
 }
