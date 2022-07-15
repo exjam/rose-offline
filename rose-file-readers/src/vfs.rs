@@ -105,7 +105,7 @@ impl<'a> From<&'a Path> for VfsPath<'_> {
     }
 }
 
-impl<'a> From<PathBuf> for VfsPath<'_> {
+impl From<PathBuf> for VfsPath<'_> {
     fn from(path: PathBuf) -> Self {
         VfsPath {
             path: Cow::Owned(VfsPath::normalise_path(path.to_string_lossy().as_ref())),

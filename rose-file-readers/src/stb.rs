@@ -60,13 +60,13 @@ impl StbFile {
         let data_position = reader.read_u32()? as u64;
         let row_count = reader.read_u32()? as usize;
         let column_count = reader.read_u32()? as usize;
+        let _row_height = reader.read_u32()?;
 
-        let _row_height = reader.read_u32();
-
+        // column widths
         if version == 0 {
-            let _column_width = reader.skip(size_of::<u32>() as u64);
+            reader.skip(size_of::<u32>() as u64);
         } else {
-            let _column_widths = reader.skip((size_of::<u16>() * (column_count + 1)) as u64);
+            reader.skip((size_of::<u16>() * (column_count + 1)) as u64);
         }
 
         let mut column_names = Vec::with_capacity(column_count);
