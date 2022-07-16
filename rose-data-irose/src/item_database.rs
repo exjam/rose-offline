@@ -103,6 +103,9 @@ impl StbItem {
     // LIST_FOOT
     stb_column! { 33, get_feet_move_speed, u32 }
 
+    // LIST_CAP
+    stb_column! { 33, get_head_hair_type, u32 }
+
     // LIST_WEAPON
     stb_column! { 33, get_weapon_attack_range, i32 }
     stb_column! { 34, get_weapon_motion_type, u32 }
@@ -295,6 +298,14 @@ fn load_feet_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<FeetItemDa
     })
 }
 
+fn load_head_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<HeadItemData> {
+    let base_item_data = load_base_item(data, stl, ItemType::Head, id, true)?;
+    Some(HeadItemData {
+        item_data: base_item_data,
+        hair_type: data.get_head_hair_type(id).unwrap_or(0),
+    })
+}
+
 fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponItemData> {
     // Weapon item id == 0 is used for unarmed attack data
     let base_item_data = load_base_item(data, stl, ItemType::Weapon, id, id != 0)?;
@@ -387,7 +398,7 @@ macro_rules! load_items {
 
 pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
     let face = load_items! { vfs, "3DDATA/STB/LIST_FACEITEM.STB", "3DDATA/STB/LIST_FACEITEM_S.STL", load_base_item, ItemType::Face, FaceItemData };
-    let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA/STB/LIST_CAP_S.STL", load_base_item, ItemType::Head, HeadItemData };
+    let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA/STB/LIST_CAP_S.STL", load_head_item, HeadItemData };
     let body = load_items! { vfs, "3DDATA/STB/LIST_BODY.STB", "3DDATA/STB/LIST_BODY_S.STL", load_base_item, ItemType::Body, BodyItemData };
     let hands = load_items! { vfs, "3DDATA/STB/LIST_ARMS.STB", "3DDATA/STB/LIST_ARMS_S.STL", load_base_item, ItemType::Hands, HandsItemData };
     let feet = load_items! { vfs, "3DDATA/STB/LIST_FOOT.STB", "3DDATA/STB/LIST_FOOT_S.STL", load_feet_item, FeetItemData };

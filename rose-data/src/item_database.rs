@@ -223,6 +223,7 @@ pub struct FaceItemData {
 #[derive(Debug)]
 pub struct HeadItemData {
     pub item_data: BaseItemData,
+    pub hair_type: u32,
 }
 
 #[derive(Debug)]
