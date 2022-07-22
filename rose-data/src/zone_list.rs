@@ -30,6 +30,10 @@ impl ZoneList {
         Self { zones }
     }
 
+    pub fn len(&self) -> usize {
+        self.zones.len()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &ZoneListEntry> {
         self.zones
             .iter()

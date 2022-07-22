@@ -14,6 +14,7 @@ pub struct ZmoFile {
     pub channels: Vec<(u32, ZmoChannel)>,
     pub frame_events: Vec<u16>,
     pub total_attack_frames: usize,
+    pub interpolation_interval_ms: Option<u32>,
 }
 
 #[derive(Default)]
@@ -108,6 +109,7 @@ impl RoseFile for ZmoFile {
 
         let mut frame_events = Vec::new();
         let mut total_attack_frames = 0;
+        let mut interpolation_interval_ms = None;
         reader.set_position_from_end(-4);
         if let Ok(extended_magic) = reader.read_fixed_length_string(4) {
             if extended_magic == "EZMO" || extended_magic == "3ZMO" {
@@ -125,6 +127,10 @@ impl RoseFile for ZmoFile {
                         _ => {}
                     }
                 }
+
+                if extended_magic == "3ZMO" {
+                    interpolation_interval_ms = Some(reader.read_u32()?);
+                }
             }
         }
 
@@ -134,6 +140,7 @@ impl RoseFile for ZmoFile {
             channels,
             frame_events,
             total_attack_frames,
+            interpolation_interval_ms,
         })
     }
 }
