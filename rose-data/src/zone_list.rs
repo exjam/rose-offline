@@ -19,6 +19,7 @@ pub struct ZoneListEntry {
     pub skybox_id: Option<SkyboxId>,
     pub background_music_day: Option<VfsPathBuf>,
     pub background_music_night: Option<VfsPathBuf>,
+    pub footstep_type: Option<u32>,
 }
 
 pub struct ZoneList {

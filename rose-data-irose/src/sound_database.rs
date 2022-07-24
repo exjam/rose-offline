@@ -35,5 +35,21 @@ pub fn get_sound_database(vfs: &VfsIndex) -> Option<Arc<SoundDatabase>> {
         sounds.push(load_sound(&stb_sounds, row));
     }
 
-    Some(Arc::new(SoundDatabase::new(sounds)))
+    let stb_step_sounds = vfs
+        .read_file::<StbFile, _>("3DDATA/STB/LIST_STEPSOUND.STB")
+        .ok()?;
+
+    let mut step_sounds = Vec::with_capacity(stb_step_sounds.rows() * stb_step_sounds.columns());
+    let step_sound_zone_types = stb_step_sounds.columns();
+    for row in 0..stb_step_sounds.rows() {
+        for col in 0..stb_step_sounds.columns() {
+            step_sounds.push(SoundId::new(stb_step_sounds.get_int(row, col) as u16));
+        }
+    }
+
+    Some(Arc::new(SoundDatabase::new(
+        sounds,
+        step_sounds,
+        step_sound_zone_types,
+    )))
 }

@@ -368,6 +368,7 @@ fn load_zone_list_entry(
         background_music_night: data
             .get_zone_background_music_night(id)
             .map(VfsPathBuf::new),
+        footstep_type: data.get_zone_footstep_type(id),
     })
 }
 
