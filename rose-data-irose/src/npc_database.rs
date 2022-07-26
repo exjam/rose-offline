@@ -3,7 +3,7 @@ use std::{collections::HashMap, num::NonZeroUsize};
 
 use rose_data::{
     EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
-    NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId,
+    NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId, EffectFileId,
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 
@@ -49,7 +49,7 @@ impl StbNpc {
     stb_column! { 31, get_attack_sound_id, SoundId }
     stb_column! { 32, get_hitted_sound_id, SoundId }
     stb_column! { 33, get_hand_hit_effect_id, EffectId }
-    stb_column! { 34, get_dead_effect_index, EffectId }
+    stb_column! { 34, get_die_effect_file_id, EffectFileId }
     stb_column! { 35, get_die_sound_id, SoundId }
     stb_column! { 38, get_npc_quest_type, u32 }
 
@@ -205,7 +205,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
             attack_sound_id: data.get_attack_sound_id(id),
             hitted_sound_id: data.get_hitted_sound_id(id),
             hand_hit_effect_id: data.get_hand_hit_effect_id(id),
-            dead_effect_index: data.get_dead_effect_index(id),
+            die_effect_file_id: data.get_die_effect_file_id(id),
             die_sound_id: data.get_die_sound_id(id),
             npc_quest_type: data.get_npc_quest_type(id).unwrap_or(0),
             glow_colour: data.get_glow_colour(id),
