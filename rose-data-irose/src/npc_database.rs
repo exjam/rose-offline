@@ -2,8 +2,8 @@ use enum_map::enum_map;
 use std::{collections::HashMap, num::NonZeroUsize};
 
 use rose_data::{
-    EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
-    NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId, EffectFileId,
+    EffectFileId, EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
+    NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId,
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 

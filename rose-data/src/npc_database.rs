@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{EffectId, ItemReference, MotionFileData, MotionId, SoundId, EffectFileId};
+use crate::{EffectFileId, EffectId, ItemReference, MotionFileData, MotionId, SoundId};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpcId(NonZeroU16);
