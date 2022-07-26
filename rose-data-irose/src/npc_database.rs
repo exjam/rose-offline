@@ -42,7 +42,7 @@ impl StbNpc {
     stb_column! { 25, get_is_untargetable, bool }
     stb_column! { 26, get_attack_range, i32 }
     stb_column! { 27, get_npc_type_index, u32 }
-    stb_column! { 28, get_hit_sound_id, SoundId }
+    stb_column! { 28, get_hit_sound_material_type, u32 }
     stb_column! { 29, get_face_icon_index, u32 }
     stb_column! { 29, get_summon_monster_type, u32 }
     stb_column! { 30, get_normal_effect_sound_id, SoundId }
@@ -198,7 +198,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
             is_untargetable: data.get_is_untargetable(id).unwrap_or(false),
             attack_range: data.get_attack_range(id).unwrap_or(0),
             npc_type_index: data.get_npc_type_index(id).unwrap_or(0),
-            hit_sound_id: data.get_hit_sound_id(id),
+            hit_sound_material_type: data.get_hit_sound_material_type(id).unwrap_or(0),
             face_icon_index: data.get_face_icon_index(id).unwrap_or(0),
             summon_monster_type: data.get_summon_monster_type(id).unwrap_or(0),
             normal_effect_sound_id: data.get_normal_effect_sound_id(id),

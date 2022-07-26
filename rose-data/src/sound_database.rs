@@ -19,6 +19,8 @@ pub struct SoundDatabase {
     sounds: Vec<Option<SoundData>>,
     step_sounds: Vec<Option<SoundId>>,
     step_sound_zone_types: usize,
+    hit_sounds: Vec<Option<SoundId>>,
+    hit_sound_material_types: usize,
 }
 
 impl SoundDatabase {
@@ -26,16 +28,31 @@ impl SoundDatabase {
         sounds: Vec<Option<SoundData>>,
         step_sounds: Vec<Option<SoundId>>,
         step_sound_zone_types: usize,
+        hit_sounds: Vec<Option<SoundId>>,
+        hit_sound_material_types: usize,
     ) -> Self {
         Self {
             sounds,
             step_sounds,
             step_sound_zone_types,
+            hit_sounds,
+            hit_sound_material_types,
         }
     }
 
     pub fn get_sound(&self, id: SoundId) -> Option<&SoundData> {
         self.sounds.get(id.get() as usize).and_then(|x| x.as_ref())
+    }
+
+    pub fn get_hit_sound(
+        &self,
+        weapon_hit_sound_type: usize,
+        material_type: usize,
+    ) -> Option<&SoundData> {
+        self.hit_sounds
+            .get(material_type + weapon_hit_sound_type * self.hit_sound_material_types)
+            .and_then(|id| *id)
+            .and_then(|id| self.get_sound(id))
     }
 
     pub fn get_step_sound(&self, tile_number: usize, zone_type: usize) -> Option<&SoundData> {

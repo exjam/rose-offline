@@ -116,7 +116,7 @@ impl StbItem {
     stb_column! { 39, get_weapon_effect_id, EffectId }
     stb_column! { 40, get_weapon_attack_start_sound_id, SoundId }
     stb_column! { 41, get_weapon_attack_fire_sound_id, SoundId }
-    stb_column! { 42, get_weapon_attack_hit_sound_id, SoundId }
+    stb_column! { 42, get_weapon_attack_hit_sound_index, u32 }
     stb_column! { 43, get_weapon_gem_position, u32 }
 
     // LIST_SUBWEAPON
@@ -320,7 +320,7 @@ fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponIt
         effect_id: data.get_weapon_effect_id(id),
         attack_start_sound_id: data.get_weapon_attack_start_sound_id(id),
         attack_fire_sound_id: data.get_weapon_attack_fire_sound_id(id),
-        attack_hit_sound_id: data.get_weapon_attack_hit_sound_id(id),
+        attack_hit_sound_index: data.get_weapon_attack_hit_sound_index(id).unwrap_or(0),
         gem_position: data.get_weapon_gem_position(id).unwrap_or(0),
     })
 }

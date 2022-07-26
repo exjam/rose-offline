@@ -271,7 +271,7 @@ pub struct WeaponItemData {
     pub effect_id: Option<EffectId>,
     pub attack_start_sound_id: Option<SoundId>,
     pub attack_fire_sound_id: Option<SoundId>,
-    pub attack_hit_sound_id: Option<SoundId>,
+    pub attack_hit_sound_index: u32,
     pub gem_position: u32,
 }
 
