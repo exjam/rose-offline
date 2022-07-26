@@ -143,7 +143,7 @@ impl StbSkill {
 
     stb_column! { (56..=67).step_by(3), get_casting_effect_file_ids, [Option<EffectFileId>; 4] }
     stb_column! { (57..=67).step_by(3), get_casting_effect_bone_index, [Option<usize>; 4] }
-    stb_column! { (58..=67).step_by(3), get_casting_sound_index, [Option<usize>; 4] }
+    stb_column! { (58..=67).step_by(3), get_casting_sound_id, [Option<usize>; 4] }
 
     pub fn get_casting_effects(&self, id: usize) -> [Option<SkillCastingEffect>; 4] {
         let mut result: [Option<SkillCastingEffect>; 4] = Default::default();

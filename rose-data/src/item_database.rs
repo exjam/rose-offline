@@ -199,7 +199,7 @@ pub struct BaseItemData {
     pub quality: u32,
     pub icon_index: u32,
     pub field_model_index: u32,
-    pub equip_sound_index: u32,
+    pub equip_sound_id: Option<SoundId>,
     pub craft_skill_type: u32,
     pub craft_skill_level: u32,
     pub craft_material: u32,

@@ -28,7 +28,7 @@ impl StbItem {
     stb_column! { 8, get_quality, u32 }
     stb_column! { 9, get_icon_number, u32 }
     stb_column! { 10, get_field_model, u32 }
-    stb_column! { 11, get_equip_sound, u32 }
+    stb_column! { 11, get_equip_sound, SoundId }
     stb_column! { 12, get_craft_skill_type, u32 }
     stb_column! { 13, get_craft_skill_level, u32 }
     stb_column! { 14, get_craft_material, u32 }
@@ -263,7 +263,7 @@ fn load_base_item(
         weight: data.get_weight(id).unwrap_or(0),
         quality: data.get_quality(id).unwrap_or(0),
         icon_index,
-        equip_sound_index: data.get_equip_sound(id).unwrap_or(0),
+        equip_sound_id: data.get_equip_sound(id),
         craft_skill_type: data.get_craft_skill_type(id).unwrap_or(0),
         craft_skill_level: data.get_craft_skill_level(id).unwrap_or(0),
         craft_material: data.get_craft_material(id).unwrap_or(0),

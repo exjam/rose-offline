@@ -35,6 +35,10 @@ impl ZoneList {
         self.zones.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = &ZoneListEntry> {
         self.zones
             .iter()

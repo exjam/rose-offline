@@ -3,7 +3,7 @@ use std::{collections::HashMap, num::NonZeroUsize};
 
 use rose_data::{
     EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
-    NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId,
+    NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId,
 };
 use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
 
@@ -42,15 +42,15 @@ impl StbNpc {
     stb_column! { 25, get_is_untargetable, bool }
     stb_column! { 26, get_attack_range, i32 }
     stb_column! { 27, get_npc_type_index, u32 }
-    stb_column! { 28, get_hit_sound_index, u32 }
+    stb_column! { 28, get_hit_sound_id, SoundId }
     stb_column! { 29, get_face_icon_index, u32 }
     stb_column! { 29, get_summon_monster_type, u32 }
-    stb_column! { 30, get_normal_effect_sound_index, u32 }
-    stb_column! { 31, get_attack_sound_index, u32 }
-    stb_column! { 32, get_hitted_sound_index, u32 }
+    stb_column! { 30, get_normal_effect_sound_id, SoundId }
+    stb_column! { 31, get_attack_sound_id, SoundId }
+    stb_column! { 32, get_hitted_sound_id, SoundId }
     stb_column! { 33, get_hand_hit_effect_id, EffectId }
-    stb_column! { 34, get_dead_effect_index, u32 }
-    stb_column! { 35, get_die_sound_index, u32 }
+    stb_column! { 34, get_dead_effect_index, EffectId }
+    stb_column! { 35, get_die_sound_id, SoundId }
     stb_column! { 38, get_npc_quest_type, u32 }
 
     pub fn get_glow_colour(&self, id: usize) -> (f32, f32, f32) {
@@ -75,7 +75,7 @@ impl StbNpc {
     stb_column! { 41, get_death_quest_trigger_name, &str }
     stb_column! { 42, get_npc_height, i32 }
     stb_column! { 44, get_create_effect_index, u32 }
-    stb_column! { 45, get_create_sound_index, u32 }
+    stb_column! { 45, get_create_sound_id, SoundId }
 }
 
 pub struct StbEvent(pub StbFile);
@@ -198,19 +198,19 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
             is_untargetable: data.get_is_untargetable(id).unwrap_or(false),
             attack_range: data.get_attack_range(id).unwrap_or(0),
             npc_type_index: data.get_npc_type_index(id).unwrap_or(0),
-            hit_sound_index: data.get_hit_sound_index(id).unwrap_or(0),
+            hit_sound_id: data.get_hit_sound_id(id),
             face_icon_index: data.get_face_icon_index(id).unwrap_or(0),
             summon_monster_type: data.get_summon_monster_type(id).unwrap_or(0),
-            normal_effect_sound_index: data.get_normal_effect_sound_index(id).unwrap_or(0),
-            attack_sound_index: data.get_attack_sound_index(id).unwrap_or(0),
-            hitted_sound_index: data.get_hitted_sound_index(id).unwrap_or(0),
+            normal_effect_sound_id: data.get_normal_effect_sound_id(id),
+            attack_sound_id: data.get_attack_sound_id(id),
+            hitted_sound_id: data.get_hitted_sound_id(id),
             hand_hit_effect_id: data.get_hand_hit_effect_id(id),
-            dead_effect_index: data.get_dead_effect_index(id).unwrap_or(0),
-            die_sound_index: data.get_die_sound_index(id).unwrap_or(0),
+            dead_effect_index: data.get_dead_effect_index(id),
+            die_sound_id: data.get_die_sound_id(id),
             npc_quest_type: data.get_npc_quest_type(id).unwrap_or(0),
             glow_colour: data.get_glow_colour(id),
             create_effect_index: data.get_create_effect_index(id).unwrap_or(0),
-            create_sound_index: data.get_create_sound_index(id).unwrap_or(0),
+            create_sound_id: data.get_create_sound_id(id),
             death_quest_trigger_name: data
                 .get_death_quest_trigger_name(id)
                 .unwrap_or("")

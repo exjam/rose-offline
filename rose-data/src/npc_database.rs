@@ -6,7 +6,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::{EffectId, ItemReference, MotionFileData, MotionId};
+use crate::{EffectId, ItemReference, MotionFileData, MotionId, SoundId};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpcId(NonZeroU16);
@@ -67,19 +67,19 @@ pub struct NpcData {
     pub is_untargetable: bool,
     pub attack_range: i32,
     pub npc_type_index: u32,
-    pub hit_sound_index: u32,
+    pub hit_sound_id: Option<SoundId>,
     pub face_icon_index: u32,
     pub summon_monster_type: u32,
-    pub normal_effect_sound_index: u32,
-    pub attack_sound_index: u32,
-    pub hitted_sound_index: u32,
+    pub normal_effect_sound_id: Option<SoundId>,
+    pub attack_sound_id: Option<SoundId>,
+    pub hitted_sound_id: Option<SoundId>,
     pub hand_hit_effect_id: Option<EffectId>,
-    pub dead_effect_index: u32,
-    pub die_sound_index: u32,
+    pub dead_effect_index: Option<EffectId>,
+    pub die_sound_id: Option<SoundId>,
     pub npc_quest_type: u32,
     pub glow_colour: (f32, f32, f32),
     pub create_effect_index: u32,
-    pub create_sound_index: u32,
+    pub create_sound_id: Option<SoundId>,
     pub death_quest_trigger_name: String,
     pub npc_height: i32,
     pub motion_data: Vec<(MotionId, MotionFileData)>,
