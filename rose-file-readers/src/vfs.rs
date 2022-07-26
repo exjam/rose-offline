@@ -22,6 +22,7 @@ struct Storage {
 #[derive(Default)]
 pub struct VfsIndex {
     extracted_path: Option<PathBuf>,
+    root_path: Option<PathBuf>,
     base_version: u32,
     current_version: u32,
     storages: Vec<Storage>,
@@ -167,6 +168,7 @@ impl VfsIndex {
 
         let mut index = VfsIndex {
             extracted_path: extracted_path.map(|path| path.into()),
+            root_path: Some(index_root_path.clone()),
             ..Default::default()
         };
         index.base_version = reader.read_u32()?;
@@ -253,6 +255,12 @@ impl VfsIndex {
                 return Some(VfsFile::View(
                     &vfs.mmap[entry.offset..entry.offset + entry.size],
                 ));
+            }
+        }
+
+        if let Some(root_path) = self.root_path.as_ref() {
+            if let Ok(buffer) = std::fs::read(root_path.join(vfs_path.path())) {
+                return Some(VfsFile::Buffer(buffer));
             }
         }
 
