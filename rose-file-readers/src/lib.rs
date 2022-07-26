@@ -16,6 +16,7 @@ mod chr;
 mod con_;
 mod eft;
 mod him;
+mod id;
 mod ifo;
 mod lit;
 mod ltb;
@@ -23,6 +24,7 @@ mod ptl;
 mod qsd;
 mod stl;
 mod til;
+mod tsi;
 mod vfs;
 mod zmd;
 mod zmo;
@@ -38,6 +40,7 @@ pub use chr::ChrFile;
 pub use con_::{ConFile, ConMenu, ConMessage, ConMessageType};
 pub use eft::{EftFile, EftMesh, EftParticle};
 pub use him::HimFile;
+pub use id::IdFile;
 pub use ifo::{
     IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc, IfoObject,
     IfoReadOptions,
@@ -49,6 +52,7 @@ pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadOptions};
 pub use til::TilFile;
+pub use tsi::{TsiFile, TsiSprite, TsiTexture, TsiTextureId};
 pub use vfs::{VfsFile, VfsIndex, VfsPath, VfsPathBuf};
 pub use zmd::ZmdFile;
 pub use zmo::{ZmoChannel, ZmoFile, ZmoReadOptions};
