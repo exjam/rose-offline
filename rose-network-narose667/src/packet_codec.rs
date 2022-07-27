@@ -9,7 +9,7 @@ impl rose_network_common::PacketCodec for ClientPacketCodec {
 
     fn encrypt_packet(&self, buffer: &mut BytesMut) {
         let size = (&buffer[0..2]).get_u16_le() as usize;
-        for i in 2..size {
+        for i in 2..(size - 2) {
             buffer[i] ^= b'a';
         }
     }
@@ -42,7 +42,7 @@ impl rose_network_common::PacketCodec for ServerPacketCodec {
 
     fn decrypt_packet_body(&self, buffer: &mut BytesMut) -> bool {
         let size = (&buffer[0..2]).get_u16_le() as usize;
-        for i in 6..size {
+        for i in 6..(size - 2) {
             buffer[i] ^= b'a';
         }
 
