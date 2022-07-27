@@ -1,7 +1,6 @@
 use async_trait::async_trait;
-use num_traits::FromPrimitive;
-use std::convert::TryFrom;
 
+use num_traits::FromPrimitive;
 use rose_game_common::messages::{
     client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
     server::{
@@ -9,7 +8,16 @@ use rose_game_common::messages::{
     },
 };
 use rose_network_common::{Packet, PacketError};
-use rose_network_irose::{login_client_packets::*, login_server_packets::*};
+use rose_network_narose667::{
+    login_client_packets::{
+        ClientPackets, PacketClientChannelList, PacketClientLoginRequest, PacketClientSelectServer,
+    },
+    login_server_packets::{
+        ConnectionResult, LoginResult, PacketConnectionReply, PacketServerChannelList,
+        PacketServerChannelListItem, PacketServerLoginReply, PacketServerSelectServer,
+        SelectServerResult,
+    },
+};
 
 use crate::{
     implement_protocol_server,
@@ -61,7 +69,10 @@ impl LoginServer {
                         channel_id: select_server.channel_id,
                     }))?;
             }
-            _ => return Err(PacketError::InvalidPacket.into()),
+            _ => {
+                dbg!(packet);
+                return Err(PacketError::InvalidPacket.into());
+            }
         }
 
         Ok(())
@@ -158,7 +169,10 @@ impl LoginServer {
                 };
                 client.connection.write_packet(packet).await?;
             }
-            _ => panic!("Received unexpected server message for login server"),
+            _ => {
+                dbg!(message);
+                panic!("Received unexpected server message for login server");
+            }
         }
 
         Ok(())

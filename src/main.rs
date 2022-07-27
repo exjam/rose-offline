@@ -8,6 +8,7 @@
 
 mod game;
 mod irose;
+mod narose667;
 mod protocol;
 
 use std::{path::Path, time::Instant};
@@ -22,6 +23,17 @@ use crate::{
     game::GameConfig,
     protocol::server::{GameServer, LoginServer, WorldServer},
 };
+
+pub enum ProtocolType {
+    Irose,
+    Narose667,
+}
+
+impl Default for ProtocolType {
+    fn default() -> Self {
+        Self::Irose
+    }
+}
 
 async fn async_main() {
     TermLogger::init(
@@ -78,6 +90,14 @@ async fn async_main() {
                 .help("Port for login server")
                 .takes_value(true)
                 .default_value("29200"),
+        )
+        .arg(
+            clap::Arg::new("protocol")
+                .long("protocol")
+                .takes_value(true)
+                .value_parser(["irose", "narose667"])
+                .default_value("irose")
+                .help("Select which protocol to use."),
         );
     let data_path_error = command.error(
         clap::ErrorKind::ArgumentNotFound,
@@ -90,6 +110,11 @@ async fn async_main() {
     let game_port = matches.value_of("game-port").unwrap();
     let mut data_idx_path = matches.value_of("data-idx").map(Path::new);
     let data_extracted_path = matches.value_of("data-path").map(Path::new);
+    let protocol_type = match matches.value_of("protocol") {
+        Some("irose") => ProtocolType::Irose,
+        Some("narose667") => ProtocolType::Narose667,
+        _ => ProtocolType::default(),
+    };
 
     if data_idx_path.is_none() && data_extracted_path.is_none() {
         if Path::new("data.idx").exists() {
@@ -98,6 +123,19 @@ async fn async_main() {
             data_path_error.exit();
         }
     }
+
+    let (login_protocol, world_protocol, game_protocol) = match protocol_type {
+        ProtocolType::Irose => (
+            irose::login_protocol(),
+            irose::world_protocol(),
+            irose::game_protocol(),
+        ),
+        ProtocolType::Narose667 => (
+            narose667::login_protocol(),
+            narose667::world_protocol(),
+            narose667::game_protocol(),
+        ),
+    };
 
     let started_load = Instant::now();
     let game_data = irose::get_game_data(data_idx_path, data_extracted_path);
@@ -117,7 +155,7 @@ async fn async_main() {
         TcpListener::bind(format!("{}:{}", listen_ip, login_port))
             .await
             .unwrap(),
-        irose::login_protocol(),
+        login_protocol,
         game_control_tx.clone(),
     )
     .await
@@ -128,7 +166,7 @@ async fn async_main() {
         TcpListener::bind(format!("{}:{}", listen_ip, world_port))
             .await
             .unwrap(),
-        irose::world_protocol(),
+        world_protocol,
         game_control_tx.clone(),
     )
     .await
@@ -140,7 +178,7 @@ async fn async_main() {
         TcpListener::bind(format!("{}:{}", listen_ip, game_port))
             .await
             .unwrap(),
-        irose::game_protocol(),
+        game_protocol,
         game_control_tx.clone(),
     )
     .await

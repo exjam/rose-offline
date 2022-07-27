@@ -26,7 +26,10 @@ use rose_game_common::{
 use rose_network_common::Packet;
 use rose_network_irose::{game_client_packets::*, game_server_packets::*};
 
-use crate::protocol::{Client, ProtocolServer, ProtocolServerError};
+use crate::{
+    implement_protocol_server,
+    protocol::{Client, ProtocolServer, ProtocolServerError},
+};
 
 pub struct GameServer;
 
@@ -38,11 +41,11 @@ impl GameServer {
     async fn handle_packet(
         &mut self,
         client: &mut Client<'_>,
-        packet: Packet,
+        packet: &Packet,
     ) -> Result<(), anyhow::Error> {
         match FromPrimitive::from_u16(packet.command) {
             Some(ClientPackets::ConnectRequest) => {
-                let request = PacketClientConnectRequest::try_from(&packet)?;
+                let request = PacketClientConnectRequest::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::GameConnectionRequest(
@@ -53,19 +56,19 @@ impl GameServer {
                     ))?;
             }
             Some(ClientPackets::JoinZone) => {
-                let _request = PacketClientJoinZone::try_from(&packet)?;
+                let _request = PacketClientJoinZone::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::JoinZoneRequest)?;
             }
             Some(ClientPackets::Chat) => {
-                let packet = PacketClientChat::try_from(&packet)?;
+                let packet = PacketClientChat::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::Chat(String::from(packet.text)))?;
             }
             Some(ClientPackets::Move) => {
-                let packet = PacketClientMove::try_from(&packet)?;
+                let packet = PacketClientMove::try_from(packet)?;
                 client.client_message_tx.send(ClientMessage::Move(Move {
                     target_entity_id: packet.target_entity_id,
                     x: packet.x,
@@ -74,7 +77,7 @@ impl GameServer {
                 }))?;
             }
             Some(ClientPackets::Attack) => {
-                let packet = PacketClientAttack::try_from(&packet)?;
+                let packet = PacketClientAttack::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::Attack(Attack {
@@ -82,7 +85,7 @@ impl GameServer {
                     }))?;
             }
             Some(ClientPackets::SetHotbarSlot) => {
-                let request = PacketClientSetHotbarSlot::try_from(&packet)?;
+                let request = PacketClientSetHotbarSlot::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::SetHotbarSlot(SetHotbarSlot {
@@ -94,7 +97,7 @@ impl GameServer {
                 let PacketClientChangeAmmo {
                     ammo_index,
                     item_slot,
-                } = PacketClientChangeAmmo::try_from(&packet)?;
+                } = PacketClientChangeAmmo::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::ChangeAmmo(ammo_index, item_slot))?;
@@ -103,7 +106,7 @@ impl GameServer {
                 let PacketClientChangeEquipment {
                     equipment_index,
                     item_slot,
-                } = PacketClientChangeEquipment::try_from(&packet)?;
+                } = PacketClientChangeEquipment::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::ChangeEquipment(ChangeEquipment {
@@ -115,7 +118,7 @@ impl GameServer {
                 let PacketClientChangeVehiclePart {
                     vehicle_part_index,
                     item_slot,
-                } = PacketClientChangeVehiclePart::try_from(&packet)?;
+                } = PacketClientChangeVehiclePart::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::ChangeVehiclePart(
@@ -125,13 +128,13 @@ impl GameServer {
             }
             Some(ClientPackets::IncreaseBasicStat) => {
                 let PacketClientIncreaseBasicStat { basic_stat_type } =
-                    PacketClientIncreaseBasicStat::try_from(&packet)?;
+                    PacketClientIncreaseBasicStat::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::IncreaseBasicStat(basic_stat_type))?;
             }
             Some(ClientPackets::PickupItemDrop) => {
-                let packet = PacketClientPickupItemDrop::try_from(&packet)?;
+                let packet = PacketClientPickupItemDrop::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::PickupItemDrop(packet.target_entity_id))?;
@@ -147,7 +150,7 @@ impl GameServer {
                 ))?;
             }
             Some(ClientPackets::ReviveRequest) => {
-                let packet = PacketClientReviveRequest::try_from(&packet)?;
+                let packet = PacketClientReviveRequest::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::ReviveRequest(packet.revive_request_type))?;
@@ -158,7 +161,7 @@ impl GameServer {
                     .send(ClientMessage::SetReviveZone)?;
             }
             Some(ClientPackets::QuestRequest) => {
-                let packet = PacketClientQuestRequest::try_from(&packet)?;
+                let packet = PacketClientQuestRequest::try_from(packet)?;
                 match packet.request_type {
                     PacketClientQuestRequestType::DoTrigger => {
                         client.client_message_tx.send(ClientMessage::QuestTrigger(
@@ -176,7 +179,7 @@ impl GameServer {
                 }
             }
             Some(ClientPackets::PersonalStoreListItems) => {
-                let packet = PacketClientPersonalStoreListItems::try_from(&packet)?;
+                let packet = PacketClientPersonalStoreListItems::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::PersonalStoreListItems(
@@ -184,7 +187,7 @@ impl GameServer {
                     ))?;
             }
             Some(ClientPackets::PersonalStoreBuyItem) => {
-                let packet = PacketClientPersonalStoreBuyItem::try_from(&packet)?;
+                let packet = PacketClientPersonalStoreBuyItem::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
@@ -194,7 +197,7 @@ impl GameServer {
                     }))?;
             }
             Some(ClientPackets::DropItemFromInventory) => {
-                let packet = PacketClientDropItemFromInventory::try_from(&packet)?;
+                let packet = PacketClientDropItemFromInventory::try_from(packet)?;
                 match packet {
                     PacketClientDropItemFromInventory::Item(item_slot, quantity) => {
                         client
@@ -209,26 +212,26 @@ impl GameServer {
                 }
             }
             Some(ClientPackets::UseItem) => {
-                let packet = PacketClientUseItem::try_from(&packet)?;
+                let packet = PacketClientUseItem::try_from(packet)?;
                 client.client_message_tx.send(ClientMessage::UseItem(
                     packet.item_slot,
                     packet.target_entity_id,
                 ))?;
             }
             Some(ClientPackets::LevelUpSkill) => {
-                let packet = PacketClientLevelUpSkill::try_from(&packet)?;
+                let packet = PacketClientLevelUpSkill::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::LevelUpSkill(packet.skill_slot))?;
             }
             Some(ClientPackets::CastSkillSelf) => {
-                let packet = PacketClientCastSkillSelf::try_from(&packet)?;
+                let packet = PacketClientCastSkillSelf::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::CastSkillSelf(packet.skill_slot))?;
             }
             Some(ClientPackets::CastSkillTargetEntity) => {
-                let packet = PacketClientCastSkillTargetEntity::try_from(&packet)?;
+                let packet = PacketClientCastSkillTargetEntity::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::CastSkillTargetEntity(
@@ -237,7 +240,7 @@ impl GameServer {
                     ))?;
             }
             Some(ClientPackets::CastSkillTargetPosition) => {
-                let packet = PacketClientCastSkillTargetPosition::try_from(&packet)?;
+                let packet = PacketClientCastSkillTargetPosition::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::CastSkillTargetPosition(
@@ -246,7 +249,7 @@ impl GameServer {
                     ))?;
             }
             Some(ClientPackets::NpcStoreTransaction) => {
-                let packet = PacketClientNpcStoreTransaction::try_from(&packet)?;
+                let packet = PacketClientNpcStoreTransaction::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
@@ -256,7 +259,7 @@ impl GameServer {
                     }))?;
             }
             Some(ClientPackets::MoveToggle) => {
-                let packet = PacketClientMoveToggle::try_from(&packet)?;
+                let packet = PacketClientMoveToggle::try_from(packet)?;
                 match packet.toggle_type {
                     PacketClientMoveToggleType::Run => {
                         client.client_message_tx.send(ClientMessage::RunToggle)?;
@@ -270,19 +273,19 @@ impl GameServer {
                 }
             }
             Some(ClientPackets::Emote) => {
-                let packet = PacketClientEmote::try_from(&packet)?;
+                let packet = PacketClientEmote::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::UseEmote(packet.motion_id, packet.is_stop))?;
             }
             Some(ClientPackets::WarpGateRequest) => {
-                let packet = PacketClientWarpGateRequest::try_from(&packet)?;
+                let packet = PacketClientWarpGateRequest::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::WarpGateRequest(packet.warp_gate_id))?;
             }
             Some(ClientPackets::PartyRequest) => {
-                let message = match PacketClientPartyRequest::try_from(&packet)? {
+                let message = match PacketClientPartyRequest::try_from(packet)? {
                     PacketClientPartyRequest::Create(client_entity_id) => {
                         ClientMessage::PartyCreate(client_entity_id)
                     }
@@ -301,7 +304,7 @@ impl GameServer {
                 client.client_message_tx.send(message)?;
             }
             Some(ClientPackets::PartyReply) => {
-                let message = match PacketClientPartyReply::try_from(&packet)? {
+                let message = match PacketClientPartyReply::try_from(packet)? {
                     PacketClientPartyReply::AcceptCreate(client_entity_id) => {
                         ClientMessage::PartyAcceptCreateInvite(client_entity_id)
                     }
@@ -316,7 +319,7 @@ impl GameServer {
                 client.client_message_tx.send(message)?;
             }
             Some(ClientPackets::PartyUpdateRules) => {
-                let message = PacketClientPartyUpdateRules::try_from(&packet)?;
+                let message = PacketClientPartyUpdateRules::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::PartyUpdateRules(
@@ -325,7 +328,7 @@ impl GameServer {
                     ))?;
             }
             Some(ClientPackets::MoveCollision) => {
-                let message = PacketClientMoveCollision::try_from(&packet)?;
+                let message = PacketClientMoveCollision::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::MoveCollision(message.position))?;
@@ -1283,29 +1286,4 @@ impl GameServer {
     }
 }
 
-#[async_trait]
-impl ProtocolServer for GameServer {
-    async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
-        loop {
-            tokio::select! {
-                packet = client.connection.read_packet() => {
-                    match packet {
-                        Ok(packet) => {
-                            self.handle_packet(client, packet).await?;
-                        },
-                        Err(error) => {
-                            return Err(error);
-                        }
-                    }
-                },
-                server_message = client.server_message_rx.recv() => {
-                    if let Some(message) = server_message {
-                        self.handle_server_message(client, message).await?;
-                    } else {
-                        return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
-                    }
-                }
-            };
-        }
-    }
-}
+implement_protocol_server! { GameServer }

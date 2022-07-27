@@ -1,0 +1,17 @@
+[package]
+name = "rose-network-narose667"
+version = "0.1.0"
+authors = ["James Benton <james.benton2@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+bevy = { version = "0.8.0-dev", default-features = false }
+bitvec = { version = "1.0", features = ["serde"] }
+bytes = "1.1"
+modular-bitfield = "0.11"
+num-derive = "0.3"
+num-traits = "0.2"
+rose-data = { path = "../rose-data" }
+rose-data-irose = { path = "../rose-data-irose" }
+rose-game-common = { path = "../rose-game-common" }
+rose-network-common = { path = "../rose-network-common" }

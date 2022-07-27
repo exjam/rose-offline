@@ -13,7 +13,10 @@ use rose_game_common::messages::{
 use rose_network_common::{Packet, PacketError};
 use rose_network_irose::{world_client_packets::*, world_server_packets::*};
 
-use crate::protocol::{Client, ProtocolServer, ProtocolServerError};
+use crate::{
+    implement_protocol_server,
+    protocol::{Client, ProtocolServer, ProtocolServerError},
+};
 
 pub struct WorldServer;
 
@@ -25,11 +28,11 @@ impl WorldServer {
     async fn handle_packet(
         &mut self,
         client: &mut Client<'_>,
-        packet: Packet,
+        packet: &Packet,
     ) -> Result<(), anyhow::Error> {
         match FromPrimitive::from_u16(packet.command) {
             Some(ClientPackets::ConnectRequest) => {
-                let request = PacketClientConnectRequest::try_from(&packet)?;
+                let request = PacketClientConnectRequest::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
@@ -43,7 +46,7 @@ impl WorldServer {
                     .send(ClientMessage::GetCharacterList)?;
             }
             Some(ClientPackets::CreateCharacter) => {
-                let request = PacketClientCreateCharacter::try_from(&packet)?;
+                let request = PacketClientCreateCharacter::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::CreateCharacter(CreateCharacter {
@@ -55,7 +58,7 @@ impl WorldServer {
                     }))?;
             }
             Some(ClientPackets::DeleteCharacter) => {
-                let request = PacketClientDeleteCharacter::try_from(&packet)?;
+                let request = PacketClientDeleteCharacter::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::DeleteCharacter(DeleteCharacter {
@@ -65,7 +68,7 @@ impl WorldServer {
                     }))?;
             }
             Some(ClientPackets::SelectCharacter) => {
-                let request = PacketClientSelectCharacter::try_from(&packet)?;
+                let request = PacketClientSelectCharacter::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::SelectCharacter(SelectCharacter {
@@ -192,29 +195,4 @@ impl WorldServer {
     }
 }
 
-#[async_trait]
-impl ProtocolServer for WorldServer {
-    async fn run_client(&mut self, client: &mut Client) -> Result<(), anyhow::Error> {
-        loop {
-            tokio::select! {
-                packet = client.connection.read_packet() => {
-                    match packet {
-                        Ok(packet) => {
-                            self.handle_packet(client, packet).await?;
-                        },
-                        Err(error) => {
-                            return Err(error);
-                        }
-                    }
-                },
-                server_message = client.server_message_rx.recv() => {
-                    if let Some(message) = server_message {
-                        self.handle_server_message(client, message).await?;
-                    } else {
-                        return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
-                    }
-                }
-            };
-        }
-    }
-}
+implement_protocol_server! { WorldServer }
