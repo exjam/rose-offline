@@ -37,7 +37,7 @@ impl std::fmt::Debug for Packet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Packet")
             .field("command", &format_args!("{:03X}", &self.command))
-            .field("data", &format_args!("{:02x?}", self.data))
+            .field("data", &format_args!("{:02x?}", &self.data[..]))
             .finish()
     }
 }
