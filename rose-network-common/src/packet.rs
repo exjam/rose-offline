@@ -19,7 +19,6 @@ pub trait PacketCodec {
     fn encrypt_packet(&self, buffer: &mut BytesMut);
 }
 
-#[derive(Debug)]
 pub struct Packet {
     pub command: u16,
     pub data: Bytes,
@@ -31,6 +30,15 @@ impl Packet {
             command,
             data: data.freeze(),
         }
+    }
+}
+
+impl std::fmt::Debug for Packet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Packet")
+            .field("command", &format_args!("{:03X}", &self.command))
+            .field("data", &format_args!("{:02x?}", self.data))
+            .finish()
     }
 }
 
