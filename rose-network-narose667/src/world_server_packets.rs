@@ -2,14 +2,16 @@ use bevy::math::Vec3;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-use rose_data::{EquipmentIndex, EquipmentItem, ItemReference, ZoneId};
+use rose_data::{EquipmentIndex, EquipmentItem, ZoneId};
 use rose_game_common::{
     components::{CharacterDeleteTime, CharacterInfo, Equipment, Level},
     messages::server::CharacterListItem,
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
-use crate::common_packets::{PacketReadCharacterGender, PacketWriteCharacterGender};
+use crate::common_packets::{
+    PacketReadCharacterGender, PacketReadItems, PacketWriteCharacterGender,
+};
 
 #[derive(FromPrimitive)]
 pub enum ServerPackets {
@@ -19,6 +21,7 @@ pub enum ServerPackets {
     DeleteCharacterReply = 0x714,
     MoveServer = 0x711,
     ReturnToCharacterSelect = 0x71c,
+    FriendList = 0x820,
 }
 
 #[allow(dead_code)]
@@ -95,17 +98,20 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
         for _ in 0..num_characters {
             let name = reader.read_null_terminated_utf8()?.to_string();
             let gender = reader.read_character_gender_u8()?;
+            let _hair_colour = reader.read_u8()?;
             let level = Level::new(reader.read_u16()? as u32);
             let job = reader.read_u16()?;
+            let _zone_number = reader.read_u32()?;
             let delete_time = match reader.read_u32()? {
                 0 => None,
                 seconds => Some(CharacterDeleteTime::from_seconds_remaining(seconds)),
             };
-            let _is_premium = reader.read_u8()?;
-            let face = reader.read_u16()? as u8;
-            reader.read_u16()?;
-            let hair = reader.read_u16()? as u8;
-            reader.read_u16()?;
+            let _name_change_flag = reader.read_u8()?;
+
+            let face = reader.read_u32()? as u8;
+            reader.read_fixed_length_bytes(13)?;
+            let hair = reader.read_u32()? as u8;
+            reader.read_fixed_length_bytes(13)?;
 
             let mut equipment = Equipment::new();
             for index in [
@@ -118,15 +124,8 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
                 EquipmentIndex::SubWeapon,
                 EquipmentIndex::Weapon,
             ] {
-                let item_number = reader.read_u16()? as usize;
-                let grade = reader.read_u16()?;
-                if item_number != 0 {
-                    if let Some(mut item) =
-                        EquipmentItem::new(ItemReference::new(index.into(), item_number), 0)
-                    {
-                        item.grade = grade as u8;
-                        equipment.equip_item(item).ok();
-                    }
+                if let Some(item) = reader.read_equipment_item_part(index.into())? {
+                    equipment.equip_item(item).ok();
                 }
             }
 

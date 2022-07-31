@@ -6,6 +6,8 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 #[derive(FromPrimitive)]
 pub enum ClientPackets {
     ConnectRequest = 0x70b,
+    SelectCharacter = 0x715,
+    JoinZone = 0x753,
 }
 
 #[derive(Debug)]
@@ -37,6 +39,36 @@ impl<'a> From<&'a PacketClientConnectRequest<'a>> for Packet {
         let mut writer = PacketWriter::new(ClientPackets::ConnectRequest as u16);
         writer.write_u32(packet.login_token as u32);
         writer.write_fixed_length_utf8(packet.password_md5, 32);
+        writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientJoinZone {
+    pub weight_rate: u8,
+    pub z: u16,
+}
+
+impl TryFrom<&Packet> for PacketClientJoinZone {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::JoinZone as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let weight_rate = reader.read_u8()?;
+        let z = reader.read_u16()?;
+        Ok(PacketClientJoinZone { weight_rate, z })
+    }
+}
+
+impl From<&PacketClientJoinZone> for Packet {
+    fn from(packet: &PacketClientJoinZone) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::JoinZone as u16);
+        writer.write_u8(packet.weight_rate);
+        writer.write_u16(packet.z);
         writer.into()
     }
 }
