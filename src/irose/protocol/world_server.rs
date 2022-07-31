@@ -51,9 +51,12 @@ impl WorldServer {
                     .client_message_tx
                     .send(ClientMessage::CreateCharacter(CreateCharacter {
                         gender: request.gender,
-                        birth_stone: request.birth_stone,
-                        hair: request.hair,
-                        face: request.face,
+                        birth_stone: request.birth_stone as i32,
+                        hair: request.hair as i32,
+                        face: request.face as i32,
+                        start_point: request.start_point as i32,
+                        hair_color: 1,
+                        weapon_type: 0,
                         name: String::from(request.name),
                     }))?;
             }

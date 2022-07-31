@@ -648,6 +648,7 @@ pub enum ServerMessage {
     ChannelList(Result<ChannelList, ChannelListError>),
     JoinServer(Result<JoinServerResponse, JoinServerError>),
     CharacterList(Vec<CharacterListItem>),
+    CharacterListAppend(Vec<CharacterListItem>),
     CreateCharacter(Result<CreateCharacterResponse, CreateCharacterError>),
     DeleteCharacter(Result<DeleteCharacterResponse, DeleteCharacterError>),
     SelectCharacter(Result<JoinServerResponse, SelectCharacterError>),

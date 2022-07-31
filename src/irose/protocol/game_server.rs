@@ -1276,6 +1276,7 @@ impl GameServer {
             | ServerMessage::ChannelList(_)
             | ServerMessage::JoinServer(_)
             | ServerMessage::CharacterList(_)
+            | ServerMessage::CharacterListAppend(_)
             | ServerMessage::CreateCharacter(_)
             | ServerMessage::DeleteCharacter(_)
             | ServerMessage::SelectCharacter(_) => {

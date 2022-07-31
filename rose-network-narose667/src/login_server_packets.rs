@@ -251,18 +251,28 @@ impl<'a> TryFrom<&'a Packet> for PacketServerSelectServer<'a> {
 
         let mut reader = PacketReader::from(packet);
         let result = FromPrimitive::from_u8(reader.read_u8()?).ok_or(PacketError::InvalidPacket)?;
-        let login_token = reader.read_u32()?;
-        let packet_codec_seed = reader.read_u32()?;
-        let ip = reader.read_null_terminated_utf8()?;
-        let port = reader.read_u16()?;
+        if matches!(result, SelectServerResult::Ok) {
+            let login_token = reader.read_u32()?;
+            let packet_codec_seed = reader.read_u32()?;
+            let ip = reader.read_null_terminated_utf8()?;
+            let port = reader.read_u16()?;
 
-        Ok(PacketServerSelectServer {
-            result,
-            login_token,
-            packet_codec_seed,
-            ip,
-            port,
-        })
+            Ok(PacketServerSelectServer {
+                result,
+                login_token,
+                packet_codec_seed,
+                ip,
+                port,
+            })
+        } else {
+            Ok(PacketServerSelectServer {
+                result,
+                login_token: 0,
+                packet_codec_seed: 0,
+                ip: "",
+                port: 0,
+            })
+        }
     }
 }
 

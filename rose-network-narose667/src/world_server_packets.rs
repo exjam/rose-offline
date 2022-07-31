@@ -67,7 +67,16 @@ impl From<&PacketConnectionReply> for Packet {
     }
 }
 
+#[allow(dead_code)]
+#[derive(Copy, Clone, FromPrimitive)]
+pub enum CharacterListResult {
+    Start = 0,
+    Continue = 1,
+    End = 2,
+}
+
 pub struct PacketServerCharacterList {
+    pub result: CharacterListResult,
     pub characters: Vec<CharacterListItem>,
 }
 
@@ -80,6 +89,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
         }
 
         let mut reader = PacketReader::from(packet);
+        let result = FromPrimitive::from_u8(reader.read_u8()?).ok_or(PacketError::InvalidPacket)?;
         let num_characters = reader.read_u8()? as usize;
         let mut characters = Vec::with_capacity(num_characters);
         for _ in 0..num_characters {
@@ -144,7 +154,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
             });
         }
 
-        Ok(PacketServerCharacterList { characters })
+        Ok(PacketServerCharacterList { result, characters })
     }
 }
 
@@ -217,7 +227,6 @@ pub enum CreateCharacterResult {
 
 pub struct PacketServerCreateCharacterReply {
     pub result: CreateCharacterResult,
-    pub is_platinum: bool,
 }
 
 impl TryFrom<&Packet> for PacketServerCreateCharacterReply {
@@ -230,11 +239,7 @@ impl TryFrom<&Packet> for PacketServerCreateCharacterReply {
 
         let mut reader = PacketReader::from(packet);
         let result = FromPrimitive::from_u8(reader.read_u8()?).ok_or(PacketError::InvalidPacket)?;
-        let is_platinum = reader.read_u8()? != 0;
-        Ok(Self {
-            result,
-            is_platinum,
-        })
+        Ok(Self { result })
     }
 }
 
@@ -242,7 +247,6 @@ impl From<&PacketServerCreateCharacterReply> for Packet {
     fn from(packet: &PacketServerCreateCharacterReply) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CreateCharacterReply as u16);
         writer.write_u8(packet.result as u8);
-        writer.write_u8(if packet.is_platinum { 1 } else { 0 });
         writer.into()
     }
 }

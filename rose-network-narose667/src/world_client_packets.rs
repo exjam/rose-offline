@@ -72,10 +72,11 @@ impl From<&PacketClientCharacterList> for Packet {
 #[derive(Debug)]
 pub struct PacketClientCreateCharacter<'a> {
     pub gender: CharacterGender,
-    pub birth_stone: u8,
-    pub hair: u8,
-    pub face: u8,
-    pub start_point: u16,
+    pub hair_color: i32,
+    pub hair_style: i32,
+    pub face: i32,
+    pub weapon_type: i32,
+    pub start_point: i32,
     pub name: &'a str,
 }
 
@@ -88,17 +89,18 @@ impl<'a> TryFrom<&'a Packet> for PacketClientCreateCharacter<'a> {
         }
         let mut reader = PacketReader::from(packet);
         let gender = reader.read_character_gender_u8()?;
-        let birth_stone = reader.read_u8()?;
-        let hair = reader.read_u8()?;
-        let face = reader.read_u8()?;
-        let _weapon_type = reader.read_u8()?;
-        let start_point = reader.read_u16()?;
+        let hair_color = reader.read_i32()?;
+        let hair_style = reader.read_i32()?;
+        let face = reader.read_i32()?;
+        let weapon_type = reader.read_i32()?;
+        let start_point = reader.read_i32()?;
         let name = reader.read_null_terminated_utf8()?;
         Ok(PacketClientCreateCharacter {
             gender,
-            birth_stone,
-            hair,
+            hair_color,
+            hair_style,
             face,
+            weapon_type,
             start_point,
             name,
         })
@@ -109,11 +111,11 @@ impl<'a> From<&'a PacketClientCreateCharacter<'a>> for Packet {
     fn from(packet: &'a PacketClientCreateCharacter<'a>) -> Self {
         let mut writer = PacketWriter::new(ClientPackets::CreateCharacter as u16);
         writer.write_character_gender_u8(packet.gender);
-        writer.write_u8(packet.birth_stone);
-        writer.write_u8(packet.hair);
-        writer.write_u8(packet.face);
-        writer.write_u8(0);
-        writer.write_u16(packet.start_point);
+        writer.write_i32(packet.hair_color);
+        writer.write_i32(packet.hair_style);
+        writer.write_i32(packet.face);
+        writer.write_i32(packet.weapon_type);
+        writer.write_i32(packet.start_point);
         writer.write_null_terminated_utf8(packet.name);
         writer.into()
     }

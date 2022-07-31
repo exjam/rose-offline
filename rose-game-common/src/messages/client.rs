@@ -37,10 +37,17 @@ pub struct JoinServer {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CreateCharacter {
     pub gender: CharacterGender,
-    pub birth_stone: u8,
-    pub hair: u8,
-    pub face: u8,
+    pub hair: i32,
+    pub face: i32,
     pub name: String,
+    pub start_point: i32,
+
+    // irose
+    pub birth_stone: i32,
+
+    // narose667
+    pub hair_color: i32,
+    pub weapon_type: i32,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

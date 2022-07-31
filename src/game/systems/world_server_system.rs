@@ -138,9 +138,9 @@ fn create_character(
         .create(
             message.name.clone(),
             message.gender,
-            message.birth_stone,
-            message.face,
-            message.hair,
+            message.birth_stone as u8,
+            message.face as u8,
+            message.hair as u8,
         )
         .map_err(|_| CreateCharacterError::InvalidValue)?;
 
