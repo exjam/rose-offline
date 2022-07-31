@@ -4,7 +4,7 @@ use num_traits::FromPrimitive;
 
 use rose_data::{EquipmentIndex, EquipmentItem, ItemReference, ZoneId};
 use rose_game_common::{
-    components::{CharacterInfo, Equipment, Level},
+    components::{CharacterDeleteTime, CharacterInfo, Equipment, Level},
     messages::server::CharacterListItem,
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
@@ -87,7 +87,10 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
             let gender = reader.read_character_gender_u8()?;
             let level = Level::new(reader.read_u16()? as u32);
             let job = reader.read_u16()?;
-            let _delete_secs_from_now = reader.read_u32()?; // TODO: Translate this to CharacterDeleteTime
+            let delete_time = match reader.read_u32()? {
+                0 => None,
+                seconds => Some(CharacterDeleteTime::from_seconds_remaining(seconds)),
+            };
             let _is_premium = reader.read_u8()?;
             let face = reader.read_u16()? as u8;
             reader.read_u16()?;
@@ -136,7 +139,7 @@ impl TryFrom<&Packet> for PacketServerCharacterList {
                     unique_id: 0,
                 },
                 level,
-                delete_time: None,
+                delete_time,
                 equipment,
             });
         }
@@ -247,6 +250,28 @@ impl From<&PacketServerCreateCharacterReply> for Packet {
 pub struct PacketServerDeleteCharacterReply<'a> {
     pub seconds_until_delete: Option<u32>,
     pub name: &'a str,
+}
+
+impl<'a> TryFrom<&'a Packet> for PacketServerDeleteCharacterReply<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::DeleteCharacterReply as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let seconds_until_delete = match reader.read_u32()? {
+            0xFFFFFFFF => None,
+            seconds_until_delete => Some(seconds_until_delete),
+        };
+        let name = reader.read_null_terminated_utf8()?;
+
+        Ok(Self {
+            seconds_until_delete,
+            name,
+        })
+    }
 }
 
 impl<'a> From<&'a PacketServerDeleteCharacterReply<'a>> for Packet {

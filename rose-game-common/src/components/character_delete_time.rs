@@ -17,6 +17,12 @@ impl CharacterDeleteTime {
         }
     }
 
+    pub fn from_seconds_remaining(seconds: u32) -> Self {
+        Self {
+            start_time: SystemTime::now() - Duration::new(seconds as u64, 0),
+        }
+    }
+
     pub fn get_time_until_delete(&self) -> Duration {
         let time_since_delete = self.start_time.elapsed().unwrap();
 

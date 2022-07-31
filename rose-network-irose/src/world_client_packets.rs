@@ -145,6 +145,16 @@ impl<'a> TryFrom<&'a Packet> for PacketClientDeleteCharacter<'a> {
     }
 }
 
+impl<'a> From<&'a PacketClientDeleteCharacter<'a>> for Packet {
+    fn from(packet: &'a PacketClientDeleteCharacter<'a>) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::DeleteCharacter as u16);
+        writer.write_u8(packet.slot);
+        writer.write_u8(if packet.is_delete { 1 } else { 0 });
+        writer.write_null_terminated_utf8(packet.name);
+        writer.into()
+    }
+}
+
 #[derive(Debug)]
 pub struct PacketClientSelectCharacter<'a> {
     pub slot: u8,
