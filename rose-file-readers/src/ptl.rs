@@ -49,7 +49,7 @@ pub struct PtlSequence {
     pub name: String,
     pub life: RangeInclusive<f32>,
     pub emit_rate: RangeInclusive<f32>,
-    pub num_loops: u32,
+    pub num_loops: i32,
     pub emit_radius_x: RangeInclusive<f32>,
     pub emit_radius_y: RangeInclusive<f32>,
     pub emit_radius_z: RangeInclusive<f32>,
@@ -57,7 +57,7 @@ pub struct PtlSequence {
     pub gravity_y: RangeInclusive<f32>,
     pub gravity_z: RangeInclusive<f32>,
     pub texture_path: VfsPathBuf,
-    pub num_particles: u32,
+    pub num_particles: i32,
     pub align_type: u32,
     pub update_coords: PtlUpdateCoords,
     pub texture_atlas_cols: u32,
@@ -86,7 +86,7 @@ impl RoseFile for PtlFile {
             let life_max = reader.read_f32()?;
             let emit_rate_min = reader.read_f32()?;
             let emit_rate_max = reader.read_f32()?;
-            let num_loops = reader.read_u32()?;
+            let num_loops = reader.read_i32()?;
             let _spawn_direction_min = reader.read_vector3_f32()?; // Unused
             let _spawn_direction_max = reader.read_vector3_f32()?; // Unused
             let emit_radius_min = reader.read_vector3_f32()?;
@@ -94,7 +94,7 @@ impl RoseFile for PtlFile {
             let gravity_min = reader.read_vector3_f32()?;
             let gravity_max = reader.read_vector3_f32()?;
             let texture_path = VfsPathBuf::new(&reader.read_u32_length_string()?);
-            let num_particles = reader.read_u32()?;
+            let num_particles = reader.read_i32()?;
             let align_type = reader.read_u32()?;
             let update_coords = match reader.read_u32()? {
                 0 => PtlUpdateCoords::World,
