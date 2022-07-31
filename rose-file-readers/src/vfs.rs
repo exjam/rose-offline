@@ -35,8 +35,8 @@ pub enum VfsFile<'a> {
 
 #[derive(Error, Debug)]
 pub enum VfsError {
-    #[error("File not found")]
-    FileNotFound,
+    #[error("File {0} not found")]
+    FileNotFound(PathBuf),
 }
 
 impl<'a> From<&'a VfsFile<'a>> for RoseFileReader<'a> {
@@ -278,7 +278,7 @@ impl VfsIndex {
             RoseFile::read(RoseFileReader::from(&file), &Default::default())
                 .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
         } else {
-            Err(VfsError::FileNotFound.into())
+            Err(VfsError::FileNotFound(vfs_path.path().into()).into())
         }
     }
 
@@ -293,7 +293,7 @@ impl VfsIndex {
             RoseFile::read(RoseFileReader::from(&file), options)
                 .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
         } else {
-            Err(VfsError::FileNotFound.into())
+            Err(VfsError::FileNotFound(vfs_path.path().into()).into())
         }
     }
 }
