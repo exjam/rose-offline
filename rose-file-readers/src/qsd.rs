@@ -320,10 +320,45 @@ pub struct QsdFile {
     pub triggers: HashMap<String, QsdTrigger>,
 }
 
-impl RoseFile for QsdFile {
-    type ReadOptions = ();
+#[derive(Copy, Clone, Debug)]
+pub enum QsdGameVersion {
+    Irose,
+    Narose667,
+}
 
-    fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+#[derive(Copy, Clone, Debug)]
+pub struct QsdReadOptions {
+    pub game_version: QsdGameVersion,
+}
+
+impl Default for QsdReadOptions {
+    fn default() -> Self {
+        Self {
+            game_version: QsdGameVersion::Irose,
+        }
+    }
+}
+
+impl RoseFile for QsdFile {
+    type ReadOptions = QsdReadOptions;
+
+    fn read(reader: RoseFileReader, options: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
+        match options.game_version {
+            QsdGameVersion::Irose => Self::read_irose(reader),
+            QsdGameVersion::Narose667 => Self::read_narose667(reader),
+        }
+    }
+}
+
+impl QsdFile {
+    fn read_narose667(_reader: RoseFileReader) -> Result<Self, anyhow::Error> {
+        // TODO: QsdFile::read_narose667
+        Ok(QsdFile {
+            triggers: Default::default(),
+        })
+    }
+
+    fn read_irose(mut reader: RoseFileReader) -> Result<Self, anyhow::Error> {
         let _file_version = reader.read_u32()?;
         let group_count = reader.read_u32()?;
         let _filename = reader.read_u16_length_string()?;
