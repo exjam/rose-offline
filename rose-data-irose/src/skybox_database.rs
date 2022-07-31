@@ -52,15 +52,12 @@ fn load_skybox(data: &StbSkybox, id: usize) -> Option<SkyboxData> {
     })
 }
 
-pub fn get_skybox_database(vfs: &VfsIndex) -> Option<Arc<SkyboxDatabase>> {
-    let stb_sky = StbSkybox(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKY.STB")
-            .ok()?,
-    );
+pub fn get_skybox_database(vfs: &VfsIndex) -> Result<Arc<SkyboxDatabase>, anyhow::Error> {
+    let stb_sky = StbSkybox(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKY.STB")?);
     let mut skyboxs = Vec::new();
     for row in 0..stb_sky.rows() {
         skyboxs.push(load_skybox(&stb_sky, row));
     }
 
-    Some(Arc::new(SkyboxDatabase::new(skyboxs)))
+    Ok(Arc::new(SkyboxDatabase::new(skyboxs)))
 }

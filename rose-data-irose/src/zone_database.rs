@@ -314,21 +314,16 @@ fn load_zone(
     })
 }
 
-pub fn get_zone_database(vfs: &VfsIndex) -> Option<ZoneDatabase> {
-    let stl = vfs
-        .read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")
-        .ok()?;
-    let data = StbZone(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")
-            .ok()?,
-    );
+pub fn get_zone_database(vfs: &VfsIndex) -> Result<ZoneDatabase, anyhow::Error> {
+    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")?;
+    let data = StbZone(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")?);
     let mut zones = Vec::with_capacity(data.rows());
     zones.push(None); // Zone ID 0
     for id in 1..data.rows() {
         zones.push(load_zone(vfs, &data, &stl, id).ok());
     }
 
-    Some(ZoneDatabase::new(zones))
+    Ok(ZoneDatabase::new(zones))
 }
 
 fn load_zone_list_entry(
@@ -372,19 +367,14 @@ fn load_zone_list_entry(
     })
 }
 
-pub fn get_zone_list(vfs: &VfsIndex) -> Option<ZoneList> {
-    let stl = vfs
-        .read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")
-        .ok()?;
-    let data = StbZone(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")
-            .ok()?,
-    );
+pub fn get_zone_list(vfs: &VfsIndex) -> Result<ZoneList, anyhow::Error> {
+    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")?;
+    let data = StbZone(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")?);
     let mut zones = Vec::with_capacity(data.rows());
     zones.push(None); // Zone ID 0
     for id in 1..data.rows() {
         zones.push(load_zone_list_entry(&data, &stl, id).ok());
     }
 
-    Some(ZoneList::new(zones))
+    Ok(ZoneList::new(zones))
 }

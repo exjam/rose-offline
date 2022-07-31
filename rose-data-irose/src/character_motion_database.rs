@@ -55,11 +55,9 @@ fn load_motion_file_data(
 pub fn get_character_motion_database(
     vfs: &VfsIndex,
     options: &CharacterMotionDatabaseOptions,
-) -> Option<CharacterMotionDatabase> {
+) -> Result<CharacterMotionDatabase, anyhow::Error> {
     // Read motion file list
-    let file_motion = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/FILE_MOTION.STB")
-        .ok()?;
+    let file_motion = vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_MOTION.STB")?;
 
     let mut motion_datas = Vec::new();
     for gender in 0..file_motion.columns() {
@@ -75,9 +73,7 @@ pub fn get_character_motion_database(
     }
 
     // Read character motion mappings
-    let type_motion = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/TYPE_MOTION.STB")
-        .ok()?;
+    let type_motion = vfs.read_file::<StbFile, _>("3DDATA/STB/TYPE_MOTION.STB")?;
     let num_character_motion_weapons = type_motion.columns();
     let num_character_motion_actions = type_motion.rows();
     let mut motion_indices = Vec::new();
@@ -88,7 +84,7 @@ pub fn get_character_motion_database(
         }
     }
 
-    Some(CharacterMotionDatabase::new(
+    Ok(CharacterMotionDatabase::new(
         num_character_motion_weapons,
         motion_indices,
         motion_datas,

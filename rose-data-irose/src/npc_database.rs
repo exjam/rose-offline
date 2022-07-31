@@ -120,19 +120,15 @@ fn load_motion_file_data(
     }
 }
 
-pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<NpcDatabase> {
-    let stl = vfs
-        .read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")
-        .ok()?;
+pub fn get_npc_database(
+    vfs: &VfsIndex,
+    options: &NpcDatabaseOptions,
+) -> Result<NpcDatabase, anyhow::Error> {
+    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")?;
 
-    let model_data = vfs
-        .read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")
-        .ok()?;
+    let model_data = vfs.read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")?;
 
-    let data = StbNpc(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")
-            .ok()?,
-    );
+    let data = StbNpc(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")?);
 
     let mut motions = Vec::with_capacity(model_data.motion_files.len());
     for path in model_data.motion_files.iter() {
@@ -220,10 +216,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         }));
     }
 
-    let data = StbEvent(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_EVENT.STB")
-            .ok()?,
-    );
+    let data = StbEvent(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_EVENT.STB")?);
     let mut conversation_files = HashMap::new();
     for id in 0..data.rows() {
         let key = data.get_row_key(id);
@@ -243,12 +236,8 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         );
     }
 
-    let stl = vfs
-        .read_file::<StlFile, _>("3DDATA/STB/LIST_SELL_S.STL")
-        .ok()?;
-    let data = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/LIST_SELL.STB")
-        .ok()?;
+    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_SELL_S.STL")?;
+    let data = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SELL.STB")?;
     let mut store_tabs = HashMap::new();
     for id in 1..data.rows() {
         let tab_string_id = data.get(id, 1);
@@ -293,7 +282,7 @@ pub fn get_npc_database(vfs: &VfsIndex, options: &NpcDatabaseOptions) -> Option<
         conversation_files.len(),
         store_tabs.len()
     );
-    Some(NpcDatabase::new(
+    Ok(NpcDatabase::new(
         npcs,
         conversation_files,
         store_tabs,

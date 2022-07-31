@@ -25,19 +25,14 @@ fn load_sound(data: &StbSound, id: usize) -> Option<SoundData> {
     })
 }
 
-pub fn get_sound_database(vfs: &VfsIndex) -> Option<Arc<SoundDatabase>> {
-    let stb_sounds = StbSound(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_SOUND.STB")
-            .ok()?,
-    );
+pub fn get_sound_database(vfs: &VfsIndex) -> Result<Arc<SoundDatabase>, anyhow::Error> {
+    let stb_sounds = StbSound(vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_SOUND.STB")?);
     let mut sounds = Vec::new();
     for row in 0..stb_sounds.rows() {
         sounds.push(load_sound(&stb_sounds, row));
     }
 
-    let stb_step_sounds = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/LIST_STEPSOUND.STB")
-        .ok()?;
+    let stb_step_sounds = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STEPSOUND.STB")?;
     let mut step_sounds = Vec::with_capacity(stb_step_sounds.rows() * stb_step_sounds.columns());
     let step_sound_zone_types = stb_step_sounds.columns();
     for row in 0..stb_step_sounds.rows() {
@@ -46,9 +41,7 @@ pub fn get_sound_database(vfs: &VfsIndex) -> Option<Arc<SoundDatabase>> {
         }
     }
 
-    let stb_hit_sounds = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/LIST_HITSOUND.STB")
-        .ok()?;
+    let stb_hit_sounds = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_HITSOUND.STB")?;
     let mut hit_sounds = Vec::with_capacity(stb_hit_sounds.rows() * stb_hit_sounds.columns());
     let hit_sound_material_types = stb_hit_sounds.columns();
     for row in 0..stb_hit_sounds.rows() {
@@ -57,7 +50,7 @@ pub fn get_sound_database(vfs: &VfsIndex) -> Option<Arc<SoundDatabase>> {
         }
     }
 
-    Some(Arc::new(SoundDatabase::new(
+    Ok(Arc::new(SoundDatabase::new(
         sounds,
         step_sounds,
         step_sound_zone_types,

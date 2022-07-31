@@ -275,14 +275,9 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
     })
 }
 
-pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
-    let stl = vfs
-        .read_file::<StlFile, _>("3DDATA/STB/LIST_SKILL_S.STL")
-        .ok()?;
-    let data = StbSkill(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")
-            .ok()?,
-    );
+pub fn get_skill_database(vfs: &VfsIndex) -> Result<SkillDatabase, anyhow::Error> {
+    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_SKILL_S.STL")?;
+    let data = StbSkill(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")?);
     let mut skills = Vec::with_capacity(data.rows());
     skills.push(None); // SkillId 0
     for id in 1..data.rows() {
@@ -290,5 +285,5 @@ pub fn get_skill_database(vfs: &VfsIndex) -> Option<SkillDatabase> {
     }
 
     debug!("Loaded {} skills", skills.len());
-    Some(SkillDatabase::new(skills))
+    Ok(SkillDatabase::new(skills))
 }

@@ -4,16 +4,14 @@ use std::collections::HashMap;
 
 use rose_data::AiDatabase;
 
-pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
-    let ai_s_stb = vfs
-        .read_file_with::<StbFile, _>(
-            "3DDATA/AI/AI_S.STB",
-            &StbReadOptions {
-                is_wide: true,
-                ..Default::default()
-            },
-        )
-        .ok()?;
+pub fn get_ai_database(vfs: &VfsIndex) -> Result<AiDatabase, anyhow::Error> {
+    let ai_s_stb = vfs.read_file_with::<StbFile, _>(
+        "3DDATA/AI/AI_S.STB",
+        &StbReadOptions {
+            is_wide: true,
+            ..Default::default()
+        },
+    )?;
     let mut strings = HashMap::new();
 
     for row in 0..ai_s_stb.rows() {
@@ -23,7 +21,7 @@ pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
         }
     }
 
-    let file_ai_stb = vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_AI.STB").ok()?;
+    let file_ai_stb = vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_AI.STB")?;
     let mut aips = HashMap::new();
 
     for row in 0..file_ai_stb.rows() {
@@ -43,5 +41,5 @@ pub fn get_ai_database(vfs: &VfsIndex) -> Option<AiDatabase> {
     }
 
     debug!("Loaded {} AI files", aips.len());
-    Some(AiDatabase { strings, aips })
+    Ok(AiDatabase { strings, aips })
 }

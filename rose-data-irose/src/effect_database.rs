@@ -52,10 +52,8 @@ fn load_effect(data: &StbEffect, id: usize) -> Option<EffectData> {
     })
 }
 
-pub fn get_effect_database(vfs: &VfsIndex) -> Option<Arc<EffectDatabase>> {
-    let stb_effect_files = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/FILE_EFFECT.STB")
-        .ok()?;
+pub fn get_effect_database(vfs: &VfsIndex) -> Result<Arc<EffectDatabase>, anyhow::Error> {
+    let stb_effect_files = vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_EFFECT.STB")?;
 
     let mut effect_files = Vec::new();
     for row in 0..stb_effect_files.rows() {
@@ -67,14 +65,11 @@ pub fn get_effect_database(vfs: &VfsIndex) -> Option<Arc<EffectDatabase>> {
         }
     }
 
-    let stb_effects = StbEffect(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_EFFECT.STB")
-            .ok()?,
-    );
+    let stb_effects = StbEffect(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_EFFECT.STB")?);
     let mut effects = Vec::new();
     for row in 0..stb_effects.rows() {
         effects.push(load_effect(&stb_effects, row));
     }
 
-    Some(Arc::new(EffectDatabase::new(effects, effect_files)))
+    Ok(Arc::new(EffectDatabase::new(effects, effect_files)))
 }

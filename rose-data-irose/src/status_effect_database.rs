@@ -66,14 +66,9 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
     })
 }
 
-pub fn get_status_effect_database(vfs: &VfsIndex) -> Option<StatusEffectDatabase> {
-    let stl = vfs
-        .read_file::<StlFile, _>("3DDATA/STB/LIST_STATUS_S.STL")
-        .ok()?;
-    let data = StbStatus(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STATUS.STB")
-            .ok()?,
-    );
+pub fn get_status_effect_database(vfs: &VfsIndex) -> Result<StatusEffectDatabase, anyhow::Error> {
+    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_STATUS_S.STL")?;
+    let data = StbStatus(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STATUS.STB")?);
     let mut status_effects = HashMap::new();
 
     for row in 1..data.0.rows() {
@@ -83,7 +78,7 @@ pub fn get_status_effect_database(vfs: &VfsIndex) -> Option<StatusEffectDatabase
     }
 
     debug!("Loaded {} status effects", status_effects.len());
-    Some(StatusEffectDatabase::new(
+    Ok(StatusEffectDatabase::new(
         status_effects,
         StatusEffectId::new(43).unwrap(),
     ))

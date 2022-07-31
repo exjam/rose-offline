@@ -10,16 +10,14 @@ impl StbQuest {
     stb_column! { 1, get_time_limit, WorldTicks }
 }
 
-pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
-    let quest_s_stb = vfs
-        .read_file_with::<StbFile, _>(
-            "3DDATA/QUESTDATA/QUEST_S.STB",
-            &StbReadOptions {
-                is_wide: true,
-                ..Default::default()
-            },
-        )
-        .ok()?;
+pub fn get_quest_database(vfs: &VfsIndex) -> Result<QuestDatabase, anyhow::Error> {
+    let quest_s_stb = vfs.read_file_with::<StbFile, _>(
+        "3DDATA/QUESTDATA/QUEST_S.STB",
+        &StbReadOptions {
+            is_wide: true,
+            ..Default::default()
+        },
+    )?;
     let mut strings = HashMap::new();
 
     for row in 0..quest_s_stb.rows() {
@@ -29,10 +27,7 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
         }
     }
 
-    let quest_stb = StbQuest(
-        vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_QUEST.STB")
-            .ok()?,
-    );
+    let quest_stb = StbQuest(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_QUEST.STB")?);
     let mut quests = Vec::new();
     for row in 0..quest_stb.0.rows() {
         let time_limit = quest_stb.get_time_limit(row).filter(|x| x.0 != 0);
@@ -49,9 +44,7 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
         }
     }
 
-    let qsd_files_stb = vfs
-        .read_file::<StbFile, _>("3DDATA/STB/LIST_QUESTDATA.STB")
-        .ok()?;
+    let qsd_files_stb = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_QUESTDATA.STB")?;
     let mut triggers = HashMap::new();
 
     for row in 0..qsd_files_stb.rows() {
@@ -72,7 +65,7 @@ pub fn get_quest_database(vfs: &VfsIndex) -> Option<QuestDatabase> {
     }
 
     debug!("Loaded {} QSD triggers", triggers.len());
-    Some(QuestDatabase {
+    Ok(QuestDatabase {
         quests,
         strings,
         triggers,

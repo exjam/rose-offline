@@ -373,8 +373,8 @@ fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Vehicle
 
 macro_rules! load_items {
     ($vfs:ident, $path:literal, $stl_path:literal, load_base_item, $item_type:expr, $item_data_type:ident) => {{
-        let stl = $vfs.read_file::<StlFile, _>($stl_path).ok()?;
-        let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
+        let stl = $vfs.read_file::<StlFile, _>($stl_path)?;
+        let data = StbItem($vfs.read_file::<StbFile, _>($path)?);
         let mut items: Vec<Option<$item_data_type>> = Vec::with_capacity(data.rows());
         for id in 0..data.rows() {
             if let Some(item) = load_base_item(&data, &stl, $item_type, id, true) {
@@ -386,8 +386,8 @@ macro_rules! load_items {
         items
     }};
     ($vfs:ident, $path:literal, $stl_path:literal, $load_item_fn:ident, $item_data_type:ident) => {{
-        let stl = $vfs.read_file::<StlFile, _>($stl_path).ok()?;
-        let data = StbItem($vfs.read_file::<StbFile, _>($path).ok()?);
+        let stl = $vfs.read_file::<StlFile, _>($stl_path)?;
+        let data = StbItem($vfs.read_file::<StbFile, _>($path)?);
         let mut items: Vec<Option<$item_data_type>> = Vec::with_capacity(data.rows());
         for id in 0..data.rows() {
             items.push($load_item_fn(&data, &stl, id));
@@ -396,7 +396,7 @@ macro_rules! load_items {
     }};
 }
 
-pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
+pub fn get_item_database(vfs: &VfsIndex) -> Result<ItemDatabase, anyhow::Error> {
     let face = load_items! { vfs, "3DDATA/STB/LIST_FACEITEM.STB", "3DDATA/STB/LIST_FACEITEM_S.STL", load_base_item, ItemType::Face, FaceItemData };
     let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA/STB/LIST_CAP_S.STL", load_head_item, HeadItemData };
     let body = load_items! { vfs, "3DDATA/STB/LIST_BODY.STB", "3DDATA/STB/LIST_BODY_S.STL", load_base_item, ItemType::Body, BodyItemData };
@@ -445,7 +445,7 @@ pub fn get_item_database(vfs: &VfsIndex) -> Option<ItemDatabase> {
             + vehicle.len()
             + item_grades.len()
     );
-    Some(ItemDatabase::new(
+    Ok(ItemDatabase::new(
         face,
         head,
         body,

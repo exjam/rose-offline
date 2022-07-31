@@ -24,8 +24,8 @@ fn load_warp_gate(data: &StbWarp, id: usize) -> Option<WarpGateData> {
     })
 }
 
-pub fn get_warp_gate_database(vfs: &VfsIndex) -> Option<WarpGateDatabase> {
-    let data = StbWarp(vfs.read_file::<StbFile, _>("3DDATA/STB/WARP.STB").ok()?);
+pub fn get_warp_gate_database(vfs: &VfsIndex) -> Result<WarpGateDatabase, anyhow::Error> {
+    let data = StbWarp(vfs.read_file::<StbFile, _>("3DDATA/STB/WARP.STB")?);
     let mut warp_gates = HashMap::new();
     for id in 1..data.rows() {
         if let Some(warp_gate_data) = load_warp_gate(&data, id) {
@@ -34,5 +34,5 @@ pub fn get_warp_gate_database(vfs: &VfsIndex) -> Option<WarpGateDatabase> {
     }
 
     debug!("Loaded {} warp gates", warp_gates.len());
-    Some(WarpGateDatabase::new(warp_gates))
+    Ok(WarpGateDatabase::new(warp_gates))
 }

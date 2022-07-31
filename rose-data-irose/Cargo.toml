@@ -5,6 +5,7 @@ authors = ["James Benton <james.benton2@gmail.com>"]
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0"
 arrayvec = "0.7"
 bevy = { version = "0.8.0-dev", default-features = false }
 enum-map = { version = "2.0", features = ["serde"] }
