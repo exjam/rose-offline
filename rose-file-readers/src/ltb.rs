@@ -1,5 +1,6 @@
 use crate::{reader::RoseFileReader, RoseFile};
 
+#[derive(Default)]
 pub struct LtbFile {
     pub rows: usize,
     pub columns: usize,
