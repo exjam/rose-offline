@@ -19,7 +19,8 @@ impl CharacterDeleteTime {
 
     pub fn from_seconds_remaining(seconds: u32) -> Self {
         Self {
-            start_time: SystemTime::now() - (DELETE_CHARACTER_DURATION - Duration::new(seconds as u64, 0)),
+            start_time: SystemTime::now()
+                - (DELETE_CHARACTER_DURATION - Duration::new(seconds as u64, 0)),
         }
     }
 
