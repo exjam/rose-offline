@@ -188,6 +188,7 @@ impl VfsIndex {
             let _ = reader.read_u32()?;
 
             if filename.to_uppercase() == "ROOT.VFS" {
+                reader.set_position(next_vfs_position);
                 continue;
             }
 
