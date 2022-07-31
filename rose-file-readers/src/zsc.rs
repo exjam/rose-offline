@@ -54,6 +54,7 @@ bitflags::bitflags! {
         const NOT_PICKABLE = (1 << 4);
         const HEIGHT_ONLY = (1 << 5);
         const NOT_CAMERA_COLLISION = (1 << 6);
+        const PASSTHROUGH = (1 << 7);
     }
 }
 
