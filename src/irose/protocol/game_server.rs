@@ -1279,7 +1279,8 @@ impl GameServer {
             | ServerMessage::CharacterListAppend(_)
             | ServerMessage::CreateCharacter(_)
             | ServerMessage::DeleteCharacter(_)
-            | ServerMessage::SelectCharacter(_) => {
+            | ServerMessage::SelectCharacter(_)
+            | ServerMessage::UpdateSkillList(_) => {
                 panic!("Received unexpected server message for game server")
             }
         }

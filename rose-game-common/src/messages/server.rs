@@ -642,6 +642,13 @@ pub struct PartyMemberLeave {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct UpdateSkillData {
+    pub skill_slot: SkillSlot,
+    pub skill_id: Option<SkillId>,
+    pub expire_time: Option<Duration>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
     ConnectionResponse(Result<ConnectionResponse, ConnectionRequestError>),
     LoginResponse(Result<LoginResponse, LoginError>),
@@ -723,4 +730,5 @@ pub enum ServerMessage {
     ChangeNpcId(ClientEntityId, NpcId),
     SetHotbarSlot(usize, Option<HotbarSlot>),
     AdjustPosition(ClientEntityId, Vec3),
+    UpdateSkillList(Vec<UpdateSkillData>),
 }
