@@ -3,7 +3,7 @@ use std::time::Duration;
 use bevy::ecs::prelude::{Component, Entity};
 use rand::Rng;
 
-pub const BOT_IDLE_CHECK_DURATION: Duration = Duration::from_secs(3);
+pub const BOT_IDLE_CHECK_DURATION: Duration = Duration::from_secs(1);
 
 pub enum BotAiState {
     Farm,

@@ -16,7 +16,7 @@ use crate::game::{
     GameData,
 };
 
-const BOT_SEARCH_ENTITY_DISTANCE: f32 = 1500.0f32;
+const BOT_SEARCH_ENTITY_DISTANCE: f32 = 3000.0f32;
 const BOT_PARTY_OWNER_MAX_DISTANCE: f32 = 500.0f32;
 
 #[derive(WorldQuery)]
