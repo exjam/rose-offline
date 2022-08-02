@@ -75,7 +75,7 @@ pub fn bot_ai_system(
             CommandData::Stop(_) => {
                 bot.ai.time_since_last_idle_check += server_time.delta;
                 if bot.ai.time_since_last_idle_check < BOT_IDLE_CHECK_DURATION {
-                    return;
+                    continue;
                 }
                 bot.ai.time_since_last_idle_check -= BOT_IDLE_CHECK_DURATION;
 
