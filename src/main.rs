@@ -8,7 +8,6 @@
 
 mod game;
 mod irose;
-mod narose667;
 mod protocol;
 
 use std::{path::Path, time::Instant};
@@ -26,7 +25,6 @@ use crate::{
 
 pub enum ProtocolType {
     Irose,
-    Narose667,
 }
 
 impl Default for ProtocolType {
@@ -95,7 +93,7 @@ async fn async_main() {
             clap::Arg::new("protocol")
                 .long("protocol")
                 .takes_value(true)
-                .value_parser(["irose", "narose667"])
+                .value_parser(["irose"])
                 .default_value("irose")
                 .help("Select which protocol to use."),
         );
@@ -112,7 +110,6 @@ async fn async_main() {
     let data_extracted_path = matches.value_of("data-path").map(Path::new);
     let protocol_type = match matches.value_of("protocol") {
         Some("irose") => ProtocolType::Irose,
-        Some("narose667") => ProtocolType::Narose667,
         _ => ProtocolType::default(),
     };
 
@@ -129,11 +126,6 @@ async fn async_main() {
             irose::login_protocol(),
             irose::world_protocol(),
             irose::game_protocol(),
-        ),
-        ProtocolType::Narose667 => (
-            narose667::login_protocol(),
-            narose667::world_protocol(),
-            narose667::game_protocol(),
         ),
     };
 
