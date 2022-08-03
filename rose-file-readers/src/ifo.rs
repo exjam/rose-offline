@@ -7,7 +7,7 @@ use crate::{
     RoseFile,
 };
 
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct IfoObject {
     pub object_name: String,
     pub minimap_position: Vec2<u32>,
