@@ -10,7 +10,7 @@ use rose_data::{
     SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData,
     SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId, ZoneId,
 };
-use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, StlFile, VirtualFilesystem};
 
 use crate::data_decoder::{
     decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillBasicCommand,
@@ -275,7 +275,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
     })
 }
 
-pub fn get_skill_database(vfs: &VfsIndex) -> Result<SkillDatabase, anyhow::Error> {
+pub fn get_skill_database(vfs: &VirtualFilesystem) -> Result<SkillDatabase, anyhow::Error> {
     let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_SKILL_S.STL")?;
     let data = StbSkill(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")?);
     let mut skills = Vec::with_capacity(data.rows());

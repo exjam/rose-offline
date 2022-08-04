@@ -10,10 +10,16 @@ mod game;
 mod irose;
 mod protocol;
 
-use std::{path::Path, time::Instant};
+use std::{
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
 use clap::{Arg, Command};
 use log::debug;
+use rose_file_readers::{
+    HostFilesystemDevice, VfsIndex, VirtualFilesystem, VirtualFilesystemDevice,
+};
 use simplelog::*;
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
@@ -106,20 +112,10 @@ async fn async_main() {
     let login_port = matches.value_of("login-port").unwrap();
     let world_port = matches.value_of("world-port").unwrap();
     let game_port = matches.value_of("game-port").unwrap();
-    let mut data_idx_path = matches.value_of("data-idx").map(Path::new);
-    let data_extracted_path = matches.value_of("data-path").map(Path::new);
     let protocol_type = match matches.value_of("protocol") {
         Some("irose") => ProtocolType::Irose,
         _ => ProtocolType::default(),
     };
-
-    if data_idx_path.is_none() && data_extracted_path.is_none() {
-        if Path::new("data.idx").exists() {
-            data_idx_path = Some(Path::new("data.idx"));
-        } else {
-            data_path_error.exit();
-        }
-    }
 
     let (login_protocol, world_protocol, game_protocol) = match protocol_type {
         ProtocolType::Irose => (
@@ -129,8 +125,51 @@ async fn async_main() {
         ),
     };
 
+    let mut data_idx_path = matches.value_of("data-idx").map(Path::new);
+    let data_extracted_path = matches.value_of("data-path").map(Path::new);
+    if data_idx_path.is_none() && data_extracted_path.is_none() {
+        if Path::new("data.idx").exists() {
+            data_idx_path = Some(Path::new("data.idx"));
+        } else {
+            data_path_error.exit();
+        }
+    }
+
+    let mut vfs_devices: Vec<Box<dyn VirtualFilesystemDevice + Send + Sync>> = Vec::new();
+    if let Some(data_extracted_path) = data_extracted_path {
+        log::info!(
+            "Loading game data from path {}",
+            data_extracted_path.to_string_lossy()
+        );
+        vfs_devices.push(Box::new(HostFilesystemDevice::new(
+            data_extracted_path.to_path_buf(),
+        )));
+    }
+
+    if let Some(data_idx_path) = data_idx_path {
+        log::info!(
+            "Loading game data from vfs {}",
+            data_idx_path.to_string_lossy()
+        );
+        vfs_devices.push(Box::new(VfsIndex::load(data_idx_path).unwrap_or_else(
+            |_| panic!("Failed to load {}", data_idx_path.to_string_lossy()),
+        )));
+
+        let index_root_path = data_idx_path
+            .parent()
+            .map(|path| path.into())
+            .unwrap_or_else(PathBuf::new);
+        log::info!(
+            "Loading game data from vfs root path {}",
+            index_root_path.to_string_lossy()
+        );
+        vfs_devices.push(Box::new(HostFilesystemDevice::new(index_root_path)));
+    }
+
+    let virtual_filesystem = VirtualFilesystem::new(vfs_devices);
+
     let started_load = Instant::now();
-    let game_data = irose::get_game_data(data_idx_path, data_extracted_path);
+    let game_data = irose::get_game_data(&virtual_filesystem);
     debug!("Time take to read game data {:?}", started_load.elapsed());
 
     let game_config = GameConfig {

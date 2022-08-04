@@ -5,7 +5,7 @@ use rose_data::{
     EffectFileId, EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
     NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId,
 };
-use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VfsIndex, ZmoFile};
+use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VirtualFilesystem, ZmoFile};
 
 use crate::data_decoder::decode_item_base1000;
 
@@ -97,7 +97,7 @@ impl StbEvent {
 }
 
 fn load_motion_file_data(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     path: &str,
     options: &NpcDatabaseOptions,
 ) -> Option<MotionFileData> {
@@ -121,7 +121,7 @@ fn load_motion_file_data(
 }
 
 pub fn get_npc_database(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     options: &NpcDatabaseOptions,
 ) -> Result<NpcDatabase, anyhow::Error> {
     let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")?;

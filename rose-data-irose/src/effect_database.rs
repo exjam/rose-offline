@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use rose_data::{EffectData, EffectDatabase, EffectFileId, EffectId, SoundId};
-use rose_file_readers::{stb_column, StbFile, VfsIndex, VfsPathBuf};
+use rose_file_readers::{stb_column, StbFile, VfsPathBuf, VirtualFilesystem};
 
 use crate::data_decoder::IroseEffectBulletMoveType;
 
@@ -52,7 +52,7 @@ fn load_effect(data: &StbEffect, id: usize) -> Option<EffectData> {
     })
 }
 
-pub fn get_effect_database(vfs: &VfsIndex) -> Result<Arc<EffectDatabase>, anyhow::Error> {
+pub fn get_effect_database(vfs: &VirtualFilesystem) -> Result<Arc<EffectDatabase>, anyhow::Error> {
     let stb_effect_files = vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_EFFECT.STB")?;
 
     let mut effect_files = Vec::new();

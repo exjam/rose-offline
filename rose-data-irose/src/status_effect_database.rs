@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use rose_data::{
     EffectFileId, StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
 };
-use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, StlFile, VirtualFilesystem};
 
 use crate::data_decoder::{IroseStatusEffectClearedByType, IroseStatusEffectType};
 
@@ -66,7 +66,9 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
     })
 }
 
-pub fn get_status_effect_database(vfs: &VfsIndex) -> Result<StatusEffectDatabase, anyhow::Error> {
+pub fn get_status_effect_database(
+    vfs: &VirtualFilesystem,
+) -> Result<StatusEffectDatabase, anyhow::Error> {
     let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_STATUS_S.STL")?;
     let data = StbStatus(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STATUS.STB")?);
     let mut status_effects = HashMap::new();

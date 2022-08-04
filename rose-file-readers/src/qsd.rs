@@ -718,12 +718,13 @@ impl QsdFile {
                             reader.skip(size_bytes - 8);
                         }
                     }
-                    assert_eq!(
-                        reader.position(),
-                        start_position + size_bytes,
-                        "Unexpected number of bytes read for opcode {:X}",
-                        opcode
-                    );
+
+                    if reader.position() != start_position + size_bytes {
+                        return Err(anyhow!(
+                            "Unexpected number of bytes read for condition opcode {:X}",
+                            opcode
+                        ));
+                    }
                 }
                 let conditions = conditions;
 
@@ -1125,12 +1126,13 @@ impl QsdFile {
                             reader.skip(size_bytes - 8);
                         }
                     }
-                    assert_eq!(
-                        reader.position(),
-                        start_position + size_bytes,
-                        "Unexpected number of bytes read for opcode {:X}",
-                        opcode
-                    );
+
+                    if reader.position() != start_position + size_bytes {
+                        return Err(anyhow!(
+                            "Unexpected number of bytes read for action opcode {:X}",
+                            opcode
+                        ));
+                    }
                 }
                 let rewards = rewards;
 

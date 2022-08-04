@@ -129,6 +129,14 @@ impl<'a> RoseFileReader<'a> {
         }
     }
 
+    pub fn read_u64(&mut self) -> Result<u64, ReadError> {
+        if self.cursor.remaining() < 4 {
+            Err(ReadError::UnexpectedEof)
+        } else {
+            Ok(self.cursor.get_u64_le())
+        }
+    }
+
     pub fn read_i8(&mut self) -> Result<i8, ReadError> {
         if self.cursor.remaining() < 1 {
             Err(ReadError::UnexpectedEof)

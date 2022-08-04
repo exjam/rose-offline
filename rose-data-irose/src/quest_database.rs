@@ -2,7 +2,7 @@ use log::{debug, warn};
 use std::collections::HashMap;
 
 use rose_data::{QuestData, QuestDatabase, WorldTicks};
-use rose_file_readers::{stb_column, QsdFile, StbFile, StbReadOptions, VfsIndex};
+use rose_file_readers::{stb_column, QsdFile, StbFile, StbReadOptions, VirtualFilesystem};
 
 struct StbQuest(StbFile);
 
@@ -10,7 +10,7 @@ impl StbQuest {
     stb_column! { 1, get_time_limit, WorldTicks }
 }
 
-pub fn get_quest_database(vfs: &VfsIndex) -> Result<QuestDatabase, anyhow::Error> {
+pub fn get_quest_database(vfs: &VirtualFilesystem) -> Result<QuestDatabase, anyhow::Error> {
     let quest_s_stb = vfs.read_file_with::<StbFile, _>(
         "3DDATA/QUESTDATA/QUEST_S.STB",
         &StbReadOptions {

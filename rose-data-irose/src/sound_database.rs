@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use rose_data::{EffectFileId, SoundData, SoundDatabase, SoundId};
-use rose_file_readers::{stb_column, StbFile, VfsIndex, VfsPathBuf};
+use rose_file_readers::{stb_column, StbFile, VfsPathBuf, VirtualFilesystem};
 
 pub struct StbSound(pub StbFile);
 
@@ -25,7 +25,7 @@ fn load_sound(data: &StbSound, id: usize) -> Option<SoundData> {
     })
 }
 
-pub fn get_sound_database(vfs: &VfsIndex) -> Result<Arc<SoundDatabase>, anyhow::Error> {
+pub fn get_sound_database(vfs: &VirtualFilesystem) -> Result<Arc<SoundDatabase>, anyhow::Error> {
     let stb_sounds = StbSound(vfs.read_file::<StbFile, _>("3DDATA/STB/FILE_SOUND.STB")?);
     let mut sounds = Vec::new();
     for row in 0..stb_sounds.rows() {

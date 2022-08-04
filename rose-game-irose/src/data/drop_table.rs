@@ -1,5 +1,5 @@
 use rand::Rng;
-use rose_file_readers::{StbFile, VfsIndex};
+use rose_file_readers::{StbFile, VirtualFilesystem};
 use std::sync::Arc;
 
 use rose_data::{EquipmentItem, ItemDatabase, ItemType, NpcDatabase, NpcId, StackableItem, ZoneId};
@@ -185,7 +185,7 @@ impl DropTable for DropTableData {
 }
 
 pub fn get_drop_table(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     item_database: Arc<ItemDatabase>,
     npc_database: Arc<NpcDatabase>,
 ) -> Option<Box<impl DropTable + Send + Sync>> {

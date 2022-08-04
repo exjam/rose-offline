@@ -1,10 +1,10 @@
 use log::{debug, warn};
-use rose_file_readers::{AipFile, StbFile, StbReadOptions, VfsIndex};
+use rose_file_readers::{AipFile, StbFile, StbReadOptions, VirtualFilesystem};
 use std::collections::HashMap;
 
 use rose_data::AiDatabase;
 
-pub fn get_ai_database(vfs: &VfsIndex) -> Result<AiDatabase, anyhow::Error> {
+pub fn get_ai_database(vfs: &VirtualFilesystem) -> Result<AiDatabase, anyhow::Error> {
     let ai_s_stb = vfs.read_file_with::<StbFile, _>(
         "3DDATA/AI/AI_S.STB",
         &StbReadOptions {

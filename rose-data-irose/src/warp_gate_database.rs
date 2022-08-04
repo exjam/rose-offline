@@ -2,7 +2,7 @@ use log::debug;
 use std::collections::HashMap;
 
 use rose_data::{WarpGateData, WarpGateDatabase, WarpGateId, ZoneId};
-use rose_file_readers::{stb_column, StbFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 pub struct StbWarp(pub StbFile);
 
@@ -24,7 +24,7 @@ fn load_warp_gate(data: &StbWarp, id: usize) -> Option<WarpGateData> {
     })
 }
 
-pub fn get_warp_gate_database(vfs: &VfsIndex) -> Result<WarpGateDatabase, anyhow::Error> {
+pub fn get_warp_gate_database(vfs: &VirtualFilesystem) -> Result<WarpGateDatabase, anyhow::Error> {
     let data = StbWarp(vfs.read_file::<StbFile, _>("3DDATA/STB/WARP.STB")?);
     let mut warp_gates = HashMap::new();
     for id in 1..data.rows() {

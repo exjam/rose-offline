@@ -8,7 +8,7 @@ use rose_data::{
     StackableItem, ZoneDatabase, ZoneId,
 };
 use rose_data_irose::decode_item_base1000;
-use rose_file_readers::{stb_column, StbFile, VfsIndex};
+use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 use crate::game::{
     components::{
@@ -214,7 +214,7 @@ fn load_gender(data: &StbInitAvatar, id: usize) -> Option<CharacterGenderData> {
 }
 
 pub fn get_character_creator(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     item_database: Arc<ItemDatabase>,
     skill_database: Arc<SkillDatabase>,
     zone_database: &ZoneDatabase,

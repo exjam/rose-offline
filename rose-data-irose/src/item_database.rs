@@ -1,5 +1,4 @@
 use arrayvec::ArrayVec;
-use rose_file_readers::{stb_column, StbFile, StlFile, VfsIndex};
 use std::time::Duration;
 
 use rose_data::{
@@ -9,6 +8,7 @@ use rose_data::{
     QuestItemData, SkillId, SoundId, StatusEffectId, SubWeaponItemData, VehicleItemData,
     VehicleItemPart, WeaponItemData,
 };
+use rose_file_readers::{stb_column, StbFile, StlFile, VirtualFilesystem};
 
 use crate::data_decoder::{decode_ability_type, IroseItemClass};
 
@@ -396,7 +396,7 @@ macro_rules! load_items {
     }};
 }
 
-pub fn get_item_database(vfs: &VfsIndex) -> Result<ItemDatabase, anyhow::Error> {
+pub fn get_item_database(vfs: &VirtualFilesystem) -> Result<ItemDatabase, anyhow::Error> {
     let face = load_items! { vfs, "3DDATA/STB/LIST_FACEITEM.STB", "3DDATA/STB/LIST_FACEITEM_S.STL", load_base_item, ItemType::Face, FaceItemData };
     let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA/STB/LIST_CAP_S.STL", load_head_item, HeadItemData };
     let body = load_items! { vfs, "3DDATA/STB/LIST_BODY.STB", "3DDATA/STB/LIST_BODY_S.STL", load_base_item, ItemType::Body, BodyItemData };

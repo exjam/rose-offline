@@ -7,7 +7,8 @@ use rose_data::{
 };
 use rose_file_readers::{
     stb_column, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
-    IfoReadOptions, StbFile, StlFile, VfsIndex, VfsPath, VfsPathBuf, ZonFile, ZonReadOptions,
+    IfoReadOptions, StbFile, StlFile, VfsPath, VfsPathBuf, VirtualFilesystem, ZonFile,
+    ZonReadOptions,
 };
 
 const MIN_SECTOR_SIZE: u32 = 5000;
@@ -128,7 +129,7 @@ fn create_event_object(
 }
 
 fn load_zone(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     data: &StbZone,
     stl: &StlFile,
     id: usize,
@@ -314,7 +315,7 @@ fn load_zone(
     })
 }
 
-pub fn get_zone_database(vfs: &VfsIndex) -> Result<ZoneDatabase, anyhow::Error> {
+pub fn get_zone_database(vfs: &VirtualFilesystem) -> Result<ZoneDatabase, anyhow::Error> {
     let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")?;
     let data = StbZone(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")?);
     let mut zones = Vec::with_capacity(data.rows());
@@ -367,7 +368,7 @@ fn load_zone_list_entry(
     })
 }
 
-pub fn get_zone_list(vfs: &VfsIndex) -> Result<ZoneList, anyhow::Error> {
+pub fn get_zone_list(vfs: &VirtualFilesystem) -> Result<ZoneList, anyhow::Error> {
     let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")?;
     let data = StbZone(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")?);
     let mut zones = Vec::with_capacity(data.rows());

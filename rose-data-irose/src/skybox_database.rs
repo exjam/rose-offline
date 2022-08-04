@@ -3,7 +3,7 @@ use std::sync::Arc;
 use bevy::math::Vec4;
 use enum_map::EnumMap;
 use rose_data::{SkyboxData, SkyboxDatabase, SkyboxId, SkyboxState};
-use rose_file_readers::{stb_column, StbFile, VfsIndex, VfsPathBuf};
+use rose_file_readers::{stb_column, StbFile, VfsPathBuf, VirtualFilesystem};
 
 struct StbSkybox(pub StbFile);
 
@@ -52,7 +52,7 @@ fn load_skybox(data: &StbSkybox, id: usize) -> Option<SkyboxData> {
     })
 }
 
-pub fn get_skybox_database(vfs: &VfsIndex) -> Result<Arc<SkyboxDatabase>, anyhow::Error> {
+pub fn get_skybox_database(vfs: &VirtualFilesystem) -> Result<Arc<SkyboxDatabase>, anyhow::Error> {
     let stb_sky = StbSkybox(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKY.STB")?);
     let mut skyboxs = Vec::new();
     for row in 0..stb_sky.rows() {

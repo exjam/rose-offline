@@ -5,8 +5,7 @@ use anyhow::{anyhow, bail};
 use crate::{
     reader::RoseFileReader,
     types::{Vec3, Vec4},
-    vfs::VfsPathBuf,
-    RoseFile,
+    RoseFile, VfsPathBuf,
 };
 
 #[derive(Copy, Clone, Debug)]

@@ -1,9 +1,10 @@
 use enum_map::{enum_map, EnumMap};
+
 use rose_data::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions, MotionFileData,
     MotionId,
 };
-use rose_file_readers::{StbFile, VfsIndex, ZmoFile};
+use rose_file_readers::{StbFile, VirtualFilesystem, ZmoFile};
 
 fn get_action_map() -> EnumMap<CharacterMotionAction, MotionId> {
     enum_map! {
@@ -29,7 +30,7 @@ fn get_action_map() -> EnumMap<CharacterMotionAction, MotionId> {
 }
 
 fn load_motion_file_data(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     path: &str,
     options: &CharacterMotionDatabaseOptions,
 ) -> Option<MotionFileData> {
@@ -53,7 +54,7 @@ fn load_motion_file_data(
 }
 
 pub fn get_character_motion_database(
-    vfs: &VfsIndex,
+    vfs: &VirtualFilesystem,
     options: &CharacterMotionDatabaseOptions,
 ) -> Result<CharacterMotionDatabase, anyhow::Error> {
     // Read motion file list

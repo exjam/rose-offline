@@ -1,4 +1,5 @@
 mod reader;
+mod virtual_filesystem;
 pub use reader::RoseFileReader;
 
 pub trait RoseFile {
@@ -24,6 +25,7 @@ mod ptl;
 mod qsd;
 mod stl;
 mod til;
+mod titanvfs;
 mod tsi;
 mod vfs;
 mod zmd;
@@ -52,8 +54,13 @@ pub use qsd::*;
 pub use stb::{StbFile, StbReadOptions};
 pub use stl::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry, StlReadOptions};
 pub use til::TilFile;
+pub use titanvfs::TitanVfsIndex;
 pub use tsi::{TsiFile, TsiSprite, TsiTexture, TsiTextureId};
-pub use vfs::{VfsFile, VfsIndex, VfsPath, VfsPathBuf};
+pub use vfs::VfsIndex;
+pub use virtual_filesystem::{
+    HostFilesystemDevice, VfsError, VfsFile, VfsPath, VfsPathBuf, VirtualFilesystem,
+    VirtualFilesystemDevice,
+};
 pub use zmd::ZmdFile;
 pub use zmo::{ZmoChannel, ZmoFile, ZmoReadOptions};
 pub use zms::{ZmsFile, ZmsReadError};
