@@ -7,10 +7,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+aes = "0.8.1"
 anyhow = "1.0"
 bitflags = "1.2"
 bytes = "1.1"
+ctr = "0.9.1"
 encoding_rs = "0.8"
+flate2 = "1.0"
 log = "0.4"
 memmap = "0.7"
 num-derive = "0.3"

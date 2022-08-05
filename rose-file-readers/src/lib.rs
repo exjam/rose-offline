@@ -1,3 +1,4 @@
+mod aruavfs;
 mod reader;
 mod virtual_filesystem;
 pub use reader::RoseFileReader;
@@ -38,6 +39,7 @@ mod zsc;
 mod stb;
 
 pub use aip::*;
+pub use aruavfs::AruaVfsIndex;
 pub use chr::ChrFile;
 pub use con_::{ConFile, ConMenu, ConMessage, ConMessageType};
 pub use eft::{EftFile, EftMesh, EftParticle};
