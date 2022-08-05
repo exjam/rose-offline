@@ -210,7 +210,7 @@ impl RoseFile for PtlFile {
                 };
 
                 keyframes.push(PtlKeyframe {
-                    start_time: start_time_min..=start_time_max,
+                    start_time: start_time_min..=start_time_max.max(start_time_min),
                     fade,
                     data,
                 })
@@ -218,15 +218,15 @@ impl RoseFile for PtlFile {
 
             sequences.push(PtlSequence {
                 name,
-                life: life_min..=life_max,
-                emit_rate: emit_rate_min..=emit_rate_max,
+                life: life_min..=life_max.max(life_min),
+                emit_rate: emit_rate_min..=emit_rate_max.max(emit_rate_min),
                 num_loops,
-                emit_radius_x: emit_radius_min.x..=emit_radius_max.x,
-                emit_radius_y: emit_radius_min.y..=emit_radius_max.y,
-                emit_radius_z: emit_radius_min.z..=emit_radius_max.z,
-                gravity_x: gravity_min.x..=gravity_max.x,
-                gravity_y: gravity_min.y..=gravity_max.y,
-                gravity_z: gravity_min.z..=gravity_max.z,
+                emit_radius_x: emit_radius_min.x..=emit_radius_max.x.max(emit_radius_min.x),
+                emit_radius_y: emit_radius_min.y..=emit_radius_max.y.max(emit_radius_min.y),
+                emit_radius_z: emit_radius_min.z..=emit_radius_max.z.max(emit_radius_min.z),
+                gravity_x: gravity_min.x..=gravity_max.x.max(gravity_min.x),
+                gravity_y: gravity_min.y..=gravity_max.y.max(gravity_min.y),
+                gravity_z: gravity_min.z..=gravity_max.z.max(gravity_min.z),
                 texture_path,
                 num_particles,
                 align_type,
