@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{reader::RoseFileReader, VfsFile, VfsPath, VirtualFilesystemDevice};
+use crate::{reader::RoseFileReader, VfsError, VfsFile, VfsPath, VirtualFilesystemDevice};
 
 struct FileEntry {
     offset: usize,
@@ -97,16 +97,16 @@ impl VfsIndex {
 }
 
 impl VirtualFilesystemDevice for VfsIndex {
-    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Option<VfsFile> {
+    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Result<VfsFile, anyhow::Error> {
         for vfs in &self.storages {
             if let Some(entry) = vfs.files.get(vfs_path.path()) {
-                return Some(VfsFile::View(
+                return Ok(VfsFile::View(
                     &vfs.mmap[entry.offset..entry.offset + entry.size],
                 ));
             }
         }
 
-        None
+        Err(VfsError::FileNotFound(vfs_path.path().into()).into())
     }
 
     fn exists(&self, vfs_path: &VfsPath) -> bool {

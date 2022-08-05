@@ -110,7 +110,7 @@ impl<'a> From<&'a VfsPathBuf> for VfsPath<'a> {
 }
 
 pub trait VirtualFilesystemDevice {
-    fn open_file<'a>(&self, path: &'a VfsPath) -> Option<VfsFile>;
+    fn open_file<'a>(&self, path: &'a VfsPath) -> Result<VfsFile, anyhow::Error>;
     fn exists(&self, path: &VfsPath) -> bool;
 }
 
@@ -125,12 +125,10 @@ impl HostFilesystemDevice {
 }
 
 impl VirtualFilesystemDevice for HostFilesystemDevice {
-    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Option<VfsFile> {
-        if let Ok(buffer) = std::fs::read(self.root_path.join(vfs_path.path())) {
-            return Some(VfsFile::Buffer(buffer));
-        }
-
-        None
+    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Result<VfsFile, anyhow::Error> {
+        let buffer = std::fs::read(self.root_path.join(vfs_path.path()))
+            .map_err(|_| VfsError::FileNotFound(vfs_path.path().into()))?;
+        Ok(VfsFile::Buffer(buffer))
     }
 
     fn exists(&self, vfs_path: &VfsPath) -> bool {
@@ -159,15 +157,22 @@ impl VirtualFilesystem {
         false
     }
 
-    pub fn open_file<'a>(&self, path: impl Into<VfsPath<'a>>) -> Option<VfsFile> {
+    pub fn open_file<'a>(&self, path: impl Into<VfsPath<'a>>) -> Result<VfsFile, anyhow::Error> {
         let vfs_path: VfsPath = path.into();
 
         for device in &self.devices {
-            if let Some(file) = device.open_file(&vfs_path) {
-                return Some(file);
+            match device.open_file(&vfs_path) {
+                Ok(file) => return Ok(file),
+                Err(error) => {
+                    match error.downcast_ref::<VfsError>() {
+                        Some(VfsError::FileNotFound(_)) => continue,
+                        None => return Err(error),
+                    };
+                }
             }
         }
-        None
+
+        Err(VfsError::FileNotFound(vfs_path.path().into()).into())
     }
 
     pub fn read_file<'a, T: RoseFile + Sized, P: Into<VfsPath<'a>>>(
@@ -176,12 +181,9 @@ impl VirtualFilesystem {
     ) -> Result<T, anyhow::Error> {
         let vfs_path: VfsPath = path.into();
 
-        if let Some(file) = self.open_file(&vfs_path) {
-            RoseFile::read(RoseFileReader::from(&file), &Default::default())
-                .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
-        } else {
-            Err(VfsError::FileNotFound(vfs_path.path().into()).into())
-        }
+        let file = self.open_file(&vfs_path)?;
+        RoseFile::read(RoseFileReader::from(&file), &Default::default())
+            .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
     }
 
     pub fn read_file_with<'a, T: RoseFile + Sized, P: Into<VfsPath<'a>>>(
@@ -191,11 +193,8 @@ impl VirtualFilesystem {
     ) -> Result<T, anyhow::Error> {
         let vfs_path: VfsPath = path.into();
 
-        if let Some(file) = self.open_file(&vfs_path) {
-            RoseFile::read(RoseFileReader::from(&file), options)
-                .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
-        } else {
-            Err(VfsError::FileNotFound(vfs_path.path().into()).into())
-        }
+        let file = self.open_file(&vfs_path)?;
+        RoseFile::read(RoseFileReader::from(&file), options)
+            .with_context(|| format!("Failed to read {}", vfs_path.path().to_string_lossy()))
     }
 }

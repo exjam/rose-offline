@@ -6,7 +6,7 @@ use std::path::Path;
 
 use memmap::{Mmap, MmapOptions};
 
-use crate::{reader::RoseFileReader, VfsFile, VfsPath, VirtualFilesystemDevice};
+use crate::{reader::RoseFileReader, VfsError, VfsFile, VfsPath, VirtualFilesystemDevice};
 
 #[derive(Debug)]
 pub struct TitanVfsIndex {
@@ -158,16 +158,19 @@ impl TitanVfsIndex {
 }
 
 impl VirtualFilesystemDevice for TitanVfsIndex {
-    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Option<VfsFile> {
-        let path_str = vfs_path.path().to_str()?;
-        let &(offset, size) = self.files.get(&FileNameHash::from(path_str).hash)?;
+    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Result<VfsFile, anyhow::Error> {
+        let path_str = vfs_path.path().to_str().unwrap();
+        let &(offset, size) = self
+            .files
+            .get(&FileNameHash::from(path_str).hash)
+            .ok_or_else(|| VfsError::FileNotFound(vfs_path.path().into()))?;
 
-        Some(VfsFile::View(
+        Ok(VfsFile::View(
             &self.mmap[offset as usize..offset as usize + size as usize],
         ))
     }
 
     fn exists(&self, vfs_path: &VfsPath) -> bool {
-        self.open_file(vfs_path).is_some()
+        self.open_file(vfs_path).is_ok()
     }
 }
