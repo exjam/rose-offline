@@ -3,7 +3,7 @@
 mod packet_codec;
 pub use packet_codec::{ClientPacketCodec, ServerPacketCodec, IROSE_112_TABLE};
 
-mod common_packets;
+pub mod common_packets;
 pub mod game_client_packets;
 pub mod game_server_packets;
 pub mod login_client_packets;
