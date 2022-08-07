@@ -1244,6 +1244,18 @@ impl GameServer {
                     }))
                     .await?;
             }
+            ServerMessage::PartyMemberRewardItem {
+                client_entity_id,
+                item,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPartyMemberRewardItem {
+                        entity_id: client_entity_id,
+                        item,
+                    }))
+                    .await?;
+            }
             ServerMessage::ChangeNpcId(client_entity_id, npc_id) => {
                 client
                     .connection

@@ -107,6 +107,7 @@ pub enum ServerPackets {
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
     PartyMembers = 0x7d2,
+    PartyMemberRewardItem = 0x7d3,
     PartyMemberUpdateInfo = 0x7d5,
     PartyUpdateRules = 0x7d7,
 }
@@ -3477,6 +3478,35 @@ impl From<&PacketServerPartyMemberUpdateInfo> for Packet {
     fn from(packet: &PacketServerPartyMemberUpdateInfo) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PartyMemberUpdateInfo as u16);
         writer.write_party_member_info_online(&packet.member_info);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPartyMemberRewardItem {
+    pub entity_id: ClientEntityId,
+    pub item: Item,
+}
+
+impl TryFrom<&Packet> for PacketServerPartyMemberRewardItem {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PartyMemberRewardItem as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let item = reader.read_item_full()?.ok_or(PacketError::InvalidPacket)?;
+        Ok(Self { entity_id, item })
+    }
+}
+
+impl From<&PacketServerPartyMemberRewardItem> for Packet {
+    fn from(packet: &PacketServerPartyMemberRewardItem) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::PartyMemberRewardItem as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.write_item_full(Some(&packet.item));
         writer.into()
     }
 }

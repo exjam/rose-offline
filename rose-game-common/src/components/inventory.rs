@@ -87,6 +87,12 @@ impl InventoryPageType {
     }
 }
 
+impl From<ItemType> for InventoryPageType {
+    fn from(val: ItemType) -> Self {
+        InventoryPageType::from_item_type(val)
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct InventoryPage {
     pub page_type: InventoryPageType,

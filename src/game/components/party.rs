@@ -1,6 +1,11 @@
 use arrayvec::ArrayVec;
 use bevy::ecs::prelude::{Component, Entity};
-use rose_game_common::messages::{PartyItemSharing, PartyXpSharing};
+use enum_map::{enum_map, EnumMap};
+
+use rose_game_common::{
+    components::InventoryPageType,
+    messages::{PartyItemSharing, PartyXpSharing},
+};
 
 use crate::game::components::CharacterUniqueId;
 
@@ -27,6 +32,8 @@ pub struct Party {
     pub xp_sharing: PartyXpSharing,
     pub average_member_level: i32,
     pub level: i32,
+    pub acquire_item_order: EnumMap<InventoryPageType, usize>,
+    pub acquire_money_order: usize,
 }
 
 impl Party {
@@ -44,6 +51,10 @@ impl Party {
             xp_sharing: PartyXpSharing::EqualShare,
             average_member_level: 1,
             level: 1,
+            acquire_item_order: enum_map! {
+                _ => 0,
+            },
+            acquire_money_order: 0,
         }
     }
 }

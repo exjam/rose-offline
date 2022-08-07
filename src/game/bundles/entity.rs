@@ -11,7 +11,7 @@ use crate::game::{
         ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
         EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
         ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
-        NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime, PartyMembership,
+        NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime, PartyMembership, PartyOwner,
         PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina,
         StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
     },
@@ -212,6 +212,7 @@ impl ItemDropBundle {
         item: DroppedItem,
         position: &Position,
         owner_entity: Option<Entity>,
+        party_owner_entity: Option<Entity>,
         server_time: &ServerTime,
     ) -> Option<Entity> {
         let mut rng = rand::thread_rng();
@@ -241,6 +242,10 @@ impl ItemDropBundle {
                 .insert(OwnerExpireTime::new(
                     server_time.now + ITEM_DROP_OWNER_EXPIRE_TIME,
                 ));
+        }
+
+        if let Some(party_owner_entity) = party_owner_entity {
+            entity_commands.insert(PartyOwner::new(party_owner_entity));
         }
 
         client_entity_join_zone(

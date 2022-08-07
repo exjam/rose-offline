@@ -1372,6 +1372,7 @@ fn ai_action_drop_random_item(
             DroppedItem::Item(item),
             ai_parameters.source.position,
             None,
+            None,
             &ai_system_resources.server_time,
         );
     }
@@ -1907,6 +1908,9 @@ pub fn npc_ai_system(
                                             drop_item,
                                             source.position,
                                             Some(killer_entity),
+                                            killer.party_membership.and_then(|party_membership| {
+                                                party_membership.get_party_entity()
+                                            }),
                                             &ai_system_resources.server_time,
                                         );
                                     }

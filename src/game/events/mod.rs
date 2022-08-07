@@ -3,6 +3,7 @@ mod damage_event;
 mod npc_store_event;
 mod party_event;
 mod personal_store_event;
+mod pickup_item_event;
 mod quest_trigger_event;
 mod reward_item_event;
 mod reward_xp_event;
@@ -20,6 +21,7 @@ pub use party_event::{
 pub use personal_store_event::{
     PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems,
 };
+pub use pickup_item_event::PickupItemEvent;
 pub use quest_trigger_event::QuestTriggerEvent;
 pub use reward_item_event::RewardItemEvent;
 pub use reward_xp_event::RewardXpEvent;

@@ -4,7 +4,7 @@ use crate::game::{
     bundles::client_entity_leave_zone,
     components::{
         ClientEntity, ClientEntitySector, Command, EntityExpireTime, Owner, OwnerExpireTime,
-        Position,
+        PartyOwner, Position,
     },
     resources::{ClientEntityList, ServerTime},
 };
@@ -51,7 +51,10 @@ pub fn expire_time_system(
 
     owner_expire_time_query.for_each(|(entity, owner_expire_time)| {
         if server_time.now >= owner_expire_time.when {
-            commands.entity(entity).remove::<Owner>();
+            commands
+                .entity(entity)
+                .remove::<Owner>()
+                .remove::<PartyOwner>();
         }
     });
 }

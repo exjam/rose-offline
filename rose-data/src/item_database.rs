@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -19,7 +20,7 @@ impl ItemReference {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Enum, Deserialize, Serialize, PartialEq)]
 pub enum ItemType {
     Face,
     Head,

@@ -727,6 +727,10 @@ pub enum ServerMessage {
     PartyMemberDisconnect(CharacterUniqueId),
     PartyMemberKicked(CharacterUniqueId),
     PartyMemberUpdateInfo(PartyMemberInfoOnline),
+    PartyMemberRewardItem {
+        client_entity_id: ClientEntityId,
+        item: Item,
+    },
     ChangeNpcId(ClientEntityId, NpcId),
     SetHotbarSlot(usize, Option<HotbarSlot>),
     AdjustPosition(ClientEntityId, Vec3),

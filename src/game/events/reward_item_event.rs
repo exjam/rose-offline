@@ -6,6 +6,7 @@ pub struct RewardItemEvent {
     pub entity: Entity,
     pub item: Item,
     pub drop_on_full_inventory: bool,
+    pub from_item_drop: bool,
 }
 
 impl RewardItemEvent {
@@ -14,6 +15,7 @@ impl RewardItemEvent {
             entity,
             item,
             drop_on_full_inventory,
+            from_item_drop: false,
         }
     }
 }

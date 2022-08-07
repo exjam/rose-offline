@@ -36,6 +36,7 @@ pub fn reward_item_system(
                             DroppedItem::Item(item),
                             position,
                             Some(event.entity),
+                            None,
                             &server_time,
                         );
                     }
