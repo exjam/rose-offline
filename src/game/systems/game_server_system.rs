@@ -6,6 +6,7 @@ use rose_data::{
     EquipmentIndex, Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour,
     VehicleItemPart, VehiclePartIndex,
 };
+use rose_game_common::data::Password;
 use rose_game_common::messages::server::{
     CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
 };
@@ -52,7 +53,7 @@ fn handle_game_connection_request(
     entity: Entity,
     game_client: &mut GameClient,
     token_id: u32,
-    password_md5: &str,
+    password: &Password,
 ) -> Result<
     (
         ConnectionResponse,
@@ -71,7 +72,7 @@ fn handle_game_connection_request(
     }
 
     // Verify account password
-    let _ = AccountStorage::try_load(&login_token.username, password_md5).map_err(|error| {
+    let _ = AccountStorage::try_load(&login_token.username, password).map_err(|error| {
         log::error!(
             "Failed to load account {} with error {:?}",
             &login_token.username,
@@ -218,7 +219,7 @@ pub fn game_server_authentication_system(
                         entity,
                         game_client.as_mut(),
                         message.login_token,
-                        &message.password_md5,
+                        &message.password,
                     ) {
                         Ok((
                             connection_response,

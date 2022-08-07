@@ -39,13 +39,13 @@ pub fn login_server_authentication_system(
                     {
                         Err(LoginError::AlreadyLoggedIn)
                     } else {
-                        match AccountStorage::try_load(&message.username, &message.password_md5) {
+                        match AccountStorage::try_load(&message.username, &message.password) {
                             Ok(account) => Ok(account),
                             Err(error) => match error.downcast_ref::<AccountStorageError>() {
                                 Some(AccountStorageError::NotFound) => {
                                     match AccountStorage::create(
                                         &message.username,
-                                        &message.password_md5,
+                                        &message.password,
                                     ) {
                                         Ok(account) => {
                                             log::info!("Created account {}", &message.username);

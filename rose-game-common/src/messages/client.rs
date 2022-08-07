@@ -5,22 +5,32 @@ use crate::{
     components::{
         BasicStatType, CharacterGender, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot,
     },
+    data::Password,
     messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
 };
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, MotionId, QuestTriggerHash, VehiclePartIndex, WarpGateId,
 };
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ConnectionRequest {
     pub login_token: u32,
-    pub password_md5: String,
+    pub password: Password,
+}
+
+impl Default for ConnectionRequest {
+    fn default() -> Self {
+        Self {
+            login_token: 0,
+            password: Password::Plaintext(String::new()),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LoginRequest {
     pub username: String,
-    pub password_md5: String,
+    pub password: Password,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -66,7 +76,7 @@ pub struct SelectCharacter {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GameConnectionRequest {
     pub login_token: u32,
-    pub password_md5: String,
+    pub password: Password,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -1,9 +1,10 @@
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::io::Write;
-use std::path::PathBuf;
+use std::{io::Write, path::PathBuf};
 use thiserror::Error;
+
+use rose_game_common::data::Password;
 
 use crate::game::storage::ACCOUNT_STORAGE_DIR;
 
@@ -27,24 +28,24 @@ fn get_account_path(name: &str) -> PathBuf {
     ACCOUNT_STORAGE_DIR.join(format!("{}.json", name))
 }
 
-fn hash_md5_password(password_md5: &str) -> String {
+fn hash_password(password: &Password) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(password_md5);
+    hasher.update(password.to_md5());
     hex::encode(hasher.finalize())
 }
 
 impl AccountStorage {
-    pub fn create(name: &str, password_md5: &str) -> Result<Self, anyhow::Error> {
+    pub fn create(name: &str, password: &Password) -> Result<Self, anyhow::Error> {
         let account = Self {
             name: String::from(name),
-            password_md5_sha256: hash_md5_password(password_md5),
+            password_md5_sha256: hash_password(password),
             character_names: Vec::new(),
         };
         account.save_impl(false)?;
         Ok(account)
     }
 
-    pub fn try_load(name: &str, password_md5: &str) -> Result<Self, anyhow::Error> {
+    pub fn try_load(name: &str, password: &Password) -> Result<Self, anyhow::Error> {
         let path = get_account_path(name);
         if path.exists() {
             let str = std::fs::read_to_string(&path)
@@ -55,15 +56,15 @@ impl AccountStorage {
                     path.to_string_lossy()
                 )
             })?;
-            account.check_password(password_md5)?;
+            account.check_password(password)?;
             Ok(account)
         } else {
             Err(AccountStorageError::NotFound.into())
         }
     }
 
-    pub fn check_password(&self, password_md5: &str) -> Result<(), anyhow::Error> {
-        if self.password_md5_sha256 == hash_md5_password(password_md5) {
+    pub fn check_password(&self, password: &Password) -> Result<(), anyhow::Error> {
+        if self.password_md5_sha256 == hash_password(password) {
             Ok(())
         } else {
             Err(AccountStorageError::InvalidPassword.into())

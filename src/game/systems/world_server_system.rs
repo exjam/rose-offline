@@ -1,6 +1,8 @@
 use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
 use log::warn;
 
+use rose_game_common::data::Password;
+
 use crate::game::{
     components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
     messages::{
@@ -24,7 +26,7 @@ fn handle_world_connection_request(
     entity: Entity,
     world_client: &mut WorldClient,
     token_id: u32,
-    password_md5: &str,
+    password: &Password,
 ) -> Result<ConnectionResponse, ConnectionRequestError> {
     let login_token = login_tokens
         .get_token_mut(token_id)
@@ -34,7 +36,7 @@ fn handle_world_connection_request(
     }
 
     let mut account =
-        AccountStorage::try_load(&login_token.username, password_md5).map_err(|error| {
+        AccountStorage::try_load(&login_token.username, password).map_err(|error| {
             match error.downcast_ref::<AccountStorageError>() {
                 Some(AccountStorageError::InvalidPassword) => {
                     ConnectionRequestError::InvalidPassword
@@ -119,7 +121,7 @@ pub fn world_server_authentication_system(
                             entity,
                             world_client.as_mut(),
                             message.login_token,
-                            &message.password_md5,
+                            &message.password,
                         ));
                     world_client.server_message_tx.send(response).ok();
                 }

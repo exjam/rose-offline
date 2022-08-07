@@ -2,10 +2,14 @@ use async_trait::async_trait;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
-use rose_game_common::messages::{
-    client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
-    server::{
-        ChannelList, ChannelListError, JoinServerError, LoginError, LoginResponse, ServerMessage,
+use rose_game_common::{
+    data::Password,
+    messages::{
+        client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
+        server::{
+            ChannelList, ChannelListError, JoinServerError, LoginError, LoginResponse,
+            ServerMessage,
+        },
     },
 };
 use rose_network_common::{Packet, PacketError};
@@ -34,16 +38,16 @@ impl LoginServer {
                     .client_message_tx
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
                         login_token: 0u32,
-                        password_md5: String::new(),
+                        password: Password::Plaintext(String::new()),
                     }))?;
             }
             Some(ClientPackets::LoginRequest) => {
-                let login_request = PacketClientLoginRequest::try_from(packet)?;
+                let request = PacketClientLoginRequest::try_from(packet)?;
                 client
                     .client_message_tx
                     .send(ClientMessage::LoginRequest(LoginRequest {
-                        username: String::from(login_request.username),
-                        password_md5: String::from(login_request.password_md5),
+                        username: String::from(request.username),
+                        password: Password::Md5(request.password_md5.into()),
                     }))?;
             }
             Some(ClientPackets::ChannelList) => {

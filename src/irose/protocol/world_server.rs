@@ -3,11 +3,16 @@ use log::warn;
 use num_traits::FromPrimitive;
 use std::convert::TryFrom;
 
-use rose_game_common::messages::{
-    client::{ClientMessage, ConnectionRequest, CreateCharacter, DeleteCharacter, SelectCharacter},
-    server::{
-        CreateCharacterError, CreateCharacterResponse, DeleteCharacterError,
-        DeleteCharacterResponse, ServerMessage,
+use rose_game_common::{
+    data::Password,
+    messages::{
+        client::{
+            ClientMessage, ConnectionRequest, CreateCharacter, DeleteCharacter, SelectCharacter,
+        },
+        server::{
+            CreateCharacterError, CreateCharacterResponse, DeleteCharacterError,
+            DeleteCharacterResponse, ServerMessage,
+        },
     },
 };
 use rose_network_common::{Packet, PacketError};
@@ -37,7 +42,7 @@ impl WorldServer {
                     .client_message_tx
                     .send(ClientMessage::ConnectionRequest(ConnectionRequest {
                         login_token: request.login_token,
-                        password_md5: String::from(request.password_md5),
+                        password: Password::Md5(request.password_md5.into()),
                     }))?;
             }
             Some(ClientPackets::CharacterListRequest) => {

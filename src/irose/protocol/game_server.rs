@@ -6,6 +6,7 @@ use std::convert::TryFrom;
 use rose_data::QuestTriggerHash;
 use rose_game_common::{
     components::MoveMode,
+    data::Password,
     messages::{
         client::{
             Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, LogoutRequest, Move,
@@ -51,7 +52,7 @@ impl GameServer {
                     .send(ClientMessage::GameConnectionRequest(
                         GameConnectionRequest {
                             login_token: request.login_token,
-                            password_md5: String::from(request.password_md5),
+                            password: Password::Md5(request.password_md5.into()),
                         },
                     ))?;
             }
