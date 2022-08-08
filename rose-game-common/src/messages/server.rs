@@ -625,6 +625,13 @@ impl PartyMemberInfo {
             PartyMemberInfo::Offline(info) => info.character_id,
         }
     }
+
+    pub fn get_client_entity_id(&self) -> Option<ClientEntityId> {
+        match self {
+            PartyMemberInfo::Online(info) => Some(info.entity_id),
+            PartyMemberInfo::Offline(_) => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
