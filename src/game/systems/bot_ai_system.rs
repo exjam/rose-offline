@@ -104,7 +104,7 @@ pub fn bot_ai_system(
                                 if let Some(target_entity) =
                                     nearby_targets.choose(&mut rng).copied()
                                 {
-                                    use_item_events.send(UseItemEvent::new(
+                                    use_item_events.send(UseItemEvent::from_inventory(
                                         bot.entity,
                                         item_slot,
                                         Some(target_entity),

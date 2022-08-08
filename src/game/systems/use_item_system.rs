@@ -68,6 +68,65 @@ enum UseItemError {
     AbilityRequirement,
 }
 
+fn apply_item_effect(
+    use_item_system_parameters: &UseItemSystemParameters,
+    use_item_user: &mut UseItemUserQueryItem,
+    item_data: &rose_data::ConsumableItemData,
+) {
+    if let Some((base_status_effect_id, total_potion_value)) = item_data.apply_status_effect {
+        if let Some(base_status_effect) = use_item_system_parameters
+            .game_data
+            .status_effects
+            .get_status_effect(base_status_effect_id)
+        {
+            for (status_effect_data, &potion_value_per_second) in base_status_effect
+                .apply_status_effects
+                .iter()
+                .filter_map(|(id, value)| {
+                    use_item_system_parameters
+                        .game_data
+                        .status_effects
+                        .get_status_effect(*id)
+                        .map(|data| (data, value))
+                })
+            {
+                if use_item_user
+                    .status_effects
+                    .can_apply(status_effect_data, status_effect_data.id.get() as i32)
+                {
+                    use_item_user.status_effects.apply_potion(
+                        &mut use_item_user.status_effects_regen,
+                        status_effect_data,
+                        use_item_system_parameters.server_time.now
+                            + Duration::from_micros(
+                                total_potion_value as u64 * 1000000
+                                    / potion_value_per_second as u64,
+                            ),
+                        total_potion_value,
+                        potion_value_per_second,
+                    );
+                }
+            }
+        }
+    } else if let Some((add_ability_type, add_ability_value)) = item_data.add_ability {
+        ability_values_add_value(
+            add_ability_type,
+            add_ability_value,
+            Some(use_item_user.ability_values),
+            Some(&mut use_item_user.basic_stats),
+            Some(&mut use_item_user.experience_points),
+            Some(&mut use_item_user.health_points),
+            Some(&mut use_item_user.inventory),
+            Some(&mut use_item_user.mana_points),
+            Some(&mut use_item_user.skill_points),
+            Some(&mut use_item_user.stamina),
+            Some(&mut use_item_user.stat_points),
+            Some(&mut use_item_user.union_membership),
+            use_item_user.game_client,
+        );
+    }
+}
+
 fn use_inventory_item(
     use_item_system_parameters: &mut UseItemSystemParameters,
     use_item_user: &mut UseItemUserQueryItem,
@@ -219,60 +278,7 @@ fn use_inventory_item(
             (false, false)
         }
         _ => {
-            if let Some((base_status_effect_id, total_potion_value)) = item_data.apply_status_effect
-            {
-                if let Some(base_status_effect) = use_item_system_parameters
-                    .game_data
-                    .status_effects
-                    .get_status_effect(base_status_effect_id)
-                {
-                    for (status_effect_data, &potion_value_per_second) in base_status_effect
-                        .apply_status_effects
-                        .iter()
-                        .filter_map(|(id, value)| {
-                            use_item_system_parameters
-                                .game_data
-                                .status_effects
-                                .get_status_effect(*id)
-                                .map(|data| (data, value))
-                        })
-                    {
-                        if use_item_user
-                            .status_effects
-                            .can_apply(status_effect_data, status_effect_data.id.get() as i32)
-                        {
-                            use_item_user.status_effects.apply_potion(
-                                &mut use_item_user.status_effects_regen,
-                                status_effect_data,
-                                use_item_system_parameters.server_time.now
-                                    + Duration::from_micros(
-                                        total_potion_value as u64 * 1000000
-                                            / potion_value_per_second as u64,
-                                    ),
-                                total_potion_value,
-                                potion_value_per_second,
-                            );
-                        }
-                    }
-                }
-            } else if let Some((add_ability_type, add_ability_value)) = item_data.add_ability {
-                ability_values_add_value(
-                    add_ability_type,
-                    add_ability_value,
-                    Some(use_item_user.ability_values),
-                    Some(&mut use_item_user.basic_stats),
-                    Some(&mut use_item_user.experience_points),
-                    Some(&mut use_item_user.health_points),
-                    Some(&mut use_item_user.inventory),
-                    Some(&mut use_item_user.mana_points),
-                    Some(&mut use_item_user.skill_points),
-                    Some(&mut use_item_user.stamina),
-                    Some(&mut use_item_user.stat_points),
-                    Some(&mut use_item_user.union_membership),
-                    use_item_user.game_client,
-                );
-            }
-
+            apply_item_effect(use_item_system_parameters, use_item_user, item_data);
             (true, true)
         }
     };
@@ -330,21 +336,49 @@ pub fn use_item_system(
     mut query_user: Query<UseItemUserQuery>,
     mut use_item_events: EventReader<UseItemEvent>,
 ) {
-    for &UseItemEvent {
-        entity,
-        item_slot,
-        target_entity,
-    } in use_item_events.iter()
-    {
-        if let Ok(mut use_item_user) = query_user.get_mut(entity) {
-            use_inventory_item(
-                &mut use_item_system_parameters,
-                &mut use_item_user,
+    for event in use_item_events.iter() {
+        match *event {
+            UseItemEvent::Inventory {
+                entity,
                 item_slot,
                 target_entity,
-                None, // TODO: Support repair item use
-            )
-            .ok();
+            } => {
+                if let Ok(mut use_item_user) = query_user.get_mut(entity) {
+                    use_inventory_item(
+                        &mut use_item_system_parameters,
+                        &mut use_item_user,
+                        item_slot,
+                        target_entity,
+                        None, // TODO: Support repair item use
+                    )
+                    .ok();
+                }
+            }
+            UseItemEvent::Item { entity, ref item } => {
+                if let Ok(mut use_item_user) = query_user.get_mut(entity) {
+                    if let Some(item_data) = use_item_system_parameters
+                        .game_data
+                        .items
+                        .get_consumable_item(item.get_item_number())
+                    {
+                        apply_item_effect(
+                            &use_item_system_parameters,
+                            &mut use_item_user,
+                            item_data,
+                        );
+
+                        use_item_system_parameters
+                            .server_messages
+                            .send_entity_message(
+                                use_item_user.client_entity,
+                                ServerMessage::UseItem(UseItem {
+                                    entity_id: use_item_user.client_entity.id,
+                                    item: item.get_item_reference(),
+                                }),
+                            );
+                    }
+                }
+            }
         }
     }
 }

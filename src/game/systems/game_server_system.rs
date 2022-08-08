@@ -1016,7 +1016,11 @@ pub fn game_server_main_system(
                             })
                             .map(|(target_entity, _, _)| *target_entity);
 
-                        use_item_events.send(UseItemEvent::new(entity, item_slot, target_entity));
+                        use_item_events.send(UseItemEvent::from_inventory(
+                            entity,
+                            item_slot,
+                            target_entity,
+                        ));
                     }
                     ClientMessage::LevelUpSkill(skill_slot) => {
                         skill_list_try_level_up_skill(

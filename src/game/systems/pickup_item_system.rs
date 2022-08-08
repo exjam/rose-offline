@@ -1,7 +1,8 @@
 use bevy::{
     ecs::query::WorldQuery,
-    prelude::{Commands, EventReader, Query, ResMut},
+    prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut},
 };
+use rose_data::{ItemClass, ItemType};
 use rose_game_common::{
     components::{DroppedItem, Inventory, ItemDrop, Money},
     messages::{
@@ -16,8 +17,9 @@ use crate::game::{
         ClientEntity, ClientEntitySector, GameClient, Owner, Party, PartyMember, PartyMembership,
         PartyOwner, Position,
     },
-    events::PickupItemEvent,
+    events::{PickupItemEvent, UseItemEvent},
     resources::ClientEntityList,
+    GameData,
 };
 
 #[derive(WorldQuery)]
@@ -42,6 +44,8 @@ pub fn pickup_item_system(
     query_client_entity: Query<&ClientEntity>,
     query_party_membership: Query<&PartyMembership>,
     mut client_entity_list: ResMut<ClientEntityList>,
+    game_data: Res<GameData>,
+    mut use_item_events: EventWriter<UseItemEvent>,
 ) {
     for pickup_item_event in pickup_item_events.iter() {
         let mut pickup_item =
@@ -163,9 +167,17 @@ pub fn pickup_item_system(
         if let Some(pickup_entity) = pickup_entity {
             match pickup_item.item_drop.item.take() {
                 Some(DroppedItem::Item(item)) => {
-                    // TODO: Use the instant-use pickup items
-
-                    if let Ok((mut inventory, game_client)) = query_inventory.get_mut(pickup_entity)
+                    if matches!(item.get_item_type(), ItemType::Consumable)
+                        && game_data
+                            .items
+                            .get_consumable_item(item.get_item_number())
+                            .map_or(false, |item_data| {
+                                matches!(item_data.item_data.class, ItemClass::AutomaticConsumption)
+                            })
+                    {
+                        use_item_events.send(UseItemEvent::from_item(pickup_entity, item));
+                    } else if let Ok((mut inventory, game_client)) =
+                        query_inventory.get_mut(pickup_entity)
                     {
                         let result = match inventory.try_add_item(item.clone()) {
                             Ok((slot, item)) => Ok(PickupItemDropContent::Item(slot, item.clone())),
