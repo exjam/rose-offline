@@ -16,12 +16,15 @@ use rose_data::{
     AbilityType, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, NpcId, SkillId,
     StackableItem, ZoneId,
 };
-use rose_game_common::{components::ExperiencePoints, data::Damage};
+use rose_game_common::{
+    components::{DroppedItem, ExperiencePoints},
+    data::Damage,
+};
 
 use crate::game::{
     bundles::{
         ability_values_add_value, ability_values_set_value, client_entity_join_zone,
-        client_entity_teleport_zone, CharacterBundle, MonsterBundle,
+        client_entity_teleport_zone, CharacterBundle, ItemDropBundle, MonsterBundle,
     },
     components::{
         AbilityValues, BasicStats, BotAi, BotAiState, CharacterGender, CharacterInfo, ClientEntity,
@@ -33,7 +36,7 @@ use crate::game::{
     },
     events::{ChatCommandEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
-    resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
+    resources::{BotList, BotListEntry, ClientEntityList, ServerMessages, ServerTime},
     GameData,
 };
 
@@ -47,6 +50,7 @@ pub struct ChatCommandParams<'w, 's> {
     damage_events: EventWriter<'w, 's, DamageEvent>,
     reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
     server_messages: ResMut<'w, ServerMessages>,
+    server_time: ResMut<'w, ServerTime>,
 }
 
 #[derive(WorldQuery)]
@@ -83,6 +87,12 @@ lazy_static! {
                     .arg(Arg::new("amount").required(true))
                     .arg(Arg::new("distance").required(true))
                     .arg(Arg::new("type").required(false)),
+            )
+            .subcommand(
+                clap::Command::new("drop")
+                    .arg(Arg::new("type").required(true))
+                    .arg(Arg::new("id").required(true))
+                    .arg(Arg::new("quantity").required(false)),
             )
             .subcommand(
                 clap::Command::new("item")
@@ -777,7 +787,9 @@ fn handle_chat_command(
                 );
             }
         }
-        ("item", arg_matches) => {
+        ("item", arg_matches) | ("drop", arg_matches) => {
+            let is_drop = command_matches.subcommand().unwrap().0 == "drop";
+
             let item_type_id = arg_matches.value_of("type").unwrap().parse::<usize>()?;
             let item_type: ItemType = chat_command_params
                 .game_data
@@ -806,9 +818,21 @@ fn handle_chat_command(
             let item = Item::from_item_data(item_data, quantity)
                 .ok_or(ChatCommandError::InvalidArguments)?;
 
-            chat_command_params
-                .reward_item_events
-                .send(RewardItemEvent::new(chat_command_user.entity, item, true));
+            if is_drop {
+                ItemDropBundle::spawn(
+                    &mut chat_command_params.commands,
+                    &mut chat_command_params.client_entity_list,
+                    DroppedItem::Item(item),
+                    chat_command_user.position,
+                    None,
+                    None,
+                    &chat_command_params.server_time,
+                );
+            } else {
+                chat_command_params
+                    .reward_item_events
+                    .send(RewardItemEvent::new(chat_command_user.entity, item, true));
+            }
         }
         _ => return Err(ChatCommandError::InvalidCommand),
     }
