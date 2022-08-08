@@ -632,6 +632,13 @@ impl PartyMemberInfo {
             PartyMemberInfo::Offline(_) => None,
         }
     }
+
+    pub fn get_name(&self) -> &str {
+        match self {
+            PartyMemberInfo::Online(info) => &info.name,
+            PartyMemberInfo::Offline(info) => &info.name,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
