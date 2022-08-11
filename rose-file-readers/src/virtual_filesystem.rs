@@ -57,7 +57,11 @@ impl<'a> VfsPath<'a> {
     }
 
     pub fn normalise_path(path: &str) -> PathBuf {
-        path.replace('\\', "/").to_uppercase().into()
+        path.replace('\\', "/")
+            .to_uppercase()
+            .trim_start()
+            .trim_end()
+            .into()
     }
 }
 
