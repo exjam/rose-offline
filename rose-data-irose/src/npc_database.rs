@@ -5,7 +5,9 @@ use rose_data::{
     EffectFileId, EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
     NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId,
 };
-use rose_file_readers::{stb_column, ChrFile, StbFile, StlFile, VirtualFilesystem, ZmoFile};
+use rose_file_readers::{
+    stb_column, ChrFile, StbFile, StlFile, VfsPathBuf, VirtualFilesystem, ZmoFile,
+};
 
 use crate::data_decoder::decode_item_base1000;
 
@@ -104,17 +106,18 @@ fn load_motion_file_data(
     if path.is_empty() {
         return None;
     }
+    let path = VfsPathBuf::new(path);
 
     if options.load_frame_data {
-        let zmo = vfs.read_file::<ZmoFile, _>(path).ok()?;
+        let zmo = vfs.read_file::<ZmoFile, _>(&path).ok()?;
         Some(MotionFileData {
-            path: path.to_string(),
+            path,
             duration: zmo.get_duration(),
             total_attack_frames: zmo.total_attack_frames,
         })
     } else {
         Some(MotionFileData {
-            path: path.to_string(),
+            path,
             ..Default::default()
         })
     }
