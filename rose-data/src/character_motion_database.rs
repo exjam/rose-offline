@@ -98,7 +98,7 @@ impl CharacterMotionDatabase {
         }
 
         self.motion_data
-            .get(gender)
+            .get(0)
             .and_then(|x| x.get(index).and_then(|x| x.as_ref()))
     }
 
