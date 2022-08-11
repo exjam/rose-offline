@@ -713,6 +713,7 @@ pub enum ServerMessage {
     LevelUpSkillResult(LevelUpSkillResult),
     RunNpcDeathTrigger(NpcId),
     OpenPersonalStore(OpenPersonalStore),
+    ClosePersonalStore(ClientEntityId),
     PersonalStoreItemList(PersonalStoreItemList),
     PersonalStoreTransactionResult(PersonalStoreTransactionResult),
     UseItem(UseItem),

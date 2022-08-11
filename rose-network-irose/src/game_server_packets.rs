@@ -101,6 +101,7 @@ pub enum ServerPackets {
     CancelCastingSkill = 0x7bd,
     UpdateVehiclePart = 0x7ca,
     OpenPersonalStore = 0x7c2,
+    ClosePersonalStore = 0x7c3,
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
@@ -2486,6 +2487,26 @@ pub struct PacketServerOpenPersonalStore<'a> {
     pub title: &'a str,
 }
 
+impl<'a> TryFrom<&'a Packet> for PacketServerOpenPersonalStore<'a> {
+    type Error = PacketError;
+
+    fn try_from(packet: &'a Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::OpenPersonalStore as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+        let skin = reader.read_u16()? as i32;
+        let title = reader.read_null_terminated_utf8()?;
+        Ok(Self {
+            entity_id,
+            skin,
+            title,
+        })
+    }
+}
+
 impl<'a> From<&'a PacketServerOpenPersonalStore<'a>> for Packet {
     fn from(packet: &'a PacketServerOpenPersonalStore<'a>) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::OpenPersonalStore as u16);
@@ -2496,13 +2517,81 @@ impl<'a> From<&'a PacketServerOpenPersonalStore<'a>> for Packet {
     }
 }
 
-pub struct PacketServerPersonalStoreItemList<'a> {
-    pub sell_items: &'a [(u8, Item, Money)],
-    pub buy_items: &'a [(u8, Item, Money)],
+pub struct PacketServerClosePersonalStore {
+    pub entity_id: ClientEntityId,
 }
 
-impl<'a> From<&'a PacketServerPersonalStoreItemList<'a>> for Packet {
-    fn from(packet: &'a PacketServerPersonalStoreItemList<'a>) -> Self {
+impl TryFrom<&Packet> for PacketServerClosePersonalStore {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::ClosePersonalStore as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let entity_id = reader.read_entity_id()?;
+
+        Ok(Self { entity_id })
+    }
+}
+
+impl From<&PacketServerClosePersonalStore> for Packet {
+    fn from(packet: &PacketServerClosePersonalStore) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ClosePersonalStore as u16);
+        writer.write_entity_id(packet.entity_id);
+        writer.into()
+    }
+}
+
+pub struct PacketServerPersonalStoreItemList {
+    pub sell_items: Vec<(u8, Item, Money)>,
+    pub buy_items: Vec<(u8, Item, Money)>,
+}
+
+impl TryFrom<&Packet> for PacketServerPersonalStoreItemList {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PersonalStoreItemList as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let num_sell_items = reader.read_u8()? as usize;
+        let num_buy_items = reader.read_u8()? as usize;
+        let mut sell_items = Vec::with_capacity(num_sell_items);
+        let mut buy_items = Vec::with_capacity(num_buy_items);
+
+        for _ in 0..num_sell_items {
+            let slot = reader.read_u8()?;
+            let item = reader.read_item_full()?;
+            let price = Money(reader.read_u32()? as i64);
+
+            if let Some(item) = item {
+                sell_items.push((slot, item, price));
+            }
+        }
+
+        for _ in 0..num_buy_items {
+            let slot = reader.read_u8()?;
+            let item = reader.read_item_full()?;
+            let price = Money(reader.read_u32()? as i64);
+
+            if let Some(item) = item {
+                buy_items.push((slot, item, price));
+            }
+        }
+
+        Ok(Self {
+            sell_items,
+            buy_items,
+        })
+    }
+}
+
+impl From<&PacketServerPersonalStoreItemList> for Packet {
+    fn from(packet: &PacketServerPersonalStoreItemList) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PersonalStoreItemList as u16);
 
         writer.write_u8(packet.sell_items.len() as u8);
@@ -2523,6 +2612,7 @@ impl<'a> From<&'a PacketServerPersonalStoreItemList<'a>> for Packet {
         writer.into()
     }
 }
+
 pub struct PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
     pub money: Money,
     pub slot: ItemSlot,

@@ -903,12 +903,18 @@ impl GameServer {
                     }))
                     .await?;
             }
+            ServerMessage::ClosePersonalStore(entity_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerClosePersonalStore { entity_id }))
+                    .await?;
+            }
             ServerMessage::PersonalStoreItemList(personal_store_item_list) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerPersonalStoreItemList {
-                        sell_items: &personal_store_item_list.sell_items,
-                        buy_items: &personal_store_item_list.buy_items,
+                        sell_items: personal_store_item_list.sell_items,
+                        buy_items: personal_store_item_list.buy_items,
                     }))
                     .await?;
             }
