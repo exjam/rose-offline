@@ -1997,10 +1997,7 @@ impl From<&PacketServerUpdateVehiclePart> for Packet {
 
 pub struct PacketServerUpdateLevel {
     pub entity_id: ClientEntityId,
-    pub level: Level,
-    pub experience_points: ExperiencePoints,
-    pub stat_points: StatPoints,
-    pub skill_points: SkillPoints,
+    pub update_values: Option<(Level, ExperiencePoints, StatPoints, SkillPoints)>,
 }
 
 impl TryFrom<&Packet> for PacketServerUpdateLevel {
@@ -2013,17 +2010,19 @@ impl TryFrom<&Packet> for PacketServerUpdateLevel {
 
         let mut reader = PacketReader::from(packet);
         let entity_id = reader.read_entity_id()?;
-        let level = Level::new(reader.read_u16()? as u32);
-        let experience_points = ExperiencePoints::new(reader.read_u32()? as u64);
-        let stat_points = StatPoints::new(reader.read_u16()? as u32);
-        let skill_points = SkillPoints::new(reader.read_u16()? as u32);
+        let update_values = if let Ok(level) = reader.read_u16() {
+            let level = Level::new(level as u32);
+            let experience_points = ExperiencePoints::new(reader.read_u32()? as u64);
+            let stat_points = StatPoints::new(reader.read_u16()? as u32);
+            let skill_points = SkillPoints::new(reader.read_u16()? as u32);
+            Some((level, experience_points, stat_points, skill_points))
+        } else {
+            None
+        };
 
         Ok(Self {
             entity_id,
-            level,
-            experience_points,
-            stat_points,
-            skill_points,
+            update_values,
         })
     }
 }
@@ -2032,10 +2031,12 @@ impl From<&PacketServerUpdateLevel> for Packet {
     fn from(packet: &PacketServerUpdateLevel) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::UpdateLevel as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_u16(packet.level.level as u16);
-        writer.write_u32(packet.experience_points.xp as u32);
-        writer.write_u16(packet.stat_points.points as u16);
-        writer.write_u16(packet.skill_points.points as u16);
+        if let Some((level, experience_points, stat_points, skill_points)) = &packet.update_values {
+            writer.write_u16(level.level as u16);
+            writer.write_u32(experience_points.xp as u32);
+            writer.write_u16(stat_points.points as u16);
+            writer.write_u16(skill_points.points as u16);
+        }
         writer.into()
     }
 }

@@ -776,10 +776,16 @@ impl GameServer {
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateLevel {
                         entity_id,
-                        level,
-                        experience_points,
-                        stat_points,
-                        skill_points,
+                        update_values: Some((level, experience_points, stat_points, skill_points)),
+                    }))
+                    .await?;
+            }
+            ServerMessage::LevelUpEntity(entity_id) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateLevel {
+                        entity_id,
+                        update_values: None,
                     }))
                     .await?;
             }

@@ -683,6 +683,7 @@ pub enum ServerMessage {
     ShoutChat(ShoutChat),
     AnnounceChat(AnnounceChat),
     MoveEntity(MoveEntity),
+    LevelUpEntity(ClientEntityId),
     PickupItemDropResult(PickupItemDropResult),
     RemoveEntities(RemoveEntities),
     SpawnEntityCharacter(Box<SpawnEntityCharacter>),
