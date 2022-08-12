@@ -9,7 +9,7 @@ pub struct SkyboxId(u16);
 
 id_wrapper_impl!(SkyboxId, u16);
 
-#[derive(Enum, Debug, Copy, Clone, PartialEq)]
+#[derive(Enum, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SkyboxState {
     Morning,
     Day,

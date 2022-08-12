@@ -21,7 +21,7 @@ pub struct ZonTile {
     pub rotation: ZonTileRotation,
 }
 
-#[derive(Debug, FromPrimitive, PartialEq)]
+#[derive(Debug, FromPrimitive, PartialEq, Eq)]
 pub enum ZonTileRotation {
     Unknown = 0,
     None = 1,

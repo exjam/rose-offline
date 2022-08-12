@@ -13,7 +13,7 @@ use rose_data::{
 
 pub const INVENTORY_PAGE_SIZE: usize = 5 * 6;
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize, PartialEq, Eq, PartialOrd)]
 pub struct Money(pub i64);
 
 impl Add for Money {

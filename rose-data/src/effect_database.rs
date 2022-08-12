@@ -6,12 +6,12 @@ use rose_file_readers::VfsPathBuf;
 
 use crate::SoundId;
 
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct EffectId(NonZeroU16);
 
 id_wrapper_impl!(EffectId, NonZeroU16, u16);
 
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct EffectFileId(NonZeroU16);
 
 id_wrapper_impl!(EffectFileId, NonZeroU16, u16);

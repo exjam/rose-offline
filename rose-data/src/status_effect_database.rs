@@ -5,7 +5,7 @@ use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
 
 use crate::EffectFileId;
 
-#[derive(Copy, Clone, PartialEq, PartialOrd, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct StatusEffectId(NonZeroU16);
 
 id_wrapper_impl!(StatusEffectId, NonZeroU16, u16);

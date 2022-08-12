@@ -7,7 +7,7 @@ use rose_data::ZoneId;
 
 pub type CharacterUniqueId = u32;
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, Enum, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Enum, PartialEq, Eq)]
 pub enum CharacterGender {
     Male,
     Female,

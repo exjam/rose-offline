@@ -5,7 +5,7 @@ use rose_data::Item;
 
 use crate::components::Money;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DroppedItem {
     Item(Item),
     Money(Money),

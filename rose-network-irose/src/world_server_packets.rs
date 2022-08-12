@@ -205,7 +205,7 @@ impl From<&PacketServerCharacterList> for Packet {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum CreateCharacterResult {
     Ok = 0,
     Failed = 1,

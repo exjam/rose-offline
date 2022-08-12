@@ -65,7 +65,7 @@ impl From<&PacketConnectionReply> for Packet {
 }
 
 #[allow(dead_code)]
-#[derive(Clone, Copy, Debug, PartialEq, FromPrimitive)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, FromPrimitive)]
 pub enum LoginResult {
     Ok = 0,
     Failed = 1,

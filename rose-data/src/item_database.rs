@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use crate::{AbilityType, EffectFileId, EffectId, SkillId, SoundId, StatusEffectId};
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ItemReference {
     pub item_type: ItemType,
     pub item_number: usize,
@@ -20,7 +20,7 @@ impl ItemReference {
     }
 }
 
-#[derive(Clone, Copy, Debug, Enum, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Copy, Debug, Enum, Deserialize, Serialize, PartialEq, Eq)]
 pub enum ItemType {
     Face,
     Head,

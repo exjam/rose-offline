@@ -4,7 +4,7 @@ use rose_data::ZoneId;
 
 pub use rose_game_common::messages::ClientEntityId;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ClientEntityType {
     Character,
     Monster,

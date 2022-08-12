@@ -113,7 +113,7 @@ impl ItemWeaponType {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct EquipmentItem {
     pub item: ItemReference,
     pub gem: u16,
@@ -158,7 +158,7 @@ impl From<&EquipmentItem> for ItemReference {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct StackableItem {
     pub item: ItemReference,
     pub quantity: u32,
@@ -221,7 +221,7 @@ impl From<&StackableItem> for ItemReference {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Item {
     Equipment(EquipmentItem),
     Stackable(StackableItem),

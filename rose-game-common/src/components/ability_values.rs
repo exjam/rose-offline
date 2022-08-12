@@ -4,13 +4,13 @@ use rose_data::StatusEffectType;
 
 use crate::components::StatusEffects;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DamageCategory {
     Character,
     Npc,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DamageType {
     Physical,
     Magic,
