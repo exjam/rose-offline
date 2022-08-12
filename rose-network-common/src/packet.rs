@@ -216,6 +216,10 @@ impl PacketWriter {
         self.data.put_i64_le(value);
     }
 
+    pub fn write_u64(&mut self, value: u64) {
+        self.data.put_u64_le(value);
+    }
+
     pub fn write_null_terminated_utf8(&mut self, value: &str) {
         self.data.put(value.as_bytes());
         self.data.put_u8(0);
