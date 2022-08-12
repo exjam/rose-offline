@@ -1,4 +1,6 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use encoding_rs::WINDOWS_1252;
+use std::borrow::Cow;
 use std::io::Cursor;
 use std::str;
 use thiserror::Error;
@@ -155,15 +157,20 @@ impl<'a> PacketReader<'a> {
     pub fn read_fixed_length_utf8(&mut self, length: usize) -> Result<&'a str, PacketError> {
         match str::from_utf8(self.read_fixed_length_bytes(length)?) {
             Ok(s) => Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => Err(PacketError::UnexpectedEof),
+            Err(_) => Err(PacketError::InvalidPacket),
         }
     }
 
     pub fn read_null_terminated_utf8(&mut self) -> Result<&'a str, PacketError> {
         match str::from_utf8(self.read_null_terminated_bytes()?) {
             Ok(s) => Ok(s.trim_end_matches(char::from(0))),
-            Err(_) => Err(PacketError::UnexpectedEof),
+            Err(_) => Err(PacketError::InvalidPacket),
         }
+    }
+
+    pub fn read_null_terminated_win1252(&mut self) -> Result<Cow<str>, PacketError> {
+        let (decoded, _, _) = WINDOWS_1252.decode(self.read_null_terminated_bytes()?);
+        Ok(decoded)
     }
 }
 
