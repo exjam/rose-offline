@@ -2,12 +2,12 @@ use modular_bitfield::prelude::*;
 use std::convert::TryInto;
 
 use rose_data::{
-    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, SkillPageType,
-    StackableItem, StatusEffectId, StatusEffectType, VehiclePartIndex,
+    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, StackableItem,
+    StatusEffectId, StatusEffectType, VehiclePartIndex,
 };
 use rose_data_irose::{
     decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
-    encode_equipment_index, encode_item_type, encode_vehicle_part_index,
+    encode_equipment_index, encode_item_type, encode_vehicle_part_index, SKILL_PAGE_SIZE,
 };
 use rose_game_common::{
     components::{
@@ -596,22 +596,13 @@ pub trait PacketWriteSkillSlot {
 }
 
 fn decode_skill_slot(index: usize) -> Result<SkillSlot, PacketError> {
-    match index {
-        0..=29 => Ok(SkillSlot(SkillPageType::Basic, index)),
-        30..=59 => Ok(SkillSlot(SkillPageType::Active, index - 30)),
-        60..=89 => Ok(SkillSlot(SkillPageType::Passive, index - 60)),
-        90..=119 => Ok(SkillSlot(SkillPageType::Clan, index - 90)),
-        _ => Err(PacketError::InvalidPacket),
-    }
+    let page = index / SKILL_PAGE_SIZE;
+    let slot = index % SKILL_PAGE_SIZE;
+    Ok(SkillSlot(page, slot))
 }
 
 fn encode_skill_slot(slot: SkillSlot) -> usize {
-    match slot {
-        SkillSlot(SkillPageType::Basic, index) => index,
-        SkillSlot(SkillPageType::Active, index) => 30 + index,
-        SkillSlot(SkillPageType::Passive, index) => (2 * 30) + index,
-        SkillSlot(SkillPageType::Clan, index) => (3 * 30) + index,
-    }
+    slot.0 * SKILL_PAGE_SIZE + slot.1
 }
 
 impl<'a> PacketReadSkillSlot for PacketReader<'a> {

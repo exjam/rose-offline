@@ -416,9 +416,11 @@ fn quest_condition_have_skill(
     have: bool,
 ) -> bool {
     if let Some(skill_list) = &quest_parameters.source.skill_list {
-        for skill_id in skill_list.iter_skills() {
-            if skill_id_range.contains(&(skill_id.get() as QsdSkillId)) {
-                return have;
+        for page in skill_list.pages.iter() {
+            for skill_id in page.skills.iter().filter_map(|x| *x) {
+                if skill_id_range.contains(&(skill_id.get() as QsdSkillId)) {
+                    return have;
+                }
             }
         }
     }
@@ -1267,9 +1269,12 @@ fn quest_reward_reset_skills(
     quest_parameters: &mut QuestParameters,
 ) -> bool {
     if let Some(skill_list) = quest_parameters.source.skill_list.as_mut() {
-        skill_list.active.skills = Default::default();
-        skill_list.passive.skills = Default::default();
-        skill_list.clan.skills = Default::default();
+        // TODO: This is quite irose specific, we should factor it out
+        for page in skill_list.pages[1..].iter_mut() {
+            for skill in page.skills.iter_mut() {
+                *skill = None;
+            }
+        }
 
         let mut total_skill_points = 0;
         for level in 2..=quest_parameters.source.level.level {

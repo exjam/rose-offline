@@ -21,7 +21,7 @@ pub use effect_database::get_effect_database;
 pub use item_database::get_item_database;
 pub use npc_database::get_npc_database;
 pub use quest_database::get_quest_database;
-pub use skill_database::get_skill_database;
+pub use skill_database::{get_skill_database, SKILL_PAGE_SIZE};
 pub use skybox_database::get_skybox_database;
 pub use sound_database::get_sound_database;
 pub use status_effect_database::get_status_effect_database;
@@ -31,5 +31,5 @@ pub use zone_database::{get_zone_database, get_zone_list};
 pub use data_decoder::{
     decode_ability_type, decode_ammo_index, decode_equipment_index, decode_item_base1000,
     decode_item_type, decode_vehicle_part_index, encode_ability_type, encode_ammo_index,
-    encode_equipment_index, encode_item_type, encode_vehicle_part_index,
+    encode_equipment_index, encode_item_type, encode_vehicle_part_index, IroseSkillPageType,
 };

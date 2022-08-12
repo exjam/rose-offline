@@ -1,13 +1,13 @@
 use bevy::math::Vec3;
 use enum_map::EnumMap;
-use rose_game_common::components::CharacterGender;
+use rose_game_common::components::{CharacterGender, SkillPage};
 use std::sync::Arc;
 
 use rose_data::{
     EquipmentItem, ItemDatabase, ItemReference, QuestTriggerHash, SkillDatabase, SkillId,
     StackableItem, ZoneDatabase, ZoneId,
 };
-use rose_data_irose::decode_item_base1000;
+use rose_data_irose::{decode_item_base1000, IroseSkillPageType, SKILL_PAGE_SIZE};
 use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 use crate::game::{
@@ -141,7 +141,14 @@ impl CharacterCreator for CharacterCreatorData {
             level: Level::new(1),
             experience_points: ExperiencePoints::default(),
             position: self.start_position.clone(),
-            skill_list: SkillList::default(),
+            skill_list: SkillList {
+                pages: vec![
+                    SkillPage::new(IroseSkillPageType::Basic as usize, SKILL_PAGE_SIZE),
+                    SkillPage::new(IroseSkillPageType::Active as usize, SKILL_PAGE_SIZE),
+                    SkillPage::new(IroseSkillPageType::Passive as usize, SKILL_PAGE_SIZE),
+                    SkillPage::new(IroseSkillPageType::Clan as usize, SKILL_PAGE_SIZE),
+                ],
+            },
             hotbar: Hotbar::default(),
             delete_time: None,
             health_points: HealthPoints::new(0),

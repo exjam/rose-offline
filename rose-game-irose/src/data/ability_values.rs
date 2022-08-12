@@ -1,11 +1,12 @@
 use core::f32;
 use log::error;
 use rand::Rng;
+use rose_data_irose::IroseSkillPageType;
 use std::sync::Arc;
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, Item, ItemClass, ItemDatabase, ItemReference, ItemType,
-    ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase, SkillId,
+    ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase,
     VehiclePartIndex,
 };
 use rose_game_common::{
@@ -121,10 +122,8 @@ impl AbilityValueCalculator for AbilityValuesData {
             calculate_equipment_ability_values(&self.item_database, equipment);
         let vehicle_ability_values =
             calculate_vehicle_ability_values(&self.item_database, equipment);
-        let passive_ability_values = calculate_passive_skill_ability_values(
-            &self.skill_database,
-            skill_list.get_passive_skills(),
-        );
+        let passive_ability_values =
+            calculate_passive_skill_ability_values(&self.skill_database, skill_list);
 
         // TODO: Apparently we only add these passive_ability_values stats when not on a cart
         let basic_stats = BasicStats {
@@ -1430,19 +1429,21 @@ impl PassiveSkillAbilityValues {
     }
 }
 
-fn calculate_passive_skill_ability_values<'a>(
+fn calculate_passive_skill_ability_values(
     skill_database: &SkillDatabase,
-    passive_skills: impl Iterator<Item = &'a SkillId>,
+    skill_list: &SkillList,
 ) -> PassiveSkillAbilityValues {
     let mut result = PassiveSkillAbilityValues::new();
 
-    for &skill_id in passive_skills {
-        if let Some(skill_data) = skill_database.get_skill(skill_id) {
-            for add_ability in skill_data.add_ability.iter().filter_map(|x| x.as_ref()) {
-                if add_ability.rate != 0 {
-                    result.add_ability_rate(add_ability.ability_type, add_ability.rate);
-                } else {
-                    result.add_ability_value(add_ability.ability_type, add_ability.value);
+    if let Some(passive_skills) = skill_list.get_page(IroseSkillPageType::Passive as usize) {
+        for skill_id in passive_skills.skills.iter().filter_map(|x| *x) {
+            if let Some(skill_data) = skill_database.get_skill(skill_id) {
+                for add_ability in skill_data.add_ability.iter().filter_map(|x| x.as_ref()) {
+                    if add_ability.rate != 0 {
+                        result.add_ability_rate(add_ability.ability_type, add_ability.rate);
+                    } else {
+                        result.add_ability_value(add_ability.ability_type, add_ability.value);
+                    }
                 }
             }
         }

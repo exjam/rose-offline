@@ -11,6 +11,7 @@ use rose_data::{
 };
 use rose_data_irose::{
     decode_ability_type, decode_ammo_index, encode_ability_type, encode_ammo_index,
+    IroseSkillPageType, SKILL_PAGE_SIZE,
 };
 use rose_game_common::{
     components::{
@@ -163,19 +164,18 @@ fn read_skill_page(
     reader: &mut PacketReader,
     skill_page_type: SkillPageType,
 ) -> Result<SkillPage, PacketError> {
-    let mut skill_page = SkillPage::new(skill_page_type);
-    for index in 0..30 {
+    let mut skill_page = SkillPage::new(skill_page_type, SKILL_PAGE_SIZE);
+    for index in 0..SKILL_PAGE_SIZE {
         skill_page.skills[index] = SkillId::new(reader.read_u16()?);
     }
     Ok(skill_page)
 }
 
-fn write_skill_page(writer: &mut PacketWriter, skill_page: &SkillPage) {
-    for index in 0..30 {
+fn write_skill_page(writer: &mut PacketWriter, skill_page: Option<&SkillPage>) {
+    for index in 0..SKILL_PAGE_SIZE {
         writer.write_u16(
             skill_page
-                .skills
-                .get(index)
+                .and_then(|page| page.skills.get(index))
                 .copied()
                 .flatten()
                 .map_or(0, |x| x.get()) as u16,
@@ -270,15 +270,18 @@ impl TryFrom<&Packet> for PacketServerSelectCharacter {
         }
 
         // tagSkillAbility
-        let basic_skill_page = read_skill_page(&mut reader, SkillPageType::Basic)?;
-        let active_skill_page = read_skill_page(&mut reader, SkillPageType::Active)?;
-        let passive_skill_page = read_skill_page(&mut reader, SkillPageType::Passive)?;
-        let clan_skill_page = read_skill_page(&mut reader, SkillPageType::Clan)?;
+        let basic_skill_page = read_skill_page(&mut reader, IroseSkillPageType::Basic as usize)?;
+        let active_skill_page = read_skill_page(&mut reader, IroseSkillPageType::Active as usize)?;
+        let passive_skill_page =
+            read_skill_page(&mut reader, IroseSkillPageType::Passive as usize)?;
+        let clan_skill_page = read_skill_page(&mut reader, IroseSkillPageType::Clan as usize)?;
         let skill_list = SkillList {
-            basic: basic_skill_page,
-            active: active_skill_page,
-            passive: passive_skill_page,
-            clan: clan_skill_page,
+            pages: vec![
+                basic_skill_page,
+                active_skill_page,
+                passive_skill_page,
+                clan_skill_page,
+            ],
         };
 
         // CHotIcons
@@ -410,10 +413,30 @@ impl From<&PacketServerSelectCharacter> for Packet {
         }
 
         // tagSkillAbility
-        write_skill_page(&mut writer, &packet.skill_list.basic);
-        write_skill_page(&mut writer, &packet.skill_list.active);
-        write_skill_page(&mut writer, &packet.skill_list.passive);
-        write_skill_page(&mut writer, &packet.skill_list.clan);
+        write_skill_page(
+            &mut writer,
+            packet
+                .skill_list
+                .get_page(IroseSkillPageType::Basic as usize),
+        );
+        write_skill_page(
+            &mut writer,
+            packet
+                .skill_list
+                .get_page(IroseSkillPageType::Active as usize),
+        );
+        write_skill_page(
+            &mut writer,
+            packet
+                .skill_list
+                .get_page(IroseSkillPageType::Passive as usize),
+        );
+        write_skill_page(
+            &mut writer,
+            packet
+                .skill_list
+                .get_page(IroseSkillPageType::Clan as usize),
+        );
 
         // CHotIcons
         assert!(packet.hotbar.pages.len() * packet.hotbar.pages[0].len() == 32);

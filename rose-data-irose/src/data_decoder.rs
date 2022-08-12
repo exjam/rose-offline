@@ -5,8 +5,8 @@ use num_traits::{FromPrimitive, ToPrimitive};
 
 use rose_data::{
     AbilityType, AmmoIndex, DataDecoder, EffectBulletMoveType, EquipmentIndex, ItemClass,
-    ItemReference, ItemType, SkillActionMode, SkillBasicCommand, SkillPageType, SkillTargetFilter,
-    SkillType, StatusEffectClearedByType, StatusEffectType, VehiclePartIndex,
+    ItemReference, ItemType, SkillActionMode, SkillBasicCommand, SkillTargetFilter, SkillType,
+    StatusEffectClearedByType, StatusEffectType, VehiclePartIndex,
 };
 
 macro_rules! impl_conversions {
@@ -425,14 +425,22 @@ impl_conversions!(
     decode_skill_target_filter
 );
 
-#[derive(FromPrimitive)]
+#[derive(Copy, Clone, Debug, FromPrimitive)]
 pub enum IroseSkillPageType {
     Basic = 0,
     Active = 1,
     Passive = 2,
     Clan = 3,
 }
-impl_conversions!(IroseSkillPageType, SkillPageType, decode_skill_page_type);
+
+impl FromStr for IroseSkillPageType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let value = s.parse::<usize>().map_err(|_| ())?;
+        FromPrimitive::from_usize(value).ok_or(())
+    }
+}
 
 #[derive(FromPrimitive)]
 pub enum IroseSkillType {
@@ -1012,14 +1020,6 @@ pub fn decode_skill_target_filter(id: usize) -> Option<SkillTargetFilter> {
     }
 }
 
-pub fn decode_skill_page_type(id: usize) -> Option<SkillPageType> {
-    match FromPrimitive::from_usize(id)? {
-        IroseSkillPageType::Basic => Some(SkillPageType::Basic),
-        IroseSkillPageType::Active => Some(SkillPageType::Active),
-        IroseSkillPageType::Passive => Some(SkillPageType::Passive),
-        IroseSkillPageType::Clan => Some(SkillPageType::Clan),
-    }
-}
 pub fn decode_skill_type(id: usize) -> Option<SkillType> {
     match FromPrimitive::from_usize(id)? {
         IroseSkillType::BasicAction => Some(SkillType::BasicAction),

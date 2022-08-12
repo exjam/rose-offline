@@ -44,7 +44,7 @@ pub use move_mode::MoveMode;
 pub use move_speed::MoveSpeed;
 pub use npc::Npc;
 pub use quest_state::{ActiveQuest, QuestState};
-pub use skill_list::{SkillList, SkillPage, SkillSlot, SKILL_PAGE_SIZE};
+pub use skill_list::{SkillList, SkillPage, SkillSlot};
 pub use skill_points::SkillPoints;
 pub use stamina::{Stamina, MAX_STAMINA};
 pub use stat_points::StatPoints;

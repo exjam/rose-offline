@@ -17,6 +17,8 @@ use crate::data_decoder::{
     IroseSkillPageType, IroseSkillTargetFilter, IroseSkillType,
 };
 
+pub const SKILL_PAGE_SIZE: usize = 30;
+
 pub struct StbSkill(pub StbFile);
 
 #[allow(dead_code)]
@@ -244,10 +246,7 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
         item_make_number: data.get_item_make_number(id).unwrap_or(0),
         level: data.get_skill_level(id).unwrap_or(1),
         learn_money_cost: data.get_learn_money_cost(id).unwrap_or(0),
-        page: data
-            .get_page(id)
-            .and_then(|x| x.try_into().ok())
-            .unwrap_or(SkillPageType::Basic),
+        page: data.get_page(id).map(|x| x as SkillPageType).unwrap_or(0),
         learn_point_cost: data.get_learn_skill_points(id).unwrap_or(0),
         power: data.get_power(id).unwrap_or(0),
         required_ability: data.get_required_abilities(id),
