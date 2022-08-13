@@ -15,12 +15,11 @@ use rose_game_common::{
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
             CastSkillTargetPosition, LevelUpSkillResult, LocalChat, LogoutReply, MoveToggle,
-            OpenPersonalStore, PersonalStoreTransactionCancelled, PersonalStoreTransactionResult,
-            PersonalStoreTransactionSoldOut, PersonalStoreTransactionSuccess, PickupItemDropResult,
-            QuestDeleteResult, QuestTriggerResult, RemoveEntities, ServerMessage, ShoutChat,
-            SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc, UpdateAbilityValue,
-            UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed, UpdateStatusEffects,
-            UpdateVehiclePart, UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
+            OpenPersonalStore, PickupItemDropResult, QuestDeleteResult, QuestTriggerResult,
+            RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop, SpawnEntityMonster,
+            SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel,
+            UpdateSpeed, UpdateStatusEffects, UpdateVehiclePart, UpdateXpStamina, UseEmote,
+            UseInventoryItem, UseItem, Whisper,
         },
     },
 };
@@ -924,68 +923,31 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::PersonalStoreTransactionResult(result) => match result {
-                PersonalStoreTransactionResult::Cancelled(PersonalStoreTransactionCancelled {
-                    store_entity_id,
-                }) => {
-                    client
-                        .connection
-                        .write_packet(Packet::from(
-                            &PacketServerPersonalStoreTransactionResult::Cancelled(store_entity_id),
-                        ))
-                        .await?;
-                }
-                PersonalStoreTransactionResult::SoldOut(PersonalStoreTransactionSoldOut {
-                    store_entity_id,
-                    store_slot_index,
-                    item,
-                }) => {
-                    client
-                        .connection
-                        .write_packet(Packet::from(
-                            &PacketServerPersonalStoreTransactionResult::SoldOut(
-                                store_entity_id,
-                                store_slot_index,
-                                item,
-                            ),
-                        ))
-                        .await?;
-                }
-                PersonalStoreTransactionResult::BoughtFromStore(
-                    PersonalStoreTransactionSuccess {
+            ServerMessage::PersonalStoreTransaction {
+                status,
+                store_entity_id,
+                update_store,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerPersonalStoreTransactionResult {
+                        status,
                         store_entity_id,
-                        store_slot_index,
-                        store_slot_item,
-                        money,
-                        inventory_slot,
-                        inventory_item,
-                    },
-                ) => {
-                    client
-                        .connection
-                        .write_packet(Packet::from(
-                            &PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
-                                money,
-                                slot: inventory_slot,
-                                item: inventory_item,
-                            },
-                        ))
-                        .await?;
-
-                    client
-                        .connection
-                        .write_packet(Packet::from(
-                            &PacketServerPersonalStoreTransactionResult::BoughtFromStore(
-                                store_entity_id,
-                                store_slot_index,
-                                store_slot_item,
-                            ),
-                        ))
-                        .await?;
-                }
-                PersonalStoreTransactionResult::NoMoreNeed(_) => todo!(),
-                PersonalStoreTransactionResult::SoldToStore(_) => todo!(),
-            },
+                        update_store_items: update_store,
+                    }))
+                    .await?;
+            }
+            ServerMessage::PersonalStoreTransactionUpdateInventory { money, items } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(
+                        &PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
+                            money,
+                            items,
+                        },
+                    ))
+                    .await?;
+            }
             ServerMessage::UseItem(UseItem { entity_id, item }) => {
                 client
                     .connection

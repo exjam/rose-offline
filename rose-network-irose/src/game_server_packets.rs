@@ -25,7 +25,8 @@ use rose_game_common::{
         server::{
             ActiveStatusEffects, CancelCastingSkillReason, CommandState, LearnSkillError,
             LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline,
-            PartyMemberLeave, PartyMemberList, PickupItemDropContent, PickupItemDropError,
+            PartyMemberLeave, PartyMemberList, PersonalStoreTransactionStatus,
+            PickupItemDropContent, PickupItemDropError,
         },
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
@@ -2638,9 +2639,30 @@ impl From<&PacketServerPersonalStoreItemList> for Packet {
 }
 
 pub struct PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
+    pub items: Vec<(ItemSlot, Option<Item>)>,
     pub money: Money,
-    pub slot: ItemSlot,
-    pub item: Option<Item>,
+}
+
+impl TryFrom<&Packet> for PacketServerPersonalStoreTransactionUpdateMoneyAndInventory {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PersonalStoreTransactionUpdateMoneyAndInventory as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let money = Money(reader.read_i64()?);
+        let num_items = reader.read_u8()? as usize;
+        let mut items = Vec::with_capacity(num_items);
+        for _ in 0..num_items {
+            let item_slot = reader.read_item_slot_u8()?;
+            let item = reader.read_item_full()?;
+            items.push((item_slot, item));
+        }
+
+        Ok(Self { items, money })
+    }
 }
 
 impl From<&PacketServerPersonalStoreTransactionUpdateMoneyAndInventory> for Packet {
@@ -2649,52 +2671,73 @@ impl From<&PacketServerPersonalStoreTransactionUpdateMoneyAndInventory> for Pack
             ServerPackets::PersonalStoreTransactionUpdateMoneyAndInventory as u16,
         );
         writer.write_i64(packet.money.0);
-        writer.write_u8(1);
-        writer.write_item_slot_u8(packet.slot);
-        writer.write_item_full(packet.item.as_ref());
+        writer.write_u8(packet.items.len() as u8);
+        for (slot, item) in packet.items.iter() {
+            writer.write_item_slot_u8(*slot);
+            writer.write_item_full(item.as_ref());
+        }
         writer.into()
     }
 }
 
-pub enum PacketServerPersonalStoreTransactionResult {
-    Cancelled(ClientEntityId),
-    SoldOut(ClientEntityId, usize, Option<Item>),
-    BoughtFromStore(ClientEntityId, usize, Option<Item>),
+pub struct PacketServerPersonalStoreTransactionResult {
+    pub status: PersonalStoreTransactionStatus,
+    pub store_entity_id: ClientEntityId,
+    pub update_store_items: Vec<(usize, Option<Item>)>,
+}
+
+impl TryFrom<&Packet> for PacketServerPersonalStoreTransactionResult {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::PersonalStoreTransactionResult as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let store_entity_id = reader.read_entity_id()?;
+        let status = match reader.read_u8()? {
+            1 => PersonalStoreTransactionStatus::Cancelled,
+            2 => PersonalStoreTransactionStatus::SoldOut,
+            3 => PersonalStoreTransactionStatus::NoMoreNeed,
+            4 | 5 => PersonalStoreTransactionStatus::BoughtFromStore,
+            6 | 7 => PersonalStoreTransactionStatus::SoldToStore,
+            _ => return Err(PacketError::InvalidPacket),
+        };
+        let update_item_count = reader.read_u8()? as usize;
+        let mut update_store_items = Vec::with_capacity(update_item_count);
+        for _ in 0..update_item_count {
+            let slot_index = reader.read_u8()? as usize;
+            let item = reader.read_item_full()?;
+            update_store_items.push((slot_index, item));
+        }
+
+        Ok(Self {
+            status,
+            store_entity_id,
+            update_store_items,
+        })
+    }
 }
 
 impl From<&PacketServerPersonalStoreTransactionResult> for Packet {
     fn from(packet: &PacketServerPersonalStoreTransactionResult) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PersonalStoreTransactionResult as u16);
-
-        match packet {
-            &PacketServerPersonalStoreTransactionResult::Cancelled(store_entity_id) => {
-                writer.write_entity_id(store_entity_id);
-                writer.write_u8(1); // Cancelled
-                writer.write_u8(0); // Update item count
-            }
-            PacketServerPersonalStoreTransactionResult::BoughtFromStore(
-                store_entity_id,
-                store_slot_index,
-                store_slot,
-            ) => {
-                writer.write_entity_id(*store_entity_id);
-                writer.write_u8(4); // Item bought from store
-                writer.write_u8(1); // Update item count
-                writer.write_u8(*store_slot_index as u8);
-                writer.write_item_full(store_slot.as_ref());
-            }
-            PacketServerPersonalStoreTransactionResult::SoldOut(
-                store_entity_id,
-                store_slot_index,
-                store_slot,
-            ) => {
-                writer.write_entity_id(*store_entity_id);
-                writer.write_u8(2); // Sold Out
-                writer.write_u8(1); // Update item count
-                writer.write_u8(*store_slot_index as u8);
-                writer.write_item_full(store_slot.as_ref());
-            }
+        writer.write_entity_id(packet.store_entity_id);
+        match packet.status {
+            PersonalStoreTransactionStatus::Cancelled => writer.write_u8(1),
+            PersonalStoreTransactionStatus::SoldOut => writer.write_u8(2),
+            PersonalStoreTransactionStatus::NoMoreNeed => writer.write_u8(3),
+            PersonalStoreTransactionStatus::BoughtFromStore => writer.write_u8(4),
+            PersonalStoreTransactionStatus::SoldToStore => writer.write_u8(6),
         }
+
+        writer.write_u8(packet.update_store_items.len() as u8);
+        for (slot_index, item) in packet.update_store_items.iter() {
+            writer.write_u8(*slot_index as u8);
+            writer.write_item_full(item.as_ref());
+        }
+
         writer.into()
     }
 }

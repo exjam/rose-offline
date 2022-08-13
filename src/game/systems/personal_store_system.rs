@@ -9,16 +9,13 @@ use bevy::{
 use rose_data::{Item, ItemSlotBehaviour};
 use rose_game_common::{
     components::{ItemSlot, Money},
-    messages::server::PersonalStoreTransactionCancelled,
+    messages::server::PersonalStoreTransactionStatus,
 };
 
 use crate::game::{
     components::{ClientEntity, GameClient, Inventory, PersonalStore},
     events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},
-    messages::server::{
-        PersonalStoreItemList, PersonalStoreTransactionResult, PersonalStoreTransactionSoldOut,
-        PersonalStoreTransactionSuccess, ServerMessage,
-    },
+    messages::server::{PersonalStoreItemList, ServerMessage},
 };
 
 #[derive(WorldQuery)]
@@ -172,48 +169,60 @@ pub fn personal_store_system(
                                 if let Some(seller_game_client) = seller.game_client {
                                     seller_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::PersonalStoreTransactionResult(
-                                            PersonalStoreTransactionResult::BoughtFromStore(
-                                                PersonalStoreTransactionSuccess {
-                                                    store_entity_id: seller.client_entity.id,
-                                                    money: seller.inventory.money,
-                                                    store_slot_index,
-                                                    store_slot_item: seller
-                                                        .inventory
-                                                        .get_item(seller_item_slot)
-                                                        .cloned(),
-                                                    inventory_slot: seller_item_slot,
-                                                    inventory_item: seller
-                                                        .inventory
-                                                        .get_item(seller_item_slot)
-                                                        .cloned(),
-                                                },
-                                            ),
-                                        ))
+                                        .send(ServerMessage::PersonalStoreTransaction {
+                                            status: PersonalStoreTransactionStatus::BoughtFromStore,
+                                            store_entity_id: seller.client_entity.id,
+                                            update_store: vec![(
+                                                store_slot_index,
+                                                seller
+                                                    .inventory
+                                                    .get_item(seller_item_slot)
+                                                    .cloned(),
+                                            )],
+                                        })
                                         .ok();
+
+                                    seller_game_client.server_message_tx.send(
+                                        ServerMessage::PersonalStoreTransactionUpdateInventory {
+                                            money: seller.inventory.money,
+                                            items: vec![(
+                                                seller_item_slot,
+                                                seller
+                                                    .inventory
+                                                    .get_item(seller_item_slot)
+                                                    .cloned(),
+                                            )],
+                                        },
+                                    ).ok();
                                 }
 
                                 if let Some(buyer_game_client) = buyer.game_client {
                                     buyer_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::PersonalStoreTransactionResult(
-                                            PersonalStoreTransactionResult::BoughtFromStore(
-                                                PersonalStoreTransactionSuccess {
-                                                    store_entity_id: seller.client_entity.id,
-                                                    money: buyer.inventory.money,
-                                                    store_slot_index,
-                                                    store_slot_item: seller
-                                                        .inventory
-                                                        .get_item(seller_item_slot)
-                                                        .cloned(),
-                                                    inventory_slot: buyer_item_slot,
-                                                    inventory_item: buyer
-                                                        .inventory
-                                                        .get_item(buyer_item_slot)
-                                                        .cloned(),
-                                                },
-                                            ),
-                                        ))
+                                        .send(ServerMessage::PersonalStoreTransaction {
+                                            status: PersonalStoreTransactionStatus::BoughtFromStore,
+                                            store_entity_id: seller.client_entity.id,
+                                            update_store: vec![(
+                                                store_slot_index,
+                                                seller
+                                                    .inventory
+                                                    .get_item(seller_item_slot)
+                                                    .cloned(),
+                                            )],
+                                        })
+                                        .ok();
+
+                                    buyer_game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::PersonalStoreTransactionUpdateInventory {
+                                            money: buyer.inventory.money,
+                                            items: vec![(
+                                                buyer_item_slot,
+                                                buyer
+                                                    .inventory
+                                                    .get_item(buyer_item_slot)
+                                                    .cloned(),
+                                            )]})
                                         .ok();
                                 }
                             }
@@ -221,15 +230,11 @@ pub fn personal_store_system(
                                 if let Some(buyer_game_client) = buyer.game_client {
                                     buyer_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::PersonalStoreTransactionResult(
-                                            PersonalStoreTransactionResult::SoldOut(
-                                                PersonalStoreTransactionSoldOut {
-                                                    store_entity_id: seller.client_entity.id,
-                                                    store_slot_index,
-                                                    item: None,
-                                                },
-                                            ),
-                                        ))
+                                        .send(ServerMessage::PersonalStoreTransaction {
+                                            status: PersonalStoreTransactionStatus::SoldOut,
+                                            store_entity_id: seller.client_entity.id,
+                                            update_store: vec![(store_slot_index, None)],
+                                        })
                                         .ok();
                                 }
                             }
@@ -239,13 +244,11 @@ pub fn personal_store_system(
                                 if let Some(buyer_game_client) = buyer.game_client {
                                     buyer_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::PersonalStoreTransactionResult(
-                                            PersonalStoreTransactionResult::Cancelled(
-                                                PersonalStoreTransactionCancelled {
-                                                    store_entity_id: seller.client_entity.id,
-                                                },
-                                            ),
-                                        ))
+                                        .send(ServerMessage::PersonalStoreTransaction {
+                                            status: PersonalStoreTransactionStatus::Cancelled,
+                                            store_entity_id: seller.client_entity.id,
+                                            update_store: Vec::default(),
+                                        })
                                         .ok();
                                 }
                             }

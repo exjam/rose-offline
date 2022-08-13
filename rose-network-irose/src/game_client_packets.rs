@@ -21,8 +21,8 @@ use crate::common_packets::{
     decode_item_slot, encode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex,
     PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadPartyRules,
     PacketReadSkillSlot, PacketReadVehiclePartIndex, PacketWriteEntityId,
-    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWritePartyRules,
-    PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
+    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
+    PacketWritePartyRules, PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -526,7 +526,7 @@ impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
         }
 
         let mut reader = PacketReader::from(packet);
-        let store_entity_id = ClientEntityId(reader.read_u16()? as usize);
+        let store_entity_id = reader.read_entity_id()?;
 
         // Although the packet supports multiple items, no one uses it
         // so to keep our code simpler we only support single item.
@@ -540,6 +540,17 @@ impl TryFrom<&Packet> for PacketClientPersonalStoreBuyItem {
             store_slot_index,
             buy_item,
         })
+    }
+}
+
+impl From<&PacketClientPersonalStoreBuyItem> for Packet {
+    fn from(packet: &PacketClientPersonalStoreBuyItem) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::PersonalStoreBuyItem as u16);
+        writer.write_entity_id(packet.store_entity_id);
+        writer.write_u8(1);
+        writer.write_u8(packet.store_slot_index as u8);
+        writer.write_item_full(Some(&packet.buy_item));
+        writer.into()
     }
 }
 

@@ -473,36 +473,13 @@ pub struct OpenPersonalStore {
     pub title: String,
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum PersonalStoreTransactionResult {
-    Cancelled(PersonalStoreTransactionCancelled),
-    SoldOut(PersonalStoreTransactionSoldOut),
-    NoMoreNeed(PersonalStoreTransactionSoldOut),
-    BoughtFromStore(PersonalStoreTransactionSuccess),
-    SoldToStore(PersonalStoreTransactionSuccess),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PersonalStoreTransactionCancelled {
-    pub store_entity_id: ClientEntityId,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PersonalStoreTransactionSoldOut {
-    pub store_entity_id: ClientEntityId,
-    pub store_slot_index: usize,
-    pub item: Option<Item>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PersonalStoreTransactionSuccess {
-    pub store_entity_id: ClientEntityId,
-    pub store_slot_index: usize,
-    pub store_slot_item: Option<Item>,
-    pub money: Money,
-    pub inventory_slot: ItemSlot,
-    pub inventory_item: Option<Item>,
+pub enum PersonalStoreTransactionStatus {
+    Cancelled,
+    SoldOut,
+    NoMoreNeed, // Similar to SoldOut but when selling item to store
+    BoughtFromStore,
+    SoldToStore,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -716,7 +693,15 @@ pub enum ServerMessage {
     OpenPersonalStore(OpenPersonalStore),
     ClosePersonalStore(ClientEntityId),
     PersonalStoreItemList(PersonalStoreItemList),
-    PersonalStoreTransactionResult(PersonalStoreTransactionResult),
+    PersonalStoreTransaction {
+        status: PersonalStoreTransactionStatus,
+        store_entity_id: ClientEntityId,
+        update_store: Vec<(usize, Option<Item>)>,
+    },
+    PersonalStoreTransactionUpdateInventory {
+        money: Money,
+        items: Vec<(ItemSlot, Option<Item>)>,
+    },
     UseItem(UseItem),
     UseInventoryItem(UseInventoryItem),
     CastSkillSelf(CastSkillSelf),
