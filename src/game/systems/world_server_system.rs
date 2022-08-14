@@ -53,7 +53,7 @@ fn handle_world_connection_request(
         })?;
 
     // Load character list, deleting any characters ready for deletion
-    let mut character_list = CharacterList::new();
+    let mut character_list = CharacterList::default();
     account
         .character_names
         .retain(|name| match CharacterStorage::try_load(name) {
