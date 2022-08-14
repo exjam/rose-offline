@@ -1,6 +1,10 @@
 use arrayvec::ArrayVec;
 use serde::{Deserialize, Serialize};
-use std::{num::NonZeroU16, str::FromStr, time::Duration};
+use std::{
+    num::{NonZeroU16, NonZeroUsize},
+    str::FromStr,
+    time::Duration,
+};
 
 use rose_file_readers::VfsPathBuf;
 
@@ -27,7 +31,7 @@ pub enum EffectBulletMoveType {
 pub struct EffectData {
     pub id: EffectId,
     pub point_effects: ArrayVec<EffectFileId, 4>,
-    pub trail_effect: Option<EffectFileId>,
+    pub trail_colour_index: Option<NonZeroUsize>,
     pub trail_duration: Duration,
     pub hit_effect_normal: Option<EffectFileId>,
     pub hit_effect_critical: Option<EffectFileId>,

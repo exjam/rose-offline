@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 
 use rose_data::{EffectData, EffectDatabase, EffectFileId, EffectId, SoundId};
 use rose_file_readers::{stb_column, StbFile, VfsPathBuf, VirtualFilesystem};
@@ -15,8 +15,8 @@ impl StbEffect {
 
     stb_column! { (2..=5), get_effect_points, [Option<EffectFileId>; 4] }
 
-    stb_column! { 6, get_trail_normal, EffectFileId }
-    stb_column! { 8, get_trail_duration, u32 }
+    stb_column! { 6, get_trail_colour_index, NonZeroUsize }
+    stb_column! { 8, get_trail_duration_millis, u32 }
 
     stb_column! { 9, get_hit_normal, EffectFileId }
     stb_column! { 10, get_hit_critical, EffectFileId }
@@ -38,8 +38,10 @@ fn load_effect(data: &StbEffect, id: usize) -> Option<EffectData> {
             .filter_map(|x| x.as_ref())
             .copied()
             .collect(),
-        trail_effect: data.get_trail_normal(id),
-        trail_duration: Duration::from_millis(data.get_trail_duration(id).unwrap_or(0) as u64),
+        trail_colour_index: data.get_trail_colour_index(id),
+        trail_duration: Duration::from_millis(
+            data.get_trail_duration_millis(id).unwrap_or(0) as u64
+        ),
         hit_effect_normal: data.get_hit_normal(id),
         hit_effect_critical: data.get_hit_critical(id),
         bullet_effect: data.get_bullet_normal(id),
