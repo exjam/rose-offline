@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 pub enum AbilityType {
     Gender,
     Birthstone,
-    Class,
+    Job,
     Union,
     Rank,
     Fame,

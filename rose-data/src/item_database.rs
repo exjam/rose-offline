@@ -205,7 +205,7 @@ pub struct BaseItemData {
     pub craft_skill_level: u32,
     pub craft_material: u32,
     pub craft_difficulty: u32,
-    pub equip_class_requirement: u32,
+    pub equip_job_requirement: u32,
     pub equip_union_requirement: ArrayVec<u32, 2>,
     pub equip_ability_requirement: ArrayVec<(AbilityType, u32), 2>,
     pub add_ability_union_requirement: ArrayVec<u32, 2>,

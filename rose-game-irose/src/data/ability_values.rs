@@ -151,7 +151,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         TODO:
         Cal_MaxWEIGHT ();
         m_fRateUseMP
-        class based += stats + immunity
+        job based += stats + immunity
         */
         let (attack_speed, passive_attack_speed) = calculate_attack_speed(
             &self.item_database,
@@ -1103,7 +1103,7 @@ fn calculate_attack_damage_magic(
 struct EquipmentAbilityValue {
     pub gender: i32,
     pub birthstone: i32,
-    pub class: i32,
+    pub job: i32,
     pub union: i32,
     pub rank: i32,
     pub fame: i32,
@@ -1176,7 +1176,7 @@ impl EquipmentAbilityValue {
         match ability_type {
             AbilityType::Gender => self.gender += value,
             AbilityType::Birthstone => self.birthstone += value,
-            AbilityType::Class => self.class += value,
+            AbilityType::Job => self.job += value,
             AbilityType::Union => self.union += value,
             AbilityType::Rank => self.rank += value,
             AbilityType::Fame => self.fame += value,

@@ -36,7 +36,7 @@ macro_rules! impl_conversions {
 pub enum IroseAbilityType {
     Gender = 2,
     Birthstone = 3,
-    Class = 4,
+    Job = 4,
     Union = 5,
     Rank = 6,
     Fame = 7,
@@ -521,7 +521,7 @@ pub fn decode_ability_type(id: usize) -> Option<AbilityType> {
     match FromPrimitive::from_usize(id)? {
         IroseAbilityType::Gender => Some(AbilityType::Gender),
         IroseAbilityType::Birthstone => Some(AbilityType::Birthstone),
-        IroseAbilityType::Class => Some(AbilityType::Class),
+        IroseAbilityType::Job => Some(AbilityType::Job),
         IroseAbilityType::Union => Some(AbilityType::Union),
         IroseAbilityType::Rank => Some(AbilityType::Rank),
         IroseAbilityType::Fame => Some(AbilityType::Fame),
@@ -627,7 +627,7 @@ pub fn encode_ability_type(from: AbilityType) -> Option<usize> {
     match from {
         AbilityType::Gender => IroseAbilityType::Gender.to_usize(),
         AbilityType::Birthstone => IroseAbilityType::Birthstone.to_usize(),
-        AbilityType::Class => IroseAbilityType::Class.to_usize(),
+        AbilityType::Job => IroseAbilityType::Job.to_usize(),
         AbilityType::Union => IroseAbilityType::Union.to_usize(),
         AbilityType::Rank => IroseAbilityType::Rank.to_usize(),
         AbilityType::Fame => IroseAbilityType::Fame.to_usize(),

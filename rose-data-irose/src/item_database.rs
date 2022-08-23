@@ -33,7 +33,7 @@ impl StbItem {
     stb_column! { 13, get_craft_skill_level, u32 }
     stb_column! { 14, get_craft_material, u32 }
     stb_column! { 15, get_craft_difficulty, u32 }
-    stb_column! { 16, get_equip_class_requirement, u32 }
+    stb_column! { 16, get_equip_job_requirement, u32 }
 
     pub fn get_equip_union_requirement(&self, id: usize) -> ArrayVec<u32, 2> {
         let mut requirements = ArrayVec::new();
@@ -268,7 +268,7 @@ fn load_base_item(
         craft_skill_level: data.get_craft_skill_level(id).unwrap_or(0),
         craft_material: data.get_craft_material(id).unwrap_or(0),
         craft_difficulty: data.get_craft_difficulty(id).unwrap_or(0),
-        equip_class_requirement: data.get_equip_class_requirement(id).unwrap_or(0),
+        equip_job_requirement: data.get_equip_job_requirement(id).unwrap_or(0),
         equip_union_requirement: data.get_equip_union_requirement(id),
         equip_ability_requirement: data.get_equip_ability_requirement(id),
         add_ability_union_requirement: data.get_add_ability_union_requirement(id),

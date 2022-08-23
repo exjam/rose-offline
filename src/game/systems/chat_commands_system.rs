@@ -611,7 +611,7 @@ fn handle_chat_command(
                 "gender" => AbilityType::Gender,
                 "face" => AbilityType::Face,
                 "hair" => AbilityType::Hair,
-                "class" => AbilityType::Class,
+                "job" => AbilityType::Job,
                 "strength" => AbilityType::Strength,
                 "dexterity" => AbilityType::Dexterity,
                 "intelligence" => AbilityType::Intelligence,

@@ -50,7 +50,7 @@ pub fn ability_values_get_value(
         }),
         AbilityType::Race => character_info.map(|x| (x.race / 2) as i32),
         AbilityType::Birthstone => character_info.map(|x| x.birth_stone as i32),
-        AbilityType::Class => character_info.map(|x| x.job as i32),
+        AbilityType::Job => character_info.map(|x| x.job as i32),
         AbilityType::Rank => character_info.map(|x| x.rank as i32),
         AbilityType::Fame => character_info.map(|x| x.fame as i32),
         AbilityType::FameB => character_info.map(|x| x.fame_b as i32),
@@ -411,7 +411,7 @@ pub fn ability_values_set_value(
 
             true
         }
-        AbilityType::Class => {
+        AbilityType::Job => {
             if let Some(character_info) = character_info.as_mut() {
                 character_info.job = value as u16;
             }
