@@ -359,6 +359,13 @@ impl Item {
             Item::Stackable(item) => compare_item.is_same_item_reference(item.item),
         }
     }
+
+    pub fn is_stackable_item(&self) -> bool {
+        match self {
+            Item::Equipment(_) => false,
+            Item::Stackable(_) => true,
+        }
+    }
 }
 
 pub trait ItemSlotBehaviour {
