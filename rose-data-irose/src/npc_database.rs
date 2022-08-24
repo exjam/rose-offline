@@ -1,13 +1,12 @@
 use enum_map::enum_map;
-use std::{collections::HashMap, num::NonZeroUsize};
+use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 
 use rose_data::{
     EffectFileId, EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
     NpcDatabaseOptions, NpcId, NpcMotionAction, NpcStoreTabData, NpcStoreTabId, SoundId,
+    StringDatabase,
 };
-use rose_file_readers::{
-    stb_column, ChrFile, StbFile, StlFile, VfsPathBuf, VirtualFilesystem, ZmoFile,
-};
+use rose_file_readers::{stb_column, ChrFile, StbFile, VfsPathBuf, VirtualFilesystem, ZmoFile};
 
 use crate::data_decoder::decode_item_base1000;
 
@@ -125,10 +124,9 @@ fn load_motion_file_data(
 
 pub fn get_npc_database(
     vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
     options: &NpcDatabaseOptions,
 ) -> Result<NpcDatabase, anyhow::Error> {
-    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_NPC_S.STL")?;
-
     let model_data = vfs.read_file::<ChrFile, _>("3DDATA/NPC/LIST_NPC.CHR")?;
 
     let data = StbNpc(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_NPC.STB")?);
@@ -164,13 +162,16 @@ pub fn get_npc_database(
             }
         }
 
+        let name = if let Some(entry) = npc_string_id.and_then(|key| string_database.get_npc(key)) {
+            unsafe { std::mem::transmute(entry.text) }
+        } else {
+            ""
+        };
+
         npc_count += 1;
         npcs.push(Some(NpcData {
-            name: npc_string_id
-                .and_then(|string_id| stl.get_text_string(1, string_id))
-                .unwrap_or("")
-                .to_string(),
             id: NpcId::new(id as u16).unwrap(),
+            name,
             walk_speed: data.get_walk_speed(id).unwrap_or(0),
             run_speed: data.get_run_speed(id).unwrap_or(0),
             scale: (data.get_scale(id).unwrap_or(100) as f32) / 100.0,
@@ -239,17 +240,10 @@ pub fn get_npc_database(
         );
     }
 
-    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_SELL_S.STL")?;
     let data = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SELL.STB")?;
     let mut store_tabs = HashMap::new();
     for id in 1..data.rows() {
-        let tab_string_id = data.get(id, 1);
-        let name = stl
-            .get_text_string(1, tab_string_id)
-            .map(|x| x.to_string())
-            .unwrap_or_else(String::new);
         let mut items = HashMap::new();
-
         for col in 2..data.columns() {
             if let Some(item) = decode_item_base1000(data.get_int(id, col) as usize) {
                 items.insert((col - 2) as u16, item);
@@ -257,6 +251,12 @@ pub fn get_npc_database(
         }
 
         if !items.is_empty() {
+            let name = if let Some(entry) = string_database.get_npc_store_tab(data.get(id, 1)) {
+                unsafe { std::mem::transmute(entry.text) }
+            } else {
+                ""
+            };
+
             store_tabs.insert(
                 NpcStoreTabId::new(id as u16).unwrap(),
                 NpcStoreTabData { name, items },
@@ -286,6 +286,7 @@ pub fn get_npc_database(
         store_tabs.len()
     );
     Ok(NpcDatabase::new(
+        string_database,
         npcs,
         conversation_files,
         store_tabs,

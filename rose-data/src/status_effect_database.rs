@@ -1,9 +1,9 @@
 use arrayvec::ArrayVec;
 use enum_map::Enum;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
+use std::{collections::HashMap, num::NonZeroU16, str::FromStr, sync::Arc};
 
-use crate::EffectFileId;
+use crate::{EffectFileId, StringDatabase};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug, Serialize, Deserialize)]
 pub struct StatusEffectId(NonZeroU16);
@@ -105,7 +105,10 @@ pub enum StatusEffectClearedByType {
 #[derive(Debug)]
 pub struct StatusEffectData {
     pub id: StatusEffectId,
-    pub name: String,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub start_message: &'static str,
+    pub end_message: &'static str,
     pub status_effect_type: StatusEffectType,
     pub can_be_reapplied: bool,
     pub cleared_by_type: StatusEffectClearedByType,
@@ -115,16 +118,19 @@ pub struct StatusEffectData {
 }
 
 pub struct StatusEffectDatabase {
+    _string_database: Arc<StringDatabase>,
     status_effects: HashMap<u16, StatusEffectData>,
     decrease_summon_life_status_effect_id: StatusEffectId,
 }
 
 impl StatusEffectDatabase {
     pub fn new(
+        string_database: Arc<StringDatabase>,
         status_effects: HashMap<u16, StatusEffectData>,
         decrease_summon_life_status_effect_id: StatusEffectId,
     ) -> Self {
         Self {
+            _string_database: string_database,
             status_effects,
             decrease_summon_life_status_effect_id,
         }

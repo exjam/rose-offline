@@ -10,6 +10,7 @@ mod skill_database;
 mod skybox_database;
 mod sound_database;
 mod status_effect_database;
+mod string_database;
 mod warp_gate_database;
 mod zone_database;
 
@@ -25,6 +26,7 @@ pub use skill_database::{get_skill_database, SKILL_PAGE_SIZE};
 pub use skybox_database::get_skybox_database;
 pub use sound_database::get_sound_database;
 pub use status_effect_database::get_status_effect_database;
+pub use string_database::get_string_database;
 pub use warp_gate_database::get_warp_gate_database;
 pub use zone_database::{get_zone_database, get_zone_list};
 

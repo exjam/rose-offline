@@ -2,15 +2,17 @@ use arrayvec::ArrayVec;
 use log::debug;
 use std::{
     num::{NonZeroU32, NonZeroUsize},
+    sync::Arc,
     time::Duration,
 };
 
 use rose_data::{
     AbilityType, EffectFileId, EffectId, ItemClass, MotionId, NpcId, SkillActionMode,
     SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData,
-    SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId, ZoneId,
+    SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId,
+    StringDatabase, ZoneId,
 };
-use rose_file_readers::{stb_column, StbFile, StlFile, VirtualFilesystem};
+use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 use crate::data_decoder::{
     decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillBasicCommand,
@@ -193,17 +195,20 @@ impl StbSkill {
     }
 }
 
-fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
+fn load_skill(data: &StbSkill, string_database: &StringDatabase, id: usize) -> Option<SkillData> {
     let skill_id = SkillId::new(id as u16)?;
     let icon_number = data.get_icon_number(id)?;
     let skill_type = data.get_skill_type(id).and_then(|x| x.try_into().ok())?;
+    let skill_strings = string_database.get_skill(data.0.get(id, data.0.columns() - 1));
 
     Some(SkillData {
         id: skill_id,
-        name: stl
-            .get_text_string(1, data.0.get(id, data.0.columns() - 1))
-            .unwrap_or("")
-            .to_string(),
+        name: skill_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.name) }),
+        description: skill_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.description) }),
         base_skill_id: data.get_base_skill_id(id),
         action_mode: data
             .get_action_mode(id)
@@ -274,15 +279,17 @@ fn load_skill(data: &StbSkill, stl: &StlFile, id: usize) -> Option<SkillData> {
     })
 }
 
-pub fn get_skill_database(vfs: &VirtualFilesystem) -> Result<SkillDatabase, anyhow::Error> {
-    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_SKILL_S.STL")?;
+pub fn get_skill_database(
+    vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
+) -> Result<SkillDatabase, anyhow::Error> {
     let data = StbSkill(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_SKILL.STB")?);
     let mut skills = Vec::with_capacity(data.rows());
     skills.push(None); // SkillId 0
     for id in 1..data.rows() {
-        skills.push(load_skill(&data, &stl, id));
+        skills.push(load_skill(&data, &string_database, id));
     }
 
     debug!("Loaded {} skills", skills.len());
-    Ok(SkillDatabase::new(skills))
+    Ok(SkillDatabase::new(string_database, skills))
 }

@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, num::Wrapping};
+use std::{collections::HashMap, num::Wrapping, sync::Arc};
 
-use crate::WorldTicks;
+use crate::{StringDatabase, WorldTicks};
 
 pub use rose_file_readers::QsdTrigger as QuestTrigger;
 
 pub struct QuestData {
     pub id: usize,
-    pub string_id: String,
+    pub name: &'static str,
+    pub description: &'static str,
+    pub start_message: &'static str,
+    pub end_message: &'static str,
     pub time_limit: Option<WorldTicks>,
 }
 
@@ -78,6 +81,7 @@ impl From<&str> for QuestTriggerHash {
 }
 
 pub struct QuestDatabase {
+    pub _string_database: Arc<StringDatabase>,
     pub quests: Vec<Option<QuestData>>,
     pub strings: HashMap<u16, String>,
     pub triggers: HashMap<String, QuestTrigger>,

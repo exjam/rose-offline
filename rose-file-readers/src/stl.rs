@@ -93,8 +93,8 @@ impl RoseFile for StlFile {
         let read_stl_entry = |reader: &mut RoseFileReader,
                               data: &mut Vec<u8>|
          -> Result<(u32, u32), anyhow::Error> {
-            let text = reader.read_variable_length_string()?;
-            let text_bytes = text.as_bytes();
+            let text_bytes = reader.read_variable_length_bytes()?;
+            let _ = str::from_utf8(text_bytes)?;
             let text_bytes_length = text_bytes.len();
             let text_offset = data.len();
             data.extend_from_slice(text_bytes);
@@ -166,53 +166,114 @@ impl StlFile {
         self.string_keys.keys()
     }
 
+    pub fn lookup_key(&self, key: &str) -> Option<usize> {
+        self.string_keys.get(key).map(|x| *x as usize)
+    }
+
     pub fn get_text_string(&self, language: usize, key: &str) -> Option<&str> {
         let language = self.languages.get(language as usize)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.text.get(*index as usize)?;
-        str::from_utf8(&self.data[*offset as usize..(offset + size) as usize]).ok()
+        unsafe {
+            Some(str::from_utf8_unchecked(
+                &self.data[*offset as usize..(offset + size) as usize],
+            ))
+        }
     }
 
     pub fn get_comment_string(&self, language: usize, key: &str) -> Option<&str> {
         let language = self.languages.get(language as usize)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.comment.get(*index as usize)?;
-        str::from_utf8(&self.data[*offset as usize..(offset + size) as usize]).ok()
+        unsafe {
+            Some(str::from_utf8_unchecked(
+                &self.data[*offset as usize..(offset + size) as usize],
+            ))
+        }
     }
 
     pub fn get_quest1_string(&self, language: usize, key: &str) -> Option<&str> {
         let language = self.languages.get(language as usize)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.quest1.get(*index as usize)?;
-        str::from_utf8(&self.data[*offset as usize..(offset + size) as usize]).ok()
+        unsafe {
+            Some(str::from_utf8_unchecked(
+                &self.data[*offset as usize..(offset + size) as usize],
+            ))
+        }
     }
 
     pub fn get_quest2_string(&self, language: usize, key: &str) -> Option<&str> {
         let language = self.languages.get(language as usize)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.quest2.get(*index as usize)?;
-        str::from_utf8(&self.data[*offset as usize..(offset + size) as usize]).ok()
+        unsafe {
+            Some(str::from_utf8_unchecked(
+                &self.data[*offset as usize..(offset + size) as usize],
+            ))
+        }
     }
 
-    pub fn get_normal_entry(&self, language: usize, key: &str) -> Option<StlNormalEntry<'_>> {
+    pub fn get_normal_entry(&self, language: usize, index: usize) -> Option<StlNormalEntry<'_>> {
+        let language = self.languages.get(language as usize)?;
+
         Some(StlNormalEntry {
-            text: self.get_text_string(language, key)?,
+            text: {
+                let (offset, size) = language.text.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
         })
     }
 
-    pub fn get_item_entry(&self, language: usize, key: &str) -> Option<StlItemEntry<'_>> {
+    pub fn get_item_entry(&self, language: usize, index: usize) -> Option<StlItemEntry<'_>> {
+        let language = self.languages.get(language as usize)?;
+
         Some(StlItemEntry {
-            name: self.get_text_string(language, key)?,
-            description: self.get_comment_string(language, key)?,
+            name: {
+                let (offset, size) = language.text.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
+            description: {
+                let (offset, size) = language.comment.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
         })
     }
 
-    pub fn get_quest_entry(&self, language: usize, key: &str) -> Option<StlQuestEntry<'_>> {
+    pub fn get_quest_entry(&self, language: usize, index: usize) -> Option<StlQuestEntry<'_>> {
+        let language = self.languages.get(language as usize)?;
+
         Some(StlQuestEntry {
-            name: self.get_text_string(language, key)?,
-            description: self.get_comment_string(language, key)?,
-            start_message: self.get_quest1_string(language, key)?,
-            end_message: self.get_quest2_string(language, key)?,
+            name: {
+                let (offset, size) = language.text.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
+            description: {
+                let (offset, size) = language.comment.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
+            start_message: {
+                let (offset, size) = language.quest1.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
+            end_message: {
+                let (offset, size) = language.quest2.get(index)?;
+                unsafe {
+                    str::from_utf8_unchecked(&self.data[*offset as usize..(offset + size) as usize])
+                }
+            },
         })
     }
 }

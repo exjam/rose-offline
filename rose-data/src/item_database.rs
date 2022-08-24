@@ -1,9 +1,11 @@
 use arrayvec::ArrayVec;
 use enum_map::Enum;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
-use crate::{AbilityType, EffectFileId, EffectId, SkillId, SoundId, StatusEffectId};
+use crate::{
+    AbilityType, EffectFileId, EffectId, SkillId, SoundId, StatusEffectId, StringDatabase,
+};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct ItemReference {
@@ -192,7 +194,8 @@ impl ItemClass {
 #[derive(Debug)]
 pub struct BaseItemData {
     pub id: ItemReference,
-    pub name: String,
+    pub name: &'static str,
+    pub description: &'static str,
     pub class: ItemClass,
     pub base_price: u32,
     pub price_rate: u32,
@@ -355,6 +358,7 @@ pub enum ItemData<'a> {
 }
 
 pub struct ItemDatabase {
+    _string_database: Arc<StringDatabase>,
     face: Vec<Option<FaceItemData>>,
     head: Vec<Option<HeadItemData>>,
     body: Vec<Option<BodyItemData>>,
@@ -376,6 +380,7 @@ pub struct ItemDatabase {
 impl ItemDatabase {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        string_database: Arc<StringDatabase>,
         face: Vec<Option<FaceItemData>>,
         head: Vec<Option<HeadItemData>>,
         body: Vec<Option<BodyItemData>>,
@@ -393,6 +398,7 @@ impl ItemDatabase {
         item_grades: Vec<ItemGradeData>,
     ) -> Self {
         Self {
+            _string_database: string_database,
             face,
             head,
             body,

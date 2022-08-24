@@ -1656,7 +1656,7 @@ fn quest_reward_npc_message(
             character_info.name.clone()
         } else if let Some(npc) = quest_parameters.source.npc.as_ref() {
             if let Some(npc_data) = quest_system_resources.game_data.npcs.get_npc(npc.id) {
-                npc_data.name.clone()
+                npc_data.name.to_string()
             } else {
                 return false;
             }

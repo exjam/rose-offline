@@ -3,12 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::{
     num::{NonZeroU16, NonZeroUsize},
     str::FromStr,
+    sync::Arc,
     time::Duration,
 };
 
 use crate::{
     effect_database::EffectId, AbilityType, EffectFileId, ItemClass, MotionId, NpcId, SoundId,
-    StatusEffectId, ZoneId,
+    StatusEffectId, StringDatabase, ZoneId,
 };
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
@@ -135,7 +136,8 @@ pub struct SkillCastingEffect {
 #[derive(Debug)]
 pub struct SkillData {
     pub id: SkillId,
-    pub name: String,
+    pub name: &'static str,
+    pub description: &'static str,
 
     pub base_skill_id: Option<SkillId>,
     pub level: u32,
@@ -187,12 +189,16 @@ pub struct SkillData {
 }
 
 pub struct SkillDatabase {
+    _string_database: Arc<StringDatabase>,
     skills: Vec<Option<SkillData>>,
 }
 
 impl SkillDatabase {
-    pub fn new(skills: Vec<Option<SkillData>>) -> Self {
-        Self { skills }
+    pub fn new(string_database: Arc<StringDatabase>, skills: Vec<Option<SkillData>>) -> Self {
+        Self {
+            _string_database: string_database,
+            skills,
+        }
     }
 
     pub fn get_skill(&self, id: SkillId) -> Option<&SkillData> {

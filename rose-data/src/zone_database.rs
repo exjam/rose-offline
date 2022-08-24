@@ -1,8 +1,8 @@
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, num::NonZeroU16, str::FromStr};
+use std::{collections::HashMap, num::NonZeroU16, str::FromStr, sync::Arc};
 
-use crate::{NpcConversationId, NpcId, SkyboxId};
+use crate::{NpcConversationId, NpcId, SkyboxId, StringDatabase};
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
 pub struct ZoneId(pub NonZeroU16);
@@ -35,7 +35,8 @@ pub struct ZoneEventObject {
 
 pub struct ZoneData {
     pub id: ZoneId,
-    pub name: String,
+    pub name: &'static str,
+    pub description: &'static str,
     pub sector_size: u32,
     pub grid_per_patch: f32,
     pub grid_size: f32,
@@ -73,12 +74,16 @@ impl ZoneData {
 }
 
 pub struct ZoneDatabase {
+    _string_database: Arc<StringDatabase>,
     zones: Vec<Option<ZoneData>>,
 }
 
 impl ZoneDatabase {
-    pub fn new(zones: Vec<Option<ZoneData>>) -> Self {
-        Self { zones }
+    pub fn new(string_database: Arc<StringDatabase>, zones: Vec<Option<ZoneData>>) -> Self {
+        Self {
+            _string_database: string_database,
+            zones,
+        }
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &ZoneData> {

@@ -4,9 +4,12 @@ use std::{
     collections::HashMap,
     num::{NonZeroU16, NonZeroUsize},
     str::FromStr,
+    sync::Arc,
 };
 
-use crate::{EffectFileId, EffectId, ItemReference, MotionFileData, MotionId, SoundId};
+use crate::{
+    EffectFileId, EffectId, ItemReference, MotionFileData, MotionId, SoundId, StringDatabase,
+};
 
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NpcId(NonZeroU16);
@@ -40,7 +43,7 @@ pub enum NpcMotionAction {
 
 pub struct NpcData {
     pub id: NpcId,
-    pub name: String,
+    pub name: &'static str,
     pub walk_speed: i32,
     pub run_speed: i32,
     pub scale: f32,
@@ -94,7 +97,7 @@ pub struct NpcConversationData {
 }
 
 pub struct NpcStoreTabData {
-    pub name: String,
+    pub name: &'static str,
     pub items: HashMap<u16, ItemReference>,
 }
 
@@ -103,6 +106,7 @@ pub struct NpcDatabaseOptions {
 }
 
 pub struct NpcDatabase {
+    _string_database: Arc<StringDatabase>,
     npcs: Vec<Option<NpcData>>,
     conversation_files: HashMap<String, NpcConversationData>,
     store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
@@ -111,12 +115,14 @@ pub struct NpcDatabase {
 
 impl NpcDatabase {
     pub fn new(
+        string_database: Arc<StringDatabase>,
         npcs: Vec<Option<NpcData>>,
         conversation_files: HashMap<String, NpcConversationData>,
         store_tabs: HashMap<NpcStoreTabId, NpcStoreTabData>,
         action_map: EnumMap<NpcMotionAction, MotionId>,
     ) -> Self {
         Self {
+            _string_database: string_database,
             npcs,
             conversation_files,
             store_tabs,

@@ -1,10 +1,13 @@
+use std::sync::Arc;
+
 use rose_file_readers::VfsPathBuf;
 
-use crate::{SkyboxId, ZoneId};
+use crate::{SkyboxId, StringDatabase, ZoneId};
 
 pub struct ZoneListEntry {
     pub id: ZoneId,
-    pub name: String,
+    pub name: &'static str,
+    pub description: &'static str,
     pub minimap_path: Option<VfsPathBuf>,
     pub minimap_start_x: u32,
     pub minimap_start_y: u32,
@@ -23,12 +26,16 @@ pub struct ZoneListEntry {
 }
 
 pub struct ZoneList {
+    _string_database: Arc<StringDatabase>,
     zones: Vec<Option<ZoneListEntry>>,
 }
 
 impl ZoneList {
-    pub fn new(zones: Vec<Option<ZoneListEntry>>) -> Self {
-        Self { zones }
+    pub fn new(string_database: Arc<StringDatabase>, zones: Vec<Option<ZoneListEntry>>) -> Self {
+        Self {
+            _string_database: string_database,
+            zones,
+        }
     }
 
     pub fn len(&self) -> usize {

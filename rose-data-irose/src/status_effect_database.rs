@@ -1,11 +1,12 @@
 use arrayvec::ArrayVec;
 use log::debug;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use rose_data::{
-    EffectFileId, StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase, StatusEffectId,
+    EffectFileId, StatusEffectClearedByType, StatusEffectData, StatusEffectDatabase,
+    StatusEffectId, StringDatabase,
 };
-use rose_file_readers::{stb_column, StbFile, StlFile, VirtualFilesystem};
+use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 use crate::data_decoder::{IroseStatusEffectClearedByType, IroseStatusEffectType};
 
@@ -41,19 +42,34 @@ impl StbStatus {
     stb_column! { 20, get_string_id, &str }
 }
 
-fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<StatusEffectData> {
+fn load_status_effect(
+    data: &StbStatus,
+    string_database: &StringDatabase,
+    row: usize,
+) -> Option<StatusEffectData> {
     let id = StatusEffectId::new(row as u16)?;
     let status_effect_type = data
         .get_status_effect_type(row)
         .and_then(|x| x.try_into().ok())?;
 
+    let status_effect_strings = data
+        .get_string_id(row)
+        .and_then(|key| string_database.get_status_effect(key));
+
     Some(StatusEffectData {
         id,
-        name: data
-            .get_string_id(row)
-            .and_then(|string_id| stl.get_text_string(1, string_id))
-            .unwrap_or("")
-            .to_string(),
+        name: status_effect_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.name) }),
+        description: status_effect_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.description) }),
+        start_message: status_effect_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.start_message) }),
+        end_message: status_effect_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.end_message) }),
         status_effect_type,
         can_be_reapplied: data.get_can_be_reapplied(row).unwrap_or(false),
         cleared_by_type: data
@@ -68,19 +84,20 @@ fn load_status_effect(data: &StbStatus, stl: &StlFile, row: usize) -> Option<Sta
 
 pub fn get_status_effect_database(
     vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
 ) -> Result<StatusEffectDatabase, anyhow::Error> {
-    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_STATUS_S.STL")?;
     let data = StbStatus(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_STATUS.STB")?);
     let mut status_effects = HashMap::new();
 
     for row in 1..data.0.rows() {
-        if let Some(status_effect_data) = load_status_effect(&data, &stl, row) {
+        if let Some(status_effect_data) = load_status_effect(&data, &string_database, row) {
             status_effects.insert(row as u16, status_effect_data);
         }
     }
 
     debug!("Loaded {} status effects", status_effects.len());
     Ok(StatusEffectDatabase::new(
+        string_database,
         status_effects,
         StatusEffectId::new(43).unwrap(),
     ))

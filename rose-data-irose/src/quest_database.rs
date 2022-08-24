@@ -1,7 +1,7 @@
 use log::{debug, warn};
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use rose_data::{QuestData, QuestDatabase, WorldTicks};
+use rose_data::{QuestData, QuestDatabase, StringDatabase, WorldTicks};
 use rose_file_readers::{stb_column, QsdFile, StbFile, StbReadOptions, VirtualFilesystem};
 
 struct StbQuest(StbFile);
@@ -10,7 +10,10 @@ impl StbQuest {
     stb_column! { 1, get_time_limit, WorldTicks }
 }
 
-pub fn get_quest_database(vfs: &VirtualFilesystem) -> Result<QuestDatabase, anyhow::Error> {
+pub fn get_quest_database(
+    vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
+) -> Result<QuestDatabase, anyhow::Error> {
     let quest_s_stb = vfs.read_file_with::<StbFile, _>(
         "3DDATA/QUESTDATA/QUEST_S.STB",
         &StbReadOptions {
@@ -34,9 +37,21 @@ pub fn get_quest_database(vfs: &VirtualFilesystem) -> Result<QuestDatabase, anyh
         let string_id = quest_stb.0.try_get(row, quest_stb.0.columns() - 1);
 
         if let Some(string_id) = string_id {
+            let quest_strings = string_database.get_quest(string_id);
             quests.push(Some(QuestData {
                 id: row,
-                string_id: string_id.to_string(),
+                name: quest_strings
+                    .as_ref()
+                    .map_or("", |x| unsafe { std::mem::transmute(x.name) }),
+                description: quest_strings
+                    .as_ref()
+                    .map_or("", |x| unsafe { std::mem::transmute(x.description) }),
+                start_message: quest_strings
+                    .as_ref()
+                    .map_or("", |x| unsafe { std::mem::transmute(x.start_message) }),
+                end_message: quest_strings
+                    .as_ref()
+                    .map_or("", |x| unsafe { std::mem::transmute(x.end_message) }),
                 time_limit,
             }));
         } else {
@@ -66,6 +81,7 @@ pub fn get_quest_database(vfs: &VirtualFilesystem) -> Result<QuestDatabase, anyh
 
     debug!("Loaded {} QSD triggers", triggers.len());
     Ok(QuestDatabase {
+        _string_database: string_database,
         quests,
         strings,
         triggers,

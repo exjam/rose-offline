@@ -1,14 +1,15 @@
+use std::sync::Arc;
+
 use bevy::math::{Quat, Vec2, Vec3, Vec3Swizzles};
 use log::debug;
 
 use rose_data::{
-    NpcConversationId, NpcId, SkyboxId, ZoneData, ZoneDatabase, ZoneEventObject, ZoneId, ZoneList,
-    ZoneListEntry, ZoneMonsterSpawnPoint, ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
+    NpcConversationId, NpcId, SkyboxId, StringDatabase, ZoneData, ZoneDatabase, ZoneEventObject,
+    ZoneId, ZoneList, ZoneListEntry, ZoneMonsterSpawnPoint, ZoneNpcSpawn, WORLD_TICKS_PER_DAY,
 };
 use rose_file_readers::{
     stb_column, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
-    IfoReadOptions, StbFile, StlFile, VfsPath, VfsPathBuf, VirtualFilesystem, ZonFile,
-    ZonReadOptions,
+    IfoReadOptions, StbFile, VfsPath, VfsPathBuf, VirtualFilesystem, ZonFile, ZonReadOptions,
 };
 
 const MIN_SECTOR_SIZE: u32 = 5000;
@@ -131,7 +132,7 @@ fn create_event_object(
 fn load_zone(
     vfs: &VirtualFilesystem,
     data: &StbZone,
-    stl: &StlFile,
+    string_database: &StringDatabase,
     id: usize,
 ) -> Result<ZoneData, LoadZoneError> {
     let zone_file = VfsPath::from(data.get_zone_file(id).ok_or(LoadZoneError::NotExists)?);
@@ -257,10 +258,13 @@ fn load_zone(
         }
     }
 
-    let name = stl
-        .get_text_string(1, data.get_zone_string_id(id).unwrap_or(""))
-        .unwrap_or("")
-        .to_string();
+    let zone_strings = string_database.get_zone(data.get_zone_string_id(id).unwrap_or(""));
+    let name = zone_strings
+        .as_ref()
+        .map_or("", |x| unsafe { std::mem::transmute(x.name) });
+    let description = zone_strings
+        .as_ref()
+        .map_or("", |x| unsafe { std::mem::transmute(x.description) });
     debug!(
         "Loaded zone {} {} blocks: {}, spawns: {}, npcs: {}, sectors ({}, {}), start: {}",
         id,
@@ -275,6 +279,7 @@ fn load_zone(
     Ok(ZoneData {
         id: ZoneId::new(id as u16).unwrap(),
         name,
+        description,
         sector_size,
         grid_per_patch: zon_file.grid_per_patch,
         grid_size: zon_file.grid_size,
@@ -315,29 +320,35 @@ fn load_zone(
     })
 }
 
-pub fn get_zone_database(vfs: &VirtualFilesystem) -> Result<ZoneDatabase, anyhow::Error> {
-    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")?;
+pub fn get_zone_database(
+    vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
+) -> Result<ZoneDatabase, anyhow::Error> {
     let data = StbZone(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")?);
     let mut zones = Vec::with_capacity(data.rows());
     zones.push(None); // Zone ID 0
     for id in 1..data.rows() {
-        zones.push(load_zone(vfs, &data, &stl, id).ok());
+        zones.push(load_zone(vfs, &data, &string_database, id).ok());
     }
 
-    Ok(ZoneDatabase::new(zones))
+    Ok(ZoneDatabase::new(string_database, zones))
 }
 
 fn load_zone_list_entry(
     data: &StbZone,
-    stl: &StlFile,
+    string_database: &StringDatabase,
     id: usize,
 ) -> Result<ZoneListEntry, LoadZoneError> {
+    let zone_strings = string_database.get_zone(data.get_zone_string_id(id).unwrap_or(""));
+
     Ok(ZoneListEntry {
         id: ZoneId::new(id as u16).unwrap(),
-        name: stl
-            .get_text_string(1, data.get_zone_string_id(id).unwrap_or(""))
-            .unwrap_or("")
-            .to_string(),
+        name: zone_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.name) }),
+        description: zone_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.description) }),
         minimap_path: data.get_zone_minimap_filename(id).map(VfsPathBuf::new),
         minimap_start_x: data.get_zone_minimap_start_x(id).unwrap_or(0),
         minimap_start_y: data.get_zone_minimap_start_y(id).unwrap_or(0),
@@ -368,14 +379,16 @@ fn load_zone_list_entry(
     })
 }
 
-pub fn get_zone_list(vfs: &VirtualFilesystem) -> Result<ZoneList, anyhow::Error> {
-    let stl = vfs.read_file::<StlFile, _>("3DDATA/STB/LIST_ZONE_S.STL")?;
+pub fn get_zone_list(
+    vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
+) -> Result<ZoneList, anyhow::Error> {
     let data = StbZone(vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_ZONE.STB")?);
     let mut zones = Vec::with_capacity(data.rows());
     zones.push(None); // Zone ID 0
     for id in 1..data.rows() {
-        zones.push(load_zone_list_entry(&data, &stl, id).ok());
+        zones.push(load_zone_list_entry(&data, &string_database, id).ok());
     }
 
-    Ok(ZoneList::new(zones))
+    Ok(ZoneList::new(string_database, zones))
 }

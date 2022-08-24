@@ -1,14 +1,14 @@
 use arrayvec::ArrayVec;
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use rose_data::{
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, EffectFileId,
     EffectId, FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemClass,
     ItemDatabase, ItemGradeData, ItemReference, ItemType, JewelleryItemData, MaterialItemData,
-    QuestItemData, SkillId, SoundId, StatusEffectId, SubWeaponItemData, VehicleItemData,
-    VehicleItemPart, WeaponItemData,
+    QuestItemData, SkillId, SoundId, StatusEffectId, StringDatabase, SubWeaponItemData,
+    VehicleItemData, VehicleItemPart, WeaponItemData,
 };
-use rose_file_readers::{stb_column, StbFile, StlFile, VirtualFilesystem};
+use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 use crate::data_decoder::{decode_ability_type, IroseItemClass};
 
@@ -237,7 +237,7 @@ impl StbItemGrades {
 
 fn load_base_item(
     data: &StbItem,
-    stl: &StlFile,
+    string_database: &StringDatabase,
     item_type: ItemType,
     id: usize,
     check_valid: bool,
@@ -246,13 +246,16 @@ fn load_base_item(
     if check_valid && icon_index == 0 {
         return None;
     }
+    let item_strings = string_database.get_item(item_type, data.0.get(id, data.0.columns() - 1));
 
     Some(BaseItemData {
         id: ItemReference::new(item_type, id),
-        name: stl
-            .get_text_string(1, data.0.get(id, data.0.columns() - 1))
-            .unwrap_or("")
-            .to_string(),
+        name: item_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.name) }),
+        description: item_strings
+            .as_ref()
+            .map_or("", |x| unsafe { std::mem::transmute(x.description) }),
         class: data
             .get_item_class(id)
             .unwrap_or(IroseItemClass::Unknown)
@@ -281,34 +284,50 @@ fn load_base_item(
     })
 }
 
-fn load_back_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<BackItemData> {
-    let base_item_data = load_base_item(data, stl, ItemType::Back, id, true)?;
+fn load_back_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<BackItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::Back, id, true)?;
     Some(BackItemData {
         item_data: base_item_data,
         move_speed: data.get_back_move_speed(id).unwrap_or(0),
     })
 }
 
-fn load_feet_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<FeetItemData> {
+fn load_feet_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<FeetItemData> {
     // Feet item id == 0 is used for base move speed
-    let base_item_data = load_base_item(data, stl, ItemType::Feet, id, id != 0)?;
+    let base_item_data = load_base_item(data, string_database, ItemType::Feet, id, id != 0)?;
     Some(FeetItemData {
         item_data: base_item_data,
         move_speed: data.get_feet_move_speed(id).unwrap_or(0),
     })
 }
 
-fn load_head_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<HeadItemData> {
-    let base_item_data = load_base_item(data, stl, ItemType::Head, id, true)?;
+fn load_head_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<HeadItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::Head, id, true)?;
     Some(HeadItemData {
         item_data: base_item_data,
         hair_type: data.get_head_hair_type(id).unwrap_or(0),
     })
 }
 
-fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponItemData> {
+fn load_weapon_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<WeaponItemData> {
     // Weapon item id == 0 is used for unarmed attack data
-    let base_item_data = load_base_item(data, stl, ItemType::Weapon, id, id != 0)?;
+    let base_item_data = load_base_item(data, string_database, ItemType::Weapon, id, id != 0)?;
     Some(WeaponItemData {
         item_data: base_item_data,
         attack_range: data.get_weapon_attack_range(id).unwrap_or(0),
@@ -325,8 +344,12 @@ fn load_weapon_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<WeaponIt
     })
 }
 
-fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<ConsumableItemData> {
-    let base_item_data = load_base_item(data, stl, ItemType::Consumable, id, true)?;
+fn load_consumeable_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<ConsumableItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::Consumable, id, true)?;
     Some(ConsumableItemData {
         item_data: base_item_data,
         store_skin: data.get_consumeable_store_skin(id).unwrap_or(0),
@@ -346,24 +369,36 @@ fn load_consumeable_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Con
     })
 }
 
-fn load_gem_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<GemItemData> {
-    let base_item_data = load_base_item(data, stl, ItemType::Gem, id, true)?;
+fn load_gem_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<GemItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::Gem, id, true)?;
     Some(GemItemData {
         item_data: base_item_data,
         gem_add_ability: data.get_gem_add_ability(id),
     })
 }
 
-fn load_material_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<MaterialItemData> {
-    let base_item_data = load_base_item(data, stl, ItemType::Material, id, true)?;
+fn load_material_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<MaterialItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::Material, id, true)?;
     Some(MaterialItemData {
         item_data: base_item_data,
         bullet_effect_id: data.get_material_bullet_effect_id(id),
     })
 }
 
-fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<VehicleItemData> {
-    let base_item_data = load_base_item(data, stl, ItemType::Vehicle, id, true)?;
+fn load_vehicle_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<VehicleItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::Vehicle, id, true)?;
     Some(VehicleItemData {
         item_data: base_item_data,
         vehicle_part: data.get_vehicle_part(id)?,
@@ -372,12 +407,11 @@ fn load_vehicle_item(data: &StbItem, stl: &StlFile, id: usize) -> Option<Vehicle
 }
 
 macro_rules! load_items {
-    ($vfs:ident, $path:literal, $stl_path:literal, load_base_item, $item_type:expr, $item_data_type:ident) => {{
-        let stl = $vfs.read_file::<StlFile, _>($stl_path)?;
+    ($vfs:ident, $string_database: ident, $path:literal, load_base_item, $item_type:expr, $item_data_type:ident) => {{
         let data = StbItem($vfs.read_file::<StbFile, _>($path)?);
         let mut items: Vec<Option<$item_data_type>> = Vec::with_capacity(data.rows());
         for id in 0..data.rows() {
-            if let Some(item) = load_base_item(&data, &stl, $item_type, id, true) {
+            if let Some(item) = load_base_item(&data, $string_database, $item_type, id, true) {
                 items.push(Some($item_data_type { item_data: item }));
             } else {
                 items.push(None);
@@ -385,32 +419,40 @@ macro_rules! load_items {
         }
         items
     }};
-    ($vfs:ident, $path:literal, $stl_path:literal, $load_item_fn:ident, $item_data_type:ident) => {{
-        let stl = $vfs.read_file::<StlFile, _>($stl_path)?;
+    ($vfs:ident, $string_database: ident, $path:literal, $load_item_fn:ident, $item_data_type:ident) => {{
         let data = StbItem($vfs.read_file::<StbFile, _>($path)?);
         let mut items: Vec<Option<$item_data_type>> = Vec::with_capacity(data.rows());
         for id in 0..data.rows() {
-            items.push($load_item_fn(&data, &stl, id));
+            items.push($load_item_fn(&data, $string_database, id));
         }
         items
     }};
 }
 
-pub fn get_item_database(vfs: &VirtualFilesystem) -> Result<ItemDatabase, anyhow::Error> {
-    let face = load_items! { vfs, "3DDATA/STB/LIST_FACEITEM.STB", "3DDATA/STB/LIST_FACEITEM_S.STL", load_base_item, ItemType::Face, FaceItemData };
-    let head = load_items! { vfs, "3DDATA/STB/LIST_CAP.STB", "3DDATA/STB/LIST_CAP_S.STL", load_head_item, HeadItemData };
-    let body = load_items! { vfs, "3DDATA/STB/LIST_BODY.STB", "3DDATA/STB/LIST_BODY_S.STL", load_base_item, ItemType::Body, BodyItemData };
-    let hands = load_items! { vfs, "3DDATA/STB/LIST_ARMS.STB", "3DDATA/STB/LIST_ARMS_S.STL", load_base_item, ItemType::Hands, HandsItemData };
-    let feet = load_items! { vfs, "3DDATA/STB/LIST_FOOT.STB", "3DDATA/STB/LIST_FOOT_S.STL", load_feet_item, FeetItemData };
-    let back = load_items! { vfs, "3DDATA/STB/LIST_BACK.STB", "3DDATA/STB/LIST_BACK_S.STL", load_back_item, BackItemData };
-    let jewellery = load_items! { vfs, "3DDATA/STB/LIST_JEWEL.STB", "3DDATA/STB/LIST_JEWEL_S.STL", load_base_item, ItemType::Jewellery, JewelleryItemData };
-    let weapon = load_items! { vfs, "3DDATA/STB/LIST_WEAPON.STB", "3DDATA/STB/LIST_WEAPON_S.STL", load_weapon_item, WeaponItemData };
-    let subweapon = load_items! { vfs, "3DDATA/STB/LIST_SUBWPN.STB", "3DDATA/STB/LIST_SUBWPN_S.STL", load_base_item, ItemType::SubWeapon, SubWeaponItemData };
-    let consumable = load_items! { vfs, "3DDATA/STB/LIST_USEITEM.STB", "3DDATA/STB/LIST_USEITEM_S.STL", load_consumeable_item, ConsumableItemData };
-    let gem = load_items! { vfs, "3DDATA/STB/LIST_JEMITEM.STB", "3DDATA/STB/LIST_JEMITEM_S.STL", load_gem_item, GemItemData };
-    let material = load_items! { vfs, "3DDATA/STB/LIST_NATURAL.STB", "3DDATA/STB/LIST_NATURAL_S.STL", load_material_item, MaterialItemData };
-    let quest = load_items! { vfs, "3DDATA/STB/LIST_QUESTITEM.STB", "3DDATA/STB/LIST_QUESTITEM_S.STL", load_base_item, ItemType::Quest, QuestItemData };
-    let vehicle = load_items! { vfs, "3DDATA/STB/LIST_PAT.STB", "3DDATA/STB/LIST_PAT_S.STL", load_vehicle_item, VehicleItemData };
+pub fn get_item_database(
+    vfs: &VirtualFilesystem,
+    string_database: Arc<StringDatabase>,
+) -> Result<ItemDatabase, anyhow::Error> {
+    let strings = &*string_database;
+    let face = load_items! { vfs, strings, "3DDATA/STB/LIST_FACEITEM.STB", load_base_item, ItemType::Face, FaceItemData };
+    let head =
+        load_items! { vfs, strings, "3DDATA/STB/LIST_CAP.STB", load_head_item, HeadItemData };
+    let body = load_items! { vfs, strings, "3DDATA/STB/LIST_BODY.STB", load_base_item, ItemType::Body, BodyItemData };
+    let hands = load_items! { vfs, strings, "3DDATA/STB/LIST_ARMS.STB", load_base_item, ItemType::Hands, HandsItemData };
+    let feet =
+        load_items! { vfs, strings, "3DDATA/STB/LIST_FOOT.STB", load_feet_item, FeetItemData };
+    let back =
+        load_items! { vfs, strings, "3DDATA/STB/LIST_BACK.STB", load_back_item, BackItemData };
+    let jewellery = load_items! { vfs, strings, "3DDATA/STB/LIST_JEWEL.STB", load_base_item, ItemType::Jewellery, JewelleryItemData };
+    let weapon = load_items! { vfs, strings, "3DDATA/STB/LIST_WEAPON.STB", load_weapon_item, WeaponItemData };
+    let subweapon = load_items! { vfs, strings, "3DDATA/STB/LIST_SUBWPN.STB", load_base_item, ItemType::SubWeapon, SubWeaponItemData };
+    let consumable = load_items! { vfs, strings, "3DDATA/STB/LIST_USEITEM.STB", load_consumeable_item, ConsumableItemData };
+    let gem =
+        load_items! { vfs, strings,"3DDATA/STB/LIST_JEMITEM.STB", load_gem_item, GemItemData };
+    let material = load_items! { vfs, strings, "3DDATA/STB/LIST_NATURAL.STB", load_material_item, MaterialItemData };
+    let quest = load_items! { vfs, strings, "3DDATA/STB/LIST_QUESTITEM.STB", load_base_item, ItemType::Quest, QuestItemData };
+    let vehicle =
+        load_items! { vfs, strings, "3DDATA/STB/LIST_PAT.STB", load_vehicle_item, VehicleItemData };
 
     let mut item_grades = Vec::new();
     if let Ok(data) = vfs.read_file::<StbFile, _>("3DDATA/STB/LIST_GRADE.STB") {
@@ -446,6 +488,7 @@ pub fn get_item_database(vfs: &VirtualFilesystem) -> Result<ItemDatabase, anyhow
             + item_grades.len()
     );
     Ok(ItemDatabase::new(
+        string_database,
         face,
         head,
         body,

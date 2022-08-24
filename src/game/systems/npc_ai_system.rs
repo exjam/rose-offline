@@ -1307,7 +1307,7 @@ fn ai_action_message(
         .game_data
         .npcs
         .get_npc(ai_parameters.source.npc.id)
-        .map(|npc_data| npc_data.name.clone());
+        .map(|npc_data| npc_data.name.to_string());
 
     if let Some(message) = ai_system_resources.game_data.ai.get_ai_string(string_id) {
         match message_type {
