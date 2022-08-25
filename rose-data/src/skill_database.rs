@@ -8,8 +8,8 @@ use std::{
 };
 
 use crate::{
-    effect_database::EffectId, AbilityType, EffectFileId, ItemClass, MotionId, NpcId, SoundId,
-    StatusEffectId, StringDatabase, ZoneId,
+    effect_database::EffectId, AbilityType, EffectFileId, ItemClass, JobClassId, MotionId, NpcId,
+    SoundId, StatusEffectId, StringDatabase, ZoneId,
 };
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
@@ -149,7 +149,7 @@ pub struct SkillData {
 
     pub use_ability: ArrayVec<(AbilityType, i32), 2>,
     pub required_ability: ArrayVec<(AbilityType, i32), 2>,
-    pub required_job_set_index: Option<NonZeroUsize>, // TODO: JobSetReference to the job set STB
+    pub required_job_class: Option<JobClassId>,
     pub required_planet: Option<NonZeroUsize>,
     pub required_skills: ArrayVec<(SkillId, i32), 3>,
     pub required_union: ArrayVec<NonZeroUsize, 3>,

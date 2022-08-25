@@ -66,6 +66,7 @@ mod data_decoder;
 mod effect_database;
 mod item;
 mod item_database;
+mod job_class_database;
 mod motion_file_data;
 mod npc_database;
 mod quest_database;
@@ -99,6 +100,7 @@ pub use item_database::{
     ItemReference, ItemType, JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData,
     VehicleItemData, VehicleItemPart, WeaponItemData,
 };
+pub use job_class_database::{JobClassData, JobClassDatabase, JobClassId, JobId};
 pub use motion_file_data::{MotionFileData, MotionId};
 pub use npc_database::{
     NpcConversationData, NpcConversationId, NpcData, NpcDatabase, NpcDatabaseOptions, NpcId,

@@ -7,7 +7,7 @@ use std::{
 };
 
 use rose_data::{
-    AbilityType, EffectFileId, EffectId, ItemClass, MotionId, NpcId, SkillActionMode,
+    AbilityType, EffectFileId, EffectId, ItemClass, JobClassId, MotionId, NpcId, SkillActionMode,
     SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData,
     SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId,
     StringDatabase, ZoneId,
@@ -109,7 +109,7 @@ impl StbSkill {
         result
     }
 
-    stb_column! { 35, get_required_job_set_index, NonZeroUsize }
+    stb_column! { 35, get_required_job_class, JobClassId }
     stb_column! { 36..=38, get_required_union, ArrayVec<NonZeroUsize, 3> }
 
     stb_column! { (39..=44).step_by(2), get_required_skill_id, [Option<SkillId>; 3] }
@@ -255,7 +255,7 @@ fn load_skill(data: &StbSkill, string_database: &StringDatabase, id: usize) -> O
         learn_point_cost: data.get_learn_skill_points(id).unwrap_or(0),
         power: data.get_power(id).unwrap_or(0),
         required_ability: data.get_required_abilities(id),
-        required_job_set_index: data.get_required_job_set_index(id),
+        required_job_class: data.get_required_job_class(id),
         required_planet: data.get_require_planet_index(id),
         required_skills: data.get_required_skills(id),
         required_union: data.get_required_union(id),

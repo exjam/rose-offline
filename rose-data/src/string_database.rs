@@ -42,6 +42,10 @@ impl StringDatabase {
         self.job.get_text_string(self.language, &key)
     }
 
+    pub fn get_job_class_name(&self, key: &str) -> Option<&str> {
+        self.job_class.get_text_string(self.language, key)
+    }
+
     pub fn get_npc(&self, key: &str) -> Option<StlNormalEntry> {
         let index = self.npc.lookup_key(key)?;
         self.npc.get_normal_entry(self.language, index)
