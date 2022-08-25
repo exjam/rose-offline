@@ -1,6 +1,7 @@
 mod ai_database;
 mod animation_event_flags;
 mod character_motion_database;
+mod client_strings;
 mod data_decoder;
 mod effect_database;
 mod item_database;
@@ -18,6 +19,7 @@ mod zone_database;
 pub use ai_database::get_ai_database;
 pub use animation_event_flags::get_animation_event_flags;
 pub use character_motion_database::get_character_motion_database;
+pub use client_strings::get_client_strings;
 pub use data_decoder::get_data_decoder;
 pub use effect_database::get_effect_database;
 pub use item_database::get_item_database;
@@ -35,5 +37,6 @@ pub use zone_database::{get_zone_database, get_zone_list};
 pub use data_decoder::{
     decode_ability_type, decode_ammo_index, decode_equipment_index, decode_item_base1000,
     decode_item_type, decode_vehicle_part_index, encode_ability_type, encode_ammo_index,
-    encode_equipment_index, encode_item_type, encode_vehicle_part_index, IroseSkillPageType,
+    encode_equipment_index, encode_item_class, encode_item_type, encode_vehicle_part_index,
+    IroseSkillPageType,
 };

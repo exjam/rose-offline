@@ -26,7 +26,7 @@ pub fn get_job_class_database(
         let name = stb
             .0
             .try_get(row, stb.0.columns() - 1)
-            .and_then(|key| string_database.get_job_class_name(key));
+            .map(|key| string_database.get_job_class_name(key));
         job_classes.push(Some(JobClassData {
             name: name.map_or("", |x| unsafe { std::mem::transmute(x) }),
             jobs,

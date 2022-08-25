@@ -62,6 +62,7 @@ mod ability;
 mod ai_database;
 mod animation_event_flags;
 mod character_motion_database;
+mod client_strings;
 mod data_decoder;
 mod effect_database;
 mod item;
@@ -86,6 +87,7 @@ pub use animation_event_flags::AnimationEventFlags;
 pub use character_motion_database::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions,
 };
+pub use client_strings::ClientStrings;
 pub use data_decoder::DataDecoder;
 pub use effect_database::{
     EffectBulletMoveType, EffectData, EffectDatabase, EffectFileId, EffectId,

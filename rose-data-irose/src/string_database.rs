@@ -5,6 +5,8 @@ use enum_map::enum_map;
 use rose_data::{ItemType, StringDatabase};
 use rose_file_readers::{StlFile, StlReadOptions, VirtualFilesystem};
 
+use crate::{encode_ability_type, encode_item_class};
+
 pub fn get_string_database(
     vfs: &VirtualFilesystem,
     language: usize,
@@ -15,9 +17,13 @@ pub fn get_string_database(
 
     Ok(Arc::new(StringDatabase {
         language,
+        encode_ability_type: Box::new(encode_ability_type),
+        encode_item_class: Box::new(encode_item_class),
         ability: vfs
             .read_file_with::<StlFile, _>("3DDATA/STB/STR_ABILITY.STL", &stl_read_options)?,
         clan: vfs.read_file_with::<StlFile, _>("3DDATA/STB/STR_CLAN.STL", &stl_read_options)?,
+        client_strings: vfs
+            .read_file_with::<StlFile, _>("3DDATA/STB/LIST_STRING.STL", &stl_read_options)?,
         item: enum_map! {
             ItemType::Face => vfs.read_file_with::<StlFile, _>("3DDATA/STB/LIST_FACEITEM_S.STL", &stl_read_options)?,
             ItemType::Head => vfs.read_file_with::<StlFile, _>("3DDATA/STB/LIST_CAP_S.STL", &stl_read_options)?,
@@ -36,7 +42,7 @@ pub fn get_string_database(
         },
         item_prefix: vfs
             .read_file_with::<StlFile, _>("3DDATA/STB/STR_ITEMPREFIX.STL", &stl_read_options)?,
-        item_type: vfs
+        item_class: vfs
             .read_file_with::<StlFile, _>("3DDATA/STB/STR_ITEMTYPE.STL", &stl_read_options)?,
         job: vfs.read_file_with::<StlFile, _>("3DDATA/STB/STR_JOB.STL", &stl_read_options)?,
         job_class: vfs
