@@ -93,7 +93,7 @@ impl StbSkill {
     stb_column! { 28, get_summon_pet_npc_id, NpcId }
     stb_column! { 29, get_action_mode, IroseSkillActionMode }
 
-    pub fn get_required_weapon_class(&self, row: usize) -> ArrayVec<ItemClass, 5> {
+    pub fn get_required_equipment_class(&self, row: usize) -> ArrayVec<ItemClass, 5> {
         let mut result = ArrayVec::<_, 5>::new();
 
         for column in 30..=34 {
@@ -259,7 +259,7 @@ fn load_skill(data: &StbSkill, string_database: &StringDatabase, id: usize) -> O
         required_planet: data.get_require_planet_index(id),
         required_skills: data.get_required_skills(id),
         required_union: data.get_required_union(id),
-        required_weapon_class: data.get_required_weapon_class(id),
+        required_equipment_class: data.get_required_equipment_class(id),
         scope: data.get_scope(id).unwrap_or(0),
         skill_type,
         status_effect_duration: Duration::from_secs(

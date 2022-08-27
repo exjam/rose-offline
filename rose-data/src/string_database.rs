@@ -4,7 +4,7 @@ use std::fmt::Write;
 
 use rose_file_readers::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry};
 
-use crate::{AbilityType, ItemClass, ItemType};
+use crate::{AbilityType, ItemClass, ItemType, SkillTargetFilter, SkillType};
 
 // Strictly speaking we should abstract away from StlFile here, but it is not worth
 // the effort until a ROSE version comes along which does not use STL...
@@ -13,6 +13,8 @@ pub struct StringDatabase {
 
     pub encode_ability_type: Box<dyn Fn(AbilityType) -> Option<usize> + Send + Sync>,
     pub encode_item_class: Box<dyn Fn(ItemClass) -> Option<usize> + Send + Sync>,
+    pub encode_skill_target_filter: Box<dyn Fn(SkillTargetFilter) -> Option<usize> + Send + Sync>,
+    pub encode_skill_type: Box<dyn Fn(SkillType) -> Option<usize> + Send + Sync>,
 
     pub ability: StlFile,
     pub clan: StlFile,
@@ -97,6 +99,32 @@ impl StringDatabase {
     pub fn get_skill(&self, key: &str) -> Option<StlItemEntry> {
         let index = self.skill.lookup_key(key)?;
         self.skill.get_item_entry(self.language, index)
+    }
+
+    pub fn get_skill_target_filter(&self, skill_target_filter: SkillTargetFilter) -> &str {
+        let index = if let Some(index) = (self.encode_skill_target_filter)(skill_target_filter) {
+            index as u16
+        } else {
+            return "";
+        };
+        let mut key = ArrayString::<16>::new();
+        write!(&mut key, "{}", index).ok();
+        self.skill_target
+            .get_text_string(self.language, &key)
+            .unwrap_or("")
+    }
+
+    pub fn get_skill_type(&self, skill_type: SkillType) -> &str {
+        let index = if let Some(index) = (self.encode_skill_type)(skill_type) {
+            index as u16
+        } else {
+            return "";
+        };
+        let mut key = ArrayString::<16>::new();
+        write!(&mut key, "{}", index).ok();
+        self.skill_type
+            .get_text_string(self.language, &key)
+            .unwrap_or("")
     }
 
     pub fn get_status_effect(&self, key: &str) -> Option<StlQuestEntry> {

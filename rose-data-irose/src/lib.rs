@@ -37,6 +37,6 @@ pub use zone_database::{get_zone_database, get_zone_list};
 pub use data_decoder::{
     decode_ability_type, decode_ammo_index, decode_equipment_index, decode_item_base1000,
     decode_item_type, decode_vehicle_part_index, encode_ability_type, encode_ammo_index,
-    encode_equipment_index, encode_item_class, encode_item_type, encode_vehicle_part_index,
-    IroseSkillPageType,
+    encode_equipment_index, encode_item_class, encode_item_type, encode_skill_target_filter,
+    encode_skill_type, encode_vehicle_part_index, IroseSkillPageType,
 };

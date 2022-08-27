@@ -405,7 +405,7 @@ impl_conversions!(
     decode_skill_basic_command
 );
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseSkillTargetFilter {
     OnlySelf = 0,
     Group = 1,
@@ -442,7 +442,7 @@ impl FromStr for IroseSkillPageType {
     }
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseSkillType {
     BasicAction = 1,
     CreateWindow = 2,
@@ -1101,6 +1101,26 @@ pub fn decode_skill_target_filter(id: usize) -> Option<SkillTargetFilter> {
     }
 }
 
+pub fn encode_skill_target_filter(skill_target_filter: SkillTargetFilter) -> Option<usize> {
+    match skill_target_filter {
+        SkillTargetFilter::OnlySelf => IroseSkillTargetFilter::OnlySelf.to_usize(),
+        SkillTargetFilter::Group => IroseSkillTargetFilter::Group.to_usize(),
+        SkillTargetFilter::Guild => IroseSkillTargetFilter::Guild.to_usize(),
+        SkillTargetFilter::Allied => IroseSkillTargetFilter::Allied.to_usize(),
+        SkillTargetFilter::Monster => IroseSkillTargetFilter::Monster.to_usize(),
+        SkillTargetFilter::Enemy => IroseSkillTargetFilter::Enemy.to_usize(),
+        SkillTargetFilter::EnemyCharacter => IroseSkillTargetFilter::EnemyCharacter.to_usize(),
+        SkillTargetFilter::Character => IroseSkillTargetFilter::Character.to_usize(),
+        SkillTargetFilter::CharacterOrMonster => {
+            IroseSkillTargetFilter::CharacterOrMonster.to_usize()
+        }
+        SkillTargetFilter::DeadAlliedCharacter => {
+            IroseSkillTargetFilter::DeadAlliedCharacter.to_usize()
+        }
+        SkillTargetFilter::EnemyMonster => IroseSkillTargetFilter::EnemyMonster.to_usize(),
+    }
+}
+
 pub fn decode_skill_type(id: usize) -> Option<SkillType> {
     match FromPrimitive::from_usize(id)? {
         IroseSkillType::BasicAction => Some(SkillType::BasicAction),
@@ -1123,5 +1143,30 @@ pub fn decode_skill_type(id: usize) -> Option<SkillType> {
         IroseSkillType::Warp => Some(SkillType::Warp),
         IroseSkillType::SelfAndTarget => Some(SkillType::SelfAndTarget),
         IroseSkillType::Resurrection => Some(SkillType::Resurrection),
+    }
+}
+
+pub fn encode_skill_type(skill_type: SkillType) -> Option<usize> {
+    match skill_type {
+        SkillType::BasicAction => IroseSkillType::BasicAction.to_usize(),
+        SkillType::CreateWindow => IroseSkillType::CreateWindow.to_usize(),
+        SkillType::Immediate => IroseSkillType::Immediate.to_usize(),
+        SkillType::EnforceWeapon => IroseSkillType::EnforceWeapon.to_usize(),
+        SkillType::EnforceBullet => IroseSkillType::EnforceBullet.to_usize(),
+        SkillType::FireBullet => IroseSkillType::FireBullet.to_usize(),
+        SkillType::AreaTarget => IroseSkillType::AreaTarget.to_usize(),
+        SkillType::SelfBoundDuration => IroseSkillType::SelfBoundDuration.to_usize(),
+        SkillType::TargetBoundDuration => IroseSkillType::TargetBoundDuration.to_usize(),
+        SkillType::SelfBound => IroseSkillType::SelfBound.to_usize(),
+        SkillType::TargetBound => IroseSkillType::TargetBound.to_usize(),
+        SkillType::SelfStateDuration => IroseSkillType::SelfStateDuration.to_usize(),
+        SkillType::TargetStateDuration => IroseSkillType::TargetStateDuration.to_usize(),
+        SkillType::SummonPet => IroseSkillType::SummonPet.to_usize(),
+        SkillType::Passive => IroseSkillType::Passive.to_usize(),
+        SkillType::Emote => IroseSkillType::Emote.to_usize(),
+        SkillType::SelfDamage => IroseSkillType::SelfDamage.to_usize(),
+        SkillType::Warp => IroseSkillType::Warp.to_usize(),
+        SkillType::SelfAndTarget => IroseSkillType::SelfAndTarget.to_usize(),
+        SkillType::Resurrection => IroseSkillType::Resurrection.to_usize(),
     }
 }

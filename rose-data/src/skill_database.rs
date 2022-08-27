@@ -26,14 +26,14 @@ pub struct SkillAddAbility {
     pub value: i32,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum SkillActionMode {
     Stop,
     Attack,
     Restore,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum SkillTargetFilter {
     OnlySelf,
     Group,
@@ -48,7 +48,7 @@ pub enum SkillTargetFilter {
     EnemyMonster,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum SkillType {
     BasicAction,
     CreateWindow,
@@ -72,7 +72,7 @@ pub enum SkillType {
     Resurrection,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum SkillBasicCommand {
     Sit,
     PickupItem,
@@ -153,7 +153,7 @@ pub struct SkillData {
     pub required_planet: Option<NonZeroUsize>,
     pub required_skills: ArrayVec<(SkillId, i32), 3>,
     pub required_union: ArrayVec<NonZeroUsize, 3>,
-    pub required_weapon_class: ArrayVec<ItemClass, 5>,
+    pub required_equipment_class: ArrayVec<ItemClass, 5>,
 
     pub action_mode: SkillActionMode,
     pub action_motion_id: Option<MotionId>,
