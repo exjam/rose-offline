@@ -31,12 +31,12 @@ impl SkillPage {
     }
 
     pub fn remove_skill(&mut self, skill_data: &SkillData) -> Option<SkillSlot> {
-        let (skill_slot, _) = self.find_skill(skill_data)?;
+        let (skill_slot, _) = self.find_skill_exact(skill_data)?;
         self.skills[skill_slot.1].take();
         Some(skill_slot)
     }
 
-    pub fn find_skill(&self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
+    pub fn find_skill_exact(&self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
         self.skills
             .iter()
             .enumerate()
@@ -81,9 +81,9 @@ impl SkillList {
             .and_then(|page| page.remove_skill(skill_data))
     }
 
-    pub fn find_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
-        self.get_page_mut(skill_data.page)
-            .and_then(|page| page.find_skill(skill_data))
+    pub fn find_skill_exact(&self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {
+        self.get_page(skill_data.page)
+            .and_then(|page| page.find_skill_exact(skill_data))
     }
 
     pub fn get_skill(&self, skill_slot: SkillSlot) -> Option<SkillId> {

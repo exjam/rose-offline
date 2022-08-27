@@ -688,7 +688,7 @@ fn handle_chat_command(
             if matches!(cmd, "add")
                 && chat_command_user
                     .skill_list
-                    .find_skill(skill_data)
+                    .find_skill_exact(skill_data)
                     .is_some()
             {
                 return Err(ChatCommandError::WithMessage(format!(

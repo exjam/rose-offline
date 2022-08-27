@@ -28,7 +28,7 @@ fn try_learn_skill(
         .get_skill(skill_id)
         .ok_or(LearnSkillError::InvalidSkillId)?;
 
-    if skill_list.find_skill(skill_data).is_some() {
+    if skill_list.find_skill_exact(skill_data).is_some() {
         return Err(LearnSkillError::AlreadyLearnt);
     }
 

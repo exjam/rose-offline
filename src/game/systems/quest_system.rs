@@ -1225,7 +1225,7 @@ fn quest_reward_remove_skill(
         .skills
         .get_skill(skill_id)?;
     let skill_list = quest_parameters.source.skill_list.as_mut()?;
-    let (skill_slot, _) = skill_list.find_skill(skill_data)?;
+    let (skill_slot, _) = skill_list.find_skill_exact(skill_data)?;
     let skill_slot = skill_list.get_slot_mut(skill_slot)?;
     *skill_slot = None;
     Some(())
