@@ -69,7 +69,7 @@ pub struct NpcData {
     pub store_union_number: Option<NonZeroUsize>,
     pub is_untargetable: bool,
     pub attack_range: i32,
-    pub npc_type_index: u32,
+    pub npc_type_index: Option<NonZeroU16>,
     pub hit_sound_material_type: u32,
     pub face_icon_index: u32,
     pub summon_monster_type: u32,

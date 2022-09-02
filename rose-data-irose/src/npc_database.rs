@@ -1,5 +1,9 @@
 use enum_map::enum_map;
-use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
+use std::{
+    collections::HashMap,
+    num::{NonZeroU16, NonZeroUsize},
+    sync::Arc,
+};
 
 use rose_data::{
     EffectFileId, EffectId, MotionFileData, MotionId, NpcConversationData, NpcData, NpcDatabase,
@@ -42,7 +46,7 @@ impl StbNpc {
     stb_column! { 21..=24, get_store_tabs, [Option<NpcStoreTabId>; 4] }
     stb_column! { 25, get_is_untargetable, bool }
     stb_column! { 26, get_attack_range, i32 }
-    stb_column! { 27, get_npc_type_index, u32 }
+    stb_column! { 27, get_npc_type_index, NonZeroU16 }
     stb_column! { 28, get_hit_sound_material_type, u32 }
     stb_column! { 29, get_face_icon_index, u32 }
     stb_column! { 29, get_summon_monster_type, u32 }
@@ -197,7 +201,7 @@ pub fn get_npc_database(
             store_union_number: data.get_store_union_number(id),
             is_untargetable: data.get_is_untargetable(id).unwrap_or(false),
             attack_range: data.get_attack_range(id).unwrap_or(0),
-            npc_type_index: data.get_npc_type_index(id).unwrap_or(0),
+            npc_type_index: data.get_npc_type_index(id),
             hit_sound_material_type: data.get_hit_sound_material_type(id).unwrap_or(0),
             face_icon_index: data.get_face_icon_index(id).unwrap_or(0),
             summon_monster_type: data.get_summon_monster_type(id).unwrap_or(0),
