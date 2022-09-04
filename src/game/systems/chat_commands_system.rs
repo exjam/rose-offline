@@ -92,13 +92,19 @@ lazy_static! {
                 clap::Command::new("drop")
                     .arg(Arg::new("type").required(true))
                     .arg(Arg::new("id").required(true))
-                    .arg(Arg::new("quantity").required(false)),
+                    .arg(Arg::new("quantity").required(false))
+                    .arg(Arg::new("socket").required(false))
+                    .arg(Arg::new("gem").required(false))
+                    .arg(Arg::new("grade").required(false)),
             )
             .subcommand(
                 clap::Command::new("item")
                     .arg(Arg::new("type").required(true))
                     .arg(Arg::new("id").required(true))
-                    .arg(Arg::new("quantity").required(false)),
+                    .arg(Arg::new("quantity").required(false))
+                    .arg(Arg::new("socket").required(false))
+                    .arg(Arg::new("gem").required(false))
+                    .arg(Arg::new("grade").required(false)),
             )
             .subcommand(
                 clap::Command::new("mm")
@@ -806,6 +812,22 @@ fn handle_chat_command(
                 .and_then(|str| str.parse::<u32>().ok())
                 .unwrap_or(1);
 
+            let has_socket = arg_matches
+                .value_of("socket")
+                .and_then(|str| str.parse::<u8>().ok())
+                .unwrap_or(0)
+                != 0;
+
+            let gem = arg_matches
+                .value_of("gem")
+                .and_then(|str| str.parse::<u16>().ok())
+                .unwrap_or(0);
+
+            let grade = arg_matches
+                .value_of("grade")
+                .and_then(|str| str.parse::<u8>().ok())
+                .unwrap_or(0);
+
             let item_reference = ItemReference::new(item_type, item_number);
             let item_data = chat_command_params
                 .game_data
@@ -815,8 +837,17 @@ fn handle_chat_command(
                     ChatCommandError::WithMessage(format!("Invalid item {:?}", item_reference))
                 })?;
 
-            let item = Item::from_item_data(item_data, quantity)
+            let mut item = Item::from_item_data(item_data, quantity)
                 .ok_or(ChatCommandError::InvalidArguments)?;
+
+            match &mut item {
+                Item::Equipment(equipment_item) => {
+                    equipment_item.has_socket = has_socket;
+                    equipment_item.gem = gem;
+                    equipment_item.grade = grade;
+                }
+                Item::Stackable(_) => {}
+            }
 
             if is_drop {
                 ItemDropBundle::spawn(
