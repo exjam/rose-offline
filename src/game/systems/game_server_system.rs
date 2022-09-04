@@ -3,12 +3,12 @@ use bevy::math::Vec3;
 use log::warn;
 
 use rose_data::{
-    EquipmentIndex, Item, ItemSlotBehaviour, ItemType, StackError, StackableSlotBehaviour,
-    VehicleItemPart, VehiclePartIndex,
+    EquipmentIndex, Item, ItemClass, ItemSlotBehaviour, ItemType, StackError,
+    StackableSlotBehaviour, VehicleItemPart, VehiclePartIndex,
 };
 use rose_game_common::data::Password;
 use rose_game_common::messages::server::{
-    CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
+    CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse, CraftInsertGemError,
 };
 
 use crate::game::events::{PartyEventUpdateRules, PartyMemberEvent};
@@ -1279,6 +1279,82 @@ pub fn game_server_main_system(
                         entity_commands
                             .insert(NextCommand::with_move(collision_position, None, None))
                             .insert(Position::new(collision_position, position.zone_id));
+                    }
+                    ClientMessage::CraftInsertGem {
+                        equipment_index,
+                        item_slot,
+                    } => {
+                        if inventory
+                            .get_item(item_slot)
+                            .and_then(|item| {
+                                if !matches!(item.get_item_type(), ItemType::Gem) {
+                                    None
+                                } else {
+                                    game_data.items.get_base_item(item.get_item_reference())
+                                }
+                            })
+                            .map_or(false, |item_data| item_data.class == ItemClass::Jewel)
+                        {
+                            if let Some(equipment_item) =
+                                equipment.get_equipment_item(equipment_index)
+                            {
+                                if !equipment_item.has_socket {
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::CraftInsertGem(Err(
+                                            CraftInsertGemError::NoSocket,
+                                        )))
+                                        .ok();
+                                } else if equipment_item.gem > 300 {
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::CraftInsertGem(Err(
+                                            CraftInsertGemError::SocketFull,
+                                        )))
+                                        .ok();
+                                } else {
+                                    let equipment_item = equipment
+                                        .get_equipment_slot_mut(equipment_index)
+                                        .as_mut()
+                                        .unwrap();
+
+                                    if let Some(gem_item) = inventory
+                                        .get_item_slot_mut(item_slot)
+                                        .unwrap()
+                                        .try_take_quantity(1)
+                                    {
+                                        equipment_item.gem = gem_item.get_item_number() as u16;
+
+                                        client
+                                            .server_message_tx
+                                            .send(ServerMessage::CraftInsertGem(Ok(vec![
+                                                (item_slot, inventory.get_item(item_slot).cloned()),
+                                                (
+                                                    ItemSlot::Equipment(equipment_index),
+                                                    equipment
+                                                        .get_equipment_item(equipment_index)
+                                                        .cloned()
+                                                        .map(Item::Equipment),
+                                                ),
+                                            ])))
+                                            .ok();
+
+                                        server_messages.send_entity_message(
+                                            client_entity,
+                                            ServerMessage::UpdateEquipment(
+                                                server::UpdateEquipment {
+                                                    entity_id: client_entity.id,
+                                                    equipment_index,
+                                                    item: equipment
+                                                        .get_equipment_item(equipment_index)
+                                                        .cloned(),
+                                                },
+                                            ),
+                                        );
+                                    }
+                                }
+                            }
+                        }
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }

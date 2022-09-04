@@ -471,20 +471,30 @@ const VEHICLE_START_INDEX: usize = AMMO_END_INDEX;
 const VEHICLE_END_INDEX: usize = VEHICLE_START_INDEX + 4;
 
 pub trait PacketReadEquipmentIndex {
+    fn read_equipment_index_u8(&mut self) -> Result<EquipmentIndex, PacketError>;
     fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, PacketError>;
 }
 
 pub trait PacketWriteEquipmentIndex {
+    fn write_equipment_index_u8(&mut self, equipment_index: EquipmentIndex);
     fn write_equipment_index_u16(&mut self, equipment_index: EquipmentIndex);
 }
 
 impl<'a> PacketReadEquipmentIndex for PacketReader<'a> {
+    fn read_equipment_index_u8(&mut self) -> Result<EquipmentIndex, PacketError> {
+        decode_equipment_index(self.read_u8()? as usize).ok_or(PacketError::InvalidPacket)
+    }
+
     fn read_equipment_index_u16(&mut self) -> Result<EquipmentIndex, PacketError> {
         decode_equipment_index(self.read_u16()? as usize).ok_or(PacketError::InvalidPacket)
     }
 }
 
 impl PacketWriteEquipmentIndex for PacketWriter {
+    fn write_equipment_index_u8(&mut self, equipment_index: EquipmentIndex) {
+        self.write_u8(encode_equipment_index(equipment_index).unwrap_or(0) as u8)
+    }
+
     fn write_equipment_index_u16(&mut self, equipment_index: EquipmentIndex) {
         self.write_u16(encode_equipment_index(equipment_index).unwrap_or(0) as u16)
     }

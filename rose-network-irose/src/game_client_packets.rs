@@ -54,6 +54,7 @@ pub enum ClientPackets {
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
     CastSkillTargetPosition = 0x7b4,
+    CraftItem = 0x7bc,
     ChangeVehiclePart = 0x7ca,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
@@ -1175,6 +1176,154 @@ impl From<&PacketClientMoveCollision> for Packet {
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
         writer.write_i16(packet.position.z as i16);
+        writer.into()
+    }
+}
+
+pub enum PacketClientCraftItem {
+    InsertGem {
+        equipment_index: EquipmentIndex,
+        item_slot: ItemSlot,
+    },
+    SkillDisassemble {
+        skill_slot: SkillSlot,
+        item_slot: ItemSlot,
+    },
+    NpcDisassemble {
+        npc_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+    },
+    SkillUpgradeItem {
+        skill_slot: SkillSlot,
+        item_slot: ItemSlot,
+        ingredients: [ItemSlot; 3],
+    },
+    NpcUpgradeItem {
+        npc_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+        ingredients: [ItemSlot; 3],
+    },
+}
+
+impl TryFrom<&Packet> for PacketClientCraftItem {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::CraftItem as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let craft_type = reader.read_u8()?;
+        match craft_type {
+            1 => {
+                let equipment_index = reader.read_equipment_index_u8()?;
+                let item_slot = reader.read_item_slot_u8()?;
+                Ok(PacketClientCraftItem::InsertGem {
+                    equipment_index,
+                    item_slot,
+                })
+            }
+            2 => {
+                let skill_slot = reader.read_skill_slot_u8()?;
+                let item_slot = reader.read_item_slot_u8()?;
+                Ok(PacketClientCraftItem::SkillDisassemble {
+                    skill_slot,
+                    item_slot,
+                })
+            }
+            3 => {
+                let npc_entity_id = reader.read_entity_id()?;
+                let item_slot = reader.read_item_slot_u8()?;
+                Ok(PacketClientCraftItem::NpcDisassemble {
+                    npc_entity_id,
+                    item_slot,
+                })
+            }
+            4 => {
+                let skill_slot = reader.read_skill_slot_u8()?;
+                let upgrade_item_slot = reader.read_item_slot_u8()?;
+                let ingredient0 = reader.read_item_slot_u8()?;
+                let ingredient1 = reader.read_item_slot_u8()?;
+                let ingredient2 = reader.read_item_slot_u8()?;
+                Ok(PacketClientCraftItem::SkillUpgradeItem {
+                    skill_slot,
+                    item_slot: upgrade_item_slot,
+                    ingredients: [ingredient0, ingredient1, ingredient2],
+                })
+            }
+            5 => {
+                let npc_entity_id = reader.read_entity_id()?;
+                let upgrade_item_slot = reader.read_item_slot_u8()?;
+                let ingredient0 = reader.read_item_slot_u8()?;
+                let ingredient1 = reader.read_item_slot_u8()?;
+                let ingredient2 = reader.read_item_slot_u8()?;
+                Ok(PacketClientCraftItem::NpcUpgradeItem {
+                    npc_entity_id,
+                    item_slot: upgrade_item_slot,
+                    ingredients: [ingredient0, ingredient1, ingredient2],
+                })
+            }
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
+impl From<&PacketClientCraftItem> for Packet {
+    fn from(packet: &PacketClientCraftItem) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::CraftItem as u16);
+
+        match *packet {
+            PacketClientCraftItem::InsertGem {
+                equipment_index,
+                item_slot,
+            } => {
+                writer.write_u8(1);
+                writer.write_equipment_index_u8(equipment_index);
+                writer.write_item_slot_u8(item_slot);
+            }
+            PacketClientCraftItem::SkillDisassemble {
+                skill_slot,
+                item_slot,
+            } => {
+                writer.write_u8(2);
+                writer.write_skill_slot_u8(skill_slot);
+                writer.write_item_slot_u8(item_slot);
+            }
+            PacketClientCraftItem::NpcDisassemble {
+                npc_entity_id,
+                item_slot,
+            } => {
+                writer.write_u8(3);
+                writer.write_entity_id(npc_entity_id);
+                writer.write_item_slot_u8(item_slot);
+            }
+            PacketClientCraftItem::SkillUpgradeItem {
+                skill_slot,
+                item_slot,
+                ingredients,
+            } => {
+                writer.write_u8(4);
+                writer.write_skill_slot_u8(skill_slot);
+                writer.write_item_slot_u8(item_slot);
+                writer.write_item_slot_u8(ingredients[0]);
+                writer.write_item_slot_u8(ingredients[1]);
+                writer.write_item_slot_u8(ingredients[2]);
+            }
+            PacketClientCraftItem::NpcUpgradeItem {
+                npc_entity_id,
+                item_slot,
+                ingredients,
+            } => {
+                writer.write_u8(5);
+                writer.write_entity_id(npc_entity_id);
+                writer.write_item_slot_u8(item_slot);
+                writer.write_item_slot_u8(ingredients[0]);
+                writer.write_item_slot_u8(ingredients[1]);
+                writer.write_item_slot_u8(ingredients[2]);
+            }
+        }
+
         writer.into()
     }
 }

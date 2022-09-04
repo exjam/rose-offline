@@ -333,6 +333,51 @@ impl GameServer {
                     .client_message_tx
                     .send(ClientMessage::MoveCollision(message.position))?;
             }
+            Some(ClientPackets::CraftItem) => {
+                let packet = PacketClientCraftItem::try_from(packet)?;
+                let message = match packet {
+                    PacketClientCraftItem::InsertGem {
+                        equipment_index,
+                        item_slot,
+                    } => ClientMessage::CraftInsertGem {
+                        equipment_index,
+                        item_slot,
+                    },
+                    PacketClientCraftItem::SkillDisassemble {
+                        skill_slot,
+                        item_slot,
+                    } => ClientMessage::CraftSkillDisassemble {
+                        skill_slot,
+                        item_slot,
+                    },
+                    PacketClientCraftItem::NpcDisassemble {
+                        npc_entity_id,
+                        item_slot,
+                    } => ClientMessage::CraftNpcDisassemble {
+                        npc_entity_id,
+                        item_slot,
+                    },
+                    PacketClientCraftItem::SkillUpgradeItem {
+                        skill_slot,
+                        item_slot,
+                        ingredients,
+                    } => ClientMessage::CraftSkillUpgradeItem {
+                        skill_slot,
+                        item_slot,
+                        ingredients,
+                    },
+                    PacketClientCraftItem::NpcUpgradeItem {
+                        npc_entity_id,
+                        item_slot,
+                        ingredients,
+                    } => ClientMessage::CraftNpcUpgradeItem {
+                        npc_entity_id,
+                        item_slot,
+                        ingredients,
+                    },
+                };
+                client.client_message_tx.send(message)?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -1254,6 +1299,22 @@ impl GameServer {
                     .write_packet(Packet::from(&PacketServerAdjustPosition {
                         client_entity_id,
                         position,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CraftInsertGem(Ok(items)) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCraftItem::InsertGemSuccess {
+                        items,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CraftInsertGem(Err(error)) => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerCraftItem::InsertGemFailed {
+                        error,
                     }))
                     .await?;
             }

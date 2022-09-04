@@ -640,6 +640,12 @@ pub struct UpdateSkillData {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum CraftInsertGemError {
+    NoSocket,
+    SocketFull,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
     ConnectionResponse(Result<ConnectionResponse, ConnectionRequestError>),
     LoginResponse(Result<LoginResponse, LoginError>),
@@ -736,4 +742,5 @@ pub enum ServerMessage {
     SetHotbarSlot(usize, Option<HotbarSlot>),
     AdjustPosition(ClientEntityId, Vec3),
     UpdateSkillList(Vec<UpdateSkillData>),
+    CraftInsertGem(Result<Vec<(ItemSlot, Option<Item>)>, CraftInsertGemError>),
 }

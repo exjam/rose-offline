@@ -23,10 +23,10 @@ use rose_game_common::{
     data::Damage,
     messages::{
         server::{
-            ActiveStatusEffects, CancelCastingSkillReason, CommandState, LearnSkillError,
-            LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline,
-            PartyMemberLeave, PartyMemberList, PersonalStoreTransactionStatus,
-            PickupItemDropContent, PickupItemDropError,
+            ActiveStatusEffects, CancelCastingSkillReason, CommandState, CraftInsertGemError,
+            LearnSkillError, LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError,
+            PartyMemberInfoOnline, PartyMemberLeave, PartyMemberList,
+            PersonalStoreTransactionStatus, PickupItemDropContent, PickupItemDropError,
         },
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
@@ -100,6 +100,7 @@ pub enum ServerPackets {
     UpdateSpeed = 0x7b8,
     FinishCastingSkill = 0x7b9,
     StartCastingSkill = 0x7bb,
+    CraftItem = 0x7bc,
     CancelCastingSkill = 0x7bd,
     UpdateVehiclePart = 0x7ca,
     OpenPersonalStore = 0x7c2,
@@ -3764,6 +3765,78 @@ impl From<&PacketServerAdjustPosition> for Packet {
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
         writer.write_i16(packet.position.z as i16);
+        writer.into()
+    }
+}
+
+pub enum PacketServerCraftItem {
+    InsertGemFailed {
+        error: CraftInsertGemError,
+    },
+    InsertGemSuccess {
+        items: Vec<(ItemSlot, Option<Item>)>,
+    },
+}
+
+impl TryFrom<&Packet> for PacketServerCraftItem {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::CraftItem as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let craft_type = reader.read_u8()?;
+        match craft_type {
+            1 => {
+                let num_items = reader.read_u8()? as usize;
+                let mut items = Vec::with_capacity(num_items);
+                for _ in 0..num_items {
+                    let item_slot = reader.read_item_slot_u8()?;
+                    let item = reader.read_item_full()?;
+                    items.push((item_slot, item));
+                }
+                Ok(Self::InsertGemSuccess { items })
+            }
+            2 => Ok(Self::InsertGemFailed {
+                error: CraftInsertGemError::NoSocket,
+            }),
+            3 => Ok(Self::InsertGemFailed {
+                error: CraftInsertGemError::SocketFull,
+            }),
+            // TODO: 4, 5, 6, 7, 16, 17, 18
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
+impl From<&PacketServerCraftItem> for Packet {
+    fn from(packet: &PacketServerCraftItem) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::CraftItem as u16);
+
+        match packet {
+            PacketServerCraftItem::InsertGemSuccess { items } => {
+                writer.write_u8(1);
+                writer.write_u8(items.len() as u8);
+
+                for (slot, item) in items.iter() {
+                    writer.write_item_slot_u8(*slot);
+                    writer.write_item_full(item.as_ref());
+                }
+            }
+            PacketServerCraftItem::InsertGemFailed {
+                error: CraftInsertGemError::NoSocket,
+            } => {
+                writer.write_u8(2);
+            }
+            PacketServerCraftItem::InsertGemFailed {
+                error: CraftInsertGemError::SocketFull,
+            } => {
+                writer.write_u8(3);
+            }
+        }
+
         writer.into()
     }
 }

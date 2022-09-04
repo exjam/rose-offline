@@ -194,4 +194,26 @@ pub enum ClientMessage {
     PartyAcceptJoinInvite(ClientEntityId),
     PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
     PartyUpdateRules(PartyItemSharing, PartyXpSharing),
+    CraftInsertGem {
+        equipment_index: EquipmentIndex,
+        item_slot: ItemSlot,
+    },
+    CraftSkillDisassemble {
+        skill_slot: SkillSlot,
+        item_slot: ItemSlot,
+    },
+    CraftNpcDisassemble {
+        npc_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+    },
+    CraftSkillUpgradeItem {
+        skill_slot: SkillSlot,
+        item_slot: ItemSlot,
+        ingredients: [ItemSlot; 3],
+    },
+    CraftNpcUpgradeItem {
+        npc_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+        ingredients: [ItemSlot; 3],
+    },
 }
