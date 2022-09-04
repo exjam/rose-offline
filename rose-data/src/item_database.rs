@@ -262,6 +262,7 @@ pub struct JewelleryItemData {
 pub struct GemItemData {
     pub item_data: BaseItemData,
     pub gem_add_ability: ArrayVec<(AbilityType, i32), 2>,
+    pub gem_effect_id: Option<EffectId>,
 }
 
 #[derive(Debug)]
@@ -283,6 +284,7 @@ pub struct WeaponItemData {
 #[derive(Debug)]
 pub struct SubWeaponItemData {
     pub item_data: BaseItemData,
+    pub gem_position: u32,
 }
 
 #[derive(Debug)]
@@ -598,6 +600,10 @@ impl ItemDatabase {
 
     pub fn get_jewellery_item(&self, id: usize) -> Option<&JewelleryItemData> {
         self.jewellery.get(id).and_then(|x| x.as_ref())
+    }
+
+    pub fn get_sub_weapon_item(&self, id: usize) -> Option<&SubWeaponItemData> {
+        self.subweapon.get(id).and_then(|x| x.as_ref())
     }
 
     pub fn get_weapon_item(&self, id: usize) -> Option<&WeaponItemData> {

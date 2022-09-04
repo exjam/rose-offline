@@ -186,6 +186,7 @@ impl StbItem {
         }
         add_ability
     }
+    stb_column! { 21, get_gem_effect_id, EffectId }
 
     // LIST_NATURAL
     stb_column! { 17, get_material_bullet_effect_id, EffectId }
@@ -344,6 +345,18 @@ fn load_weapon_item(
     })
 }
 
+fn load_subweapon_item(
+    data: &StbItem,
+    string_database: &StringDatabase,
+    id: usize,
+) -> Option<SubWeaponItemData> {
+    let base_item_data = load_base_item(data, string_database, ItemType::SubWeapon, id, true)?;
+    Some(SubWeaponItemData {
+        item_data: base_item_data,
+        gem_position: data.get_subweapon_gem_position(id).unwrap_or(0),
+    })
+}
+
 fn load_consumeable_item(
     data: &StbItem,
     string_database: &StringDatabase,
@@ -378,6 +391,7 @@ fn load_gem_item(
     Some(GemItemData {
         item_data: base_item_data,
         gem_add_ability: data.get_gem_add_ability(id),
+        gem_effect_id: data.get_gem_effect_id(id),
     })
 }
 
@@ -445,7 +459,7 @@ pub fn get_item_database(
         load_items! { vfs, strings, "3DDATA/STB/LIST_BACK.STB", load_back_item, BackItemData };
     let jewellery = load_items! { vfs, strings, "3DDATA/STB/LIST_JEWEL.STB", load_base_item, ItemType::Jewellery, JewelleryItemData };
     let weapon = load_items! { vfs, strings, "3DDATA/STB/LIST_WEAPON.STB", load_weapon_item, WeaponItemData };
-    let subweapon = load_items! { vfs, strings, "3DDATA/STB/LIST_SUBWPN.STB", load_base_item, ItemType::SubWeapon, SubWeaponItemData };
+    let subweapon = load_items! { vfs, strings, "3DDATA/STB/LIST_SUBWPN.STB", load_subweapon_item, SubWeaponItemData };
     let consumable = load_items! { vfs, strings, "3DDATA/STB/LIST_USEITEM.STB", load_consumeable_item, ConsumableItemData };
     let gem =
         load_items! { vfs, strings,"3DDATA/STB/LIST_JEMITEM.STB", load_gem_item, GemItemData };
