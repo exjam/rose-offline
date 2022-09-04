@@ -263,6 +263,7 @@ pub struct GemItemData {
     pub item_data: BaseItemData,
     pub gem_add_ability: ArrayVec<(AbilityType, i32), 2>,
     pub gem_effect_id: Option<EffectId>,
+    pub gem_sprite_id: u32,
 }
 
 #[derive(Debug)]

@@ -186,6 +186,7 @@ impl StbItem {
         }
         add_ability
     }
+    stb_column! { 20, get_gem_sprite_id, u32 }
     stb_column! { 21, get_gem_effect_id, EffectId }
 
     // LIST_NATURAL
@@ -392,6 +393,7 @@ fn load_gem_item(
         item_data: base_item_data,
         gem_add_ability: data.get_gem_add_ability(id),
         gem_effect_id: data.get_gem_effect_id(id),
+        gem_sprite_id: data.get_gem_sprite_id(id).unwrap_or(0),
     })
 }
 
