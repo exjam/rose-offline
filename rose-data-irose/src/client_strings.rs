@@ -59,6 +59,8 @@ pub fn get_client_strings(
         skill_target: get_string(307),
         skill_type: get_string(106),
         duration_seconds: get_string(315),
+        bank_tab: get_string(344),
+        bank_tab_premium: get_string(590),
         _string_database: string_database,
     }))
 }

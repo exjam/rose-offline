@@ -43,5 +43,8 @@ pub struct ClientStrings {
 
     pub duration_seconds: &'static str,
 
+    pub bank_tab: &'static str,
+    pub bank_tab_premium: &'static str,
+
     pub _string_database: Arc<StringDatabase>,
 }
