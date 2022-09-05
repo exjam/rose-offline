@@ -328,19 +328,36 @@ fn load_weapon_item(
     string_database: &StringDatabase,
     id: usize,
 ) -> Option<WeaponItemData> {
-    // Weapon item id == 0 is used for unarmed attack data
-    let base_item_data = load_base_item(data, string_database, ItemType::Weapon, id, id != 0)?;
+    // Weapon item id == 0 is used for unarmed attack data,
+    // NPCs with use weapon data for range / effects / sounds
+    let attack_range = data.get_weapon_attack_range(id).unwrap_or(0);
+    let bullet_effect_id = data.get_weapon_bullet_effect_id(id);
+    let effect_id = data.get_weapon_effect_id(id);
+    let attack_start_sound_id = data.get_weapon_attack_start_sound_id(id);
+    let attack_fire_sound_id = data.get_weapon_attack_fire_sound_id(id);
+    let base_item_data = load_base_item(
+        data,
+        string_database,
+        ItemType::Weapon,
+        id,
+        id != 0
+            && bullet_effect_id.is_none()
+            && attack_range == 0
+            && effect_id.is_none()
+            && attack_start_sound_id.is_none()
+            && attack_fire_sound_id.is_none(),
+    )?;
     Some(WeaponItemData {
         item_data: base_item_data,
-        attack_range: data.get_weapon_attack_range(id).unwrap_or(0),
+        attack_range,
         attack_power: data.get_weapon_attack_power(id).unwrap_or(0),
         attack_speed: data.get_weapon_attack_speed(id).unwrap_or(0),
         motion_type: data.get_weapon_motion_type(id).unwrap_or(0),
         is_magic_damage: data.get_weapon_is_magic_damage(id).unwrap_or(false),
-        bullet_effect_id: data.get_weapon_bullet_effect_id(id),
-        effect_id: data.get_weapon_effect_id(id),
-        attack_start_sound_id: data.get_weapon_attack_start_sound_id(id),
-        attack_fire_sound_id: data.get_weapon_attack_fire_sound_id(id),
+        bullet_effect_id,
+        effect_id,
+        attack_start_sound_id,
+        attack_fire_sound_id,
         attack_hit_sound_index: data.get_weapon_attack_hit_sound_index(id).unwrap_or(0),
         gem_position: data.get_weapon_gem_position(id).unwrap_or(0),
     })
