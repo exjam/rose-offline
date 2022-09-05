@@ -8,21 +8,23 @@ use log::{error, info};
 use crate::game::{
     bundles::client_entity_leave_zone,
     components::{
-        BasicStats, CharacterInfo, ClientEntity, ClientEntitySector, Equipment, ExperiencePoints,
-        HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership, Position, QuestState,
-        SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
+        Account, Bank, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector, Equipment,
+        ExperiencePoints, HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership,
+        Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
     },
     events::{PartyMemberDisconnect, PartyMemberEvent, SaveEvent, SaveEventCharacter},
     resources::ClientEntityList,
-    storage::character::CharacterStorage,
+    storage::{bank::BankStorage, character::CharacterStorage},
 };
 
 #[derive(WorldQuery)]
 pub struct SaveEntityQuery<'w> {
     client_entity: Option<&'w ClientEntity>,
     client_entity_sector: Option<&'w ClientEntitySector>,
+    account: &'w Account,
     character_info: &'w CharacterInfo,
     basic_stats: &'w BasicStats,
+    bank: &'w Bank,
     inventory: &'w Inventory,
     equipment: &'w Equipment,
     level: &'w Level,
@@ -73,12 +75,20 @@ pub fn save_system(
                         union_membership: character.union_membership.clone(),
                         stamina: *character.stamina,
                     };
-
                     match storage.save() {
-                        Ok(_) => info!("Saved character {}", character.character_info.name),
+                        Ok(_) => info!("Saved character {}", &character.character_info.name),
                         Err(error) => error!(
                             "Failed to save character {} with error {:?}",
-                            character.character_info.name, error
+                            &character.character_info.name, error
+                        ),
+                    }
+
+                    let bank_storage = BankStorage::from(character.bank);
+                    match bank_storage.save(&character.account.name) {
+                        Ok(_) => info!("Saved bank for account {}", &character.account.name),
+                        Err(error) => error!(
+                            "Failed to save bank for account {} with error {:?}",
+                            &character.account.name, error
                         ),
                     }
 

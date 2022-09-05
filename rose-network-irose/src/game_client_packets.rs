@@ -50,6 +50,8 @@ pub enum ClientPackets {
     IncreaseBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
     ChangeAmmo = 0x7ab,
+    BankOpen = 0x7ad,
+    BankMoveItem = 0x7ae,
     LevelUpSkill = 0x7b1,
     CastSkillSelf = 0x7b2,
     CastSkillTargetEntity = 0x7b3,
@@ -1324,6 +1326,112 @@ impl From<&PacketClientCraftItem> for Packet {
             }
         }
 
+        writer.into()
+    }
+}
+
+pub struct PacketClientBankOpen {}
+
+impl TryFrom<&Packet> for PacketClientBankOpen {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::BankOpen as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let command = reader.read_u8()?;
+        if command != 0 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        Ok(Self {})
+    }
+}
+
+impl From<&PacketClientBankOpen> for Packet {
+    fn from(_: &PacketClientBankOpen) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::BankOpen as u16);
+        writer.write_u8(0);
+        writer.into()
+    }
+}
+
+pub enum PacketClientBankMoveItem {
+    Deposit {
+        item_slot: ItemSlot,
+        item: Item,
+        is_premium: bool,
+    },
+    Withdraw {
+        bank_slot: usize,
+        item: Item,
+        is_premium: bool,
+    },
+}
+
+impl TryFrom<&Packet> for PacketClientBankMoveItem {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::BankMoveItem as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let command = reader.read_u8()?;
+        match command {
+            0 => {
+                let item_slot = reader.read_item_slot_u8()?;
+                let item = reader.read_item_full()?.ok_or(PacketError::InvalidPacket)?;
+                let is_premium = reader.read_u8().unwrap_or(0) != 0;
+                Ok(Self::Deposit {
+                    item_slot,
+                    item,
+                    is_premium,
+                })
+            }
+            1 => {
+                let bank_slot = reader.read_u8()? as usize;
+                let item = reader.read_item_full()?.ok_or(PacketError::InvalidPacket)?;
+                let is_premium = reader.read_u8().unwrap_or(0) != 0;
+                Ok(Self::Withdraw {
+                    bank_slot,
+                    item,
+                    is_premium,
+                })
+            }
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
+impl From<&PacketClientBankMoveItem> for Packet {
+    fn from(packet: &PacketClientBankMoveItem) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::BankMoveItem as u16);
+        match packet {
+            PacketClientBankMoveItem::Deposit {
+                item_slot,
+                item,
+                is_premium,
+            } => {
+                writer.write_u8(0);
+                writer.write_item_slot_u8(*item_slot);
+                writer.write_item_full(Some(item));
+                writer.write_u8(if *is_premium { 1 } else { 0 });
+            }
+            PacketClientBankMoveItem::Withdraw {
+                bank_slot,
+                item,
+                is_premium,
+            } => {
+                writer.write_u8(1);
+                writer.write_u8(*bank_slot as u8);
+                writer.write_item_full(Some(item));
+                writer.write_u8(if *is_premium { 1 } else { 0 });
+            }
+        }
         writer.into()
     }
 }

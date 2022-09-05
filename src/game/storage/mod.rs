@@ -9,8 +9,10 @@ lazy_static! {
         PathBuf::from(project.data_local_dir())
     };
     pub static ref ACCOUNT_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("accounts");
+    pub static ref BANK_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("bank");
     pub static ref CHARACTER_STORAGE_DIR: PathBuf = LOCAL_STORAGE_DIR.join("characters");
 }
 
 pub mod account;
+pub mod bank;
 pub mod character;

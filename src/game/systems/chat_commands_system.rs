@@ -277,6 +277,7 @@ fn create_bot_entity(
         .insert_bundle(CharacterBundle {
             ability_values,
             basic_stats: bot_data.basic_stats,
+            bank: Default::default(),
             command: Command::default(),
             equipment: bot_data.equipment,
             experience_points: bot_data.experience_points,

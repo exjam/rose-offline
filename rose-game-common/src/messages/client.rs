@@ -216,4 +216,15 @@ pub enum ClientMessage {
         item_slot: ItemSlot,
         ingredients: [ItemSlot; 3],
     },
+    BankOpen,
+    BankDepositItem {
+        item_slot: ItemSlot,
+        item: Item,
+        is_premium: bool,
+    },
+    BankWithdrawItem {
+        bank_slot: usize,
+        item: Item,
+        is_premium: bool,
+    },
 }

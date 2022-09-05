@@ -1,5 +1,7 @@
-use bevy::ecs::prelude::{Bundle, Commands, Entity};
-use bevy::math::Vec3;
+use bevy::{
+    ecs::prelude::{Bundle, Commands, Entity},
+    math::Vec3,
+};
 use rand::Rng;
 use std::time::Duration;
 
@@ -7,13 +9,14 @@ use rose_data::{NpcId, ZoneId};
 
 use crate::game::{
     components::{
-        AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntityId, ClientEntitySector,
-        ClientEntityType, ClientEntityVisibility, Command, DamageSources, DroppedItem,
-        EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-        ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, NpcAi,
-        NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime, PartyMembership, PartyOwner,
-        PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina,
-        StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+        AbilityValues, Bank, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
+        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, DamageSources,
+        DroppedItem, EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints,
+        Hotbar, Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed,
+        NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime,
+        PartyMembership, PartyOwner, PassiveRecoveryTime, Position, QuestState, SkillList,
+        SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
+        UnionMembership,
     },
     messages::server::{ServerMessage, Teleport},
     resources::{ClientEntityList, ServerTime},
@@ -51,6 +54,7 @@ pub struct NpcBundle {
 pub struct CharacterBundle {
     pub ability_values: AbilityValues,
     pub basic_stats: BasicStats,
+    pub bank: Bank,
     pub command: Command,
     pub equipment: Equipment,
     pub experience_points: ExperiencePoints,

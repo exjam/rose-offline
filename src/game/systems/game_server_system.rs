@@ -6,29 +6,34 @@ use rose_data::{
     EquipmentIndex, Item, ItemClass, ItemSlotBehaviour, ItemType, StackError,
     StackableSlotBehaviour, VehicleItemPart, VehiclePartIndex,
 };
-use rose_game_common::data::Password;
-use rose_game_common::messages::server::{
-    CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse, CraftInsertGemError,
+use rose_game_common::{
+    data::Password,
+    messages::server::{
+        CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
+        CraftInsertGemError,
+    },
 };
 
-use crate::game::events::{PartyEventUpdateRules, PartyMemberEvent};
+use crate::game::components::Account;
 use crate::game::{
     bundles::{
         client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
         skill_list_try_level_up_skill, CharacterBundle, ItemDropBundle,
     },
     components::{
-        AbilityValues, BasicStatType, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector,
-        ClientEntityType, ClientEntityVisibility, Command, CommandData, CommandSit, DroppedItem,
-        Equipment, EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar,
-        Inventory, ItemSlot, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand,
-        Party, PartyMember, PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList,
-        SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
+        AbilityValues, Bank, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
+        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
+        CommandSit, DroppedItem, Equipment, EquipmentItemDatabase, ExperiencePoints, GameClient,
+        HealthPoints, Hotbar, Inventory, ItemSlot, ManaPoints, Money, MotionData, MoveMode,
+        MoveSpeed, NextCommand, Party, PartyMember, PartyMembership, PassiveRecoveryTime, Position,
+        QuestState, SkillList, SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team,
+        WorldClient,
     },
     events::{
-        ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner, PartyEventInvite,
-        PartyEventKick, PartyEventLeave, PartyMemberReconnect, PersonalStoreEvent,
-        PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
+        BankEvent, ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner,
+        PartyEventInvite, PartyEventKick, PartyEventLeave, PartyEventUpdateRules, PartyMemberEvent,
+        PartyMemberReconnect, PersonalStoreEvent, PersonalStoreEventBuyItem,
+        PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
     },
     messages::{
         client::{
@@ -43,7 +48,7 @@ use crate::game::{
     resources::{
         ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldRates, WorldTime,
     },
-    storage::{account::AccountStorage, character::CharacterStorage},
+    storage::{account::AccountStorage, bank::BankStorage, character::CharacterStorage},
 };
 
 fn handle_game_connection_request(
@@ -72,14 +77,35 @@ fn handle_game_connection_request(
     }
 
     // Verify account password
-    let _ = AccountStorage::try_load(&login_token.username, password).map_err(|error| {
-        log::error!(
-            "Failed to load account {} with error {:?}",
-            &login_token.username,
-            error
-        );
-        ConnectionRequestError::InvalidPassword
-    })?;
+    let account: Account = AccountStorage::try_load(&login_token.username, password)
+        .map_err(|error| {
+            log::error!(
+                "Failed to load account {} with error {:?}",
+                &login_token.username,
+                error
+            );
+            ConnectionRequestError::InvalidPassword
+        })?
+        .into();
+
+    // Try load bank
+    let bank = match BankStorage::try_load(&login_token.username) {
+        Ok(bank_storage) => Bank::from(bank_storage),
+        Err(_) => match BankStorage::create(&login_token.username) {
+            Ok(bank_storage) => {
+                log::info!("Created bank storage for account {}", &login_token.username);
+                Bank::from(bank_storage)
+            }
+            Err(error) => {
+                log::error!(
+                    "Failed to create bank storage for account {} with error {}",
+                    &login_token.username,
+                    error
+                );
+                return Err(ConnectionRequestError::Failed);
+            }
+        },
+    };
 
     // Try load character
     let character =
@@ -141,35 +167,39 @@ fn handle_game_connection_request(
     let move_mode = MoveMode::Run;
     let move_speed = MoveSpeed::new(ability_values.get_run_speed());
 
-    commands.entity(entity).insert_bundle(CharacterBundle {
-        ability_values,
-        basic_stats: character.basic_stats.clone(),
-        command: Command::default(),
-        equipment: character.equipment.clone(),
-        experience_points: character.experience_points.clone(),
-        health_points,
-        hotbar: character.hotbar.clone(),
-        info: character.info.clone(),
-        inventory: character.inventory.clone(),
-        level: character.level,
-        mana_points,
-        motion_data,
-        move_mode,
-        move_speed,
-        next_command: NextCommand::default(),
-        party_membership: PartyMembership::None,
-        passive_recovery_time: PassiveRecoveryTime::default(),
-        position: position.clone(),
-        quest_state: character.quest_state.clone(),
-        skill_list: character.skill_list.clone(),
-        skill_points: character.skill_points,
-        stamina: character.stamina,
-        stat_points: character.stat_points,
-        status_effects,
-        status_effects_regen,
-        team: Team::default_character(),
-        union_membership: character.union_membership.clone(),
-    });
+    commands
+        .entity(entity)
+        .insert_bundle(CharacterBundle {
+            ability_values,
+            basic_stats: character.basic_stats.clone(),
+            bank,
+            command: Command::default(),
+            equipment: character.equipment.clone(),
+            experience_points: character.experience_points.clone(),
+            health_points,
+            hotbar: character.hotbar.clone(),
+            info: character.info.clone(),
+            inventory: character.inventory.clone(),
+            level: character.level,
+            mana_points,
+            motion_data,
+            move_mode,
+            move_speed,
+            next_command: NextCommand::default(),
+            party_membership: PartyMembership::None,
+            passive_recovery_time: PassiveRecoveryTime::default(),
+            position: position.clone(),
+            quest_state: character.quest_state.clone(),
+            skill_list: character.skill_list.clone(),
+            skill_points: character.skill_points,
+            stamina: character.stamina,
+            stat_points: character.stat_points,
+            status_effects,
+            status_effects_regen,
+            team: Team::default_character(),
+            union_membership: character.union_membership.clone(),
+        })
+        .insert(account);
 
     Ok((
         ConnectionResponse {
@@ -582,6 +612,7 @@ pub fn game_server_main_system(
     )>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
+    mut bank_events: EventWriter<BankEvent>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
     mut npc_store_events: EventWriter<NpcStoreEvent>,
     mut party_events: EventWriter<PartyEvent>,
@@ -1355,6 +1386,33 @@ pub fn game_server_main_system(
                                 }
                             }
                         }
+                    }
+                    ClientMessage::BankOpen => {
+                        bank_events.send(BankEvent::Open { entity });
+                    }
+                    ClientMessage::BankDepositItem {
+                        item_slot,
+                        item,
+                        is_premium,
+                    } => {
+                        bank_events.send(BankEvent::DepositItem {
+                            entity,
+                            item_slot,
+                            item,
+                            is_premium,
+                        });
+                    }
+                    ClientMessage::BankWithdrawItem {
+                        bank_slot,
+                        item,
+                        is_premium,
+                    } => {
+                        bank_events.send(BankEvent::WithdrawItem {
+                            entity,
+                            bank_slot,
+                            item,
+                            is_premium,
+                        });
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }

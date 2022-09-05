@@ -378,6 +378,34 @@ impl GameServer {
                 };
                 client.client_message_tx.send(message)?;
             }
+            Some(ClientPackets::BankOpen) => {
+                let _ = PacketClientBankOpen::try_from(packet)?;
+                client.client_message_tx.send(ClientMessage::BankOpen)?;
+            }
+            Some(ClientPackets::BankMoveItem) => {
+                let message = match PacketClientBankMoveItem::try_from(packet)? {
+                    PacketClientBankMoveItem::Deposit {
+                        item_slot,
+                        item,
+                        is_premium,
+                    } => ClientMessage::BankDepositItem {
+                        item_slot,
+                        item,
+                        is_premium,
+                    },
+                    PacketClientBankMoveItem::Withdraw {
+                        bank_slot,
+                        item,
+                        is_premium,
+                    } => ClientMessage::BankWithdrawItem {
+                        bank_slot,
+                        item,
+                        is_premium,
+                    },
+                };
+
+                client.client_message_tx.send(message)?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -1315,6 +1343,42 @@ impl GameServer {
                     .connection
                     .write_packet(Packet::from(&PacketServerCraftItem::InsertGemFailed {
                         error,
+                    }))
+                    .await?;
+            }
+            ServerMessage::BankOpen => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerBankOpen::Open))
+                    .await?;
+            }
+            ServerMessage::BankSetItems { items } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerBankOpen::SetItems { items }))
+                    .await?;
+            }
+            ServerMessage::BankUpdateItems { items } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerBankOpen::UpdateItems { items }))
+                    .await?;
+            }
+            ServerMessage::BankTransaction {
+                inventory_item_slot,
+                inventory_item,
+                inventory_money,
+                bank_slot,
+                bank_item,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerBankTransaction {
+                        inventory_item_slot,
+                        inventory_item,
+                        inventory_money,
+                        bank_slot,
+                        bank_item,
                     }))
                     .await?;
             }

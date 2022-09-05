@@ -89,6 +89,8 @@ pub enum ServerPackets {
     UpdateBasicStat = 0x7a9,
     SetHotbarSlot = 0x7aa,
     UpdateAmmo = 0x7ab,
+    BankOpen = 0x7ad,
+    BankTransaction = 0x7ae,
     LearnSkillResult = 0x7b0,
     LevelUpSkillResult = 0x7b1,
     CastSkillSelf = 0x7b2,
@@ -3837,6 +3839,127 @@ impl From<&PacketServerCraftItem> for Packet {
             }
         }
 
+        writer.into()
+    }
+}
+
+pub enum PacketServerBankOpen {
+    Open,
+    SetItems { items: Vec<(u8, Option<Item>)> },
+    UpdateItems { items: Vec<(u8, Option<Item>)> },
+}
+
+impl TryFrom<&Packet> for PacketServerBankOpen {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::BankOpen as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let command = reader.read_u8()?;
+        match command {
+            0 => {
+                let num_items = reader.read_u8()? as usize;
+                let mut items = Vec::with_capacity(num_items);
+                for _ in 0..num_items {
+                    let storage_slot = reader.read_u8()?;
+                    let item = reader.read_item_full()?;
+                    items.push((storage_slot, item));
+                }
+
+                Ok(Self::SetItems { items })
+            }
+            1 => Ok(Self::Open),
+            2 => {
+                let num_items = reader.read_u8()? as usize;
+                let mut items = Vec::with_capacity(num_items);
+                for _ in 0..num_items {
+                    let storage_slot = reader.read_u8()?;
+                    let item = reader.read_item_full()?;
+                    items.push((storage_slot, item));
+                }
+
+                Ok(Self::UpdateItems { items })
+            }
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
+impl From<&PacketServerBankOpen> for Packet {
+    fn from(packet: &PacketServerBankOpen) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::BankOpen as u16);
+        match packet {
+            PacketServerBankOpen::SetItems { items } => {
+                writer.write_u8(0);
+                writer.write_u8(items.len() as u8);
+                for (storage_slot, item) in items.iter() {
+                    writer.write_u8(*storage_slot);
+                    writer.write_item_full(item.as_ref());
+                }
+            }
+            PacketServerBankOpen::Open => {
+                writer.write_u8(1);
+                writer.write_u8(0);
+            }
+            PacketServerBankOpen::UpdateItems { items } => {
+                writer.write_u8(2);
+                writer.write_u8(items.len() as u8);
+                for (storage_slot, item) in items.iter() {
+                    writer.write_u8(*storage_slot);
+                    writer.write_item_full(item.as_ref());
+                }
+            }
+        }
+        writer.into()
+    }
+}
+
+pub struct PacketServerBankTransaction {
+    pub inventory_item_slot: ItemSlot,
+    pub inventory_item: Option<Item>,
+    pub inventory_money: Option<Money>,
+    pub bank_slot: usize,
+    pub bank_item: Option<Item>,
+}
+
+impl TryFrom<&Packet> for PacketServerBankTransaction {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ServerPackets::BankTransaction as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let inventory_item_slot = reader.read_item_slot_u16()?;
+        let bank_slot = reader.read_u16()? as usize;
+        let inventory_item = reader.read_item_full()?;
+        let bank_item = reader.read_item_full()?;
+        let inventory_money = reader.read_i64().ok().map(Money);
+
+        Ok(Self {
+            inventory_item_slot,
+            inventory_item,
+            inventory_money,
+            bank_slot,
+            bank_item,
+        })
+    }
+}
+
+impl From<&PacketServerBankTransaction> for Packet {
+    fn from(packet: &PacketServerBankTransaction) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::BankTransaction as u16);
+        writer.write_item_slot_u16(packet.inventory_item_slot);
+        writer.write_u16(packet.bank_slot as u16);
+        writer.write_item_full(packet.inventory_item.as_ref());
+        writer.write_item_full(packet.bank_item.as_ref());
+        if let Some(inventory_money) = packet.inventory_money.as_ref() {
+            writer.write_i64(inventory_money.0);
+        }
         writer.into()
     }
 }

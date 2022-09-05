@@ -1,3 +1,4 @@
+mod bank_event;
 mod chat_command_event;
 mod damage_event;
 mod npc_store_event;
@@ -11,6 +12,7 @@ mod save_event;
 mod skill_event;
 mod use_item_event;
 
+pub use bank_event::BankEvent;
 pub use chat_command_event::ChatCommandEvent;
 pub use damage_event::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged};
 pub use npc_store_event::NpcStoreEvent;

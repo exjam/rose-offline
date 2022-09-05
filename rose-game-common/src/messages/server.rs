@@ -743,4 +743,18 @@ pub enum ServerMessage {
     AdjustPosition(ClientEntityId, Vec3),
     UpdateSkillList(Vec<UpdateSkillData>),
     CraftInsertGem(Result<Vec<(ItemSlot, Option<Item>)>, CraftInsertGemError>),
+    BankOpen,
+    BankSetItems {
+        items: Vec<(u8, Option<Item>)>,
+    },
+    BankUpdateItems {
+        items: Vec<(u8, Option<Item>)>,
+    },
+    BankTransaction {
+        inventory_item_slot: ItemSlot,
+        inventory_item: Option<Item>,
+        inventory_money: Option<Money>,
+        bank_slot: usize,
+        bank_item: Option<Item>,
+    },
 }

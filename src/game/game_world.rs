@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 
 use crate::game::{
     events::{
-        ChatCommandEvent, DamageEvent, NpcStoreEvent, PartyEvent, PartyMemberEvent,
+        BankEvent, ChatCommandEvent, DamageEvent, NpcStoreEvent, PartyEvent, PartyMemberEvent,
         PersonalStoreEvent, PickupItemEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent,
         SaveEvent, SkillEvent, UseItemEvent,
     },
@@ -24,7 +24,7 @@ use crate::game::{
     },
     systems::{
         ability_values_changed_system, ability_values_update_character_system,
-        ability_values_update_npc_system, bot_ai_system, chat_commands_system,
+        ability_values_update_npc_system, bank_system, bot_ai_system, chat_commands_system,
         client_entity_visibility_system, command_system, control_server_system, damage_system,
         experience_points_system, expire_time_system, game_server_authentication_system,
         game_server_join_system, game_server_main_system, login_server_authentication_system,
@@ -77,6 +77,7 @@ impl GameWorld {
         world.insert_resource(game_data);
 
         world.insert_resource(Events::<ChatCommandEvent>::default());
+        world.insert_resource(Events::<BankEvent>::default());
         world.insert_resource(Events::<DamageEvent>::default());
         world.insert_resource(Events::<NpcStoreEvent>::default());
         world.insert_resource(Events::<PartyEvent>::default());
@@ -153,6 +154,7 @@ impl GameWorld {
             GameStages::PreUpdate,
             GameStages::Update,
             SystemStage::parallel()
+                .with_system(bank_system)
                 .with_system(skill_effect_system)
                 .with_system(personal_store_system)
                 .with_system(npc_store_system)
