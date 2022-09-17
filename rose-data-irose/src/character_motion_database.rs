@@ -2,7 +2,7 @@ use enum_map::{enum_map, EnumMap};
 
 use rose_data::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions, MotionFileData,
-    MotionId,
+    MotionId, VehicleMotionAction,
 };
 use rose_file_readers::{StbFile, VfsPathBuf, VirtualFilesystem, ZmoFile};
 
@@ -26,6 +26,19 @@ fn get_action_map() -> EnumMap<CharacterMotionAction, MotionId> {
         CharacterMotionAction::Jump1 => MotionId::new(15),
         CharacterMotionAction::Jump2 => MotionId::new(16),
         CharacterMotionAction::Pickitem => MotionId::new(17),
+    }
+}
+
+fn get_vehicle_action_map() -> EnumMap<VehicleMotionAction, u16> {
+    enum_map! {
+        VehicleMotionAction::Stop => 0,
+        VehicleMotionAction::Move => 1,
+        VehicleMotionAction::Attack1 => 2,
+        VehicleMotionAction::Attack2 => 3,
+        VehicleMotionAction::Attack3 => 4,
+        VehicleMotionAction::Die => 5,
+        VehicleMotionAction::Special1 => 6,
+        VehicleMotionAction::Special2 => 7,
     }
 }
 
@@ -91,5 +104,6 @@ pub fn get_character_motion_database(
         motion_indices,
         motion_datas,
         get_action_map(),
+        get_vehicle_action_map(),
     ))
 }

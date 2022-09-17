@@ -203,7 +203,14 @@ impl StbItem {
             _ => None,
         }
     }
+    stb_column! { 31, get_vehicle_max_fuel, u32 }
+    stb_column! { 32, get_vehicle_fuel_use_rate, u32 }
     stb_column! { 33, get_vehicle_move_speed, u32 }
+    stb_column! { 35, get_vehicle_attack_range, i32 }
+    stb_column! { 36, get_vehicle_attack_power, i32 }
+    stb_column! { 37, get_vehicle_attack_speed, i32 }
+    stb_column! { 40, get_vehicle_base_motion_index, u32 }
+    stb_column! { 41, get_vehicle_base_avatar_motion_index, u32 }
 }
 
 #[allow(dead_code)]
@@ -436,6 +443,13 @@ fn load_vehicle_item(
         item_data: base_item_data,
         vehicle_part: data.get_vehicle_part(id)?,
         move_speed: data.get_vehicle_move_speed(id).unwrap_or(0),
+        max_fuel: data.get_vehicle_max_fuel(id).unwrap_or(0),
+        fuel_use_rate: data.get_vehicle_fuel_use_rate(id).unwrap_or(0),
+        attack_range: data.get_vehicle_attack_range(id).unwrap_or(0),
+        attack_power: data.get_vehicle_attack_power(id).unwrap_or(0),
+        attack_speed: data.get_vehicle_attack_speed(id).unwrap_or(0),
+        base_motion_index: data.get_vehicle_base_motion_index(id).unwrap_or(0),
+        base_avatar_motion_index: data.get_vehicle_base_avatar_motion_index(id).unwrap_or(0),
     })
 }
 

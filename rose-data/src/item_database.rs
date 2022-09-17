@@ -330,6 +330,13 @@ pub struct VehicleItemData {
     pub item_data: BaseItemData,
     pub vehicle_part: VehicleItemPart,
     pub move_speed: u32,
+    pub max_fuel: u32,
+    pub fuel_use_rate: u32,
+    pub attack_range: i32,
+    pub attack_power: i32,
+    pub attack_speed: i32,
+    pub base_motion_index: u32,
+    pub base_avatar_motion_index: u32,
 }
 
 #[derive(Debug)]

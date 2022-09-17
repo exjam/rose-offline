@@ -86,6 +86,7 @@ pub use ai_database::AiDatabase;
 pub use animation_event_flags::AnimationEventFlags;
 pub use character_motion_database::{
     CharacterMotionAction, CharacterMotionDatabase, CharacterMotionDatabaseOptions,
+    VehicleMotionAction,
 };
 pub use client_strings::ClientStrings;
 pub use data_decoder::DataDecoder;
