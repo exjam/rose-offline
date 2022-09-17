@@ -549,7 +549,7 @@ pub fn decode_item_slot(index: usize) -> Option<ItemSlot> {
     } else if (AMMO_START_INDEX..AMMO_END_INDEX).contains(&index) {
         decode_ammo_index(index - AMMO_START_INDEX).map(ItemSlot::Ammo)
     } else if (VEHICLE_START_INDEX..VEHICLE_END_INDEX).contains(&index) {
-        decode_vehicle_part_index(index - AMMO_START_INDEX).map(ItemSlot::Vehicle)
+        decode_vehicle_part_index(index - VEHICLE_START_INDEX).map(ItemSlot::Vehicle)
     } else {
         None
     }
