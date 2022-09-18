@@ -139,9 +139,11 @@ impl CharacterMotionDatabase {
         &self,
         action: VehicleMotionAction,
         base_motion_index: usize,
+        weapon_motion_type: usize,
     ) -> Option<&MotionFileData> {
         let index = *self.motion_indices.get(
-            base_motion_index * self.weapon_type_count + self.vehicle_action_map[action] as usize,
+            (base_motion_index + self.vehicle_action_map[action] as usize) * self.weapon_type_count
+                + weapon_motion_type,
         )? as usize;
 
         self.motion_data
