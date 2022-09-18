@@ -1,4 +1,7 @@
-use bevy::ecs::{prelude::Changed, query::WorldQuery, system::Query};
+use bevy::{
+    ecs::{prelude::Changed, query::WorldQuery, system::Query},
+    prelude::Or,
+};
 
 use crate::game::components::{AbilityValues, HealthPoints, ManaPoints, MoveMode, MoveSpeed};
 
@@ -13,7 +16,7 @@ pub struct AbilityValuesChangedQuery<'w> {
 }
 
 pub fn ability_values_changed_system(
-    mut query: Query<AbilityValuesChangedQuery, Changed<AbilityValues>>,
+    mut query: Query<AbilityValuesChangedQuery, Or<(Changed<AbilityValues>, Changed<MoveMode>)>>,
 ) {
     for mut object in query.iter_mut() {
         // Limit hp to max health
