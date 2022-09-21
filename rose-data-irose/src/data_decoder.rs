@@ -6,7 +6,7 @@ use num_traits::{FromPrimitive, ToPrimitive};
 use rose_data::{
     AbilityType, AmmoIndex, DataDecoder, EffectBulletMoveType, EquipmentIndex, ItemClass,
     ItemReference, ItemType, SkillActionMode, SkillBasicCommand, SkillTargetFilter, SkillType,
-    StatusEffectClearedByType, StatusEffectType, VehiclePartIndex,
+    StatusEffectClearedByType, StatusEffectType, VehiclePartIndex, VehicleType,
 };
 
 macro_rules! impl_conversions {
@@ -298,14 +298,20 @@ pub enum IroseVehiclePartIndex {
     Body = 0,
     Engine = 1,
     Leg = 2,
-    Ability = 3,
-    Arms = 4,
+    Arms = 3,
 }
 impl_conversions!(
     IroseVehiclePartIndex,
     VehiclePartIndex,
     decode_vehicle_part_index
 );
+
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum IroseVehicleType {
+    Cart = 21,
+    CastleGear = 31,
+}
+impl_conversions!(IroseVehicleType, VehicleType, decode_vehicle_type);
 
 #[derive(FromPrimitive, ToPrimitive)]
 pub enum IroseAmmoIndex {
@@ -962,8 +968,14 @@ pub fn decode_vehicle_part_index(id: usize) -> Option<VehiclePartIndex> {
         IroseVehiclePartIndex::Body => Some(VehiclePartIndex::Body),
         IroseVehiclePartIndex::Engine => Some(VehiclePartIndex::Engine),
         IroseVehiclePartIndex::Leg => Some(VehiclePartIndex::Leg),
-        IroseVehiclePartIndex::Ability => Some(VehiclePartIndex::Ability),
         IroseVehiclePartIndex::Arms => Some(VehiclePartIndex::Arms),
+    }
+}
+
+pub fn decode_vehicle_type(id: usize) -> Option<VehicleType> {
+    match FromPrimitive::from_usize(id)? {
+        IroseVehicleType::Cart => Some(VehicleType::Cart),
+        IroseVehicleType::CastleGear => Some(VehicleType::CastleGear),
     }
 }
 
@@ -996,7 +1008,6 @@ pub fn encode_vehicle_part_index(id: VehiclePartIndex) -> Option<usize> {
         VehiclePartIndex::Body => IroseVehiclePartIndex::Body.to_usize(),
         VehiclePartIndex::Engine => IroseVehiclePartIndex::Engine.to_usize(),
         VehiclePartIndex::Leg => IroseVehiclePartIndex::Leg.to_usize(),
-        VehiclePartIndex::Ability => IroseVehiclePartIndex::Ability.to_usize(),
         VehiclePartIndex::Arms => IroseVehiclePartIndex::Arms.to_usize(),
     }
 }

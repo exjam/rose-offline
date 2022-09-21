@@ -517,7 +517,7 @@ impl TryFrom<&Packet> for PacketServerCharacterInventory {
             VehiclePartIndex::Body,
             VehiclePartIndex::Engine,
             VehiclePartIndex::Leg,
-            VehiclePartIndex::Ability,
+            VehiclePartIndex::Arms,
         ] {
             equipment.equipped_vehicle[index] = reader.read_equipment_item_full()?;
         }
@@ -577,7 +577,7 @@ impl From<&PacketServerCharacterInventory> for Packet {
             VehiclePartIndex::Body,
             VehiclePartIndex::Engine,
             VehiclePartIndex::Leg,
-            VehiclePartIndex::Ability,
+            VehiclePartIndex::Arms,
         ] {
             writer.write_equipment_item_full(equipment.get_vehicle_item(index));
         }
@@ -1561,7 +1561,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
             VehiclePartIndex::Body,
             VehiclePartIndex::Engine,
             VehiclePartIndex::Leg,
-            VehiclePartIndex::Ability,
+            VehiclePartIndex::Arms,
         ] {
             equipment.equipped_vehicle[index] =
                 reader.read_equipment_item_part(ItemType::Weapon)?;
@@ -1654,7 +1654,7 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
             VehiclePartIndex::Body,
             VehiclePartIndex::Engine,
             VehiclePartIndex::Leg,
-            VehiclePartIndex::Ability,
+            VehiclePartIndex::Arms,
         ] {
             writer.write_equipment_item_part(packet.equipment.get_vehicle_item(*index));
         }

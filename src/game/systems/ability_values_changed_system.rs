@@ -8,7 +8,7 @@ use crate::game::components::{AbilityValues, HealthPoints, ManaPoints, MoveMode,
 #[derive(WorldQuery)]
 #[world_query(mutable)]
 pub struct AbilityValuesChangedQuery<'w> {
-    ability_values: &'w AbilityValues,
+    ability_values: &'w mut AbilityValues,
     health_points: &'w mut HealthPoints,
     mana_points: Option<&'w mut ManaPoints>,
     move_mode: &'w MoveMode,
@@ -19,6 +19,9 @@ pub fn ability_values_changed_system(
     mut query: Query<AbilityValuesChangedQuery, Or<(Changed<AbilityValues>, Changed<MoveMode>)>>,
 ) {
     for mut object in query.iter_mut() {
+        // Update is_driving so vehicle stats are used correctly
+        object.ability_values.is_driving = matches!(object.move_mode, MoveMode::Drive);
+
         // Limit hp to max health
         let max_hp = object.ability_values.get_max_health();
         if object.health_points.hp > max_hp {
@@ -34,12 +37,7 @@ pub fn ability_values_changed_system(
         }
 
         // Update move speed
-        let updated_move_speed = match object.move_mode {
-            MoveMode::Run => object.ability_values.get_run_speed(),
-            MoveMode::Walk => object.ability_values.get_walk_speed(),
-            MoveMode::Drive => object.ability_values.get_drive_speed(),
-        };
-
+        let updated_move_speed = object.ability_values.get_move_speed(object.move_mode);
         if (object.move_speed.speed - updated_move_speed).abs() > f32::EPSILON {
             object.move_speed.speed = updated_move_speed;
         }

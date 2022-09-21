@@ -66,7 +66,6 @@ pub enum VehiclePartIndex {
     Body,
     Engine,
     Leg,
-    Ability,
     Arms,
 }
 

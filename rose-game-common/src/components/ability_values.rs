@@ -2,7 +2,7 @@ use bevy::ecs::prelude::Component;
 
 use rose_data::StatusEffectType;
 
-use crate::components::StatusEffects;
+use crate::components::{MoveMode, StatusEffects};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum DamageCategory {
@@ -98,11 +98,12 @@ impl From<&StatusEffects> for AbilityValuesAdjust {
 
 #[derive(Component, Clone, Debug)]
 pub struct AbilityValues {
+    pub is_driving: bool,
     pub damage_category: DamageCategory,
     pub level: i32,
     pub walk_speed: f32,
     pub run_speed: f32,
-    pub drive_speed: f32,
+    pub vehicle_move_speed: f32,
     pub strength: i32,
     pub dexterity: i32,
     pub intelligence: i32,
@@ -123,6 +124,12 @@ pub struct AbilityValues {
     pub resistance: i32,
     pub critical: i32,
     pub avoid: i32,
+    pub vehicle_attack_power: i32,
+    pub vehicle_attack_range: i32,
+    pub vehicle_attack_speed: i32,
+    pub vehicle_hit: i32,
+    pub vehicle_critical: i32,
+    pub vehicle_avoid: i32,
     pub max_damage_sources: usize,
     pub drop_rate: i32,
     pub max_weight: i32,
@@ -189,7 +196,11 @@ impl AbilityValues {
     }
 
     pub fn get_attack_range(&self) -> i32 {
-        self.attack_range
+        if self.is_driving {
+            self.vehicle_attack_range
+        } else {
+            self.attack_range
+        }
     }
 
     pub fn get_max_damage_sources(&self) -> usize {
@@ -217,19 +228,35 @@ impl AbilityValues {
     }
 
     pub fn get_attack_speed(&self) -> i32 {
-        self.attack_speed + self.adjust.attack_speed
+        if self.is_driving {
+            self.vehicle_attack_speed + self.adjust.attack_speed
+        } else {
+            self.attack_speed + self.adjust.attack_speed
+        }
     }
 
     pub fn get_attack_power(&self) -> i32 {
-        self.attack_power + self.adjust.attack_power
+        if self.is_driving {
+            self.vehicle_attack_power + self.adjust.attack_power
+        } else {
+            self.attack_power + self.adjust.attack_power
+        }
     }
 
     pub fn get_avoid(&self) -> i32 {
-        self.avoid + self.adjust.avoid
+        if self.is_driving {
+            self.vehicle_avoid + self.adjust.avoid
+        } else {
+            self.avoid + self.adjust.avoid
+        }
     }
 
     pub fn get_critical(&self) -> i32 {
-        self.critical + self.adjust.critical
+        if self.is_driving {
+            self.vehicle_critical + self.adjust.critical
+        } else {
+            self.critical + self.adjust.critical
+        }
     }
 
     pub fn get_defence(&self) -> i32 {
@@ -237,7 +264,11 @@ impl AbilityValues {
     }
 
     pub fn get_hit(&self) -> i32 {
-        self.hit + self.adjust.hit
+        if self.is_driving {
+            self.vehicle_hit + self.adjust.hit
+        } else {
+            self.hit + self.adjust.hit
+        }
     }
 
     pub fn get_resistance(&self) -> i32 {
@@ -256,11 +287,19 @@ impl AbilityValues {
         self.run_speed + self.adjust.run_speed
     }
 
-    pub fn get_drive_speed(&self) -> f32 {
-        self.drive_speed + self.adjust.run_speed
+    pub fn get_vehicle_move_speed(&self) -> f32 {
+        self.vehicle_move_speed + self.adjust.run_speed
     }
 
     pub fn get_save_mana(&self) -> i32 {
         self.save_mana
+    }
+
+    pub fn get_move_speed(&self, move_mode: &MoveMode) -> f32 {
+        match move_mode {
+            MoveMode::Walk => self.get_walk_speed(),
+            MoveMode::Run => self.get_run_speed(),
+            MoveMode::Drive => self.get_vehicle_move_speed(),
+        }
     }
 }

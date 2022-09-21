@@ -251,7 +251,8 @@ fn create_bot_entity(
             &status_effects,
         );
 
-    let move_speed = MoveSpeed::new(ability_values.get_run_speed() as f32);
+    let move_mode = MoveMode::Run;
+    let move_speed = MoveSpeed::new(ability_values.get_move_speed(&move_mode));
 
     let weapon_motion_type = chat_command_params
         .game_data
@@ -288,7 +289,7 @@ fn create_bot_entity(
             level: bot_data.level,
             mana_points: bot_data.mana_points,
             motion_data,
-            move_mode: MoveMode::Run,
+            move_mode,
             move_speed,
             next_command: NextCommand::default(),
             party_membership: PartyMembership::default(),

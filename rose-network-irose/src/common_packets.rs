@@ -572,8 +572,7 @@ pub fn encode_item_slot(slot: ItemSlot) -> usize {
         ItemSlot::Vehicle(VehiclePartIndex::Body) => VEHICLE_START_INDEX,
         ItemSlot::Vehicle(VehiclePartIndex::Engine) => VEHICLE_START_INDEX + 1,
         ItemSlot::Vehicle(VehiclePartIndex::Leg) => VEHICLE_START_INDEX + 2,
-        ItemSlot::Vehicle(VehiclePartIndex::Ability) => VEHICLE_START_INDEX + 3,
-        ItemSlot::Vehicle(VehiclePartIndex::Arms) => VEHICLE_START_INDEX + 4,
+        ItemSlot::Vehicle(VehiclePartIndex::Arms) => VEHICLE_START_INDEX + 3,
     }
 }
 

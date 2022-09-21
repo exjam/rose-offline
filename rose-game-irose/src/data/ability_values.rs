@@ -68,10 +68,11 @@ impl AbilityValueCalculator for AbilityValuesData {
         }
 
         Some(AbilityValues {
+            is_driving: false,
             damage_category: DamageCategory::Npc,
             walk_speed: npc_data.walk_speed as f32,
             run_speed: npc_data.run_speed as f32,
-            drive_speed: 0.0,
+            vehicle_move_speed: 0.0,
             level,
             strength: 0,
             dexterity: 0,
@@ -97,6 +98,12 @@ impl AbilityValueCalculator for AbilityValuesData {
             resistance,
             critical: (npc_data.level as f32 * 2.5) as i32,
             avoid,
+            vehicle_attack_power: 0,
+            vehicle_attack_range: 0,
+            vehicle_attack_speed: 0,
+            vehicle_hit: 0,
+            vehicle_critical: 0,
+            vehicle_avoid: 0,
             max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
             drop_rate: 0,
             max_weight: 0,
@@ -125,7 +132,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         let passive_ability_values =
             calculate_passive_skill_ability_values(&self.skill_database, skill_list);
 
-        // TODO: Apparently we only add these passive_ability_values stats when not on a cart
+        let vehicle_basic_stats = basic_stats.clone();
         let basic_stats = BasicStats {
             strength: (basic_stats.strength
                 + passive_ability_values.value.strength
@@ -160,17 +167,14 @@ impl AbilityValueCalculator for AbilityValuesData {
             &passive_ability_values,
         );
 
-        // TODO:
-        // If riding cart, some stat calculations are different:
-        //  - equipment_ability_values from vehicle parts
-        //  - Driving speed
-        //  - Attack
-        //  - Hit
-        //  - Defence
-        //  - Avoid
-        //  - Critical
+        let (job_add_max_health, job_add_attack, job_add_defence, job_add_resistance) =
+            match character_info.job {
+                121 | 122 | 221 | 222 | 321 | 322 | 421 | 422 => (300, 30, 25, 20),
+                _ => (0, 0, 0, 0),
+            };
 
         AbilityValues {
+            is_driving: false,
             damage_category: DamageCategory::Character,
             walk_speed: 200.0,
             run_speed: calculate_run_speed(
@@ -180,7 +184,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 equipment,
                 &passive_ability_values,
             ),
-            drive_speed: calculate_drive_speed(
+            vehicle_move_speed: calculate_vehicle_move_speed(
                 &self.item_database,
                 &vehicle_ability_values,
                 equipment,
@@ -191,7 +195,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &basic_stats,
                 &equipment_ability_values,
                 &passive_ability_values,
-            ),
+            ) + job_add_max_health,
             max_mana: calculate_max_mana(
                 character_info,
                 level,
@@ -232,7 +236,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
-            ),
+            ) + job_add_attack,
             attack_speed,
             passive_attack_speed,
             attack_range: calculate_attack_range(&self.item_database, equipment),
@@ -250,7 +254,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
-            ),
+            ) + job_add_defence,
             resistance: calculate_resistance(
                 &self.item_database,
                 &basic_stats,
@@ -258,7 +262,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
-            ),
+            ) + job_add_resistance,
             critical: calculate_critical(
                 &basic_stats,
                 &equipment_ability_values,
@@ -270,6 +274,39 @@ impl AbilityValueCalculator for AbilityValuesData {
                 level,
                 equipment,
                 &equipment_ability_values,
+                &passive_ability_values,
+            ),
+            vehicle_attack_power: calculate_vehicle_attack_power(
+                &self.item_database,
+                &vehicle_basic_stats,
+                level,
+                &vehicle_ability_values,
+                equipment,
+            ) + job_add_attack,
+            vehicle_attack_range: calculate_vehicle_attack_range(&self.item_database, equipment),
+            vehicle_attack_speed: calculate_vehicle_attack_speed(
+                &self.item_database,
+                equipment,
+                &vehicle_ability_values,
+            ),
+            vehicle_hit: calculate_vehicle_hit(
+                &self.item_database,
+                &vehicle_basic_stats,
+                level,
+                &vehicle_ability_values,
+                equipment,
+                &passive_ability_values,
+            ),
+            vehicle_critical: calculate_vehicle_critical(
+                &vehicle_basic_stats,
+                level,
+                &vehicle_ability_values,
+                &passive_ability_values,
+            ),
+            vehicle_avoid: calculate_vehicle_avoid(
+                &vehicle_basic_stats,
+                level,
+                &vehicle_ability_values,
                 &passive_ability_values,
             ),
             max_damage_sources: 0,
@@ -1485,7 +1522,7 @@ fn calculate_run_speed(
     item_run_speed + passive_run_speed
 }
 
-fn calculate_drive_speed(
+fn calculate_vehicle_move_speed(
     item_database: &ItemDatabase,
     vehicle_ability_values: &EquipmentAbilityValue,
     equipment: &Equipment,
@@ -1698,6 +1735,32 @@ fn calculate_attack_power(
     (attack_power + passive_attack_power) as i32
 }
 
+fn calculate_vehicle_attack_power(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    level: &Level,
+    vehicle_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+) -> i32 {
+    let concentration = basic_stats.concentration as f32;
+    let level = level.level as f32;
+
+    let arms_attack_power = equipment
+        .get_vehicle_item(VehiclePartIndex::Arms)
+        .filter(|item| !item.is_broken())
+        .and_then(|item| {
+            item_database
+                .get_vehicle_item(item.item.item_number as usize)
+                .map(|item_data| item_data.attack_power as f32)
+        })
+        .unwrap_or(0.0);
+
+    let attack_power =
+        level * 3.0 + concentration + arms_attack_power + vehicle_ability_values.attack as f32;
+
+    attack_power as i32
+}
+
 fn calculate_attack_speed(
     item_database: &ItemDatabase,
     equipment: &Equipment,
@@ -1740,6 +1803,26 @@ fn calculate_attack_speed(
     )
 }
 
+fn calculate_vehicle_attack_speed(
+    item_database: &ItemDatabase,
+    equipment: &Equipment,
+    vehicle_ability_values: &EquipmentAbilityValue,
+) -> i32 {
+    let arms_attack_speed = equipment
+        .get_vehicle_item(VehiclePartIndex::Arms)
+        .filter(|item| !item.is_broken())
+        .and_then(|item| {
+            item_database
+                .get_vehicle_item(item.item.item_number as usize)
+                .map(|item_data| item_data.attack_speed as f32)
+        })
+        .unwrap_or(0.0);
+
+    let attack_speed = 1500.0 / (arms_attack_speed + 5.0) as f32;
+
+    (attack_speed + vehicle_ability_values.attack_speed as f32) as i32
+}
+
 fn calculate_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -> i32 {
     let weapon_attack_range = item_database
         .get_weapon_item(
@@ -1754,6 +1837,21 @@ fn calculate_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -
     let scale = 1.0;
 
     weapon_attack_range as i32 + (scale * 120.0) as i32
+}
+
+fn calculate_vehicle_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -> i32 {
+    let arms_attack_range = equipment
+        .get_vehicle_item(VehiclePartIndex::Arms)
+        .and_then(|item| {
+            item_database
+                .get_vehicle_item(item.item.item_number as usize)
+                .map(|item_data| item_data.attack_range)
+        })
+        .unwrap_or(0);
+
+    let scale = 1.0;
+
+    arms_attack_range + (scale * 120.0) as i32
 }
 
 fn calculate_hit(
@@ -1784,6 +1882,36 @@ fn calculate_hit(
     } else {
         (concentration + 10.0) * 0.5 + 15.0
     } + equipment_ability_values.hit as f32;
+
+    let passive_hit_rate = passive_ability_values.rate.hit as f32 / 100.0;
+    let passive_hit = passive_ability_values.value.hit as f32 + (hit as f32 * passive_hit_rate);
+
+    (hit + passive_hit) as i32
+}
+
+fn calculate_vehicle_hit(
+    item_database: &ItemDatabase,
+    basic_stats: &BasicStats,
+    level: &Level,
+    vehicle_ability_values: &EquipmentAbilityValue,
+    equipment: &Equipment,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let concentration = basic_stats.concentration as f32;
+    let level = level.level as f32;
+
+    let hit = if let Some(arms_item_quality) = equipment
+        .get_vehicle_item(VehiclePartIndex::Arms)
+        .filter(|item| !item.is_broken())
+        .and_then(|item| {
+            item_database
+                .get_vehicle_item(item.item.item_number as usize)
+                .map(|item_data| item_data.item_data.quality as f32)
+        }) {
+        (concentration + 10.0) * 0.8 + level * 0.5 + arms_item_quality * 1.2
+    } else {
+        0.0
+    } + vehicle_ability_values.hit as f32;
 
     let passive_hit_rate = passive_ability_values.rate.hit as f32 / 100.0;
     let passive_hit = passive_ability_values.value.hit as f32 + (hit as f32 * passive_hit_rate);
@@ -1894,6 +2022,23 @@ fn calculate_critical(
     (critical + passive_critical) as i32
 }
 
+fn calculate_vehicle_critical(
+    basic_stats: &BasicStats,
+    level: &Level,
+    vehicle_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let level = level.level as f32;
+    let sense = basic_stats.sense as f32;
+    let critical = sense * 0.8 + level * 0.3 + vehicle_ability_values.critical as f32;
+
+    let passive_critical_rate = passive_ability_values.rate.critical as f32 / 100.0;
+    let passive_critical =
+        passive_ability_values.value.critical as f32 + (critical as f32 * passive_critical_rate);
+
+    (critical + passive_critical) as i32
+}
+
 fn calculate_avoid(
     item_database: &ItemDatabase,
     basic_stats: &BasicStats,
@@ -1935,6 +2080,23 @@ fn calculate_avoid(
         + (equipment_durability as f32) * 0.3
         + equipment_total_grade as f32
         + equipment_ability_values.avoid as f32;
+
+    let passive_avoid_rate = passive_ability_values.rate.avoid as f32 / 100.0;
+    let passive_avoid =
+        passive_ability_values.value.avoid as f32 + (avoid as f32 * passive_avoid_rate);
+
+    (avoid + passive_avoid) as i32
+}
+
+fn calculate_vehicle_avoid(
+    basic_stats: &BasicStats,
+    level: &Level,
+    vehicle_ability_values: &EquipmentAbilityValue,
+    passive_ability_values: &PassiveSkillAbilityValues,
+) -> i32 {
+    let dexterity = basic_stats.dexterity as f32;
+    let level = level.level as f32;
+    let avoid = (dexterity + 10.0) * 0.8 + level * 0.5 + vehicle_ability_values.avoid as f32;
 
     let passive_avoid_rate = passive_ability_values.rate.avoid as f32 / 100.0;
     let passive_avoid =

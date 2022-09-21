@@ -6,11 +6,13 @@ use rose_data::{
     EffectId, FaceItemData, FeetItemData, GemItemData, HandsItemData, HeadItemData, ItemClass,
     ItemDatabase, ItemGradeData, ItemReference, ItemType, JewelleryItemData, JobClassId,
     MaterialItemData, QuestItemData, SkillId, SoundId, StatusEffectId, StringDatabase,
-    SubWeaponItemData, VehicleItemData, VehicleItemPart, WeaponItemData,
+    SubWeaponItemData, VehicleItemData, WeaponItemData,
 };
 use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
-use crate::data_decoder::{decode_ability_type, IroseItemClass};
+use crate::data_decoder::{
+    decode_ability_type, IroseItemClass, IroseVehiclePartIndex, IroseVehicleType,
+};
 
 pub struct StbItem(pub StbFile);
 pub struct StbItemGrades(pub StbFile);
@@ -193,16 +195,30 @@ impl StbItem {
     stb_column! { 17, get_material_bullet_effect_id, EffectId }
 
     // LIST_PAT
-    pub fn get_vehicle_part(&self, id: usize) -> Option<VehicleItemPart> {
-        match self.0.try_get_int(id, 2)? {
-            0 => Some(VehicleItemPart::Body),
-            1 => Some(VehicleItemPart::Engine),
-            2 => Some(VehicleItemPart::Leg),
-            3 => Some(VehicleItemPart::Ability),
-            4 => Some(VehicleItemPart::Arms),
-            _ => None,
-        }
+    stb_column! { 2, get_vehicle_part_index, IroseVehiclePartIndex }
+    stb_column! { 16, get_vehicle_type, IroseVehicleType }
+    stb_column! { 17, get_vehicle_version, u32 }
+    stb_column! { 19, get_vehicle_skill_id_requirement, SkillId }
+    stb_column! { 20, get_vehicle_skill_level_requirement, i32 }
+
+    pub fn get_vehicle_ability_requirement(&self, id: usize) -> Option<(AbilityType, i32)> {
+        let ability_type: Option<AbilityType> = self
+            .0
+            .try_get_int(id, 21)
+            .and_then(|id| decode_ability_type(id as usize));
+        let ability_value = self.0.try_get_int(id, 22);
+
+        ability_type.and_then(|ability_type| {
+            ability_value.map(|ability_value| (ability_type, ability_value))
+        })
     }
+
+    pub fn get_vehicle_skill_requirement(&self, id: usize) -> Option<(SkillId, i32)> {
+        let skill_id = self.get_vehicle_skill_id_requirement(id)?;
+        let level = self.get_vehicle_skill_level_requirement(id).unwrap_or(0);
+        Some((skill_id, level))
+    }
+
     stb_column! { 31, get_vehicle_max_fuel, u32 }
     stb_column! { 32, get_vehicle_fuel_use_rate, u32 }
     stb_column! { 33, get_vehicle_move_speed, u32 }
@@ -441,7 +457,7 @@ fn load_vehicle_item(
     let base_item_data = load_base_item(data, string_database, ItemType::Vehicle, id, true)?;
     Some(VehicleItemData {
         item_data: base_item_data,
-        vehicle_part: data.get_vehicle_part(id)?,
+        vehicle_part: data.get_vehicle_part_index(id)?.try_into().ok()?,
         move_speed: data.get_vehicle_move_speed(id).unwrap_or(0),
         max_fuel: data.get_vehicle_max_fuel(id).unwrap_or(0),
         fuel_use_rate: data.get_vehicle_fuel_use_rate(id).unwrap_or(0),
@@ -450,6 +466,10 @@ fn load_vehicle_item(
         attack_speed: data.get_vehicle_attack_speed(id).unwrap_or(0),
         base_motion_index: data.get_vehicle_base_motion_index(id).unwrap_or(0),
         base_avatar_motion_index: data.get_vehicle_base_avatar_motion_index(id).unwrap_or(0),
+        vehicle_type: data.get_vehicle_type(id)?.try_into().ok()?,
+        version: data.get_vehicle_version(id).unwrap_or(0),
+        ability_requirement: data.get_vehicle_ability_requirement(id),
+        skill_requirement: data.get_vehicle_skill_requirement(id),
     })
 }
 

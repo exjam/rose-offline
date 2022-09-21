@@ -4,7 +4,7 @@ use log::warn;
 
 use rose_data::{
     EquipmentIndex, Item, ItemClass, ItemSlotBehaviour, ItemType, StackError,
-    StackableSlotBehaviour, VehicleItemPart, VehiclePartIndex,
+    StackableSlotBehaviour, VehiclePartIndex,
 };
 use rose_game_common::{
     data::Password,
@@ -165,7 +165,7 @@ fn handle_game_connection_request(
     );
 
     let move_mode = MoveMode::Run;
-    let move_speed = MoveSpeed::new(ability_values.get_run_speed());
+    let move_speed = MoveSpeed::new(ability_values.get_move_speed(&move_mode));
 
     commands
         .entity(entity)
@@ -550,13 +550,7 @@ fn equip_vehicle_from_inventory(
         .get_vehicle_item(equipment_item.item.item_number)
         .ok_or(EquipItemError::InvalidItemData)?;
 
-    if match item_data.vehicle_part {
-        VehicleItemPart::Body => vehicle_part_index != VehiclePartIndex::Body,
-        VehicleItemPart::Engine => vehicle_part_index != VehiclePartIndex::Engine,
-        VehicleItemPart::Leg => vehicle_part_index != VehiclePartIndex::Leg,
-        VehicleItemPart::Ability => vehicle_part_index != VehiclePartIndex::Ability,
-        VehicleItemPart::Arms => vehicle_part_index != VehiclePartIndex::Arms,
-    } {
+    if vehicle_part_index != item_data.vehicle_part {
         return Err(EquipItemError::InvalidEquipmentIndex);
     }
 

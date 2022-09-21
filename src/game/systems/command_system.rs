@@ -477,29 +477,14 @@ pub fn command_system(
                         }
                     }
 
-                    match command_move_mode {
-                        Some(MoveMode::Walk) => {
-                            if !matches!(move_mode, MoveMode::Walk) {
-                                entity_commands
-                                    .insert(MoveMode::Walk)
-                                    .insert(MoveSpeed::new(ability_values.get_walk_speed()));
-                            }
+                    // If this move command has a different move mode, update move mode and move speed
+                    if let Some(command_move_mode) = command_move_mode.as_ref() {
+                        if command_move_mode != move_mode {
+                            entity_commands.insert_bundle((
+                                *command_move_mode,
+                                MoveSpeed::new(ability_values.get_move_speed(command_move_mode)),
+                            ));
                         }
-                        Some(MoveMode::Run) => {
-                            if !matches!(move_mode, MoveMode::Run) {
-                                entity_commands
-                                    .insert(MoveMode::Run)
-                                    .insert(MoveSpeed::new(ability_values.get_run_speed()));
-                            }
-                        }
-                        Some(MoveMode::Drive) => {
-                            if !matches!(move_mode, MoveMode::Drive) {
-                                entity_commands
-                                    .insert(MoveMode::Drive)
-                                    .insert(MoveSpeed::new(ability_values.get_drive_speed()));
-                            }
-                        }
-                        None => {}
                     }
 
                     let distance = position.position.xy().distance(destination.xy());

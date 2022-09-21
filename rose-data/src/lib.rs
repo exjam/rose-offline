@@ -101,7 +101,7 @@ pub use item_database::{
     BackItemData, BaseItemData, BodyItemData, ConsumableItemData, FaceItemData, FeetItemData,
     GemItemData, HandsItemData, HeadItemData, ItemClass, ItemData, ItemDatabase, ItemGradeData,
     ItemReference, ItemType, JewelleryItemData, MaterialItemData, QuestItemData, SubWeaponItemData,
-    VehicleItemData, VehicleItemPart, WeaponItemData,
+    VehicleItemData, VehicleType, WeaponItemData,
 };
 pub use job_class_database::{JobClassData, JobClassDatabase, JobClassId, JobId};
 pub use motion_file_data::{MotionFileData, MotionId};

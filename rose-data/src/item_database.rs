@@ -5,7 +5,7 @@ use std::{sync::Arc, time::Duration};
 
 use crate::{
     AbilityType, EffectFileId, EffectId, JobClassId, SkillId, SoundId, StatusEffectId,
-    StringDatabase,
+    StringDatabase, VehiclePartIndex,
 };
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
@@ -316,19 +316,18 @@ pub struct QuestItemData {
     pub item_data: BaseItemData,
 }
 
-#[derive(Debug)]
-pub enum VehicleItemPart {
-    Body,
-    Engine,
-    Leg,
-    Ability,
-    Arms,
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VehicleType {
+    Cart,
+    CastleGear,
 }
 
 #[derive(Debug)]
 pub struct VehicleItemData {
     pub item_data: BaseItemData,
-    pub vehicle_part: VehicleItemPart,
+    pub vehicle_type: VehicleType,
+    pub version: u32,
+    pub vehicle_part: VehiclePartIndex,
     pub move_speed: u32,
     pub max_fuel: u32,
     pub fuel_use_rate: u32,
@@ -337,6 +336,8 @@ pub struct VehicleItemData {
     pub attack_speed: i32,
     pub base_motion_index: u32,
     pub base_avatar_motion_index: u32,
+    pub ability_requirement: Option<(AbilityType, i32)>,
+    pub skill_requirement: Option<(SkillId, i32)>,
 }
 
 #[derive(Debug)]
