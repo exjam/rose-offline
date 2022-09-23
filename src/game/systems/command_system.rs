@@ -546,64 +546,72 @@ pub fn command_system(
                         // Check if we are in attack range
                         let attack_range = ability_values.get_attack_range() as f32;
                         if distance < attack_range {
-                            let (attack_duration, hit_count) = motion_data
-                                .get_attack()
-                                .as_ref()
-                                .map(|attack_motion| {
-                                    (attack_motion.duration, attack_motion.total_attack_frames)
-                                })
-                                .unwrap_or_else(|| (Duration::from_secs(1), 1));
-
-                            // If the weapon uses ammo, we must consume the ammo
                             let mut cancel_attack = false;
 
-                            if let Some(mut equipment) = equipment {
-                                if let Some(weapon_item_data) = weapon_item_data {
-                                    let ammo_index = match weapon_item_data.item_data.class {
-                                        ItemClass::Bow | ItemClass::Crossbow => {
-                                            Some(AmmoIndex::Arrow)
-                                        }
-                                        ItemClass::Gun | ItemClass::DualGuns => {
-                                            Some(AmmoIndex::Bullet)
-                                        }
-                                        ItemClass::Launcher => Some(AmmoIndex::Throw),
-                                        _ => None,
-                                    };
+                            let (attack_duration, hit_count) =
+                                if let Some(attack_motion) = motion_data.get_attack() {
+                                    (attack_motion.duration, attack_motion.total_attack_frames)
+                                } else {
+                                    // No attack animation, cancel attack
+                                    cancel_attack = true;
+                                    (Duration::ZERO, 0)
+                                };
 
-                                    if let Some(ammo_index) = ammo_index {
-                                        if equipment
-                                            .get_ammo_slot_mut(ammo_index)
-                                            .try_take_quantity(hit_count as u32)
-                                            .is_none()
-                                        {
-                                            cancel_attack = true;
-                                        } else if let Some(game_client) = game_client {
-                                            match equipment.get_ammo_item(ammo_index) {
-                                                Some(ammo_item) => {
-                                                    if (ammo_item.quantity & 0x0F) == 0 {
-                                                        game_client
-                                                            .server_message_tx
-                                                            .send(ServerMessage::UpdateInventory(
-                                                                vec![(
-                                                                    ItemSlot::Ammo(ammo_index),
-                                                                    Some(Item::Stackable(
-                                                                        ammo_item.clone(),
-                                                                    )),
-                                                                )],
-                                                                None,
-                                                            ))
-                                                            .ok();
+                            // If the weapon uses ammo, we must consume the ammo
+                            if !cancel_attack {
+                                if let Some(mut equipment) = equipment {
+                                    if let Some(weapon_item_data) = weapon_item_data {
+                                        let ammo_index = match weapon_item_data.item_data.class {
+                                            ItemClass::Bow | ItemClass::Crossbow => {
+                                                Some(AmmoIndex::Arrow)
+                                            }
+                                            ItemClass::Gun | ItemClass::DualGuns => {
+                                                Some(AmmoIndex::Bullet)
+                                            }
+                                            ItemClass::Launcher => Some(AmmoIndex::Throw),
+                                            _ => None,
+                                        };
+
+                                        if let Some(ammo_index) = ammo_index {
+                                            if equipment
+                                                .get_ammo_slot_mut(ammo_index)
+                                                .try_take_quantity(hit_count as u32)
+                                                .is_none()
+                                            {
+                                                // Not enough ammo, cancel attack
+                                                cancel_attack = true;
+                                            } else if let Some(game_client) = game_client {
+                                                match equipment.get_ammo_item(ammo_index) {
+                                                    Some(ammo_item) => {
+                                                        if (ammo_item.quantity & 0x0F) == 0 {
+                                                            game_client
+                                                                .server_message_tx
+                                                                .send(
+                                                                    ServerMessage::UpdateInventory(
+                                                                        vec![(
+                                                                            ItemSlot::Ammo(
+                                                                                ammo_index,
+                                                                            ),
+                                                                            Some(Item::Stackable(
+                                                                                ammo_item.clone(),
+                                                                            )),
+                                                                        )],
+                                                                        None,
+                                                                    ),
+                                                                )
+                                                                .ok();
+                                                        }
                                                     }
-                                                }
-                                                None => {
-                                                    server_messages.send_entity_message(
-                                                        client_entity,
-                                                        ServerMessage::UpdateAmmo(
-                                                            client_entity.id,
-                                                            ammo_index,
-                                                            None,
-                                                        ),
-                                                    );
+                                                    None => {
+                                                        server_messages.send_entity_message(
+                                                            client_entity,
+                                                            ServerMessage::UpdateAmmo(
+                                                                client_entity.id,
+                                                                ammo_index,
+                                                                None,
+                                                            ),
+                                                        );
+                                                    }
                                                 }
                                             }
                                         }
