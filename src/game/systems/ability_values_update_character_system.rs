@@ -27,7 +27,6 @@ pub fn ability_values_update_character_system(
     mut query: Query<
         AbilityValuesCharacterQuery,
         Or<(
-            Changed<AbilityValues>,
             Changed<CharacterInfo>,
             Changed<Level>,
             Changed<Equipment>,
