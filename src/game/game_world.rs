@@ -32,7 +32,8 @@ use crate::game::{
         party_member_event_system, party_member_update_info_system, party_system,
         party_update_average_level_system, passive_recovery_system, personal_store_system,
         pickup_item_system, quest_system, reward_item_system, save_system, server_messages_system,
-        skill_effect_system, startup_zones_system, status_effect_system, update_position_system,
+        skill_effect_system, startup_zones_system, status_effect_system,
+        update_character_motion_data_system, update_npc_motion_data_system, update_position_system,
         use_item_system, weight_system, world_server_authentication_system, world_server_system,
         world_time_system,
     },
@@ -142,6 +143,8 @@ impl GameWorld {
             GameStages::Input,
             GameStages::PreUpdate,
             SystemStage::parallel()
+                .with_system(update_character_motion_data_system.before(command_system))
+                .with_system(update_npc_motion_data_system.before(command_system))
                 .with_system(command_system)
                 .with_system(pickup_item_system.after(command_system))
                 .with_system(party_member_event_system)

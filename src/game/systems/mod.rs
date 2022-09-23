@@ -26,6 +26,7 @@ mod server_messages_system;
 mod skill_effect_system;
 mod startup_zones_system;
 mod status_effect_system;
+mod update_motion_data_system;
 mod update_position_system;
 mod use_item_system;
 mod weight_system;
@@ -65,6 +66,9 @@ pub use server_messages_system::server_messages_system;
 pub use skill_effect_system::skill_effect_system;
 pub use startup_zones_system::startup_zones_system;
 pub use status_effect_system::status_effect_system;
+pub use update_motion_data_system::{
+    update_character_motion_data_system, update_npc_motion_data_system,
+};
 pub use update_position_system::update_position_system;
 pub use use_item_system::use_item_system;
 pub use weight_system::weight_system;

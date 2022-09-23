@@ -2,14 +2,14 @@ use bevy::ecs::prelude::Component;
 
 use rose_data::{
     CharacterMotionAction, CharacterMotionDatabase, MotionFileData, NpcDatabase, NpcId,
-    NpcMotionAction,
+    NpcMotionAction, VehicleMotionAction,
 };
 use rose_game_common::components::CharacterGender;
 
-#[derive(Default)]
 pub struct MotionDataCharacter {
     pub weapon_motion_type: usize,
-    pub gender_index: usize,
+    pub gender: CharacterGender,
+    pub base_vehicle_motion_index: Option<usize>,
     pub attack1: Option<MotionFileData>,
     pub attack2: Option<MotionFileData>,
     pub attack3: Option<MotionFileData>,
@@ -30,8 +30,8 @@ pub struct MotionDataCharacter {
     pub walk: Option<MotionFileData>,
 }
 
-#[derive(Default)]
 pub struct MotionDataNpc {
+    pub npc_id: NpcId,
     pub stop: Option<MotionFileData>,
     pub walk: Option<MotionFileData>,
     pub attack: Option<MotionFileData>,
@@ -56,6 +56,7 @@ impl MotionData {
         let get_motion = |action| npc_database.get_npc_action_motion(npc_id, action).cloned();
 
         Self::Npc(MotionDataNpc {
+            npc_id,
             stop: get_motion(NpcMotionAction::Stop),
             walk: get_motion(NpcMotionAction::Move),
             attack: get_motion(NpcMotionAction::Attack),
@@ -87,7 +88,8 @@ impl MotionData {
 
         Self::Character(MotionDataCharacter {
             weapon_motion_type,
-            gender_index,
+            gender,
+            base_vehicle_motion_index: None,
             attack1: get_motion(CharacterMotionAction::Attack),
             attack2: get_motion(CharacterMotionAction::Attack2),
             attack3: get_motion(CharacterMotionAction::Attack3),
@@ -106,6 +108,42 @@ impl MotionData {
             stop2: get_motion(CharacterMotionAction::Stop2),
             stop3: get_motion(CharacterMotionAction::Stop3),
             walk: get_motion(CharacterMotionAction::Walk),
+        })
+    }
+
+    pub fn from_vehicle(
+        character_motion_database: &CharacterMotionDatabase,
+        base_vehicle_motion_index: usize,
+        weapon_motion_type: usize,
+    ) -> Self {
+        let get_motion = |action| {
+            character_motion_database
+                .get_vehicle_action_motion(action, base_vehicle_motion_index, weapon_motion_type)
+                .cloned()
+        };
+
+        Self::Character(MotionDataCharacter {
+            weapon_motion_type,
+            gender: CharacterGender::Male,
+            base_vehicle_motion_index: Some(base_vehicle_motion_index),
+            attack1: get_motion(VehicleMotionAction::Attack1),
+            attack2: get_motion(VehicleMotionAction::Attack2),
+            attack3: get_motion(VehicleMotionAction::Attack3),
+            die: get_motion(VehicleMotionAction::Die),
+            fall: get_motion(VehicleMotionAction::Stop),
+            hit: get_motion(VehicleMotionAction::Stop),
+            jump1: get_motion(VehicleMotionAction::Stop),
+            jump2: get_motion(VehicleMotionAction::Stop),
+            pickup_dropped_item: get_motion(VehicleMotionAction::Stop),
+            raise: get_motion(VehicleMotionAction::Stop),
+            run: get_motion(VehicleMotionAction::Move),
+            sit: get_motion(VehicleMotionAction::Stop),
+            sitting: get_motion(VehicleMotionAction::Stop),
+            standup: get_motion(VehicleMotionAction::Stop),
+            stop1: get_motion(VehicleMotionAction::Stop),
+            stop2: get_motion(VehicleMotionAction::Stop),
+            stop3: get_motion(VehicleMotionAction::Stop),
+            walk: get_motion(VehicleMotionAction::Move),
         })
     }
 
