@@ -338,6 +338,21 @@ pub struct VehicleItemData {
     pub base_avatar_motion_index: u32,
     pub ability_requirement: Option<(AbilityType, i32)>,
     pub skill_requirement: Option<(SkillId, i32)>,
+    pub ride_effect_id: Option<EffectId>,
+    pub ride_sound_id: Option<SoundId>,
+    pub dismount_effect_id: Option<EffectId>,
+    pub dismount_sound_id: Option<SoundId>,
+    pub dead_effect_id: Option<EffectId>,
+    pub dead_sound_id: Option<SoundId>,
+    pub stop_sound_id: Option<SoundId>,
+    pub move_effect_id: Option<EffectId>,
+    pub move_sound_id: Option<SoundId>,
+    pub attack_effect_id: Option<EffectId>,
+    pub attack_sound_id: Option<SoundId>,
+    pub hit_effect_id: Option<EffectId>,
+    pub hit_sound_id: Option<SoundId>,
+    pub bullet_effect_id: Option<EffectId>,
+    pub bullet_fire_point: u32,
 }
 
 #[derive(Debug)]

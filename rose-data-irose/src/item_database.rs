@@ -227,6 +227,21 @@ impl StbItem {
     stb_column! { 37, get_vehicle_attack_speed, i32 }
     stb_column! { 40, get_vehicle_base_motion_index, u32 }
     stb_column! { 41, get_vehicle_base_avatar_motion_index, u32 }
+    stb_column! { 42, get_vehicle_ride_effect_id, EffectId }
+    stb_column! { 43, get_vehicle_ride_sound_id, SoundId }
+    stb_column! { 44, get_vehicle_dismount_effect_id, EffectId }
+    stb_column! { 45, get_vehicle_dismount_sound_id, SoundId }
+    stb_column! { 46, get_vehicle_dead_effect_id, EffectId }
+    stb_column! { 47, get_vehicle_dead_sound_id, SoundId }
+    stb_column! { 48, get_vehicle_stop_sound_id, SoundId }
+    stb_column! { 49, get_vehicle_move_effect_id, EffectId }
+    stb_column! { 50, get_vehicle_move_sound_id, SoundId }
+    stb_column! { 51, get_vehicle_attack_effect_id, EffectId }
+    stb_column! { 52, get_vehicle_attack_sound_id, SoundId }
+    stb_column! { 53, get_vehicle_hit_effect_id, EffectId }
+    stb_column! { 54, get_vehicle_hit_sound_id, SoundId }
+    stb_column! { 55, get_vehicle_bullet_effect_id, EffectId }
+    stb_column! { 64, get_vehicle_bullet_fire_point, u32 }
 }
 
 #[allow(dead_code)]
@@ -470,6 +485,21 @@ fn load_vehicle_item(
         version: data.get_vehicle_version(id).unwrap_or(0),
         ability_requirement: data.get_vehicle_ability_requirement(id),
         skill_requirement: data.get_vehicle_skill_requirement(id),
+        ride_effect_id: data.get_vehicle_ride_effect_id(id),
+        ride_sound_id: data.get_vehicle_ride_sound_id(id),
+        dismount_effect_id: data.get_vehicle_dismount_effect_id(id),
+        dismount_sound_id: data.get_vehicle_dismount_sound_id(id),
+        dead_effect_id: data.get_vehicle_dead_effect_id(id),
+        dead_sound_id: data.get_vehicle_dead_sound_id(id),
+        stop_sound_id: data.get_vehicle_stop_sound_id(id),
+        move_effect_id: data.get_vehicle_move_effect_id(id),
+        move_sound_id: data.get_vehicle_move_sound_id(id),
+        attack_effect_id: data.get_vehicle_attack_effect_id(id),
+        attack_sound_id: data.get_vehicle_attack_sound_id(id),
+        hit_effect_id: data.get_vehicle_hit_effect_id(id),
+        hit_sound_id: data.get_vehicle_hit_sound_id(id),
+        bullet_effect_id: data.get_vehicle_bullet_effect_id(id),
+        bullet_fire_point: data.get_vehicle_bullet_fire_point(id).unwrap_or(8),
     })
 }
 
