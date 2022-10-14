@@ -72,23 +72,13 @@ pub struct SkillList {
 
 impl SkillList {
     pub fn get_page(&self, page_type: SkillPageType) -> Option<&SkillPage> {
-        for page in self.pages.iter() {
-            if page.page_type == page_type {
-                return Some(page);
-            }
-        }
-
-        None
+        self.pages.iter().find(|&page| page.page_type == page_type)
     }
 
     pub fn get_page_mut(&mut self, page_type: SkillPageType) -> Option<&mut SkillPage> {
-        for page in self.pages.iter_mut() {
-            if page.page_type == page_type {
-                return Some(page);
-            }
-        }
-
-        None
+        self.pages
+            .iter_mut()
+            .find(|page| page.page_type == page_type)
     }
 
     pub fn add_skill(&mut self, skill_data: &SkillData) -> Option<(SkillSlot, SkillId)> {

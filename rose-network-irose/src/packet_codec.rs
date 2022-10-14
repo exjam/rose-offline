@@ -412,7 +412,7 @@ where
 
         let mut head_server = E::from_header_bytes(buffer[0..5].try_into().unwrap());
         head_server.encode_main(&head);
-        (&mut buffer[0..5]).copy_from_slice(&head_server.into_header_bytes());
+        buffer[0..5].copy_from_slice(&head_server.into_header_bytes());
 
         let mut checksum = 0u8;
         let head_bytes = head.into_bytes();
@@ -432,7 +432,7 @@ where
 
         let mut head_server = E::from_header_bytes(buffer[0..5].try_into().unwrap());
         head_server.encode_final(&head);
-        (&mut buffer[0..5]).copy_from_slice(&head_server.into_header_bytes());
+        buffer[0..5].copy_from_slice(&head_server.into_header_bytes());
     }
 
     fn decrypt_packet_header(&self, buffer: &mut BytesMut) -> usize {
@@ -446,7 +446,7 @@ where
 
         D::from_header_bytes(buffer[0..5].try_into().unwrap()).decode_main(&mut head);
 
-        (&mut buffer[0..5]).copy_from_slice(&head.into_bytes());
+        buffer[0..5].copy_from_slice(&head.into_bytes());
         head.add_buffer_len() as usize
     }
 
@@ -472,8 +472,8 @@ where
             return false;
         }
 
-        (&mut buffer[0..2]).copy_from_slice(&data_length.to_le_bytes()[0..2]);
-        (&mut buffer[2..4]).copy_from_slice(&head.command().to_le_bytes()[0..2]);
+        buffer[0..2].copy_from_slice(&data_length.to_le_bytes()[0..2]);
+        buffer[2..4].copy_from_slice(&head.command().to_le_bytes()[0..2]);
         true
     }
 }
