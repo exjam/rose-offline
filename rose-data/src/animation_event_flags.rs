@@ -4,14 +4,15 @@ bitflags::bitflags! {
         const NONE                              = 0;
 
         const SOUND_FOOTSTEP                    = 1 << 0;
-        const SOUND_FOOTSTEP_VEHICLE            = 1 << 1;
-        const SOUND_WEAPON_ATTACK_START         = 1 << 2;
-        const SOUND_WEAPON_ATTACK_HIT           = 1 << 3;
-        const SOUND_WEAPON_FIRE_BULLET          = 1 << 4;
-        const SOUND_SKILL_FIRE_BULLET           = 1 << 5;
-        const SOUND_SKILL_DUMMY_HIT_0           = 1 << 6;
-        const SOUND_SKILL_DUMMY_HIT_1           = 1 << 7;
-        const SOUND_SKILL_HIT                   = 1 << 8;
+        const SOUND_MOVE_VEHICLE_DUMMY1         = 1 << 1;
+        const SOUND_MOVE_VEHICLE_DUMMY2         = 1 << 2;
+        const SOUND_WEAPON_ATTACK_START         = 1 << 3;
+        const SOUND_WEAPON_ATTACK_HIT           = 1 << 4;
+        const SOUND_WEAPON_FIRE_BULLET          = 1 << 5;
+        const SOUND_SKILL_FIRE_BULLET           = 1 << 6;
+        const SOUND_SKILL_DUMMY_HIT_0           = 1 << 7;
+        const SOUND_SKILL_DUMMY_HIT_1           = 1 << 8;
+        const SOUND_SKILL_HIT                   = 1 << 9;
 
         const EFFECT_SKILL_CASTING_0            = 1 << 12;
         const EFFECT_SKILL_CASTING_1            = 1 << 13;

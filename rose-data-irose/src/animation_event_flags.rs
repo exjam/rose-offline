@@ -6,9 +6,9 @@ pub fn get_animation_event_flags() -> Vec<AnimationEventFlags> {
     animation_event_flags[1] = AnimationEventFlags::SOUND_FOOTSTEP;
 
     animation_event_flags[2] = AnimationEventFlags::EFFECT_MOVE_VEHCILE_DUMMY1
-        | AnimationEventFlags::SOUND_FOOTSTEP_VEHICLE;
+        | AnimationEventFlags::SOUND_MOVE_VEHICLE_DUMMY1;
     animation_event_flags[3] = AnimationEventFlags::EFFECT_MOVE_VEHCILE_DUMMY2
-        | AnimationEventFlags::SOUND_FOOTSTEP_VEHICLE;
+        | AnimationEventFlags::SOUND_MOVE_VEHICLE_DUMMY2;
 
     animation_event_flags[10] = AnimationEventFlags::EFFECT_SKILL_DUMMY_HIT_0
         | AnimationEventFlags::SOUND_SKILL_DUMMY_HIT_0;
