@@ -25,6 +25,8 @@ bitflags::bitflags! {
         const EFFECT_SKILL_DUMMY_HIT_1          = 1 << 21;
         const EFFECT_SKILL_HIT                  = 1 << 22;
         const EFFECT_SKILL_ACTION               = 1 << 23;
+        const EFFECT_MOVE_VEHCILE_DUMMY1        = 1 << 24;
+        const EFFECT_MOVE_VEHCILE_DUMMY2        = 1 << 25;
 
         const APPLY_RESSURRECTON                = 1 << 30;
         const APPLY_PENDING_SKILL_EFFECT        = 1 << 31;
