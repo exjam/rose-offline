@@ -176,7 +176,7 @@ impl StbSkill {
     stb_column! { 75, get_hit_effect_dummy_bone_id, u32 }
     stb_column! { 76, get_hit_sound_id, SoundId }
 
-    stb_column! { (77..=82).step_by(3), get_hit_dummy_effect_id, [Option<EffectId>; 2] }
+    stb_column! { (77..=82).step_by(3), get_hit_dummy_effect_file_id, [Option<EffectFileId>; 2] }
     stb_column! { (78..=82).step_by(3), get_hit_dummy_effect_dummy_bone_index, [Option<u32>; 2] }
     stb_column! { (79..=82).step_by(3), get_hit_dummy_sound_id, [Option<SoundId>; 2] }
 
@@ -247,6 +247,8 @@ fn load_skill(data: &StbSkill, string_database: &StringDatabase, id: usize) -> O
             .filter(|x| *x != 999)
             .map(|x| x as usize),
         hit_sound_id: data.get_hit_sound_id(id),
+        hit_dummy_effect_file_id: data.get_hit_dummy_effect_file_id(id),
+        hit_dummy_sound_id: data.get_hit_dummy_sound_id(id),
         icon_number,
         item_make_number: data.get_item_make_number(id).unwrap_or(0),
         level: data.get_skill_level(id).unwrap_or(1),

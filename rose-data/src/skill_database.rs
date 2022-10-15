@@ -175,6 +175,8 @@ pub struct SkillData {
     pub hit_effect_file_id: Option<EffectFileId>,
     pub hit_link_dummy_bone_id: Option<usize>,
     pub hit_sound_id: Option<SoundId>,
+    pub hit_dummy_effect_file_id: [Option<EffectFileId>; 2],
+    pub hit_dummy_sound_id: [Option<SoundId>; 2],
     pub item_make_number: u32,
     pub power: u32,
     pub scope: u32,
