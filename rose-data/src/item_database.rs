@@ -351,6 +351,7 @@ pub struct VehicleItemData {
     pub hit_sound_id: Option<SoundId>,
     pub bullet_effect_id: Option<EffectId>,
     pub bullet_fire_point: u32,
+    pub dummy_effect_file_ids: [Option<EffectFileId>; 8],
 }
 
 #[derive(Debug)]

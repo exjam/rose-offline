@@ -239,7 +239,12 @@ impl StbItem {
     stb_column! { 53, get_vehicle_hit_effect_id, EffectId }
     stb_column! { 54, get_vehicle_hit_sound_id, SoundId }
     stb_column! { 55, get_vehicle_bullet_effect_id, EffectId }
+    stb_column! { 56..64, get_vehicle_dummy_effect_file_ids, [Option<EffectFileId>; 8] }
     stb_column! { 64, get_vehicle_bullet_fire_point, u32 }
+    stb_column! { 67, get_vehicle_add_gauge, u32 }
+    stb_column! { 68, get_vehicle_job_class_requirement, JobClassId }
+    stb_column! { 70, get_vehicle_ability_type, u32 }
+
 }
 
 #[allow(dead_code)]
@@ -496,6 +501,7 @@ fn load_vehicle_item(
         hit_sound_id: data.get_vehicle_hit_sound_id(id),
         bullet_effect_id: data.get_vehicle_bullet_effect_id(id),
         bullet_fire_point: data.get_vehicle_bullet_fire_point(id).unwrap_or(8),
+        dummy_effect_file_ids: data.get_vehicle_dummy_effect_file_ids(id),
     })
 }
 
