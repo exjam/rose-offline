@@ -396,25 +396,17 @@ fn apply_skill_damage_to_entity(
             1,
         );
 
-    if matches!(skill_data.skill_type, SkillType::FireBullet) {
-        skill_system_parameters
-            .damage_events
-            .send(DamageEvent::with_attack(
-                skill_caster.entity,
-                skill_target.entity,
-                damage,
-            ));
-    } else {
-        skill_system_parameters
-            .damage_events
-            .send(DamageEvent::with_skill(
-                skill_caster.entity,
-                skill_target.entity,
-                damage,
-                skill_data.id,
-                skill_caster.ability_values.get_intelligence(),
-            ));
-    }
+    skill_system_parameters
+        .damage_events
+        .send(DamageEvent::with_skill(
+            skill_caster.entity,
+            skill_target.entity,
+            damage,
+            skill_data.id,
+            skill_caster.ability_values.get_intelligence(),
+        ));
+
+    // TODO: if skill_data.damage_type != 3 { decrease weapon life }
 
     Ok(damage)
 }

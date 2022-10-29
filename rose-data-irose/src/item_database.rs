@@ -244,7 +244,6 @@ impl StbItem {
     stb_column! { 67, get_vehicle_add_gauge, u32 }
     stb_column! { 68, get_vehicle_job_class_requirement, JobClassId }
     stb_column! { 70, get_vehicle_ability_type, u32 }
-
 }
 
 #[allow(dead_code)]
