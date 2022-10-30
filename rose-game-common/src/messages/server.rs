@@ -686,6 +686,10 @@ pub enum ServerMessage {
     UpdateStatusEffects(UpdateStatusEffects),
     UpdateSpeed(UpdateSpeed),
     UpdateXpStamina(UpdateXpStamina),
+    UpdateItemLife {
+        item_slot: ItemSlot,
+        life: u16,
+    },
     RewardItems(Vec<(ItemSlot, Option<Item>)>),
     RewardMoney(Money),
     Whisper(Whisper),

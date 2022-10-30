@@ -8,6 +8,7 @@ use rose_data::{
 };
 use rose_game_common::components::{CharacterGender, CharacterInfo};
 
+use crate::game::events::ItemLifeEvent;
 use crate::game::{
     components::{
         AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command, CommandAttack,
@@ -162,6 +163,7 @@ pub fn command_system(
     mut damage_events: EventWriter<DamageEvent>,
     mut skill_events: EventWriter<SkillEvent>,
     mut pickup_item_event: EventWriter<PickupItemEvent>,
+    mut item_life_event: EventWriter<ItemLifeEvent>,
     mut server_messages: ResMut<ServerMessages>,
 ) {
     query.for_each_mut(
@@ -557,6 +559,18 @@ pub fn command_system(
                                     (Duration::ZERO, 0)
                                 };
 
+                            if !cancel_attack {
+                                if let Some(equipment) = equipment.as_ref() {
+                                    if equipment
+                                        .get_equipment_item(EquipmentIndex::Weapon)
+                                        .map_or(false, |equipment_item| equipment_item.life == 0)
+                                    {
+                                        // Weapon item is broken, cancel attack
+                                        cancel_attack = true;
+                                    }
+                                }
+                            }
+
                             // If the weapon uses ammo, we must consume the ammo
                             if !cancel_attack {
                                 if let Some(mut equipment) = equipment {
@@ -620,7 +634,7 @@ pub fn command_system(
                             }
 
                             if cancel_attack {
-                                // Not enough ammo, cancel attack
+                                // Attack requirements not met, cancel attack
                                 command_stop(
                                     &mut commands,
                                     &mut command,
@@ -631,6 +645,11 @@ pub fn command_system(
                                 );
                                 *next_command = NextCommand::default();
                             } else {
+                                // Decrease weapon item life on attack
+                                if character_info.is_some() {
+                                    item_life_event.send(ItemLifeEvent::DecreaseWeaponLife(entity));
+                                }
+
                                 // In range, set current command to attack
                                 *command = Command::with_attack(target_entity, attack_duration);
 

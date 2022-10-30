@@ -56,8 +56,16 @@ impl Equipment {
         self.equipped_items[index].as_ref()
     }
 
+    pub fn get_equipment_item_mut(&mut self, index: EquipmentIndex) -> Option<&mut EquipmentItem> {
+        self.equipped_items[index].as_mut()
+    }
+
     pub fn get_vehicle_item(&self, index: VehiclePartIndex) -> Option<&EquipmentItem> {
         self.equipped_vehicle[index].as_ref()
+    }
+
+    pub fn get_vehicle_item_mut(&mut self, index: VehiclePartIndex) -> Option<&mut EquipmentItem> {
+        self.equipped_vehicle[index].as_mut()
     }
 
     pub fn get_ammo_item(&self, index: AmmoIndex) -> Option<&StackableItem> {

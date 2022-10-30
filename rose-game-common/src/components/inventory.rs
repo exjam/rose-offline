@@ -323,6 +323,17 @@ impl Inventory {
         }
     }
 
+    pub fn get_item_mut(&mut self, slot: ItemSlot) -> Option<&mut Item> {
+        match slot {
+            ItemSlot::Inventory(page_type, index) => self
+                .get_page_mut(page_type)
+                .slots
+                .get_mut(index)
+                .and_then(|x| x.as_mut()),
+            _ => None,
+        }
+    }
+
     pub fn get_equipment_item(&self, slot: ItemSlot) -> Option<&EquipmentItem> {
         match slot {
             ItemSlot::Inventory(page_type, index) => self

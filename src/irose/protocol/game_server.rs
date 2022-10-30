@@ -837,6 +837,15 @@ impl GameServer {
                     }))
                     .await?;
             }
+            ServerMessage::UpdateItemLife { item_slot, life } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerUpdateItemLife {
+                        item_slot,
+                        life,
+                    }))
+                    .await?;
+            }
             ServerMessage::UpdateLevel(UpdateLevel {
                 entity_id,
                 level,

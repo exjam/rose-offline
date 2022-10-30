@@ -1,13 +1,17 @@
 use std::time::Duration;
 
-use bevy::ecs::prelude::{Commands, EventReader, Query, Res, ResMut};
+use bevy::{
+    ecs::prelude::{Commands, EventReader, Query, Res, ResMut},
+    prelude::EventWriter,
+};
 use rose_game_common::data::Damage;
 
 use crate::game::{
     components::{
-        ClientEntity, Command, DamageSource, DamageSources, HealthPoints, MotionData, NpcAi,
+        ClientEntity, ClientEntityType, Command, DamageSource, DamageSources, HealthPoints,
+        MotionData, NpcAi,
     },
-    events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged},
+    events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged, ItemLifeEvent},
     messages::server::{DamageEntity, ServerMessage},
     resources::{ServerMessages, ServerTime},
 };
@@ -23,6 +27,7 @@ pub fn damage_system(
         Option<&MotionData>,
     )>,
     mut damage_events: EventReader<DamageEvent>,
+    mut item_life_events: EventWriter<ItemLifeEvent>,
     mut server_messages: ResMut<ServerMessages>,
     server_time: Res<ServerTime>,
 ) {
@@ -97,6 +102,11 @@ pub fn damage_system(
                             from_skill,
                         }),
                     );
+                }
+
+                if matches!(client_entity.entity_type, ClientEntityType::Character) {
+                    item_life_events
+                        .send(ItemLifeEvent::DecreaseArmourLife(defender_entity, damage));
                 }
             }
 

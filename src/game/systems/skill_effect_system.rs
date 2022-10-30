@@ -23,7 +23,7 @@ use crate::game::{
         Inventory, Level, ManaPoints, MoveSpeed, Position, SpawnOrigin, Stamina, StatusEffects,
         Team,
     },
-    events::{DamageEvent, SkillEvent, SkillEventTarget},
+    events::{DamageEvent, ItemLifeEvent, SkillEvent, SkillEventTarget},
     messages::server::{
         ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseInventoryItem,
     },
@@ -42,6 +42,7 @@ enum SkillCastError {
 pub struct SkillSystemParameters<'w, 's> {
     server_messages: ResMut<'w, ServerMessages>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
+    item_life_events: EventWriter<'w, 's, ItemLifeEvent>,
 }
 
 #[derive(SystemParam)]
@@ -406,8 +407,6 @@ fn apply_skill_damage_to_entity(
             skill_caster.ability_values.get_intelligence(),
         ));
 
-    // TODO: if skill_data.damage_type != 3 { decrease weapon life }
-
     Ok(damage)
 }
 
@@ -420,7 +419,7 @@ fn apply_skill_damage(
     skill_data: &SkillData,
     skill_target_query: &mut Query<SkillTargetQuery>,
 ) -> Result<(), SkillCastError> {
-    if skill_data.scope > 0 {
+    let result = if skill_data.scope > 0 {
         // Apply in AOE around target position
         let client_entity_zone = client_entity_list
             .get_zone(skill_caster.position.zone_id)
@@ -471,7 +470,15 @@ fn apply_skill_damage(
         }
     } else {
         Err(SkillCastError::InvalidTarget)
+    };
+
+    if result.is_ok() && skill_data.damage_type != 3 {
+        skill_system_parameters
+            .item_life_events
+            .send(ItemLifeEvent::DecreaseWeaponLife(skill_caster.entity));
     }
+
+    result
 }
 
 pub fn skill_effect_system(

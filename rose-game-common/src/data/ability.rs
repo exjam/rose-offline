@@ -2,7 +2,7 @@ use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, Skill
 use serde::{Deserialize, Serialize};
 
 use crate::components::{
-    AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, Level, SkillList,
+    AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, ItemSlot, Level, SkillList,
     StatusEffects,
 };
 
@@ -129,4 +129,17 @@ pub trait AbilityValueCalculator {
         ability_values: &AbilityValues,
         recovery_state: PassiveRecoveryState,
     ) -> i32;
+
+    fn calculate_decrease_weapon_life(
+        &self,
+        is_driving: bool,
+        equipment: &Equipment,
+    ) -> Option<ItemSlot>;
+
+    fn calculate_decrease_armour_life(
+        &self,
+        is_driving: bool,
+        equipment: &Equipment,
+        damage: &Damage,
+    ) -> Option<ItemSlot>;
 }

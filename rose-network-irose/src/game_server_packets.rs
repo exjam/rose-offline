@@ -104,12 +104,13 @@ pub enum ServerPackets {
     StartCastingSkill = 0x7bb,
     CraftItem = 0x7bc,
     CancelCastingSkill = 0x7bd,
-    UpdateVehiclePart = 0x7ca,
     OpenPersonalStore = 0x7c2,
     ClosePersonalStore = 0x7c3,
     PersonalStoreItemList = 0x7c4,
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
+    UpdateVehiclePart = 0x7ca,
+    UpdateItemLife = 0x7ce,
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
     PartyMembers = 0x7d2,
@@ -2018,6 +2019,36 @@ impl From<&PacketServerUpdateVehiclePart> for Packet {
         if let Some(run_speed) = packet.run_speed {
             writer.write_u16(run_speed);
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerUpdateItemLife {
+    pub item_slot: ItemSlot,
+    pub life: u16,
+}
+
+impl TryFrom<&Packet> for PacketServerUpdateItemLife {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::UpdateItemLife as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let item_slot = reader.read_item_slot_u16()?;
+        let life = reader.read_u16()?;
+
+        Ok(Self { item_slot, life })
+    }
+}
+
+impl From<&PacketServerUpdateItemLife> for Packet {
+    fn from(packet: &PacketServerUpdateItemLife) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::UpdateItemLife as u16);
+        writer.write_item_slot_u16(packet.item_slot);
+        writer.write_u16(packet.life);
         writer.into()
     }
 }

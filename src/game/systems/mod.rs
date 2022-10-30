@@ -11,6 +11,7 @@ mod damage_system;
 mod experience_points_system;
 mod expire_time_system;
 mod game_server_system;
+mod item_life_system;
 mod login_server_system;
 mod monster_spawn_system;
 mod npc_ai_system;
@@ -48,6 +49,7 @@ pub use expire_time_system::expire_time_system;
 pub use game_server_system::{
     game_server_authentication_system, game_server_join_system, game_server_main_system,
 };
+pub use item_life_system::item_life_system;
 pub use login_server_system::{login_server_authentication_system, login_server_system};
 pub use monster_spawn_system::monster_spawn_system;
 pub use npc_ai_system::npc_ai_system;

@@ -12,7 +12,7 @@ use rose_data::{
 use rose_game_common::{
     components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
-        Equipment, EquipmentItemDatabase, Level, SkillList, StatusEffects,
+        Equipment, EquipmentItemDatabase, ItemSlot, Level, SkillList, StatusEffects,
     },
     data::{AbilityValueCalculator, Damage, PassiveRecoveryState},
 };
@@ -915,6 +915,120 @@ impl AbilityValueCalculator for AbilityValuesData {
                     + ((((ability_values.get_concentration() as f32 + 20.0) / 10.0) * 20.0) / 7.0))
                     as i32
             }
+        }
+    }
+
+    fn calculate_decrease_weapon_life(
+        &self,
+        is_driving: bool,
+        equipment: &Equipment,
+    ) -> Option<ItemSlot> {
+        let (equipment_item, item_slot) = if is_driving {
+            (
+                equipment.get_vehicle_item(VehiclePartIndex::Arms),
+                ItemSlot::Vehicle(VehiclePartIndex::Arms),
+            )
+        } else {
+            (
+                equipment.get_equipment_item(EquipmentIndex::Weapon),
+                ItemSlot::Equipment(EquipmentIndex::Weapon),
+            )
+        };
+
+        let equipment_item = equipment_item?;
+        if equipment_item.life == 0 {
+            return None;
+        }
+
+        let mut rng = rand::thread_rng();
+        if rng.gen_range(1..=710) >= equipment_item.durability as i32 + 600 {
+            Some(item_slot)
+        } else {
+            None
+        }
+    }
+
+    fn calculate_decrease_armour_life(
+        &self,
+        is_driving: bool,
+        equipment: &Equipment,
+        damage: &Damage,
+    ) -> Option<ItemSlot> {
+        let mut rng = rand::thread_rng();
+        let rand_value = rng.gen_range(1..=400);
+
+        if rand_value >= 101 {
+            return None;
+        }
+
+        let (equipment_item, item_slot) = if is_driving {
+            let vehicle_part_index = if rand_value >= 51 {
+                VehiclePartIndex::Body
+            } else if rand_value >= 21 {
+                VehiclePartIndex::Leg
+            } else {
+                VehiclePartIndex::Arms
+            };
+
+            (
+                equipment.get_vehicle_item(vehicle_part_index),
+                ItemSlot::Vehicle(vehicle_part_index),
+            )
+        } else {
+            let equipment_index = if equipment
+                .get_equipment_item(EquipmentIndex::SubWeapon)
+                .filter(|item| item.life > 0)
+                .and_then(|item| self.item_database.get_base_item(item.item))
+                .map_or(false, |item_data| {
+                    matches!(item_data.class, ItemClass::Shield)
+                }) {
+                if rand_value > 60 {
+                    EquipmentIndex::SubWeapon
+                } else if rand_value > 30 {
+                    EquipmentIndex::Body
+                } else if rand_value > 22 {
+                    EquipmentIndex::Feet
+                } else if rand_value > 16 {
+                    EquipmentIndex::Head
+                } else if rand_value > 9 {
+                    EquipmentIndex::Back
+                } else if rand_value > 5 {
+                    EquipmentIndex::Hands
+                } else {
+                    EquipmentIndex::Face
+                }
+            } else if rand_value > 64 {
+                EquipmentIndex::Body
+            } else if rand_value > 46 {
+                EquipmentIndex::Feet
+            } else if rand_value > 31 {
+                EquipmentIndex::Hands
+            } else if rand_value > 15 {
+                EquipmentIndex::Back
+            } else if rand_value > 7 {
+                EquipmentIndex::Head
+            } else {
+                EquipmentIndex::Face
+            };
+
+            (
+                equipment.get_equipment_item(equipment_index),
+                ItemSlot::Equipment(equipment_index),
+            )
+        };
+
+        let equipment_item = equipment_item?;
+        if equipment_item.life == 0 {
+            return None;
+        }
+
+        if rng.gen_range(1..=120)
+            - (equipment_item.durability as i32 + 10 - (damage.amount / 10) as i32)
+            >= 0
+        {
+            Some(item_slot)
+        } else {
+            None
         }
     }
 }
