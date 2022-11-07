@@ -128,6 +128,7 @@ pub struct AbilityValues {
     pub vehicle_attack_range: i32,
     pub vehicle_attack_speed: i32,
     pub vehicle_hit: i32,
+    pub vehicle_defence: i32,
     pub vehicle_critical: i32,
     pub vehicle_avoid: i32,
     pub max_damage_sources: usize,
@@ -260,7 +261,11 @@ impl AbilityValues {
     }
 
     pub fn get_defence(&self) -> i32 {
-        self.defence + self.adjust.defence
+        if self.is_driving {
+            self.vehicle_defence + self.adjust.defence
+        } else {
+            self.defence + self.adjust.defence
+        }
     }
 
     pub fn get_hit(&self) -> i32 {

@@ -102,6 +102,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             vehicle_attack_range: 0,
             vehicle_attack_speed: 0,
             vehicle_hit: 0,
+            vehicle_defence: 0,
             vehicle_critical: 0,
             vehicle_avoid: 0,
             max_damage_sources: ((npc_data.health_points / 8) + 4) as usize,
@@ -254,6 +255,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &equipment_ability_values,
                 equipment,
                 &passive_ability_values,
+                false,
             ) + job_add_defence,
             resistance: calculate_resistance(
                 &self.item_database,
@@ -297,6 +299,15 @@ impl AbilityValueCalculator for AbilityValuesData {
                 equipment,
                 &passive_ability_values,
             ),
+            vehicle_defence: calculate_defence(
+                &self.item_database,
+                &basic_stats,
+                level,
+                &equipment_ability_values,
+                equipment,
+                &passive_ability_values,
+                true,
+            ) + job_add_defence,
             vehicle_critical: calculate_vehicle_critical(
                 &vehicle_basic_stats,
                 level,
@@ -2040,6 +2051,7 @@ fn calculate_defence(
     equipment_ability_values: &EquipmentAbilityValue,
     equipment: &Equipment,
     passive_ability_values: &PassiveSkillAbilityValues,
+    for_vehicle: bool,
 ) -> i32 {
     let mut item_defence = 0;
 
@@ -2052,6 +2064,18 @@ fn calculate_defence(
                     .unwrap_or(0);
                 item_defence += item_data.defence as i32 + grade_defence;
             }
+        }
+    }
+
+    if for_vehicle {
+        for item in equipment
+            .iter_equipped_vehicles()
+            .filter(|item| item.life > 0)
+        {
+            item_defence += item_database
+                .get_item_grade(item.grade)
+                .map(|grade| grade.defence)
+                .unwrap_or(0);
         }
     }
 
