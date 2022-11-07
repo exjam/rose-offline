@@ -35,6 +35,11 @@ pub fn passive_recovery_system(
                 continue;
             }
 
+            if ability_values.is_driving {
+                // No recovery whilst driving
+                continue;
+            }
+
             let recovery_state = if command.is_sit() {
                 PassiveRecoveryState::Sitting
             } else {
