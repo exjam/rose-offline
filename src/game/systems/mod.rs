@@ -8,6 +8,7 @@ mod client_entity_visibility_system;
 mod command_system;
 mod control_server_system;
 mod damage_system;
+mod driving_time_system;
 mod experience_points_system;
 mod expire_time_system;
 mod game_server_system;
@@ -44,6 +45,7 @@ pub use client_entity_visibility_system::client_entity_visibility_system;
 pub use command_system::command_system;
 pub use control_server_system::control_server_system;
 pub use damage_system::damage_system;
+pub use driving_time_system::driving_time_system;
 pub use experience_points_system::experience_points_system;
 pub use expire_time_system::expire_time_system;
 pub use game_server_system::{

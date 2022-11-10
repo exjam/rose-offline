@@ -26,10 +26,10 @@ use crate::game::{
         ability_values_changed_system, ability_values_update_character_system,
         ability_values_update_npc_system, bank_system, bot_ai_system, chat_commands_system,
         client_entity_visibility_system, command_system, control_server_system, damage_system,
-        experience_points_system, expire_time_system, game_server_authentication_system,
-        game_server_join_system, game_server_main_system, item_life_system,
-        login_server_authentication_system, login_server_system, monster_spawn_system,
-        npc_ai_system, npc_store_system, party_member_event_system,
+        driving_time_system, experience_points_system, expire_time_system,
+        game_server_authentication_system, game_server_join_system, game_server_main_system,
+        item_life_system, login_server_authentication_system, login_server_system,
+        monster_spawn_system, npc_ai_system, npc_store_system, party_member_event_system,
         party_member_update_info_system, party_system, party_update_average_level_system,
         passive_recovery_system, personal_store_system, pickup_item_system, quest_system,
         reward_item_system, save_system, server_messages_system, skill_effect_system,
@@ -139,7 +139,8 @@ impl GameWorld {
                 .with_system(npc_ai_system)
                 .with_system(expire_time_system)
                 .with_system(status_effect_system)
-                .with_system(passive_recovery_system),
+                .with_system(passive_recovery_system)
+                .with_system(driving_time_system),
         );
 
         schedule.add_stage_after(

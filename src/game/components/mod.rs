@@ -7,6 +7,7 @@ mod client_entity_sector;
 mod client_entity_visibility;
 mod command;
 mod damage_sources;
+mod driving_time;
 mod entity_expire_time;
 mod event_object;
 mod game_client;
@@ -52,6 +53,7 @@ pub use command::{
     CommandEmote, CommandMove, CommandPickupItemDrop, CommandSit, CommandStop,
 };
 pub use damage_sources::{DamageSource, DamageSources};
+pub use driving_time::DrivingTime;
 pub use entity_expire_time::EntityExpireTime;
 pub use event_object::EventObject;
 pub use game_client::GameClient;
