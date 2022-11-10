@@ -278,7 +278,7 @@ fn use_inventory_item(
             {
                 engine_item.life = engine_item
                     .life
-                    .saturating_add(item_data.add_fuel as u16)
+                    .saturating_add(item_data.add_fuel as u16 * 10)
                     .min(1000);
 
                 if let Some(game_client) = use_item_user.game_client {
