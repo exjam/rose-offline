@@ -7,8 +7,8 @@ use bevy::math::Vec3;
 use log::warn;
 use std::time::Duration;
 
-use rose_data::{AbilityType, ItemClass, ItemType, SkillType};
-use rose_game_common::components::{HealthPoints, ManaPoints};
+use rose_data::{AbilityType, ItemClass, ItemType, SkillType, VehiclePartIndex};
+use rose_game_common::components::{Equipment, HealthPoints, ManaPoints};
 
 use crate::game::{
     bundles::{
@@ -46,6 +46,7 @@ pub struct UseItemUserQuery<'w> {
     client_entity: &'w ClientEntity,
     client_entity_sector: &'w ClientEntitySector,
     experience_points: &'w mut ExperiencePoints,
+    equipment: &'w mut Equipment,
     game_client: Option<&'w GameClient>,
     health_points: &'w mut HealthPoints,
     inventory: &'w mut Inventory,
@@ -270,7 +271,32 @@ fn use_inventory_item(
                 (false, false)
             }
         }
-        ItemClass::RepairTool | ItemClass::EngineFuel | ItemClass::TimeCoupon => {
+        ItemClass::EngineFuel => {
+            if let Some(engine_item) = use_item_user
+                .equipment
+                .get_vehicle_item_mut(VehiclePartIndex::Engine)
+            {
+                engine_item.life = engine_item
+                    .life
+                    .saturating_add(item_data.add_fuel as u16)
+                    .min(1000);
+
+                if let Some(game_client) = use_item_user.game_client {
+                    game_client
+                        .server_message_tx
+                        .send(ServerMessage::UpdateItemLife {
+                            item_slot: ItemSlot::Vehicle(VehiclePartIndex::Engine),
+                            life: engine_item.life,
+                        })
+                        .ok();
+                }
+
+                (true, false)
+            } else {
+                (false, false)
+            }
+        }
+        ItemClass::RepairTool | ItemClass::TimeCoupon => {
             warn!(
                 "Unimplemented use item ItemClass {:?} with item {:?}",
                 item_data.item_data.class, item

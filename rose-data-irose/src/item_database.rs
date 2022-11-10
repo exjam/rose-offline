@@ -152,6 +152,7 @@ impl StbItem {
         })
     }
 
+    stb_column! { 20, get_consumeable_add_fuel, i32 }
     stb_column! { 20, get_consumeable_learn_skill_id, SkillId }
     stb_column! { 20, get_consumeable_use_skill_id, SkillId }
     stb_column! { 21, get_consumeable_use_script_index, usize }
@@ -424,6 +425,7 @@ fn load_consumeable_item(
     Some(ConsumableItemData {
         item_data: base_item_data,
         store_skin: data.get_consumeable_store_skin(id).unwrap_or(0),
+        add_fuel: data.get_consumeable_add_fuel(id).unwrap_or(0),
         confile_index: data.get_consumeable_confile_index(id).unwrap_or(0),
         ability_requirement: data.get_consumeable_ability_requirement(id),
         add_ability: data.get_consumeable_add_ability(id),

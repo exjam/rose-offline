@@ -1,5 +1,6 @@
-use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData};
 use serde::{Deserialize, Serialize};
+
+use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData};
 
 use crate::components::{
     AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, ItemSlot, Level, SkillList,

@@ -293,6 +293,7 @@ pub struct ConsumableItemData {
     pub item_data: BaseItemData,
     pub store_skin: i32,
     pub confile_index: usize,
+    pub add_fuel: i32,
     pub ability_requirement: Option<(AbilityType, i32)>,
     pub add_ability: Option<(AbilityType, i32)>,
     pub learn_skill_id: Option<SkillId>,
