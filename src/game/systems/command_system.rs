@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, ItemClass, SkillActionMode, StackableSlotBehaviour,
+    VehiclePartIndex,
 };
 use rose_game_common::components::{CharacterGender, CharacterInfo};
 
@@ -559,7 +560,25 @@ pub fn command_system(
                                     (Duration::ZERO, 0)
                                 };
 
-                            if !cancel_attack {
+                            if matches!(move_mode, MoveMode::Drive) {
+                                if let Some(equipment) = equipment.as_ref() {
+                                    if equipment
+                                        .get_vehicle_item(VehiclePartIndex::Engine)
+                                        .map_or(false, |equipment_item| equipment_item.life == 0)
+                                    {
+                                        // Vehicle engine is broken, cancel attack
+                                        cancel_attack = true;
+                                    }
+
+                                    if equipment
+                                        .get_vehicle_item(VehiclePartIndex::Arms)
+                                        .map_or(false, |equipment_item| equipment_item.life == 0)
+                                    {
+                                        // Vehicle weapon item is broken, cancel attack
+                                        cancel_attack = true;
+                                    }
+                                }
+                            } else {
                                 if let Some(equipment) = equipment.as_ref() {
                                     if equipment
                                         .get_equipment_item(EquipmentIndex::Weapon)
@@ -569,36 +588,36 @@ pub fn command_system(
                                         cancel_attack = true;
                                     }
                                 }
-                            }
 
-                            // If the weapon uses ammo, we must consume the ammo
-                            if !cancel_attack {
-                                if let Some(mut equipment) = equipment {
-                                    if let Some(weapon_item_data) = weapon_item_data {
-                                        let ammo_index = match weapon_item_data.item_data.class {
-                                            ItemClass::Bow | ItemClass::Crossbow => {
-                                                Some(AmmoIndex::Arrow)
-                                            }
-                                            ItemClass::Gun | ItemClass::DualGuns => {
-                                                Some(AmmoIndex::Bullet)
-                                            }
-                                            ItemClass::Launcher => Some(AmmoIndex::Throw),
-                                            _ => None,
-                                        };
-
-                                        if let Some(ammo_index) = ammo_index {
-                                            if equipment
-                                                .get_ammo_slot_mut(ammo_index)
-                                                .try_take_quantity(hit_count as u32)
-                                                .is_none()
+                                // If the weapon uses ammo, we must consume the ammo
+                                if !cancel_attack {
+                                    if let Some(mut equipment) = equipment {
+                                        if let Some(weapon_item_data) = weapon_item_data {
+                                            let ammo_index = match weapon_item_data.item_data.class
                                             {
-                                                // Not enough ammo, cancel attack
-                                                cancel_attack = true;
-                                            } else if let Some(game_client) = game_client {
-                                                match equipment.get_ammo_item(ammo_index) {
-                                                    Some(ammo_item) => {
-                                                        if (ammo_item.quantity & 0x0F) == 0 {
-                                                            game_client
+                                                ItemClass::Bow | ItemClass::Crossbow => {
+                                                    Some(AmmoIndex::Arrow)
+                                                }
+                                                ItemClass::Gun | ItemClass::DualGuns => {
+                                                    Some(AmmoIndex::Bullet)
+                                                }
+                                                ItemClass::Launcher => Some(AmmoIndex::Throw),
+                                                _ => None,
+                                            };
+
+                                            if let Some(ammo_index) = ammo_index {
+                                                if equipment
+                                                    .get_ammo_slot_mut(ammo_index)
+                                                    .try_take_quantity(hit_count as u32)
+                                                    .is_none()
+                                                {
+                                                    // Not enough ammo, cancel attack
+                                                    cancel_attack = true;
+                                                } else if let Some(game_client) = game_client {
+                                                    match equipment.get_ammo_item(ammo_index) {
+                                                        Some(ammo_item) => {
+                                                            if (ammo_item.quantity & 0x0F) == 0 {
+                                                                game_client
                                                                 .server_message_tx
                                                                 .send(
                                                                     ServerMessage::UpdateInventory(
@@ -614,17 +633,18 @@ pub fn command_system(
                                                                     ),
                                                                 )
                                                                 .ok();
+                                                            }
                                                         }
-                                                    }
-                                                    None => {
-                                                        server_messages.send_entity_message(
-                                                            client_entity,
-                                                            ServerMessage::UpdateAmmo(
-                                                                client_entity.id,
-                                                                ammo_index,
-                                                                None,
-                                                            ),
-                                                        );
+                                                        None => {
+                                                            server_messages.send_entity_message(
+                                                                client_entity,
+                                                                ServerMessage::UpdateAmmo(
+                                                                    client_entity.id,
+                                                                    ammo_index,
+                                                                    None,
+                                                                ),
+                                                            );
+                                                        }
                                                     }
                                                 }
                                             }
