@@ -1,4 +1,5 @@
 use bevy::prelude::{EventReader, Query, Res};
+use rose_data::VehiclePartIndex;
 use rose_game_common::{components::ItemSlot, messages::server::ServerMessage};
 
 use crate::game::{
@@ -30,20 +31,18 @@ pub fn item_life_system(
                         };
 
                         if let Some(equipment_item) = equipment_slot.as_mut() {
-                            if equipment_item.life > 1 {
+                            if equipment_item.life >= 1 {
                                 equipment_item.life -= 1;
-                            } else {
-                                equipment_item.life = 0;
-                            }
 
-                            if let Some(game_client) = game_client {
-                                game_client
-                                    .server_message_tx
-                                    .send(ServerMessage::UpdateItemLife {
-                                        item_slot,
-                                        life: equipment_item.life,
-                                    })
-                                    .ok();
+                                if let Some(game_client) = game_client {
+                                    game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::UpdateItemLife {
+                                            item_slot,
+                                            life: equipment_item.life,
+                                        })
+                                        .ok();
+                                }
                             }
                         }
                     }
@@ -66,20 +65,46 @@ pub fn item_life_system(
                         };
 
                         if let Some(equipment_item) = equipment_slot.as_mut() {
-                            if equipment_item.life > 1 {
+                            if equipment_item.life >= 1 {
                                 equipment_item.life -= 1;
-                            } else {
-                                equipment_item.life = 0;
-                            }
 
-                            if let Some(game_client) = game_client {
-                                game_client
-                                    .server_message_tx
-                                    .send(ServerMessage::UpdateItemLife {
-                                        item_slot,
-                                        life: equipment_item.life,
-                                    })
-                                    .ok();
+                                if let Some(game_client) = game_client {
+                                    game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::UpdateItemLife {
+                                            item_slot,
+                                            life: equipment_item.life,
+                                        })
+                                        .ok();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            ItemLifeEvent::DecreaseVehicleEngineLife(entity) => {
+                if let Ok((_, mut equipment, game_client)) = query.get_mut(entity) {
+                    let equipment_slot = equipment.get_vehicle_slot_mut(VehiclePartIndex::Engine);
+
+                    if let Some(engine_item) = equipment_slot.as_mut() {
+                        if let Some(item_data) = game_data
+                            .items
+                            .get_vehicle_item(engine_item.item.item_number)
+                        {
+                            if engine_item.life > 0 {
+                                engine_item.life = engine_item
+                                    .life
+                                    .saturating_sub(item_data.fuel_use_rate as u16);
+
+                                if let Some(game_client) = game_client {
+                                    game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::UpdateItemLife {
+                                            item_slot: ItemSlot::Vehicle(VehiclePartIndex::Engine),
+                                            life: engine_item.life,
+                                        })
+                                        .ok();
+                                }
                             }
                         }
                     }
