@@ -14,26 +14,25 @@ use rose_game_common::{
     },
 };
 
-use crate::game::components::Account;
 use crate::game::{
     bundles::{
         client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
         skill_list_try_level_up_skill, CharacterBundle, ItemDropBundle,
     },
     components::{
-        AbilityValues, Bank, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
+        AbilityValues, Account, Bank, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
         ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
-        CommandSit, DroppedItem, Equipment, EquipmentItemDatabase, ExperiencePoints, GameClient,
-        HealthPoints, Hotbar, Inventory, ItemSlot, ManaPoints, Money, MotionData, MoveMode,
-        MoveSpeed, NextCommand, Party, PartyMember, PartyMembership, PassiveRecoveryTime, Position,
-        QuestState, SkillList, SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team,
-        WorldClient,
+        CommandSit, DrivingTime, DroppedItem, Equipment, EquipmentItemDatabase, ExperiencePoints,
+        GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, ManaPoints, Money, MotionData,
+        MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership, PassiveRecoveryTime,
+        Position, QuestState, SkillList, SkillPoints, StatPoints, StatusEffects,
+        StatusEffectsRegen, Team, WorldClient,
     },
     events::{
-        BankEvent, ChatCommandEvent, NpcStoreEvent, PartyEvent, PartyEventChangeOwner,
-        PartyEventInvite, PartyEventKick, PartyEventLeave, PartyEventUpdateRules, PartyMemberEvent,
-        PartyMemberReconnect, PersonalStoreEvent, PersonalStoreEventBuyItem,
-        PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
+        BankEvent, ChatCommandEvent, ItemLifeEvent, NpcStoreEvent, PartyEvent,
+        PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
+        PartyEventUpdateRules, PartyMemberEvent, PartyMemberReconnect, PersonalStoreEvent,
+        PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
     },
     messages::{
         client::{
@@ -608,6 +607,7 @@ pub fn game_server_main_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     mut bank_events: EventWriter<BankEvent>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
+    mut item_life_events: EventWriter<ItemLifeEvent>,
     mut npc_store_events: EventWriter<NpcStoreEvent>,
     mut party_events: EventWriter<PartyEvent>,
     mut personal_store_events: EventWriter<PersonalStoreEvent>,
@@ -1133,11 +1133,21 @@ pub fn game_server_main_system(
                     ClientMessage::DriveToggle => {
                         if match *move_mode {
                             MoveMode::Walk | MoveMode::Run => {
+                                // TODO: Check if we have a valid cart equipped....
+
+                                // Starting driving decreases vehicle engine life
+                                item_life_events
+                                    .send(ItemLifeEvent::DecreaseVehicleEngineLife(entity));
+
+                                // Start driving
                                 *move_mode = MoveMode::Drive;
+                                commands.entity(entity).insert(DrivingTime::default());
+
                                 true
                             }
                             MoveMode::Drive => {
                                 *move_mode = MoveMode::Run;
+                                commands.entity(entity).remove::<DrivingTime>();
                                 true
                             }
                         } {
