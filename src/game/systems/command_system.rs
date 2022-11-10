@@ -665,6 +665,12 @@ pub fn command_system(
                                 );
                                 *next_command = NextCommand::default();
                             } else {
+                                if matches!(move_mode, MoveMode::Drive) {
+                                    // Decrease vehicle engine item life on attack
+                                    item_life_event
+                                        .send(ItemLifeEvent::DecreaseVehicleEngineLife(entity));
+                                }
+
                                 // Decrease weapon item life on attack
                                 if character_info.is_some() {
                                     item_life_event.send(ItemLifeEvent::DecreaseWeaponLife(entity));
