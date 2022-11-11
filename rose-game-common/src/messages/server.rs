@@ -761,4 +761,9 @@ pub enum ServerMessage {
         bank_slot: usize,
         bank_item: Option<Item>,
     },
+    RepairedItemUsingNpc {
+        item_slot: ItemSlot,
+        item: Item,
+        updated_money: Money,
+    },
 }

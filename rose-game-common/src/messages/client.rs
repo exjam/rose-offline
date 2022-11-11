@@ -227,4 +227,12 @@ pub enum ClientMessage {
         item: Item,
         is_premium: bool,
     },
+    RepairItemUsingItem {
+        use_item_slot: ItemSlot,
+        item_slot: ItemSlot,
+    },
+    RepairItemUsingNpc {
+        npc_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+    },
 }

@@ -1,5 +1,5 @@
 use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
-use bevy::math::Vec3;
+use bevy::math::{Vec3, Vec3Swizzles};
 use log::warn;
 
 use rose_data::{
@@ -1417,6 +1417,43 @@ pub fn game_server_main_system(
                             item,
                             is_premium,
                         });
+                    }
+                    ClientMessage::RepairItemUsingNpc {
+                        npc_entity_id,
+                        item_slot,
+                    } => {
+                        if client_entity_list
+                            .get_zone(position.zone_id)
+                            .and_then(|zone| zone.get_entity(npc_entity_id))
+                            .map(|(_, _, npc_position)| npc_position.xy())
+                            .map_or(false, |npc_position| {
+                                position.position.xy().distance(npc_position) <= 6000.0
+                            })
+                        {
+                            if let Some(Item::Equipment(equipment_item)) =
+                                inventory.get_item(item_slot)
+                            {
+                                let cost = game_data
+                                    .ability_value_calculator
+                                    .calculate_repair_from_npc_price(equipment_item);
+                                if inventory.try_take_money(cost).is_ok() {
+                                    if let Some(Item::Equipment(equipment_item)) =
+                                        inventory.get_item_mut(item_slot)
+                                    {
+                                        equipment_item.life = 1000;
+                                    }
+
+                                    client
+                                        .server_message_tx
+                                        .send(ServerMessage::RepairedItemUsingNpc {
+                                            item_slot,
+                                            item: inventory.get_item(item_slot).unwrap().clone(),
+                                            updated_money: inventory.money,
+                                        })
+                                        .ok();
+                                }
+                            }
+                        }
                     }
                     _ => warn!("Received unimplemented client message {:?}", message),
                 }

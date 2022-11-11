@@ -110,6 +110,8 @@ pub enum ServerPackets {
     PersonalStoreTransactionResult = 0x7c6,
     PersonalStoreTransactionUpdateMoneyAndInventory = 0x7c7,
     UpdateVehiclePart = 0x7ca,
+    RepairedItemUsingItem = 0x7cb,
+    RepairedItemUsingNpc = 0x7cd,
     UpdateItemLife = 0x7ce,
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
@@ -3991,6 +3993,48 @@ impl From<&PacketServerBankTransaction> for Packet {
         if let Some(inventory_money) = packet.inventory_money.as_ref() {
             writer.write_i64(inventory_money.0);
         }
+        writer.into()
+    }
+}
+
+pub struct PacketServerRepairedItemUsingNpc {
+    pub item_slot: ItemSlot,
+    pub item: Item,
+    pub updated_money: Money,
+}
+
+impl TryFrom<&Packet> for PacketServerRepairedItemUsingNpc {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::RepairedItemUsingNpc as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let updated_money = Money(reader.read_i64()?);
+        let num_items = reader.read_u8()? as usize;
+        if num_items != 1 {
+            return Err(PacketError::InvalidPacket);
+        }
+        let item_slot = reader.read_item_slot_u8()?;
+        let item = reader.read_item_full()?.ok_or(PacketError::InvalidPacket)?;
+
+        Ok(Self {
+            item_slot,
+            item,
+            updated_money,
+        })
+    }
+}
+
+impl From<&PacketServerRepairedItemUsingNpc> for Packet {
+    fn from(packet: &PacketServerRepairedItemUsingNpc) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::RepairedItemUsingNpc as u16);
+        writer.write_i64(packet.updated_money.0);
+        writer.write_u8(1);
+        writer.write_item_slot_u8(packet.item_slot);
+        writer.write_item_full(Some(&packet.item));
         writer.into()
     }
 }

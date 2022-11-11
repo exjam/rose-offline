@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use rose_data::{Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData};
+use rose_data::{
+    EquipmentItem, Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData,
+};
 
 use crate::components::{
-    AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, ItemSlot, Level, SkillList,
-    StatusEffects,
+    AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, ItemSlot, Level, Money,
+    SkillList, StatusEffects,
 };
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -143,4 +145,6 @@ pub trait AbilityValueCalculator {
         equipment: &Equipment,
         damage: &Damage,
     ) -> Option<ItemSlot>;
+
+    fn calculate_repair_from_npc_price(&self, item: &EquipmentItem) -> Money;
 }

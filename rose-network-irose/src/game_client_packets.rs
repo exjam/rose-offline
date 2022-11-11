@@ -60,6 +60,8 @@ pub enum ClientPackets {
     ChangeVehiclePart = 0x7ca,
     PersonalStoreListItems = 0x7c4,
     PersonalStoreBuyItem = 0x7c5,
+    RepairItemUsingItem = 0x7cb,
+    RepairItemUsingNpc = 0x7cd,
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
     PartyUpdateRules = 0x7d7,
@@ -553,6 +555,74 @@ impl From<&PacketClientPersonalStoreBuyItem> for Packet {
         writer.write_u8(1);
         writer.write_u8(packet.store_slot_index as u8);
         writer.write_item_full(Some(&packet.buy_item));
+        writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientRepairItemUsingItem {
+    pub use_item_slot: ItemSlot,
+    pub item_slot: ItemSlot,
+}
+
+impl TryFrom<&Packet> for PacketClientRepairItemUsingItem {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::RepairItemUsingItem as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let use_item_slot = reader.read_item_slot_u16()?;
+        let item_slot = reader.read_item_slot_u16()?;
+
+        Ok(PacketClientRepairItemUsingItem {
+            use_item_slot,
+            item_slot,
+        })
+    }
+}
+
+impl From<&PacketClientRepairItemUsingItem> for Packet {
+    fn from(packet: &PacketClientRepairItemUsingItem) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::RepairItemUsingItem as u16);
+        writer.write_item_slot_u16(packet.use_item_slot);
+        writer.write_item_slot_u16(packet.item_slot);
+        writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub struct PacketClientRepairItemUsingNpc {
+    pub npc_entity_id: ClientEntityId,
+    pub item_slot: ItemSlot,
+}
+
+impl TryFrom<&Packet> for PacketClientRepairItemUsingNpc {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::RepairItemUsingNpc as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let npc_entity_id = reader.read_entity_id()?;
+        let item_slot = reader.read_item_slot_u16()?;
+
+        Ok(PacketClientRepairItemUsingNpc {
+            npc_entity_id,
+            item_slot,
+        })
+    }
+}
+
+impl From<&PacketClientRepairItemUsingNpc> for Packet {
+    fn from(packet: &PacketClientRepairItemUsingNpc) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::RepairItemUsingNpc as u16);
+        writer.write_entity_id(packet.npc_entity_id);
+        writer.write_item_slot_u16(packet.item_slot);
         writer.into()
     }
 }

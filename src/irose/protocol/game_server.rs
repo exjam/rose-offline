@@ -406,6 +406,24 @@ impl GameServer {
 
                 client.client_message_tx.send(message)?;
             }
+            Some(ClientPackets::RepairItemUsingItem) => {
+                let packet = PacketClientRepairItemUsingItem::try_from(packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::RepairItemUsingItem {
+                        use_item_slot: packet.use_item_slot,
+                        item_slot: packet.item_slot,
+                    })?;
+            }
+            Some(ClientPackets::RepairItemUsingNpc) => {
+                let packet = PacketClientRepairItemUsingNpc::try_from(packet)?;
+                client
+                    .client_message_tx
+                    .send(ClientMessage::RepairItemUsingNpc {
+                        npc_entity_id: packet.npc_entity_id,
+                        item_slot: packet.item_slot,
+                    })?;
+            }
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -1388,6 +1406,20 @@ impl GameServer {
                         inventory_money,
                         bank_slot,
                         bank_item,
+                    }))
+                    .await?;
+            }
+            ServerMessage::RepairedItemUsingNpc {
+                item_slot,
+                item,
+                updated_money,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerRepairedItemUsingNpc {
+                        item_slot,
+                        item,
+                        updated_money,
                     }))
                     .await?;
             }

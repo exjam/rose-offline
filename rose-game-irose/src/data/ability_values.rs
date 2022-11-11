@@ -5,14 +5,14 @@ use rose_data_irose::IroseSkillPageType;
 use std::sync::Arc;
 
 use rose_data::{
-    AbilityType, AmmoIndex, EquipmentIndex, Item, ItemClass, ItemDatabase, ItemReference, ItemType,
-    ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData, SkillDatabase,
-    VehiclePartIndex,
+    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemClass, ItemDatabase,
+    ItemReference, ItemType, ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData,
+    SkillDatabase, VehiclePartIndex,
 };
 use rose_game_common::{
     components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
-        Equipment, EquipmentItemDatabase, ItemSlot, Level, SkillList, StatusEffects,
+        Equipment, EquipmentItemDatabase, ItemSlot, Level, Money, SkillList, StatusEffects,
     },
     data::{AbilityValueCalculator, Damage, PassiveRecoveryState},
 };
@@ -1041,6 +1041,19 @@ impl AbilityValueCalculator for AbilityValuesData {
         } else {
             None
         }
+    }
+
+    fn calculate_repair_from_npc_price(&self, item: &EquipmentItem) -> Money {
+        let base_item_price = self
+            .item_database
+            .get_base_item(item.item)
+            .map_or(0, |item_data| item_data.base_price);
+
+        Money(
+            (((base_item_price + 1000) as f32 / 400000.0)
+                * (item.durability + 10) as f32
+                * (1100 - item.life) as f32) as i64,
+        )
     }
 }
 
