@@ -3229,8 +3229,7 @@ impl From<&PacketServerUpdateSpeed> for Packet {
 pub struct PacketServerUpdateStatusEffects {
     pub entity_id: ClientEntityId,
     pub status_effects: ActiveStatusEffects,
-    pub updated_hp: Option<HealthPoints>,
-    pub updated_mp: Option<ManaPoints>,
+    pub updated_values: Vec<i32>,
 }
 
 impl TryFrom<&Packet> for PacketServerUpdateStatusEffects {
@@ -3247,14 +3246,15 @@ impl TryFrom<&Packet> for PacketServerUpdateStatusEffects {
         let mut status_effects = ActiveStatusEffects::default();
         reader.read_status_effects_flags_u32(&mut status_effects)?;
 
-        let updated_hp = reader.read_i32().ok().map(HealthPoints::new);
-        let updated_mp = reader.read_i32().ok().map(ManaPoints::new);
+        let mut updated_values = Vec::new();
+        while let Ok(value) = reader.read_i32() {
+            updated_values.push(value);
+        }
 
         Ok(Self {
             entity_id,
             status_effects,
-            updated_hp,
-            updated_mp,
+            updated_values,
         })
     }
 }
@@ -3265,12 +3265,8 @@ impl From<&PacketServerUpdateStatusEffects> for Packet {
         writer.write_entity_id(packet.entity_id);
         writer.write_status_effects_flags_u32(&packet.status_effects);
 
-        if let Some(updated_hp) = packet.updated_hp {
-            writer.write_i32(updated_hp.hp);
-        }
-
-        if let Some(updated_mp) = packet.updated_mp {
-            writer.write_i32(updated_mp.mp);
+        for value in packet.updated_values.iter() {
+            writer.write_i32(*value);
         }
 
         writer.into()

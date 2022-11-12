@@ -802,16 +802,14 @@ impl GameServer {
             ServerMessage::UpdateStatusEffects(UpdateStatusEffects {
                 entity_id,
                 status_effects,
-                updated_hp,
-                updated_mp,
+                updated_values,
             }) => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateStatusEffects {
                         entity_id,
                         status_effects,
-                        updated_hp,
-                        updated_mp,
+                        updated_values,
                     }))
                     .await?;
             }

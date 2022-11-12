@@ -385,8 +385,7 @@ pub struct UpdateVehiclePart {
 pub struct UpdateStatusEffects {
     pub entity_id: ClientEntityId,
     pub status_effects: ActiveStatusEffects,
-    pub updated_hp: Option<HealthPoints>,
-    pub updated_mp: Option<ManaPoints>,
+    pub updated_values: Vec<i32>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

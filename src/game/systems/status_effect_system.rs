@@ -187,12 +187,8 @@ pub fn status_effect_system(
                 status_effects_regen.regens[expired_status_effect_type] = None;
 
                 match expired_status_effect_type {
-                    StatusEffectType::IncreaseHp | StatusEffectType::IncreaseMaxHp => {
-                        cleared_hp = true
-                    }
-                    StatusEffectType::IncreaseMp | StatusEffectType::IncreaseMaxMp => {
-                        cleared_mp = true
-                    }
+                    StatusEffectType::IncreaseHp => cleared_hp = true,
+                    StatusEffectType::IncreaseMp => cleared_mp = true,
                     _ => {}
                 }
             }
@@ -221,30 +217,21 @@ pub fn status_effect_system(
             }
 
             // Send status effect expiry message
-            let updated_hp = if cleared_hp {
-                Some(*health_points)
-            } else {
-                None
-            };
+            let mut updated_values = Vec::new();
+            if cleared_hp {
+                updated_values.push(health_points.hp);
+            }
 
-            let updated_mp = if cleared_mp {
-                Some(
-                    mana_points
-                        .as_ref()
-                        .map(|mp| *mp.as_ref())
-                        .unwrap_or_else(|| ManaPoints::new(0)),
-                )
-            } else {
-                None
-            };
+            if cleared_mp {
+                updated_values.push(mana_points.as_ref().map(|mp| mp.mp).unwrap_or(0));
+            }
 
             server_messages.send_entity_message(
                 client_entity,
                 ServerMessage::UpdateStatusEffects(UpdateStatusEffects {
                     entity_id: client_entity.id,
                     status_effects: status_effects.active.clone(),
-                    updated_hp,
-                    updated_mp,
+                    updated_values,
                 }),
             );
         }
