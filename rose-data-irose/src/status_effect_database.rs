@@ -30,7 +30,7 @@ impl StbStatus {
             .collect()
     }
 
-    stb_column! { 9, get_symbol_id, u32 }
+    stb_column! { 9, get_icon_id, u32 }
     stb_column! { 10, get_step_effect_file_id, EffectFileId }
     stb_column! { 11, get_step_sound_id, u32 }
     stb_column! { 12..=14, get_control, [Option<u32>; 3] }
@@ -79,6 +79,7 @@ fn load_status_effect(
         apply_status_effects: data.get_apply_status_effects(row),
         apply_per_second_value: data.get_apply_status_effect_value(row)[0].unwrap_or(0),
         effect_file_id: data.get_step_effect_file_id(row),
+        icon_id: data.get_icon_id(row).unwrap_or(0),
     })
 }
 

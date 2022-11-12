@@ -115,6 +115,7 @@ pub struct StatusEffectData {
     pub apply_status_effects: ArrayVec<(StatusEffectId, i32), 2>,
     pub apply_per_second_value: i32,
     pub effect_file_id: Option<EffectFileId>,
+    pub icon_id: u32,
 }
 
 pub struct StatusEffectDatabase {
