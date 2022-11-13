@@ -1489,7 +1489,7 @@ impl From<&PacketClientBankMoveItem> for Packet {
                 writer.write_u8(0);
                 writer.write_item_slot_u8(*item_slot);
                 writer.write_item_full(Some(item));
-                writer.write_u8(if *is_premium { 1 } else { 0 });
+                writer.write_u8(u8::from(*is_premium));
             }
             PacketClientBankMoveItem::Withdraw {
                 bank_slot,
@@ -1499,7 +1499,7 @@ impl From<&PacketClientBankMoveItem> for Packet {
                 writer.write_u8(1);
                 writer.write_u8(*bank_slot as u8);
                 writer.write_item_full(Some(item));
-                writer.write_u8(if *is_premium { 1 } else { 0 });
+                writer.write_u8(u8::from(*is_premium));
             }
         }
         writer.into()

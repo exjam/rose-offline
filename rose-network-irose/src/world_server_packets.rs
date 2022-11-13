@@ -169,7 +169,7 @@ impl From<&PacketServerCharacterList> for Packet {
                     writer.write_u32(0);
                 }
             }
-            writer.write_u8(if slot >= 3 { 1 } else { 0 });
+            writer.write_u8(u8::from(slot >= 3));
 
             writer.write_u16(character.info.face as u16);
             writer.write_u16(0);
@@ -242,7 +242,7 @@ impl From<&PacketServerCreateCharacterReply> for Packet {
     fn from(packet: &PacketServerCreateCharacterReply) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CreateCharacterReply as u16);
         writer.write_u8(packet.result as u8);
-        writer.write_u8(if packet.is_platinum { 1 } else { 0 });
+        writer.write_u8(u8::from(packet.is_platinum));
         writer.into()
     }
 }

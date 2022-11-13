@@ -142,7 +142,7 @@ fn quest_condition_quest_switch(
     value: bool,
 ) -> bool {
     if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
-        if let Some(switch) = (*quest_state).quest_switches.get(switch_id) {
+        if let Some(switch) = quest_state.quest_switches.get(switch_id) {
             return *switch == value;
         }
     }
@@ -800,7 +800,7 @@ fn quest_reward_set_quest_switch(
     value: bool,
 ) -> bool {
     if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
-        if let Some(mut switch) = (*quest_state).quest_switches.get_mut(switch_id) {
+        if let Some(mut switch) = quest_state.quest_switches.get_mut(switch_id) {
             *switch = value;
             return true;
         }
