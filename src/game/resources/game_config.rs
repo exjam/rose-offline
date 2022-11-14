@@ -1,3 +1,6 @@
+use bevy::prelude::Resource;
+
+#[derive(Resource)]
 pub struct GameConfig {
     pub enable_npc_spawns: bool,
     pub enable_monster_spawns: bool,

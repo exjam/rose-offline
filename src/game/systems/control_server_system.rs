@@ -24,16 +24,13 @@ pub fn control_server_system(
             } => {
                 let entity = match client_type {
                     ClientType::Login => commands
-                        .spawn()
-                        .insert(LoginClient::new(client_message_rx, server_message_tx))
+                        .spawn(LoginClient::new(client_message_rx, server_message_tx))
                         .id(),
                     ClientType::World => commands
-                        .spawn()
-                        .insert(WorldClient::new(client_message_rx, server_message_tx))
+                        .spawn(WorldClient::new(client_message_rx, server_message_tx))
                         .id(),
                     ClientType::Game => commands
-                        .spawn()
-                        .insert(GameClient::new(client_message_rx, server_message_tx))
+                        .spawn(GameClient::new(client_message_rx, server_message_tx))
                         .id(),
                 };
                 response_tx.send(entity).unwrap();
@@ -90,8 +87,7 @@ pub fn control_server_system(
                 response_tx,
             } => {
                 let entity = commands
-                    .spawn()
-                    .insert(ServerInfo {
+                    .spawn(ServerInfo {
                         name: name.clone(),
                         ip: ip.clone(),
                         port,
@@ -117,8 +113,7 @@ pub fn control_server_system(
                 response_tx,
             } => {
                 let entity = commands
-                    .spawn()
-                    .insert(ServerInfo {
+                    .spawn(ServerInfo {
                         name: name.clone(),
                         ip: ip.clone(),
                         port,

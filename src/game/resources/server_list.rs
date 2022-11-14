@@ -1,4 +1,4 @@
-use bevy::ecs::prelude::Entity;
+use bevy::{ecs::prelude::Entity, prelude::Resource};
 
 pub struct GameServer {
     pub entity: Entity,
@@ -17,7 +17,7 @@ pub struct WorldServer {
     pub channels: Vec<GameServer>,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct ServerList {
     pub world_servers: Vec<WorldServer>,
 }

@@ -273,38 +273,39 @@ fn create_bot_entity(
 
     let entity = chat_command_params
         .commands
-        .spawn()
-        .insert(BotAi::new(BotAiState::Farm))
-        .insert_bundle(CharacterBundle {
-            ability_values,
-            basic_stats: bot_data.basic_stats,
-            bank: Default::default(),
-            command: Command::default(),
-            equipment: bot_data.equipment,
-            experience_points: bot_data.experience_points,
-            health_points: bot_data.health_points,
-            hotbar: bot_data.hotbar,
-            info: bot_data.info,
-            inventory: bot_data.inventory,
-            level: bot_data.level,
-            mana_points: bot_data.mana_points,
-            motion_data,
-            move_mode,
-            move_speed,
-            next_command: NextCommand::default(),
-            party_membership: PartyMembership::default(),
-            passive_recovery_time: PassiveRecoveryTime::default(),
-            position: bot_data.position,
-            quest_state: bot_data.quest_state,
-            skill_list: bot_data.skill_list,
-            skill_points: bot_data.skill_points,
-            stamina: bot_data.stamina,
-            stat_points: bot_data.stat_points,
-            status_effects,
-            status_effects_regen,
-            team: Team::default_character(),
-            union_membership: bot_data.union_membership,
-        })
+        .spawn((
+            BotAi::new(BotAiState::Farm),
+            CharacterBundle {
+                ability_values,
+                basic_stats: bot_data.basic_stats,
+                bank: Default::default(),
+                command: Command::default(),
+                equipment: bot_data.equipment,
+                experience_points: bot_data.experience_points,
+                health_points: bot_data.health_points,
+                hotbar: bot_data.hotbar,
+                info: bot_data.info,
+                inventory: bot_data.inventory,
+                level: bot_data.level,
+                mana_points: bot_data.mana_points,
+                motion_data,
+                move_mode,
+                move_speed,
+                next_command: NextCommand::default(),
+                party_membership: PartyMembership::default(),
+                passive_recovery_time: PassiveRecoveryTime::default(),
+                position: bot_data.position,
+                quest_state: bot_data.quest_state,
+                skill_list: bot_data.skill_list,
+                skill_points: bot_data.skill_points,
+                stamina: bot_data.stamina,
+                stat_points: bot_data.stat_points,
+                status_effects,
+                status_effects_regen,
+                team: Team::default_character(),
+                union_membership: bot_data.union_membership,
+            },
+        ))
         .id();
 
     client_entity_join_zone(

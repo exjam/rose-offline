@@ -1,5 +1,6 @@
 use bevy::ecs::{change_detection::Mut, prelude::Entity};
 use bevy::math::{UVec2, Vec2, Vec3, Vec3Swizzles};
+use bevy::prelude::Resource;
 use bitvec::prelude::*;
 use std::collections::HashMap;
 
@@ -338,6 +339,7 @@ impl<'a, 'b> Iterator for ClientEntityZoneEntityIterator<'a, 'b> {
     }
 }
 
+#[derive(Resource)]
 pub struct ClientEntityList {
     pub zones: HashMap<ZoneId, ClientEntityZone>,
 }

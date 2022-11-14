@@ -1,3 +1,4 @@
+use bevy::prelude::Resource;
 use std::sync::Arc;
 
 use rose_data::{
@@ -8,6 +9,7 @@ use rose_game_common::data::{AbilityValueCalculator, DropTable};
 
 use crate::game::storage::character::CharacterCreator;
 
+#[derive(Resource)]
 pub struct GameData {
     pub character_creator: Box<dyn CharacterCreator + Send + Sync>,
     pub ability_value_calculator: Box<dyn AbilityValueCalculator + Send + Sync>,

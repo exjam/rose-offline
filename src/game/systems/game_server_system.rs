@@ -166,9 +166,9 @@ fn handle_game_connection_request(
     let move_mode = MoveMode::Run;
     let move_speed = MoveSpeed::new(ability_values.get_move_speed(&move_mode));
 
-    commands
-        .entity(entity)
-        .insert_bundle(CharacterBundle {
+    commands.entity(entity).insert((
+        account,
+        CharacterBundle {
             ability_values,
             basic_stats: character.basic_stats.clone(),
             bank,
@@ -197,8 +197,8 @@ fn handle_game_connection_request(
             status_effects_regen,
             team: Team::default_character(),
             union_membership: character.union_membership.clone(),
-        })
-        .insert(account);
+        },
+    ));
 
     Ok((
         ConnectionResponse {

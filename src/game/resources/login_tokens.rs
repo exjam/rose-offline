@@ -1,4 +1,4 @@
-use bevy::ecs::prelude::Entity;
+use bevy::{ecs::prelude::Entity, prelude::Resource};
 
 pub struct LoginToken {
     pub username: String,
@@ -11,7 +11,7 @@ pub struct LoginToken {
     pub game_client: Option<Entity>,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct LoginTokens {
     pub tokens: Vec<LoginToken>,
 }

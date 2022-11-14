@@ -1,6 +1,9 @@
-use crate::game::messages::control::ControlMessage;
+use bevy::prelude::Resource;
 use crossbeam_channel::Receiver;
 
+use crate::game::messages::control::ControlMessage;
+
+#[derive(Resource)]
 pub struct ControlChannel {
     pub control_rx: Receiver<ControlMessage>,
 }

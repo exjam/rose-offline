@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{prelude::Changed, query::WorldQuery, system::Query},
-    prelude::Or,
+    prelude::{Entity, Or},
 };
 
 use crate::game::components::{AbilityValues, HealthPoints, ManaPoints, MoveMode, MoveSpeed};

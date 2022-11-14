@@ -154,10 +154,7 @@ impl MonsterBundle {
             spawn_zone,
         );
 
-        let mut entity_commands = commands.spawn();
-        let entity = entity_commands.id();
-
-        entity_commands.insert_bundle(MonsterBundle {
+        let mut entity_commands = commands.spawn(MonsterBundle {
             ability_values,
             command: Command::default(),
             health_points,
@@ -174,6 +171,7 @@ impl MonsterBundle {
             spawn_origin,
             team,
         });
+        let entity = entity_commands.id();
 
         if let Some(damage_sources) = damage_sources {
             entity_commands.insert(damage_sources);
@@ -229,16 +227,14 @@ impl ItemDropBundle {
 
         let drop_position = Position::new(drop_point, position.zone_id);
 
-        let mut entity_commands = commands.spawn();
-        let entity = entity_commands.id();
-
-        entity_commands.insert_bundle(ItemDropBundle {
+        let mut entity_commands = commands.spawn(ItemDropBundle {
             drop: ItemDrop::with_dropped_item(item),
             position: drop_position.clone(),
             entity_expire_time: EntityExpireTime::new(
                 server_time.now + ITEM_DROP_ENTITY_EXPIRE_TIME,
             ),
         });
+        let entity = entity_commands.id();
 
         if let Some(owner_entity) = owner_entity {
             entity_commands

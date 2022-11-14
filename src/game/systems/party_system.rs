@@ -212,7 +212,7 @@ fn handle_party_accept_invite(
             let item_sharing = party.item_sharing;
             let xp_sharing = party.xp_sharing;
             let party_members = party.members.clone();
-            let party_entity = commands.spawn().insert(party).id();
+            let party_entity = commands.spawn(party).id();
 
             *owner.party_membership = PartyMembership::new(party_entity);
             *invited.party_membership = PartyMembership::new(party_entity);

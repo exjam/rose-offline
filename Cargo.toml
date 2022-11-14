@@ -6,11 +6,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace.dependencies]
+bevy = { version = "0.9.0", default-features = false }
+
 [dependencies]
-arrayvec = "0.7"
 anyhow = "1.0"
+arrayvec = "0.7"
 async-trait = "0.1"
-bevy = { version = "0.8.0", default-features = false }
+bevy = { workspace = true, default-features = false }
 bitvec = { version = "1.0", features = ["serde"] }
 bytes = "1.1"
 chrono = "0.4"
@@ -27,15 +30,6 @@ modular-bitfield = "0.11"
 num-derive = "0.3"
 num-traits = "0.2"
 rand = "0.8"
-scopeguard = "1.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-simplelog = "0.11"
-sha2 = "0.10"
-shellwords = "1.1"
-tempfile = "3.3"
-thiserror = "1.0"
-tokio = { version = "1.17", features = ["full"] }
 rose-data = { path = "rose-data" }
 rose-data-irose = { path = "rose-data-irose" }
 rose-file-readers = { path = "rose-file-readers" }
@@ -43,9 +37,18 @@ rose-game-common = { path = "rose-game-common" }
 rose-game-irose = { path = "rose-game-irose" }
 rose-network-common = { path = "rose-network-common" }
 rose-network-irose = { path = "rose-network-irose" }
+scopeguard = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+shellwords = "1.1"
+simplelog = "0.11"
+tempfile = "3.3"
+thiserror = "1.0"
+tokio = { version = "1.17", features = ["full"] }
 
 [patch.crates-io]
-bevy = { git = "https://github.com/exjam/bevy", rev = "e8c26f8f6dd5df2ed19b0cb318382b394b1cbe39" }
+bevy = { git = "https://github.com/exjam/bevy", rev = "80ba2cbad128d99072357bb763e62bf19e8b8951" }
 
 [workspace]
 members = [

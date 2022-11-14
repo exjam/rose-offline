@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{
-        prelude::{EventReader, Query},
+        prelude::{Entity, EventReader, Query},
         query::WorldQuery,
     },
     prelude::Mut,

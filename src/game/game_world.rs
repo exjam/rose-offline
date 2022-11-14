@@ -4,7 +4,7 @@ use bevy::{
         prelude::{Schedule, StageLabel, World},
         schedule::{ShouldRun, SystemStage},
     },
-    prelude::ParallelSystemDescriptorCoercion,
+    prelude::IntoSystemDescriptor,
 };
 use chrono::Local;
 use crossbeam_channel::Receiver;

@@ -1,3 +1,4 @@
+use bevy::prelude::Resource;
 use rose_data::ZoneId;
 
 use crate::game::{
@@ -20,7 +21,7 @@ pub struct EntityMessage {
     pub message: ServerMessage,
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct ServerMessages {
     pub pending_global_messages: Vec<GlobalMessage>,
     pub pending_zone_messages: Vec<ZoneMessage>,

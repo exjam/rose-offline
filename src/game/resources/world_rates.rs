@@ -1,3 +1,6 @@
+use bevy::prelude::Resource;
+
+#[derive(Resource)]
 pub struct WorldRates {
     pub xp_rate: i32,
     pub drop_rate: i32,

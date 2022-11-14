@@ -10,6 +10,6 @@ bytes = "1.1"
 crossbeam-channel = "0.5"
 encoding_rs = "0.8"
 log = "0.4"
+rose-game-common = { path = "../rose-game-common" }
 thiserror = "1.0"
 tokio = { version = "1.17", features = ["net", "sync", "macros"] }
-rose-game-common = { path = "../rose-game-common" }

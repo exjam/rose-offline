@@ -1,6 +1,6 @@
 use bevy::{
     ecs::query::WorldQuery,
-    prelude::{Commands, EventReader, EventWriter, Query, Res, ResMut},
+    prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut},
 };
 use rose_data::{ItemClass, ItemType};
 use rose_game_common::{

@@ -1,4 +1,4 @@
-use bevy::ecs::prelude::Entity;
+use bevy::{ecs::prelude::Entity, prelude::Resource};
 use std::collections::HashMap;
 
 use rose_data::{NpcId, ZoneId};
@@ -15,6 +15,7 @@ struct ZoneData {
     event_objects: HashMap<EventObjectKey, Entity>,
 }
 
+#[derive(Resource)]
 pub struct ZoneList {
     zones: HashMap<ZoneId, ZoneData>,
     npcs: HashMap<NpcId, Entity>,

@@ -1,6 +1,6 @@
 use bevy::{
     ecs::{prelude::Changed, query::WorldQuery, system::Query},
-    prelude::{Or, Res},
+    prelude::{Entity, Or, Res},
 };
 use rose_data::{EquipmentIndex, VehiclePartIndex};
 

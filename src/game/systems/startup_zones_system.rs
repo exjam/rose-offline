@@ -29,10 +29,11 @@ pub fn startup_zones_system(
         // Create the Event Object entities
         for event_object in zone_data.event_objects.iter() {
             let entity = commands
-                .spawn()
-                .insert(EventObject::new(event_object.event_id))
-                .insert(Position::new(event_object.position, zone_data.id))
-                .insert(ObjectVariables::new(EVENT_OBJECT_VARIABLES_COUNT))
+                .spawn((
+                    EventObject::new(event_object.event_id),
+                    Position::new(event_object.position, zone_data.id),
+                    ObjectVariables::new(EVENT_OBJECT_VARIABLES_COUNT),
+                ))
                 .id();
 
             zone_list.add_event_object(
@@ -69,10 +70,10 @@ pub fn startup_zones_system(
                     }
                 }
 
-                commands
-                    .spawn()
-                    .insert(MonsterSpawnPoint::from(spawn))
-                    .insert(Position::new(spawn.position, zone_data.id));
+                commands.spawn((
+                    MonsterSpawnPoint::from(spawn),
+                    Position::new(spawn.position, zone_data.id),
+                ));
             }
         }
 
@@ -115,7 +116,7 @@ pub fn startup_zones_system(
                 let level = Level::new(ability_values.get_level() as u32);
                 let health_points = HealthPoints::new(ability_values.get_max_health());
 
-                let mut entity_commands = commands.spawn_bundle(NpcBundle {
+                let mut entity_commands = commands.spawn(NpcBundle {
                     ability_values,
                     command: Command::default(),
                     health_points,
@@ -132,11 +133,11 @@ pub fn startup_zones_system(
                     status_effects_regen,
                     team: Team::default_npc(),
                 });
+                let entity = entity_commands.id();
+
                 if let Some(npc_ai) = npc_ai {
                     entity_commands.insert(npc_ai);
                 }
-
-                let entity = entity_commands.id();
 
                 client_entity_join_zone(
                     &mut commands,
