@@ -1,4 +1,4 @@
-use bevy::ecs::prelude::Component;
+use bevy::{ecs::prelude::Component, prelude::Entity};
 use crossbeam_channel::Receiver;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -9,6 +9,7 @@ pub struct GameClient {
     pub client_message_rx: Receiver<ClientMessage>,
     pub server_message_tx: UnboundedSender<ServerMessage>,
     pub login_token: u32,
+    pub world_client_entity: Option<Entity>,
 }
 
 impl GameClient {
@@ -20,6 +21,7 @@ impl GameClient {
             client_message_rx,
             server_message_tx,
             login_token: 0u32,
+            world_client_entity: None,
         }
     }
 }

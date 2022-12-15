@@ -58,6 +58,7 @@ fn handle_game_connection_request(
     game_client: &mut GameClient,
     token_id: u32,
     password: &Password,
+    query_world_client: &mut Query<&mut WorldClient>,
 ) -> Result<
     (
         ConnectionResponse,
@@ -74,6 +75,13 @@ fn handle_game_connection_request(
     if login_token.world_client.is_none() || login_token.game_client.is_some() {
         return Err(ConnectionRequestError::InvalidToken);
     }
+
+    let mut world_client =
+        if let Ok(world_client) = query_world_client.get_mut(login_token.world_client.unwrap()) {
+            world_client
+        } else {
+            return Err(ConnectionRequestError::InvalidToken);
+        };
 
     // Verify account password
     let account: Account = AccountStorage::try_load(&login_token.username, password)
@@ -120,6 +128,10 @@ fn handle_game_connection_request(
     // Update token
     login_token.game_client = Some(entity);
     game_client.login_token = login_token.token;
+
+    // Associate world / game clients
+    game_client.world_client_entity = login_token.world_client;
+    world_client.game_client_entity = Some(entity);
 
     let status_effects = StatusEffects::new();
     let status_effects_regen = StatusEffectsRegen::new();
@@ -234,6 +246,7 @@ fn handle_game_connection_request(
 pub fn game_server_authentication_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
+    mut query_world_client: Query<&mut WorldClient>,
     mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,
 ) {
@@ -249,6 +262,7 @@ pub fn game_server_authentication_system(
                         game_client.as_mut(),
                         message.login_token,
                         &message.password,
+                        &mut query_world_client,
                     ) {
                         Ok((
                             connection_response,
