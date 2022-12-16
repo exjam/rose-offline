@@ -1,10 +1,14 @@
-use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without};
+use bevy::{
+    ecs::prelude::{Commands, Entity, Query, Res, ResMut, Without},
+    prelude::EventWriter,
+};
 use log::warn;
 
 use rose_game_common::data::Password;
 
 use crate::game::{
     components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
+    events::ClanEvent,
     messages::{
         client::{ClientMessage, CreateCharacter},
         server::{
@@ -156,6 +160,7 @@ pub fn world_server_system(
     server_info_query: Query<&ServerInfo>,
     mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,
+    mut clan_events: EventWriter<ClanEvent>,
 ) {
     world_client_query.for_each_mut(|(world_client, mut account, mut character_list)| {
         if let Ok(message) = world_client.client_message_rx.try_recv() {
@@ -281,7 +286,14 @@ pub fn world_server_system(
                         .send(ServerMessage::SelectCharacter(response))
                         .ok();
                 }
-                _ => warn!("Received unimplemented client message {:?}", message),
+                ClientMessage::ClanGetMemberList => {
+                    if let Some(game_client_entity) = world_client.game_client_entity {
+                        clan_events.send(ClanEvent::GetMemberList {
+                            entity: game_client_entity,
+                        });
+                    }
+                }
+                _ => warn!("[WS] Received unimplemented client message {:?}", message),
             }
         }
     });

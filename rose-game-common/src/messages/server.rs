@@ -1,7 +1,7 @@
 use bevy::math::{Vec2, Vec3};
 use enum_map::EnumMap;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use std::{num::NonZeroUsize, time::Duration};
 use thiserror::Error;
 
 use rose_data::{
@@ -13,9 +13,10 @@ use rose_data::{
 use crate::{
     components::{
         ActiveStatusEffect, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
-        CharacterUniqueId, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar,
-        HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc,
-        QuestState, SkillList, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        CharacterUniqueId, ClanLevel, ClanMark, ClanMemberPosition, ClanPoints, ClanUniqueId,
+        DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
+        ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList,
+        SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
@@ -274,6 +275,14 @@ pub enum CommandState {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CharacterClanMembership {
+    pub clan_unique_id: ClanUniqueId,
+    pub mark: ClanMark,
+    pub level: ClanLevel,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityCharacter {
     pub character_info: CharacterInfo,
     pub command: CommandState,
@@ -290,6 +299,7 @@ pub struct SpawnEntityCharacter {
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
     pub personal_store_info: Option<(i32, String)>,
+    pub clan_membership: Option<CharacterClanMembership>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -644,6 +654,25 @@ pub enum CraftInsertGemError {
     SocketFull,
 }
 
+#[allow(dead_code)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum ClanCreateError {
+    Failed,
+    NameExists,
+    NoPermission,
+    UnmetCondition,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ClanMemberInfo {
+    pub name: String,
+    pub position: ClanMemberPosition,
+    pub contribution: ClanPoints,
+    pub channel_id: Option<NonZeroUsize>,
+    pub level: Level,
+    pub job: u16,
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
     ConnectionResponse(Result<ConnectionResponse, ConnectionRequestError>),
@@ -764,5 +793,37 @@ pub enum ServerMessage {
         item_slot: ItemSlot,
         item: Item,
         updated_money: Money,
+    },
+    ClanInfo {
+        id: ClanUniqueId,
+        mark: ClanMark,
+        level: ClanLevel,
+        points: ClanPoints,
+        money: Money,
+        name: String,
+        description: String,
+        position: ClanMemberPosition,
+        contribution: ClanPoints,
+        // TODO: Clan skill list ?
+    },
+    CharacterUpdateClan {
+        client_entity_id: ClientEntityId,
+        id: ClanUniqueId,
+        name: String,
+        mark: ClanMark,
+        level: ClanLevel,
+    },
+    ClanMemberConnected {
+        name: String,
+        channel_id: NonZeroUsize,
+    },
+    ClanMemberDisconnected {
+        name: String,
+    },
+    ClanCreateError {
+        error: ClanCreateError,
+    },
+    ClanMemberList {
+        members: Vec<ClanMemberInfo>,
     },
 }

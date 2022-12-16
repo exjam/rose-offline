@@ -11,8 +11,8 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveStatusEffect, CharacterGender, Equipment, HealthPoints, HotbarSlot,
-        InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot, Stamina,
+        ActiveStatusEffect, CharacterGender, ClanMemberPosition, Equipment, HealthPoints,
+        HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot, Stamina,
     },
     data::Damage,
     messages::{
@@ -1106,5 +1106,43 @@ impl PacketWritePartyRules for PacketWriter {
         }
 
         self.write_u8(bits);
+    }
+}
+
+pub trait PacketReadClanMemberPosition {
+    fn read_clan_member_position_u8(&mut self) -> Result<ClanMemberPosition, PacketError>;
+}
+
+impl<'a> PacketReadClanMemberPosition for PacketReader<'a> {
+    fn read_clan_member_position_u8(&mut self) -> Result<ClanMemberPosition, PacketError> {
+        match self.read_u8()? {
+            0 => Ok(ClanMemberPosition::Penalty),
+            1 => Ok(ClanMemberPosition::Junior),
+            2 => Ok(ClanMemberPosition::Senior),
+            3 => Ok(ClanMemberPosition::Veteran),
+            4 => Ok(ClanMemberPosition::Commander),
+            5 => Ok(ClanMemberPosition::DeputyMaster),
+            6 => Ok(ClanMemberPosition::Master),
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
+pub trait PacketWriteClanMemberPosition {
+    fn write_clan_member_position_u8(&mut self, position: &ClanMemberPosition);
+}
+
+impl PacketWriteClanMemberPosition for PacketWriter {
+    fn write_clan_member_position_u8(&mut self, position: &ClanMemberPosition) {
+        let value = match position {
+            ClanMemberPosition::Penalty => 0,
+            ClanMemberPosition::Junior => 1,
+            ClanMemberPosition::Senior => 2,
+            ClanMemberPosition::Veteran => 3,
+            ClanMemberPosition::Commander => 4,
+            ClanMemberPosition::DeputyMaster => 5,
+            ClanMemberPosition::Master => 6,
+        };
+        self.write_u8(value);
     }
 }

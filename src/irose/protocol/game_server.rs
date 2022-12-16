@@ -424,6 +424,17 @@ impl GameServer {
                         item_slot: packet.item_slot,
                     })?;
             }
+            Some(ClientPackets::ClanCommand) => match PacketClientClanCommand::try_from(packet)? {
+                PacketClientClanCommand::Create {
+                    mark,
+                    name,
+                    description,
+                } => client.client_message_tx.send(ClientMessage::ClanCreate {
+                    name,
+                    description,
+                    mark,
+                })?,
+            },
             _ => warn!(
                 "[GS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,
@@ -1418,6 +1429,84 @@ impl GameServer {
                         item_slot,
                         item,
                         updated_money,
+                    }))
+                    .await?;
+            }
+            ServerMessage::ClanInfo {
+                id,
+                mark,
+                level,
+                points,
+                money,
+                name,
+                description,
+                position,
+                contribution,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerClanCommand::ClanInfo {
+                        id,
+                        name,
+                        description,
+                        mark,
+                        level,
+                        points,
+                        money,
+                        position,
+                        contribution,
+                    }))
+                    .await?;
+            }
+            ServerMessage::CharacterUpdateClan {
+                client_entity_id,
+                id,
+                name,
+                mark,
+                level,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(
+                        &PacketServerClanCommand::CharacterUpdateClan {
+                            client_entity_id,
+                            id,
+                            name,
+                            mark,
+                            level,
+                        },
+                    ))
+                    .await?;
+            }
+            ServerMessage::ClanMemberConnected { name, channel_id } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(
+                        &PacketServerClanCommand::ClanMemberConnected { name, channel_id },
+                    ))
+                    .await?;
+            }
+            ServerMessage::ClanMemberDisconnected { name } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(
+                        &PacketServerClanCommand::ClanMemberDisconnected { name },
+                    ))
+                    .await?;
+            }
+            ServerMessage::ClanCreateError { error } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerClanCommand::ClanCreateError {
+                        error,
+                    }))
+                    .await?;
+            }
+            ServerMessage::ClanMemberList { members } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerClanCommand::ClanMemberList {
+                        members,
                     }))
                     .await?;
             }

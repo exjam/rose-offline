@@ -8,11 +8,12 @@ use log::{error, info};
 use crate::game::{
     bundles::client_entity_leave_zone,
     components::{
-        Account, Bank, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector, Equipment,
-        ExperiencePoints, HealthPoints, Hotbar, Inventory, Level, ManaPoints, PartyMembership,
-        Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints, UnionMembership,
+        Account, Bank, BasicStats, CharacterInfo, ClanMembership, ClientEntity, ClientEntitySector,
+        Equipment, ExperiencePoints, HealthPoints, Hotbar, Inventory, Level, ManaPoints,
+        PartyMembership, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
+        UnionMembership,
     },
-    events::{PartyMemberDisconnect, PartyMemberEvent, SaveEvent, SaveEventCharacter},
+    events::{ClanEvent, PartyMemberDisconnect, PartyMemberEvent, SaveEvent, SaveEventCharacter},
     resources::ClientEntityList,
     storage::{bank::BankStorage, character::CharacterStorage},
 };
@@ -40,6 +41,7 @@ pub struct SaveEntityQuery<'w> {
     union_membership: &'w UnionMembership,
     stamina: &'w Stamina,
     party_membership: &'w PartyMembership,
+    clan_membership: &'w ClanMembership,
 }
 
 pub fn save_system(
@@ -47,6 +49,7 @@ pub fn save_system(
     query: Query<SaveEntityQuery>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut save_events: EventReader<SaveEvent>,
+    mut clan_events: EventWriter<ClanEvent>,
     mut party_member_events: EventWriter<PartyMemberEvent>,
 ) {
     for pending_save in save_events.iter() {
@@ -115,6 +118,16 @@ pub fn save_system(
                                     name: character.character_info.name.clone(),
                                 },
                             ));
+                        }
+
+                        if let Some(&clan_entity) = character.clan_membership.as_ref() {
+                            clan_events.send(ClanEvent::MemberDisconnect {
+                                clan_entity,
+                                disconnect_entity: entity,
+                                name: character.character_info.name.clone(),
+                                level: *character.level,
+                                job: character.character_info.job,
+                            });
                         }
                     }
                 }

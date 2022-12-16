@@ -2,13 +2,15 @@ use bevy::ecs::{
     prelude::{Entity, Query, Res, ResMut},
     query::WorldQuery,
 };
+use rose_game_common::messages::server::CharacterClanMembership;
 
 use crate::game::{
     components::{
-        AbilityValues, CharacterInfo, ClientEntity, ClientEntityId, ClientEntitySector,
-        ClientEntityType, ClientEntityVisibility, Command, Destination, EntityExpireTime,
-        Equipment, GameClient, HealthPoints, ItemDrop, Level, MoveMode, MoveSpeed, Npc,
-        NpcStandingDirection, Owner, PersonalStore, Position, StatusEffects, Target, Team,
+        AbilityValues, CharacterInfo, Clan, ClanMembership, ClientEntity, ClientEntityId,
+        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, Destination,
+        EntityExpireTime, Equipment, GameClient, HealthPoints, ItemDrop, Level, MoveMode,
+        MoveSpeed, Npc, NpcStandingDirection, Owner, PersonalStore, Position, StatusEffects,
+        Target, Team,
     },
     messages::server::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityItemDrop,
@@ -45,6 +47,7 @@ pub struct CharacterQuery<'w> {
     destination: Option<&'w Destination>,
     target: Option<&'w Target>,
     personal_store: Option<&'w PersonalStore>,
+    clan_membership: &'w ClanMembership,
 }
 
 #[derive(WorldQuery)]
@@ -92,6 +95,7 @@ pub fn client_entity_visibility_system(
     item_drop_query: Query<ItemDropQuery>,
     monsters_query: Query<MonsterQuery>,
     npcs_query: Query<NpcQuery>,
+    clan_query: Query<&Clan>,
     mut client_entity_list: ResMut<ClientEntityList>,
     server_time: Res<ServerTime>,
 ) {
@@ -152,6 +156,20 @@ pub fn client_entity_visibility_system(
                                                         personal_store.skin,
                                                         personal_store.title.clone(),
                                                     )
+                                                },
+                                            ),
+                                            clan_membership: character.clan_membership.and_then(
+                                                |clan_entity| {
+                                                    if let Ok(clan) = clan_query.get(clan_entity) {
+                                                        Some(CharacterClanMembership {
+                                                            clan_unique_id: clan.unique_id,
+                                                            mark: clan.mark,
+                                                            level: clan.level,
+                                                            name: clan.name.clone(),
+                                                        })
+                                                    } else {
+                                                        None
+                                                    }
                                                 },
                                             ),
                                         },

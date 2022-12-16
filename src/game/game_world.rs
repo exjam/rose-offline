@@ -13,9 +13,9 @@ use std::time::{Duration, Instant};
 
 use crate::game::{
     events::{
-        BankEvent, ChatCommandEvent, DamageEvent, ItemLifeEvent, NpcStoreEvent, PartyEvent,
-        PartyMemberEvent, PersonalStoreEvent, PickupItemEvent, QuestTriggerEvent, RewardItemEvent,
-        RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
+        BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, ItemLifeEvent, NpcStoreEvent,
+        PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent, QuestTriggerEvent,
+        RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
@@ -25,17 +25,18 @@ use crate::game::{
     systems::{
         ability_values_changed_system, ability_values_update_character_system,
         ability_values_update_npc_system, bank_system, bot_ai_system, chat_commands_system,
-        client_entity_visibility_system, command_system, control_server_system, damage_system,
-        driving_time_system, experience_points_system, expire_time_system,
+        clan_system, client_entity_visibility_system, command_system, control_server_system,
+        damage_system, driving_time_system, experience_points_system, expire_time_system,
         game_server_authentication_system, game_server_join_system, game_server_main_system,
         item_life_system, login_server_authentication_system, login_server_system,
         monster_spawn_system, npc_ai_system, npc_store_system, party_member_event_system,
         party_member_update_info_system, party_system, party_update_average_level_system,
         passive_recovery_system, personal_store_system, pickup_item_system, quest_system,
         reward_item_system, save_system, server_messages_system, skill_effect_system,
-        startup_zones_system, status_effect_system, update_character_motion_data_system,
-        update_npc_motion_data_system, update_position_system, use_item_system, weight_system,
-        world_server_authentication_system, world_server_system, world_time_system,
+        startup_clans_system, startup_zones_system, status_effect_system,
+        update_character_motion_data_system, update_npc_motion_data_system, update_position_system,
+        use_item_system, weight_system, world_server_authentication_system, world_server_system,
+        world_time_system,
     },
 };
 
@@ -79,6 +80,7 @@ impl GameWorld {
 
         world.insert_resource(Events::<BankEvent>::default());
         world.insert_resource(Events::<ChatCommandEvent>::default());
+        world.insert_resource(Events::<ClanEvent>::default());
         world.insert_resource(Events::<DamageEvent>::default());
         world.insert_resource(Events::<ItemLifeEvent>::default());
         world.insert_resource(Events::<NpcStoreEvent>::default());
@@ -98,6 +100,7 @@ impl GameWorld {
             GameStages::Startup,
             SystemStage::single_threaded()
                 .with_run_criteria(ShouldRun::once)
+                .with_system(startup_clans_system)
                 .with_system(startup_zones_system),
         );
         schedule.add_stage_after(
@@ -106,6 +109,7 @@ impl GameWorld {
             SystemStage::parallel()
                 .with_system(Events::<BankEvent>::update_system)
                 .with_system(Events::<ChatCommandEvent>::update_system)
+                .with_system(Events::<ClanEvent>::update_system)
                 .with_system(Events::<DamageEvent>::update_system)
                 .with_system(Events::<ItemLifeEvent>::update_system)
                 .with_system(Events::<NpcStoreEvent>::update_system)
@@ -154,7 +158,8 @@ impl GameWorld {
                 .with_system(party_member_event_system)
                 .with_system(party_system.after(party_member_event_system))
                 .with_system(party_member_update_info_system.after(party_system))
-                .with_system(update_position_system),
+                .with_system(update_position_system)
+                .with_system(clan_system),
         );
 
         schedule.add_stage_after(

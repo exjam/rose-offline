@@ -84,6 +84,14 @@ impl WorldServer {
                         name: String::from(request.name),
                     }))?;
             }
+            Some(ClientPackets::ClanCommand) => match PacketClientClanCommand::try_from(packet)? {
+                PacketClientClanCommand::GetMemberList => client
+                    .client_message_tx
+                    .send(ClientMessage::ClanGetMemberList)?,
+                PacketClientClanCommand::UpdateLevelAndJob { .. } => {
+                    // Ignore this, we do not need to rely on client reporting of level / job
+                }
+            },
             _ => warn!(
                 "[WS] Unhandled packet [{:#03X}] {:02x?}",
                 packet.command,

@@ -14,6 +14,8 @@ use rose_game_common::{
     },
 };
 
+use crate::game::components::{Clan, ClanMember, ClanMembership};
+use crate::game::events::ClanEvent;
 use crate::game::{
     bundles::{
         client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
@@ -59,6 +61,7 @@ fn handle_game_connection_request(
     token_id: u32,
     password: &Password,
     query_world_client: &mut Query<&mut WorldClient>,
+    query_clans: &mut Query<(Entity, &mut Clan)>,
 ) -> Result<
     (
         ConnectionResponse,
@@ -124,6 +127,24 @@ fn handle_game_connection_request(
             );
             ConnectionRequestError::Failed
         })?;
+
+    // Try find clan membership
+    let mut clan_membership = ClanMembership(None);
+    for (clan_entity, mut clan) in query_clans.iter_mut() {
+        if let Some(clan_member) = clan.find_offline_member_mut(&character.info.name) {
+            let &mut ClanMember::Offline { position, contribution, .. } = clan_member else {
+                unreachable!();
+            };
+
+            *clan_member = ClanMember::Online {
+                entity,
+                position,
+                contribution,
+            };
+            clan_membership = ClanMembership(Some(clan_entity));
+            break;
+        }
+    }
 
     // Update token
     login_token.game_client = Some(entity);
@@ -209,6 +230,7 @@ fn handle_game_connection_request(
             status_effects_regen,
             team: Team::default_character(),
             union_membership: character.union_membership.clone(),
+            clan_membership,
         },
     ));
 
@@ -247,6 +269,7 @@ pub fn game_server_authentication_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut GameClient), Without<CharacterInfo>>,
     mut query_world_client: Query<&mut WorldClient>,
+    mut query_clans: Query<(Entity, &mut Clan)>,
     mut login_tokens: ResMut<LoginTokens>,
     game_data: Res<GameData>,
 ) {
@@ -263,6 +286,7 @@ pub fn game_server_authentication_system(
                         message.login_token,
                         &message.password,
                         &mut query_world_client,
+                        &mut query_clans,
                     ) {
                         Ok((
                             connection_response,
@@ -621,6 +645,7 @@ pub fn game_server_main_system(
     mut client_entity_list: ResMut<ClientEntityList>,
     mut bank_events: EventWriter<BankEvent>,
     mut chat_command_events: EventWriter<ChatCommandEvent>,
+    mut clan_events: EventWriter<ClanEvent>,
     mut item_life_events: EventWriter<ItemLifeEvent>,
     mut npc_store_events: EventWriter<NpcStoreEvent>,
     mut party_events: EventWriter<PartyEvent>,
@@ -1469,7 +1494,19 @@ pub fn game_server_main_system(
                             }
                         }
                     }
-                    _ => warn!("Received unimplemented client message {:?}", message),
+                    ClientMessage::ClanCreate {
+                        name,
+                        description,
+                        mark,
+                    } => {
+                        clan_events.send(ClanEvent::Create {
+                            creator: entity,
+                            name,
+                            description,
+                            mark,
+                        });
+                    }
+                    _ => warn!("[GS] Received unimplemented client message {:?}", message),
                 }
             }
         },

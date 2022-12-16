@@ -27,12 +27,12 @@ use crate::game::{
         client_entity_teleport_zone, CharacterBundle, ItemDropBundle, MonsterBundle,
     },
     components::{
-        AbilityValues, BasicStats, BotAi, BotAiState, CharacterGender, CharacterInfo, ClientEntity,
-        ClientEntitySector, ClientEntityType, Command, EquipmentItemDatabase, GameClient,
-        HealthPoints, Inventory, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
-        NextCommand, PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList,
-        SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
-        UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+        AbilityValues, BasicStats, BotAi, BotAiState, CharacterGender, CharacterInfo,
+        ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType, Command,
+        EquipmentItemDatabase, GameClient, HealthPoints, Inventory, Level, ManaPoints, Money,
+        MotionData, MoveMode, MoveSpeed, NextCommand, PartyMembership, PassiveRecoveryTime,
+        PersonalStore, Position, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
+        StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
     },
     events::{ChatCommandEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
@@ -304,6 +304,7 @@ fn create_bot_entity(
                 status_effects_regen,
                 team: Team::default_character(),
                 union_membership: bot_data.union_membership,
+                clan_membership: ClanMembership::default(),
             },
         ))
         .id();

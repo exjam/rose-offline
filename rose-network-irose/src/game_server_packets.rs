@@ -15,18 +15,20 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, DroppedItem, Equipment,
-        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
-        Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot,
-        Stamina, StatPoints, Team, UnionMembership,
+        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, ClanLevel, ClanMark,
+        ClanMemberPosition, ClanPoints, ClanUniqueId, DroppedItem, Equipment, ExperiencePoints,
+        HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode,
+        MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina,
+        StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::{
         server::{
-            ActiveStatusEffects, CancelCastingSkillReason, CommandState, CraftInsertGemError,
-            LearnSkillError, LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError,
-            PartyMemberInfoOnline, PartyMemberLeave, PartyMemberList,
-            PersonalStoreTransactionStatus, PickupItemDropContent, PickupItemDropError,
+            ActiveStatusEffects, CancelCastingSkillReason, ClanCreateError, ClanMemberInfo,
+            CommandState, CraftInsertGemError, LearnSkillError, LearnSkillSuccess,
+            LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline, PartyMemberLeave,
+            PartyMemberList, PersonalStoreTransactionStatus, PickupItemDropContent,
+            PickupItemDropError,
         },
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
@@ -38,10 +40,11 @@ use crate::common_packets::{
     PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
     PacketReadItems, PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadPartyRules,
     PacketReadSkillSlot, PacketReadStatusEffects, PacketReadVehiclePartIndex,
-    PacketWriteCharacterGender, PacketWriteCommandState, PacketWriteDamage, PacketWriteEntityId,
-    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
-    PacketWriteMoveMode, PacketWritePartyMemberInfo, PacketWritePartyRules, PacketWriteSkillSlot,
-    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    PacketWriteCharacterGender, PacketWriteClanMemberPosition, PacketWriteCommandState,
+    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
+    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWritePartyMemberInfo,
+    PacketWritePartyRules, PacketWriteSkillSlot, PacketWriteStatusEffects,
+    PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -119,6 +122,7 @@ pub enum ServerPackets {
     PartyMemberRewardItem = 0x7d3,
     PartyMemberUpdateInfo = 0x7d5,
     PartyUpdateRules = 0x7d7,
+    ClanCommand = 0x7e0,
 }
 
 #[allow(dead_code)]
@@ -1687,7 +1691,7 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
             writer.write_null_terminated_utf8(personal_store_title);
         }
 
-        // TODO: Clan info - u32 clan id, u32 clan mark, u8 clan level, u8 clan rank
+        // TODO: Clan info - u32 clan id, u32 clan mark, u8 clan level, u8 clan rank, string clan name
         writer.into()
     }
 }
@@ -4031,6 +4035,168 @@ impl From<&PacketServerRepairedItemUsingNpc> for Packet {
         writer.write_u8(1);
         writer.write_item_slot_u8(packet.item_slot);
         writer.write_item_full(Some(&packet.item));
+        writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub enum PacketServerClanCommand {
+    ClanInfo {
+        id: ClanUniqueId,
+        name: String,
+        description: String,
+        mark: ClanMark,
+        level: ClanLevel,
+        points: ClanPoints,
+        money: Money,
+        position: ClanMemberPosition,
+        contribution: ClanPoints,
+    },
+    CharacterUpdateClan {
+        client_entity_id: ClientEntityId,
+        id: ClanUniqueId,
+        name: String,
+        mark: ClanMark,
+        level: ClanLevel,
+    },
+    ClanMemberConnected {
+        name: String,
+        channel_id: NonZeroUsize,
+    },
+    ClanMemberDisconnected {
+        name: String,
+    },
+    ClanCreateError {
+        error: ClanCreateError,
+    },
+    ClanMemberList {
+        members: Vec<ClanMemberInfo>,
+    },
+}
+
+impl From<&PacketServerClanCommand> for Packet {
+    fn from(packet: &PacketServerClanCommand) -> Self {
+        let mut writer = PacketWriter::new(ServerPackets::ClanCommand as u16);
+
+        match packet {
+            PacketServerClanCommand::ClanInfo {
+                id,
+                mark,
+                level,
+                position,
+                contribution,
+                points,
+                money,
+                name,
+                description,
+            } => {
+                writer.write_u8(0x33);
+
+                // tag_CLAN_ID
+                writer.write_u32(id.0);
+                match *mark {
+                    ClanMark::Premade {
+                        foreground,
+                        background,
+                    } => {
+                        writer.write_u16(background);
+                        writer.write_u16(foreground);
+                    }
+                    ClanMark::Custom { crc16 } => {
+                        writer.write_u16(0);
+                        writer.write_u16(crc16);
+                    }
+                };
+                writer.write_u8(level.0 as u8);
+                writer.write_clan_member_position_u8(position);
+
+                // tag_MY_CLAN
+                writer.write_u32(points.0 as u32);
+                writer.write_u32(0); // unused: clan storage rate
+                writer.write_i64(money.0);
+                writer.write_u16(0); // unused: member count
+                writer.write_u32(contribution.0 as u32);
+
+                // 20 clan skills
+                for _ in 0..20 {
+                    writer.write_u16(0); // Skill id
+                    writer.write_u32(0); // Expire secs
+                }
+
+                writer.write_null_terminated_utf8(name);
+                if !description.is_empty() {
+                    writer.write_null_terminated_utf8(description);
+                }
+            }
+            PacketServerClanCommand::CharacterUpdateClan {
+                client_entity_id,
+                id,
+                name,
+                mark,
+                level,
+            } => {
+                writer.write_u8(0x35);
+
+                writer.write_entity_id(*client_entity_id);
+
+                writer.write_u32(id.0);
+                match *mark {
+                    ClanMark::Premade {
+                        foreground,
+                        background,
+                    } => {
+                        writer.write_u16(background);
+                        writer.write_u16(foreground);
+                    }
+                    ClanMark::Custom { crc16 } => {
+                        writer.write_u16(0);
+                        writer.write_u16(crc16);
+                    }
+                };
+                writer.write_u8(level.0 as u8);
+                writer.write_u8(0);
+                writer.write_null_terminated_utf8(name);
+            }
+            PacketServerClanCommand::ClanMemberList { members } => {
+                writer.write_u8(0x72);
+
+                for member in members.iter() {
+                    writer.write_clan_member_position_u8(&member.position);
+                    writer.write_u8(member.channel_id.map_or(0, |value| value.get()) as u8);
+                    writer.write_u32(member.contribution.0 as u32);
+                    writer.write_u16(member.level.level as u16);
+                    writer.write_u16(member.job);
+                    writer.write_null_terminated_utf8(&member.name);
+                }
+            }
+            PacketServerClanCommand::ClanMemberConnected { name, channel_id } => {
+                writer.write_u8(0x73);
+
+                writer.write_u8(0); // unused: position
+                writer.write_u8(channel_id.get() as u8);
+                writer.write_u32(0); // unused: contribution
+                writer.write_u16(0); // unused: level
+                writer.write_u16(0); // unused: job
+                writer.write_null_terminated_utf8(name);
+            }
+            PacketServerClanCommand::ClanMemberDisconnected { name } => {
+                writer.write_u8(0x74);
+
+                writer.write_u8(0); // unused: position
+                writer.write_u8(0); // channel id 0 required for logged out
+                writer.write_u32(0); // unused: contribution
+                writer.write_u16(0); // unused: level
+                writer.write_u16(0); // unused: job
+                writer.write_null_terminated_utf8(name);
+            }
+            PacketServerClanCommand::ClanCreateError { error } => match error {
+                ClanCreateError::Failed => writer.write_u8(0x41),
+                ClanCreateError::NameExists => writer.write_u8(0x42),
+                ClanCreateError::NoPermission => writer.write_u8(0x43),
+                ClanCreateError::UnmetCondition => writer.write_u8(0x44),
+            },
+        }
+
         writer.into()
     }
 }

@@ -13,6 +13,7 @@ pub enum ClientPackets {
     CreateCharacter = 0x713,
     DeleteCharacter = 0x714,
     SelectCharacter = 0x715,
+    ClanCommand = 0x7e0,
 }
 
 #[derive(Debug)]
@@ -185,5 +186,31 @@ impl<'a> From<&'a PacketClientSelectCharacter<'a>> for Packet {
         writer.write_u8(0);
         writer.write_null_terminated_utf8(packet.name);
         writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub enum PacketClientClanCommand {
+    GetMemberList,
+    UpdateLevelAndJob { level: u16, job: u16 },
+}
+
+impl TryFrom<&Packet> for PacketClientClanCommand {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ClanCommand as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        match reader.read_u8()? {
+            8 => Ok(PacketClientClanCommand::GetMemberList),
+            15 => Ok(PacketClientClanCommand::UpdateLevelAndJob {
+                level: reader.read_u16()?,
+                job: reader.read_u16()?,
+            }),
+            _ => Err(PacketError::InvalidPacket),
+        }
     }
 }

@@ -1,5 +1,6 @@
 mod bank_event;
 mod chat_command_event;
+mod clan_event;
 mod damage_event;
 mod item_life_event;
 mod npc_store_event;
@@ -15,6 +16,7 @@ mod use_item_event;
 
 pub use bank_event::BankEvent;
 pub use chat_command_event::ChatCommandEvent;
+pub use clan_event::ClanEvent;
 pub use damage_event::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged};
 pub use item_life_event::ItemLifeEvent;
 pub use npc_store_event::NpcStoreEvent;

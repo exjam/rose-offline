@@ -162,7 +162,7 @@ pub fn login_server_system(
                         .send(ServerMessage::JoinServer(response))
                         .ok();
                 }
-                _ => warn!("Received unimplemented client message {:?}", message),
+                _ => warn!("[LS] Received unimplemented client message {:?}", message),
             }
         }
     });

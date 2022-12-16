@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
-        BasicStatType, CharacterGender, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot,
+        BasicStatType, CharacterGender, CharacterUniqueId, ClanMark, HotbarSlot, ItemSlot,
+        SkillSlot,
     },
     data::Password,
     messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
@@ -235,4 +236,10 @@ pub enum ClientMessage {
         npc_entity_id: ClientEntityId,
         item_slot: ItemSlot,
     },
+    ClanCreate {
+        name: String,
+        description: String,
+        mark: ClanMark,
+    },
+    ClanGetMemberList,
 }

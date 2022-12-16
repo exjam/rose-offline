@@ -9,14 +9,14 @@ use rose_data::{NpcId, ZoneId};
 
 use crate::game::{
     components::{
-        AbilityValues, Bank, BasicStats, CharacterInfo, ClientEntity, ClientEntityId,
-        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, DamageSources,
-        DroppedItem, EntityExpireTime, Equipment, ExperiencePoints, GameClient, HealthPoints,
-        Hotbar, Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode, MoveSpeed,
-        NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner, OwnerExpireTime,
-        PartyMembership, PartyOwner, PassiveRecoveryTime, Position, QuestState, SkillList,
-        SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
-        UnionMembership,
+        AbilityValues, Bank, BasicStats, CharacterInfo, ClanMembership, ClientEntity,
+        ClientEntityId, ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command,
+        DamageSources, DroppedItem, EntityExpireTime, Equipment, ExperiencePoints, GameClient,
+        HealthPoints, Hotbar, Inventory, ItemDrop, Level, ManaPoints, MotionData, MoveMode,
+        MoveSpeed, NextCommand, Npc, NpcAi, NpcStandingDirection, ObjectVariables, Owner,
+        OwnerExpireTime, PartyMembership, PartyOwner, PassiveRecoveryTime, Position, QuestState,
+        SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects,
+        StatusEffectsRegen, Team, UnionMembership,
     },
     messages::server::{ServerMessage, Teleport},
     resources::{ClientEntityList, ServerTime},
@@ -80,6 +80,7 @@ pub struct CharacterBundle {
     pub status_effects_regen: StatusEffectsRegen,
     pub team: Team,
     pub union_membership: UnionMembership,
+    pub clan_membership: ClanMembership,
 }
 
 #[derive(Bundle)]

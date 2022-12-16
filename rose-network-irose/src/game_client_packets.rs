@@ -9,7 +9,7 @@ use std::convert::{TryFrom, TryInto};
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, SkillId, VehiclePartIndex, WarpGateId};
 use rose_data_irose::{decode_ammo_index, encode_ammo_index};
 use rose_game_common::{
-    components::{BasicStatType, CharacterUniqueId, HotbarSlot, ItemSlot, SkillSlot},
+    components::{BasicStatType, CharacterUniqueId, ClanMark, HotbarSlot, ItemSlot, SkillSlot},
     messages::{
         client::{NpcStoreBuyItem, ReviveRequestType},
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
@@ -65,6 +65,7 @@ pub enum ClientPackets {
     PartyRequest = 0x7d0,
     PartyReply = 0x7d1,
     PartyUpdateRules = 0x7d7,
+    ClanCommand = 0x7e0,
 }
 
 #[derive(Debug)]
@@ -1503,5 +1504,41 @@ impl From<&PacketClientBankMoveItem> for Packet {
             }
         }
         writer.into()
+    }
+}
+
+#[derive(Debug)]
+pub enum PacketClientClanCommand {
+    Create {
+        name: String,
+        description: String,
+        mark: ClanMark,
+    },
+}
+
+impl TryFrom<&Packet> for PacketClientClanCommand {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ClanCommand as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        match reader.read_u8()? {
+            0 => Ok(PacketClientClanCommand::Create {
+                mark: {
+                    let background = reader.read_u16()?;
+                    let foreground = reader.read_u16()?;
+                    ClanMark::Premade {
+                        foreground,
+                        background,
+                    }
+                },
+                name: reader.read_null_terminated_utf8()?.to_string(),
+                description: reader.read_null_terminated_utf8()?.to_string(),
+            }),
+            _ => Err(PacketError::InvalidPacket),
+        }
     }
 }
