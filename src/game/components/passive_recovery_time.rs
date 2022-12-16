@@ -7,8 +7,8 @@ pub struct PassiveRecoveryTime {
     pub time: Duration,
 }
 
-impl PassiveRecoveryTime {
-    pub fn default() -> Self {
+impl Default for PassiveRecoveryTime {
+    fn default() -> Self {
         Self {
             time: Duration::from_secs(0),
         }

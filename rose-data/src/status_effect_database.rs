@@ -138,7 +138,7 @@ impl StatusEffectDatabase {
     }
 
     pub fn get_status_effect(&self, id: StatusEffectId) -> Option<&StatusEffectData> {
-        self.status_effects.get(&(id.get() as u16))
+        self.status_effects.get(&id.get())
     }
 
     pub fn get_decrease_summon_life_status_effect(&self) -> Option<&StatusEffectData> {

@@ -185,7 +185,7 @@ fn write_skill_page(writer: &mut PacketWriter, skill_page: Option<&SkillPage>) {
                 .and_then(|page| page.skills.get(index))
                 .copied()
                 .flatten()
-                .map_or(0, |x| x.get()) as u16,
+                .map_or(0, |x| x.get()),
         );
     }
 }
@@ -350,10 +350,10 @@ impl From<&PacketServerSelectCharacter> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::SelectCharacter as u16);
         let character_info = &packet.character_info;
         writer.write_character_gender_u8(character_info.gender);
-        writer.write_u16(packet.zone_id.get() as u16);
+        writer.write_u16(packet.zone_id.get());
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
-        writer.write_u16(character_info.revive_zone_id.get() as u16);
+        writer.write_u16(character_info.revive_zone_id.get());
 
         writer.write_u32(character_info.face as u32);
         writer.write_u32(character_info.hair as u32);
@@ -361,8 +361,8 @@ impl From<&PacketServerSelectCharacter> for Packet {
 
         // tagBasicInfo
         writer.write_u8(character_info.birth_stone);
-        writer.write_u8(character_info.face as u8);
-        writer.write_u8(character_info.hair as u8);
+        writer.write_u8(character_info.face);
+        writer.write_u8(character_info.hair);
         writer.write_u16(character_info.job);
         writer.write_u8(
             packet
@@ -1226,7 +1226,7 @@ impl From<&PacketServerTeleport> for Packet {
     fn from(packet: &PacketServerTeleport) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::Teleport as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_u16(packet.zone_id.get() as u16);
+        writer.write_u16(packet.zone_id.get());
         writer.write_f32(packet.x);
         writer.write_f32(packet.y);
         writer.write_u8(packet.run_mode);
@@ -1407,7 +1407,7 @@ impl From<&PacketServerSpawnEntityNpc> for Packet {
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_status_effects_flags_u32(&packet.status_effects);
-        writer.write_u16(packet.npc.id.get() as u16);
+        writer.write_u16(packet.npc.id.get());
         writer.write_u16(packet.npc.quest_index);
         writer.write_f32(packet.direction);
         writer.write_u16(0); // event status
@@ -1493,7 +1493,7 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
         writer.write_status_effects_flags_u32(&packet.status_effects);
-        writer.write_u16(packet.npc.id.get() as u16);
+        writer.write_u16(packet.npc.id.get());
         writer.write_u16(packet.npc.quest_index);
         writer.write_status_effects_values(&packet.status_effects);
         writer.into()
@@ -1650,7 +1650,7 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
             writer.write_equipment_ammo_part(packet.equipment.get_ammo_item(*index));
         }
 
-        writer.write_u16(packet.character_info.job as u16);
+        writer.write_u16(packet.character_info.job);
         writer.write_u8(packet.level.level as u8);
 
         for index in &[
@@ -2430,7 +2430,7 @@ impl From<&PacketServerLearnSkillResult> for Packet {
             }) => {
                 writer.write_u8(1); // Success
                 writer.write_skill_slot_u8(skill_slot);
-                writer.write_u16(skill_id.map_or(0, |skill_id| skill_id.get() as u16));
+                writer.write_u16(skill_id.map_or(0, |skill_id| skill_id.get()));
                 writer.write_u16(updated_skill_points.points as u16);
             }
             Err(error) => {
@@ -2495,7 +2495,7 @@ impl From<&PacketServerLevelUpSkillResult> for Packet {
             Ok((skill_slot, skill_id)) => {
                 writer.write_u8(0); // Success
                 writer.write_skill_slot_u8(skill_slot);
-                writer.write_u16(skill_id.get() as u16);
+                writer.write_u16(skill_id.get());
             }
             Err(error) => {
                 match error {
@@ -2537,7 +2537,7 @@ impl TryFrom<&Packet> for PacketServerRunNpcDeathTrigger {
 impl From<&PacketServerRunNpcDeathTrigger> for Packet {
     fn from(packet: &PacketServerRunNpcDeathTrigger) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::RunNpcDeathTrigger as u16);
-        writer.write_u16(packet.npc_id.get() as u16);
+        writer.write_u16(packet.npc_id.get());
         writer.into()
     }
 }
@@ -2848,7 +2848,7 @@ impl From<&PacketServerCastSkillSelf> for Packet {
     fn from(packet: &PacketServerCastSkillSelf) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CastSkillSelf as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_u16(packet.skill_id.get() as u16);
+        writer.write_u16(packet.skill_id.get());
         if let Some(cast_motion_id) = packet.cast_motion_id {
             writer.write_u8(cast_motion_id.get() as u8);
         }
@@ -2898,7 +2898,7 @@ impl From<&PacketServerCastSkillTargetEntity> for Packet {
         let mut writer = PacketWriter::new(ServerPackets::CastSkillTargetEntity as u16);
         writer.write_entity_id(packet.entity_id);
         writer.write_entity_id(packet.target_entity_id);
-        writer.write_u16(packet.skill_id.get() as u16);
+        writer.write_u16(packet.skill_id.get());
         writer.write_u16(packet.target_distance as u16);
         writer.write_f32(packet.target_position.x);
         writer.write_f32(packet.target_position.y);
@@ -2944,7 +2944,7 @@ impl From<&PacketServerCastSkillTargetPosition> for Packet {
     fn from(packet: &PacketServerCastSkillTargetPosition) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::CastSkillTargetPosition as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_u16(packet.skill_id.get() as u16);
+        writer.write_u16(packet.skill_id.get());
         writer.write_f32(packet.target_position.x);
         writer.write_f32(packet.target_position.y);
         if let Some(cast_motion_id) = packet.cast_motion_id {
@@ -3036,7 +3036,7 @@ impl From<&PacketServerApplySkillEffect> for Packet {
         writer.write_entity_id(packet.caster_entity_id);
 
         let data = SkillEffectData::new()
-            .with_skill_id(packet.skill_id.get() as u16)
+            .with_skill_id(packet.skill_id.get())
             .with_effect_success_1(packet.effect_success[0])
             .with_effect_success_2(packet.effect_success[1])
             .with_caster_intelligence(packet.caster_intelligence as u16);
@@ -3103,7 +3103,7 @@ impl From<&PacketServerApplySkillDamage> for Packet {
         writer.write_entity_id(packet.caster_entity_id);
 
         let data = SkillEffectData::new()
-            .with_skill_id(packet.skill_id.get() as u16)
+            .with_skill_id(packet.skill_id.get())
             .with_effect_success_1(packet.effect_success[0])
             .with_effect_success_2(packet.effect_success[1])
             .with_caster_intelligence(packet.caster_intelligence as u16);
@@ -3182,7 +3182,7 @@ impl From<&PacketServerFinishCastingSkill> for Packet {
     fn from(packet: &PacketServerFinishCastingSkill) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::FinishCastingSkill as u16);
         writer.write_entity_id(packet.entity_id);
-        writer.write_u16(packet.skill_id.get() as u16);
+        writer.write_u16(packet.skill_id.get());
         writer.into()
     }
 }
@@ -3728,7 +3728,7 @@ impl From<&PacketServerChangeNpcId> for Packet {
     fn from(packet: &PacketServerChangeNpcId) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::ChangeNpcId as u16);
         writer.write_entity_id(packet.client_entity_id);
-        writer.write_u16(packet.npc_id.get() as u16);
+        writer.write_u16(packet.npc_id.get());
         writer.into()
     }
 }

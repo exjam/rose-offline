@@ -7,8 +7,8 @@ pub struct DrivingTime {
     pub time: Duration,
 }
 
-impl DrivingTime {
-    pub fn default() -> Self {
+impl Default for DrivingTime {
+    fn default() -> Self {
         Self {
             time: Duration::from_secs(0),
         }

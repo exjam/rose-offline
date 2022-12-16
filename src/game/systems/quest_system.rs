@@ -162,7 +162,7 @@ fn quest_condition_quest_item(
         quest_system_resources
             .game_data
             .data_decoder
-            .decode_item_base1000(item_base1000.get() as usize)
+            .decode_item_base1000(item_base1000.get())
     });
 
     let equipment_index = equipment_index.and_then(|equipment_index| {
@@ -830,7 +830,7 @@ fn quest_reward_calculated_experience_points(
                 .basic_stats
                 .as_ref()
                 .map(|x| x.charm)
-                .unwrap_or(0) as i32,
+                .unwrap_or(0),
             quest_parameters
                 .source
                 .character_info
@@ -901,7 +901,7 @@ fn quest_reward_calculated_item(
                     .basic_stats
                     .as_ref()
                     .map(|x| x.charm)
-                    .unwrap_or(0) as i32,
+                    .unwrap_or(0),
                 quest_parameters
                     .source
                     .character_info
@@ -1010,7 +1010,7 @@ fn quest_reward_calculated_money(
                 .basic_stats
                 .as_ref()
                 .map(|x| x.charm)
-                .unwrap_or(0) as i32,
+                .unwrap_or(0),
             quest_parameters
                 .source
                 .character_info

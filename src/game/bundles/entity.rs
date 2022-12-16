@@ -137,7 +137,7 @@ impl MonsterBundle {
         let health_points = HealthPoints::new(ability_values.get_max_health());
         let level = Level::new(ability_values.get_level() as u32);
         let move_mode = MoveMode::Walk;
-        let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
+        let move_speed = MoveSpeed::new(ability_values.get_walk_speed());
 
         let spawn_position = match spawn_origin {
             SpawnOrigin::Summoned(_, spawn_position) => spawn_position,

@@ -6,11 +6,13 @@ pub enum PartyMembership {
     Member(Entity),
 }
 
-impl PartyMembership {
-    pub fn default() -> Self {
+impl Default for PartyMembership {
+    fn default() -> Self {
         Self::None
     }
+}
 
+impl PartyMembership {
     pub fn new(party_entity: Entity) -> Self {
         Self::Member(party_entity)
     }

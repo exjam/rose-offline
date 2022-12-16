@@ -283,7 +283,7 @@ fn ai_condition_health_percent(
     operator: AipOperatorType,
     value: i32,
 ) -> bool {
-    let current = ai_parameters.source.health_points.hp as i32;
+    let current = ai_parameters.source.health_points.hp;
     let max = ai_parameters.source.ability_values.get_max_health();
 
     compare_aip_value(operator, (100 * current) / max, value)
@@ -332,7 +332,7 @@ fn ai_condition_no_target_and_compare_attacker_ability_value(
             AipAbilityType::Attack => attacker.ability_values.get_attack_power(),
             AipAbilityType::Defence => attacker.ability_values.get_defence(),
             AipAbilityType::Resistance => attacker.ability_values.get_resistance(),
-            AipAbilityType::HealthPoints => attacker.health_points.hp as i32,
+            AipAbilityType::HealthPoints => attacker.health_points.hp,
             AipAbilityType::Charm => attacker.ability_values.get_charm(),
         };
 
@@ -357,7 +357,7 @@ fn ai_condition_source_ability_value(
         AipAbilityType::Attack => ai_parameters.source.ability_values.get_attack_power(),
         AipAbilityType::Defence => ai_parameters.source.ability_values.get_defence(),
         AipAbilityType::Resistance => ai_parameters.source.ability_values.get_resistance(),
-        AipAbilityType::HealthPoints => ai_parameters.source.health_points.hp as i32,
+        AipAbilityType::HealthPoints => ai_parameters.source.health_points.hp,
         AipAbilityType::Charm => ai_parameters.source.ability_values.get_charm(),
     };
 
@@ -560,7 +560,7 @@ fn get_aip_ability_value(
         AipAbilityType::Attack => ability_values.get_attack_power(),
         AipAbilityType::Defence => ability_values.get_defence(),
         AipAbilityType::Resistance => ability_values.get_resistance(),
-        AipAbilityType::HealthPoints => health_points.hp as i32,
+        AipAbilityType::HealthPoints => health_points.hp,
         AipAbilityType::Charm => ability_values.get_charm(),
     }
 }

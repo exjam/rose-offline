@@ -8,20 +8,13 @@ use crate::game::components::{
     CommandMove, CommandPickupItemDrop, CommandSit, CommandStop, ItemSlot, MoveMode,
 };
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct NextCommand {
     pub command: Option<CommandData>,
     pub has_sent_server_message: bool,
 }
 
 impl NextCommand {
-    pub fn default() -> Self {
-        Self {
-            command: None,
-            has_sent_server_message: false,
-        }
-    }
-
     pub fn with_command_skip_server_message(command: CommandData) -> Self {
         Self {
             command: Some(command),

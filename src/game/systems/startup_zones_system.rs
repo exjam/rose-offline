@@ -112,7 +112,7 @@ pub fn startup_zones_system(
                     .map(|ai_file_index| NpcAi::new(ai_file_index as usize));
 
                 let position = Position::new(npc.position, zone_data.id);
-                let move_speed = MoveSpeed::new(ability_values.get_walk_speed() as f32);
+                let move_speed = MoveSpeed::new(ability_values.get_walk_speed());
                 let level = Level::new(ability_values.get_level() as u32);
                 let health_points = HealthPoints::new(ability_values.get_max_health());
 

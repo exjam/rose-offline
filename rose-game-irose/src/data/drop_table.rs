@@ -143,10 +143,10 @@ impl DropTable for DropTableData {
                     * 0.5)
                     / rng.gen_range::<i32, _>(201..=300) as f32)
                     as i32;
-                item.durability = durability.min(100).max(0) as u8;
+                item.durability = durability.clamp(0, 100) as u8;
 
                 let life = ((npc_drop_item_rate + 200) * 80) / rng.gen_range(31..=130);
-                item.life = life.min(1000).max(0) as u16;
+                item.life = life.clamp(0, 1000) as u16;
 
                 if matches!(
                     item_reference.item_type,
@@ -165,7 +165,7 @@ impl DropTable for DropTableData {
                         * 0.4)
                         / (item_grade_rng + 30) as f32) as i32
                         - 1;
-                    item.grade = item_grade.min(3).max(0) as u8;
+                    item.grade = item_grade.clamp(0, 3) as u8;
                 }
 
                 Some(item.into())

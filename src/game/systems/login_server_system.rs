@@ -134,12 +134,12 @@ pub fn login_server_system(
                 ClientMessage::JoinServer(message) => {
                     let response = server_list
                         .world_servers
-                        .get(message.server_id as usize)
+                        .get(message.server_id)
                         .ok_or(JoinServerError::InvalidServerId)
                         .and_then(|world_server| {
                             world_server
                                 .channels
-                                .get(message.channel_id as usize)
+                                .get(message.channel_id)
                                 .ok_or(JoinServerError::InvalidChannelId)
                                 .map(|game_server| {
                                     login_client.login_token = login_tokens.generate(

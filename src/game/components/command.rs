@@ -96,6 +96,12 @@ pub struct Command {
     pub required_duration: Option<Duration>,
 }
 
+impl Default for Command {
+    fn default() -> Self {
+        Self::with_stop()
+    }
+}
+
 impl Command {
     pub fn new(command: CommandData, required_duration: Option<Duration>) -> Self {
         Self {
@@ -103,10 +109,6 @@ impl Command {
             duration: Duration::new(0, 0),
             required_duration,
         }
-    }
-
-    pub fn default() -> Self {
-        Self::with_stop()
     }
 
     pub fn get_target(&self) -> Option<Entity> {

@@ -57,7 +57,7 @@ impl AbilityValueCalculator for AbilityValuesData {
         if let Some(owner_level) = owner_level {
             let summon_skill_level = summon_skill_level.unwrap_or(1);
 
-            level = owner_level as i32;
+            level = owner_level;
             max_health =
                 (npc_data.health_points * (summon_skill_level + 16) * (owner_level + 85)) / 2600;
             attack_power = (attack_power * (summon_skill_level + 22) * (owner_level + 100)) / 4000;
@@ -1647,7 +1647,7 @@ fn calculate_run_speed(
     item_speed += equipment
         .get_equipment_item(EquipmentIndex::Back)
         .filter(|item| !item.is_broken())
-        .and_then(|item| item_database.get_back_item(item.item.item_number as usize))
+        .and_then(|item| item_database.get_back_item(item.item.item_number))
         .map(|item_data| item_data.move_speed)
         .unwrap_or(0) as f32;
 
@@ -1718,7 +1718,7 @@ fn calculate_max_health(
     };
 
     let max_health = (level.level as i32 + level_add) * level_multiplier
-        + (basic_stats.strength as i32) * strength_multipler
+        + basic_stats.strength * strength_multipler
         + equipment_ability_values.max_health;
 
     let passive_max_health = passive_ability_values.value.max_health
@@ -1755,7 +1755,7 @@ fn calculate_max_mana(
     };
 
     let max_mana = ((level.level as i32 + level_add) as f32 * level_multiplier) as i32
-        + (basic_stats.intelligence as i32) * int_multipler
+        + basic_stats.intelligence * int_multipler
         + equipment_ability_values.max_mana;
 
     let passive_max_mana = passive_ability_values.value.max_mana
@@ -1782,7 +1782,7 @@ fn calculate_attack_power(
     let get_ammo_quality = |item_database: &ItemDatabase, equipment: &Equipment, ammo_index| {
         equipment
             .get_ammo_item(ammo_index)
-            .and_then(|item| item_database.get_material_item(item.item.item_number as usize))
+            .and_then(|item| item_database.get_material_item(item.item.item_number))
             .map(|item| item.item_data.quality)
             .unwrap_or(0) as f32
     };
@@ -1792,7 +1792,7 @@ fn calculate_attack_power(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_weapon_item(item.item.item_number as usize)
+                .get_weapon_item(item.item.item_number)
                 .map(|item_data| (item, item_data))
         });
 
@@ -1868,7 +1868,7 @@ fn calculate_attack_power(
         passive_ability_values.get_passive_weapon_attack_power_rate(weapon_type) as f32 / 100.0;
     let passive_attack_power = passive_ability_values
         .get_passive_weapon_attack_power_value(weapon_type) as f32
-        + (attack_power as f32 * passive_attack_rate);
+        + (attack_power * passive_attack_rate);
 
     (attack_power + passive_attack_power) as i32
 }
@@ -1888,7 +1888,7 @@ fn calculate_vehicle_attack_power(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_vehicle_item(item.item.item_number as usize)
+                .get_vehicle_item(item.item.item_number)
                 .map(|item_data| item_data.attack_power as f32)
         })
         .unwrap_or(0.0);
@@ -1951,12 +1951,12 @@ fn calculate_vehicle_attack_speed(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_vehicle_item(item.item.item_number as usize)
+                .get_vehicle_item(item.item.item_number)
                 .map(|item_data| item_data.attack_speed as f32)
         })
         .unwrap_or(0.0);
 
-    let attack_speed = 1500.0 / (arms_attack_speed + 5.0) as f32;
+    let attack_speed = 1500.0 / (arms_attack_speed + 5.0);
 
     (attack_speed + vehicle_ability_values.attack_speed as f32) as i32
 }
@@ -1974,7 +1974,7 @@ fn calculate_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -
 
     let scale = 1.0;
 
-    weapon_attack_range as i32 + (scale * 120.0) as i32
+    weapon_attack_range + (scale * 120.0) as i32
 }
 
 fn calculate_vehicle_attack_range(item_database: &ItemDatabase, equipment: &Equipment) -> i32 {
@@ -1982,7 +1982,7 @@ fn calculate_vehicle_attack_range(item_database: &ItemDatabase, equipment: &Equi
         .get_vehicle_item(VehiclePartIndex::Arms)
         .and_then(|item| {
             item_database
-                .get_vehicle_item(item.item.item_number as usize)
+                .get_vehicle_item(item.item.item_number)
                 .map(|item_data| item_data.attack_range)
         })
         .unwrap_or(0);
@@ -2006,7 +2006,7 @@ fn calculate_hit(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_weapon_item(item.item.item_number as usize)
+                .get_weapon_item(item.item.item_number)
                 .map(|item_data| (item, item_data))
         }) {
         let weapon_quality = weapon_data.item_data.quality as f32;
@@ -2022,7 +2022,7 @@ fn calculate_hit(
     } + equipment_ability_values.hit as f32;
 
     let passive_hit_rate = passive_ability_values.rate.hit as f32 / 100.0;
-    let passive_hit = passive_ability_values.value.hit as f32 + (hit as f32 * passive_hit_rate);
+    let passive_hit = passive_ability_values.value.hit as f32 + (hit * passive_hit_rate);
 
     (hit + passive_hit) as i32
 }
@@ -2043,7 +2043,7 @@ fn calculate_vehicle_hit(
         .filter(|item| !item.is_broken())
         .and_then(|item| {
             item_database
-                .get_vehicle_item(item.item.item_number as usize)
+                .get_vehicle_item(item.item.item_number)
                 .map(|item_data| item_data.item_data.quality as f32)
         }) {
         (concentration + 10.0) * 0.8 + level * 0.5 + arms_item_quality * 1.2
@@ -2052,7 +2052,7 @@ fn calculate_vehicle_hit(
     } + vehicle_ability_values.hit as f32;
 
     let passive_hit_rate = passive_ability_values.rate.hit as f32 / 100.0;
-    let passive_hit = passive_ability_values.value.hit as f32 + (hit as f32 * passive_hit_rate);
+    let passive_hit = passive_ability_values.value.hit as f32 + (hit * passive_hit_rate);
 
     (hit + passive_hit) as i32
 }
@@ -2101,7 +2101,7 @@ fn calculate_defence(
 
     let passive_defence_rate = passive_ability_values.rate.defence as f32 / 100.0;
     let passive_defence =
-        passive_ability_values.value.defence as f32 + (defence as f32 * passive_defence_rate);
+        passive_ability_values.value.defence as f32 + (defence * passive_defence_rate);
 
     let mut defence = (defence + passive_defence) as i32;
 
@@ -2151,8 +2151,8 @@ fn calculate_resistance(
         + equipment_ability_values.resistance as f32;
 
     let passive_resistance_rate = passive_ability_values.rate.resistance as f32 / 100.0;
-    let passive_resistance = passive_ability_values.value.resistance as f32
-        + (resistance as f32 * passive_resistance_rate);
+    let passive_resistance =
+        passive_ability_values.value.resistance as f32 + (resistance * passive_resistance_rate);
 
     (resistance + passive_resistance) as i32
 }
@@ -2168,7 +2168,7 @@ fn calculate_critical(
 
     let passive_critical_rate = passive_ability_values.rate.critical as f32 / 100.0;
     let passive_critical =
-        passive_ability_values.value.critical as f32 + (critical as f32 * passive_critical_rate);
+        passive_ability_values.value.critical as f32 + (critical * passive_critical_rate);
 
     (critical + passive_critical) as i32
 }
@@ -2185,7 +2185,7 @@ fn calculate_vehicle_critical(
 
     let passive_critical_rate = passive_ability_values.rate.critical as f32 / 100.0;
     let passive_critical =
-        passive_ability_values.value.critical as f32 + (critical as f32 * passive_critical_rate);
+        passive_ability_values.value.critical as f32 + (critical * passive_critical_rate);
 
     (critical + passive_critical) as i32
 }
@@ -2233,8 +2233,7 @@ fn calculate_avoid(
         + equipment_ability_values.avoid as f32;
 
     let passive_avoid_rate = passive_ability_values.rate.avoid as f32 / 100.0;
-    let passive_avoid =
-        passive_ability_values.value.avoid as f32 + (avoid as f32 * passive_avoid_rate);
+    let passive_avoid = passive_ability_values.value.avoid as f32 + (avoid * passive_avoid_rate);
 
     (avoid + passive_avoid) as i32
 }
@@ -2250,8 +2249,7 @@ fn calculate_vehicle_avoid(
     let avoid = (dexterity + 10.0) * 0.8 + level * 0.5 + vehicle_ability_values.avoid as f32;
 
     let passive_avoid_rate = passive_ability_values.rate.avoid as f32 / 100.0;
-    let passive_avoid =
-        passive_ability_values.value.avoid as f32 + (avoid as f32 * passive_avoid_rate);
+    let passive_avoid = passive_ability_values.value.avoid as f32 + (avoid * passive_avoid_rate);
 
     (avoid + passive_avoid) as i32
 }

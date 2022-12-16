@@ -51,9 +51,7 @@ pub fn experience_points_system(
             game_client,
         )) = entity_query.get_mut(reward_xp_event.entity)
         {
-            experience_points.xp = experience_points
-                .xp
-                .saturating_add(reward_xp_event.xp as u64);
+            experience_points.xp = experience_points.xp.saturating_add(reward_xp_event.xp);
 
             if reward_xp_event.stamina {
                 let reward_stamina = game_data.ability_value_calculator.calculate_give_stamina(

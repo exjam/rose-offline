@@ -35,7 +35,7 @@ impl RoseFile for LtbFile {
             for _ in 0..columns {
                 let position = reader.read_u32()?;
                 let size = reader.read_u16()?;
-                cells.push((position, size as u16));
+                cells.push((position, size));
             }
         }
 

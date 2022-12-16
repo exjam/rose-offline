@@ -171,7 +171,7 @@ impl StlFile {
     }
 
     pub fn get_text_string(&self, language: usize, key: &str) -> Option<&str> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.text.get(*index as usize)?;
         unsafe {
@@ -182,7 +182,7 @@ impl StlFile {
     }
 
     pub fn get_comment_string(&self, language: usize, key: &str) -> Option<&str> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.comment.get(*index as usize)?;
         unsafe {
@@ -193,7 +193,7 @@ impl StlFile {
     }
 
     pub fn get_quest1_string(&self, language: usize, key: &str) -> Option<&str> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.quest1.get(*index as usize)?;
         unsafe {
@@ -204,7 +204,7 @@ impl StlFile {
     }
 
     pub fn get_quest2_string(&self, language: usize, key: &str) -> Option<&str> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
         let index = self.string_keys.get(key)?;
         let (offset, size) = language.quest2.get(*index as usize)?;
         unsafe {
@@ -215,7 +215,7 @@ impl StlFile {
     }
 
     pub fn get_normal_entry(&self, language: usize, index: usize) -> Option<StlNormalEntry<'_>> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
 
         Some(StlNormalEntry {
             text: {
@@ -228,7 +228,7 @@ impl StlFile {
     }
 
     pub fn get_item_entry(&self, language: usize, index: usize) -> Option<StlItemEntry<'_>> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
 
         Some(StlItemEntry {
             name: {
@@ -247,7 +247,7 @@ impl StlFile {
     }
 
     pub fn get_quest_entry(&self, language: usize, index: usize) -> Option<StlQuestEntry<'_>> {
-        let language = self.languages.get(language as usize)?;
+        let language = self.languages.get(language)?;
 
         Some(StlQuestEntry {
             name: {

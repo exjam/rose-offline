@@ -342,7 +342,7 @@ fn create_random_bot_entities(
 
         if let Some(bot_entity) = create_bot_entity(
             chat_command_params,
-            format!("Friend {}", chat_command_params.bot_list.len() as usize),
+            format!("Friend {}", chat_command_params.bot_list.len()),
             *genders.choose(&mut rng).unwrap(),
             *faces.choose(&mut rng).unwrap() as u8,
             *hair.choose(&mut rng).unwrap() as u8,

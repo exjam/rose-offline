@@ -258,7 +258,7 @@ impl<'a> PacketReadItems for PacketReader<'a> {
         if let Some(item_type) = decode_item_type(item.item_type() as usize) {
             return Ok(StackableItem::new(
                 ItemReference::new(item_type, item.item_number() as usize),
-                item.quantity() as u32,
+                item.quantity(),
             ));
         }
 
