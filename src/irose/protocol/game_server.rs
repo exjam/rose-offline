@@ -658,6 +658,7 @@ impl GameServer {
                         target_entity_id: data.target_entity_id,
                         team: data.team,
                         personal_store_info: data.personal_store_info,
+                        clan_membership: data.clan_membership,
                     }))
                     .await?;
             }

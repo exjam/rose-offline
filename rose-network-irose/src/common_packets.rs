@@ -11,7 +11,7 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveStatusEffect, CharacterGender, ClanMemberPosition, Equipment, HealthPoints,
+        ActiveStatusEffect, CharacterGender, ClanMark, ClanMemberPosition, Equipment, HealthPoints,
         HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot, Stamina,
     },
     data::Damage,
@@ -1144,5 +1144,47 @@ impl PacketWriteClanMemberPosition for PacketWriter {
             ClanMemberPosition::Master => 6,
         };
         self.write_u8(value);
+    }
+}
+
+pub trait PacketReadClanMark {
+    fn read_clan_mark_u32(&mut self) -> Result<ClanMark, PacketError>;
+}
+
+impl<'a> PacketReadClanMark for PacketReader<'a> {
+    fn read_clan_mark_u32(&mut self) -> Result<ClanMark, PacketError> {
+        let background = self.read_u16()?;
+        let foreground = self.read_u16()?;
+
+        if background == 0 {
+            Ok(ClanMark::Custom { crc16: foreground })
+        } else {
+            Ok(ClanMark::Premade {
+                foreground,
+                background,
+            })
+        }
+    }
+}
+
+pub trait PacketWriteClanMark {
+    fn write_clan_mark_u32(&mut self, mark: &ClanMark);
+}
+
+impl PacketWriteClanMark for PacketWriter {
+    fn write_clan_mark_u32(&mut self, mark: &ClanMark) {
+        match *mark {
+            ClanMark::Premade {
+                foreground,
+                background,
+            } => {
+                self.write_u16(background);
+                self.write_u16(foreground);
+            }
+            ClanMark::Custom { crc16 } => {
+                self.write_u16(0);
+                self.write_u16(crc16);
+            }
+        };
     }
 }

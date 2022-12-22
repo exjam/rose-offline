@@ -24,11 +24,11 @@ use rose_game_common::{
     data::Damage,
     messages::{
         server::{
-            ActiveStatusEffects, CancelCastingSkillReason, ClanCreateError, ClanMemberInfo,
-            CommandState, CraftInsertGemError, LearnSkillError, LearnSkillSuccess,
-            LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline, PartyMemberLeave,
-            PartyMemberList, PersonalStoreTransactionStatus, PickupItemDropContent,
-            PickupItemDropError,
+            ActiveStatusEffects, CancelCastingSkillReason, CharacterClanMembership,
+            ClanCreateError, ClanMemberInfo, CommandState, CraftInsertGemError, LearnSkillError,
+            LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline,
+            PartyMemberLeave, PartyMemberList, PersonalStoreTransactionStatus,
+            PickupItemDropContent, PickupItemDropError,
         },
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
@@ -36,15 +36,15 @@ use rose_game_common::{
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadCommandState, PacketReadDamage,
-    PacketReadEntityId, PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot,
-    PacketReadItems, PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadPartyRules,
-    PacketReadSkillSlot, PacketReadStatusEffects, PacketReadVehiclePartIndex,
-    PacketWriteCharacterGender, PacketWriteClanMemberPosition, PacketWriteCommandState,
-    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
-    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWritePartyMemberInfo,
-    PacketWritePartyRules, PacketWriteSkillSlot, PacketWriteStatusEffects,
-    PacketWriteVehiclePartIndex,
+    PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadClanMark,
+    PacketReadClanMemberPosition, PacketReadCommandState, PacketReadDamage, PacketReadEntityId,
+    PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
+    PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadPartyRules, PacketReadSkillSlot,
+    PacketReadStatusEffects, PacketReadVehiclePartIndex, PacketWriteCharacterGender,
+    PacketWriteClanMark, PacketWriteClanMemberPosition, PacketWriteCommandState, PacketWriteDamage,
+    PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot,
+    PacketWriteItems, PacketWriteMoveMode, PacketWritePartyMemberInfo, PacketWritePartyRules,
+    PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -1520,6 +1520,7 @@ pub struct PacketServerSpawnEntityCharacter {
     pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
     pub personal_store_info: Option<(i32, String)>,
+    pub clan_membership: Option<CharacterClanMembership>,
 }
 
 impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
@@ -1587,6 +1588,21 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
             None
         };
 
+        let clan_membership = |reader: &mut PacketReader| -> Option<CharacterClanMembership> {
+            let clan_unique_id = ClanUniqueId(reader.read_u32().ok()?);
+            let mark = reader.read_clan_mark_u32().ok()?;
+            let level = ClanLevel(reader.read_u8().ok()? as u32);
+            let _clan_member_position = reader.read_u8().ok()?;
+            let name = reader.read_null_terminated_utf8().ok()?.to_string();
+
+            Some(CharacterClanMembership {
+                clan_unique_id,
+                mark,
+                level,
+                name,
+            })
+        }(&mut reader);
+
         Ok(Self {
             entity_id,
             position: Vec3::new(position_x, position_y, position_z),
@@ -1618,6 +1634,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
             move_speed,
             passive_attack_speed,
             personal_store_info,
+            clan_membership,
         })
     }
 }
@@ -1691,7 +1708,14 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
             writer.write_null_terminated_utf8(personal_store_title);
         }
 
-        // TODO: Clan info - u32 clan id, u32 clan mark, u8 clan level, u8 clan rank, string clan name
+        if let Some(clan_membership) = packet.clan_membership.as_ref() {
+            writer.write_u32(clan_membership.clan_unique_id.0);
+            writer.write_clan_mark_u32(&clan_membership.mark);
+            writer.write_u8(clan_membership.level.0 as u8);
+            writer.write_u8(0);
+            writer.write_null_terminated_utf8(&clan_membership.name);
+        }
+
         writer.into()
     }
 }
@@ -4114,19 +4138,7 @@ impl From<&PacketServerClanCommand> for Packet {
 
                 // tag_CLAN_ID
                 writer.write_u32(id.0);
-                match *mark {
-                    ClanMark::Premade {
-                        foreground,
-                        background,
-                    } => {
-                        writer.write_u16(background);
-                        writer.write_u16(foreground);
-                    }
-                    ClanMark::Custom { crc16 } => {
-                        writer.write_u16(0);
-                        writer.write_u16(crc16);
-                    }
-                };
+                writer.write_clan_mark_u32(mark);
                 writer.write_u8(level.0 as u8);
                 writer.write_clan_member_position_u8(position);
 
@@ -4160,19 +4172,7 @@ impl From<&PacketServerClanCommand> for Packet {
                 writer.write_entity_id(*client_entity_id);
 
                 writer.write_u32(id.0);
-                match *mark {
-                    ClanMark::Premade {
-                        foreground,
-                        background,
-                    } => {
-                        writer.write_u16(background);
-                        writer.write_u16(foreground);
-                    }
-                    ClanMark::Custom { crc16 } => {
-                        writer.write_u16(0);
-                        writer.write_u16(crc16);
-                    }
-                };
+                writer.write_clan_mark_u32(mark);
                 writer.write_u8(level.0 as u8);
                 writer.write_u8(0);
                 writer.write_null_terminated_utf8(name);
