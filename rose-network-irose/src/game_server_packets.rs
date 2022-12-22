@@ -4118,6 +4118,125 @@ pub enum PacketServerClanCommand {
     },
 }
 
+impl TryFrom<&Packet> for PacketServerClanCommand {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::ClanCommand as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        match reader.read_u8()? {
+            0x33 => {
+                let id = ClanUniqueId(reader.read_u32()?);
+                let mark = reader.read_clan_mark_u32()?;
+                let level = ClanLevel(reader.read_u8()? as u32);
+                let position = reader.read_clan_member_position_u8()?;
+
+                let points = ClanPoints(reader.read_u32()? as u64);
+                let _storage_rate = reader.read_u32()?;
+                let money = Money(reader.read_i64()?);
+                let _member_count = reader.read_u16()?;
+                let contribution = ClanPoints(reader.read_u32()? as u64);
+
+                for _ in 0..20 {
+                    let _skill_id = reader.read_u16()?;
+                    let _expire_secs = reader.read_u32()?;
+                }
+
+                let name = reader.read_null_terminated_utf8()?.to_string();
+                let description = reader
+                    .read_null_terminated_utf8()
+                    .unwrap_or_default()
+                    .to_string();
+
+                Ok(Self::ClanInfo {
+                    id,
+                    name,
+                    description,
+                    mark,
+                    level,
+                    points,
+                    money,
+                    position,
+                    contribution,
+                })
+            }
+            0x35 => {
+                let client_entity_id = reader.read_entity_id()?;
+                let id = ClanUniqueId(reader.read_u32()?);
+                let mark = reader.read_clan_mark_u32()?;
+                let level = ClanLevel(reader.read_u8()? as u32);
+                let _position = reader.read_clan_member_position_u8()?;
+                let name = reader.read_null_terminated_utf8()?.to_string();
+
+                Ok(Self::CharacterUpdateClan {
+                    client_entity_id,
+                    id,
+                    name,
+                    mark,
+                    level,
+                })
+            }
+            0x41 => Ok(Self::ClanCreateError {
+                error: ClanCreateError::Failed,
+            }),
+            0x42 => Ok(Self::ClanCreateError {
+                error: ClanCreateError::NameExists,
+            }),
+            0x43 => Ok(Self::ClanCreateError {
+                error: ClanCreateError::NoPermission,
+            }),
+            0x44 => Ok(Self::ClanCreateError {
+                error: ClanCreateError::UnmetCondition,
+            }),
+            0x72 => {
+                let try_read_clan_member =
+                    |reader: &mut PacketReader| -> Result<ClanMemberInfo, PacketError> {
+                        let position = reader.read_clan_member_position_u8()?;
+                        let channel_id = NonZeroUsize::new(reader.read_u8()? as usize);
+                        let contribution = ClanPoints(reader.read_u32()? as u64);
+                        let level = Level::new(reader.read_u16()? as u32);
+                        let job = reader.read_u16()?;
+                        let name = reader.read_null_terminated_utf8()?.to_string();
+
+                        Ok(ClanMemberInfo {
+                            name,
+                            position,
+                            contribution,
+                            channel_id,
+                            level,
+                            job,
+                        })
+                    };
+
+                let mut members = Vec::new();
+                while let Ok(member) = try_read_clan_member(&mut reader) {
+                    members.push(member);
+                }
+
+                Ok(Self::ClanMemberList { members })
+            }
+            0x73 | 0x74 => {
+                let _position = reader.read_u8()?;
+                let channel_id = NonZeroUsize::new(reader.read_u8()? as usize);
+                let _contribution = reader.read_u32()?;
+                let _level = reader.read_u16()?;
+                let _job = reader.read_u16()?;
+                let name = reader.read_null_terminated_utf8()?.to_string();
+
+                if let Some(channel_id) = channel_id {
+                    Ok(Self::ClanMemberConnected { name, channel_id })
+                } else {
+                    Ok(Self::ClanMemberDisconnected { name })
+                }
+            }
+            _ => Err(PacketError::InvalidPacket),
+        }
+    }
+}
+
 impl From<&PacketServerClanCommand> for Packet {
     fn from(packet: &PacketServerClanCommand) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::ClanCommand as u16);
