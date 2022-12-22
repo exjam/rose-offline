@@ -3,6 +3,9 @@ use std::sync::Arc;
 use crate::StringDatabase;
 
 pub struct ClientStrings {
+    pub invalid_name: &'static str,
+    pub duration_seconds: &'static str,
+
     pub equip_require_job: &'static str,
     pub item_class: &'static str,
     pub item_durability: &'static str,
@@ -41,10 +44,40 @@ pub struct ClientStrings {
     pub skill_target: &'static str,
     pub skill_type: &'static str,
 
-    pub duration_seconds: &'static str,
-
     pub bank_tab: &'static str,
     pub bank_tab_premium: &'static str,
+
+    pub clan_name: &'static str,
+    pub clan_level: &'static str,
+    pub clan_point: &'static str,
+    pub clan_slogan: &'static str,
+    pub clan_money: &'static str,
+    pub clan_ally: &'static str,
+    pub clan_member_contribution: &'static str,
+    pub clan_member_count: &'static str,
+    pub clan_promote_error: &'static str,
+    pub clan_created: &'static str,
+    pub clan_joined: &'static str,
+    pub clan_destroy_success: &'static str,
+    pub clan_create_error: &'static str,
+    pub clan_create_error_name: &'static str,
+    pub clan_create_error_permission: &'static str,
+    pub clan_destroyed: &'static str,
+    pub clan_destroy_error: &'static str,
+    pub clan_destroy_error_permission: &'static str,
+    pub clan_join_member_accepted: &'static str,
+    pub clan_join_error: &'static str,
+    pub clan_join_error_permission: &'static str,
+    pub clan_join_error_already_in_clan: &'static str,
+    pub clan_kick_success: &'static str,
+    pub clan_kicked: &'static str,
+    pub clan_quit: &'static str,
+    pub clan_invited: &'static str,
+    pub clan_invite_rejected: &'static str,
+    pub clan_create_error_condition: &'static str,
+    pub clan_create_conditions: &'static str,
+    pub clan_create_error_slogan: &'static str,
+    pub clan_error_permission: &'static str,
 
     pub _string_database: Arc<StringDatabase>,
 }
