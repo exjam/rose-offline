@@ -42,8 +42,8 @@ use crate::game::{
             PersonalStoreBuyItem, QuestDelete, ReviveRequestType, SetHotbarSlot,
         },
         server::{
-            self, ConnectionRequestError, JoinZoneResponse, LogoutReply, QuestDeleteResult,
-            ServerMessage, UpdateBasicStat,
+            self, ConnectionRequestError, JoinZoneResponse, QuestDeleteResult, ServerMessage,
+            UpdateBasicStat,
         },
     },
     resources::{
@@ -954,7 +954,7 @@ pub fn game_server_main_system(
 
                         client
                             .server_message_tx
-                            .send(ServerMessage::LogoutReply(LogoutReply { result: Ok(()) }))
+                            .send(ServerMessage::LogoutSuccess)
                             .ok();
 
                         client_entity_leave_zone(

@@ -2264,6 +2264,26 @@ pub struct PacketServerLogoutResult {
     pub result: Result<(), Duration>,
 }
 
+impl TryFrom<&Packet> for PacketServerLogoutResult {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, PacketError> {
+        if packet.command != ServerPackets::LogoutResult as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let duration = reader.read_u16()?;
+        if duration == 0 {
+            Ok(Self { result: Ok(()) })
+        } else {
+            Ok(Self {
+                result: Err(Duration::from_secs(duration as u64)),
+            })
+        }
+    }
+}
+
 impl From<&PacketServerLogoutResult> for Packet {
     fn from(packet: &PacketServerLogoutResult) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::LogoutResult as u16);

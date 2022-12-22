@@ -14,12 +14,12 @@ use rose_game_common::{
         },
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
-            CastSkillTargetPosition, LevelUpSkillResult, LocalChat, LogoutReply, MoveToggle,
-            OpenPersonalStore, PickupItemDropResult, QuestDeleteResult, QuestTriggerResult,
-            RemoveEntities, ServerMessage, ShoutChat, SpawnEntityItemDrop, SpawnEntityMonster,
-            SpawnEntityNpc, UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel,
-            UpdateSpeed, UpdateStatusEffects, UpdateVehiclePart, UpdateXpStamina, UseEmote,
-            UseInventoryItem, UseItem, Whisper,
+            CastSkillTargetPosition, LevelUpSkillResult, LocalChat, MoveToggle, OpenPersonalStore,
+            PickupItemDropResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
+            ServerMessage, ShoutChat, SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc,
+            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed,
+            UpdateStatusEffects, UpdateVehiclePart, UpdateXpStamina, UseEmote, UseInventoryItem,
+            UseItem, Whisper,
         },
     },
 };
@@ -935,14 +935,20 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::LogoutReply(LogoutReply { result }) => {
+            ServerMessage::LogoutSuccess => {
                 client
                     .connection
-                    .write_packet(Packet::from(&PacketServerLogoutResult { result }))
+                    .write_packet(Packet::from(&PacketServerLogoutResult { result: Ok(()) }))
                     .await?;
-                if result.is_ok() {
-                    return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
-                }
+                return Err(ProtocolServerError::ServerInitiatedDisconnect.into());
+            }
+            ServerMessage::LogoutFailed { wait_duration } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerLogoutResult {
+                        result: Err(wait_duration),
+                    }))
+                    .await?;
             }
             ServerMessage::QuestTriggerResult(QuestTriggerResult {
                 success,

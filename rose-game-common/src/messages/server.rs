@@ -422,11 +422,6 @@ pub struct UpdateXpStamina {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LogoutReply {
-    pub result: Result<(), Duration>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct QuestTriggerResult {
     pub success: bool,
     pub trigger_hash: QuestTriggerHash,
@@ -721,7 +716,10 @@ pub enum ServerMessage {
     RewardItems(Vec<(ItemSlot, Option<Item>)>),
     RewardMoney(Money),
     Whisper(Whisper),
-    LogoutReply(LogoutReply),
+    LogoutSuccess,
+    LogoutFailed {
+        wait_duration: Duration,
+    },
     ReturnToCharacterSelect,
     QuestTriggerResult(QuestTriggerResult),
     QuestDeleteResult(QuestDeleteResult),
