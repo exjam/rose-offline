@@ -1,3 +1,5 @@
+use std::num::NonZeroU32;
+
 use serde::{Deserialize, Serialize};
 
 use rose_data::{
@@ -147,4 +149,6 @@ pub trait AbilityValueCalculator {
     ) -> Option<ItemSlot>;
 
     fn calculate_repair_from_npc_price(&self, item: &EquipmentItem) -> Money;
+
+    fn calculate_clan_max_members(&self, level: NonZeroU32) -> usize;
 }

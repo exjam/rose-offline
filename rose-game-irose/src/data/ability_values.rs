@@ -2,7 +2,7 @@ use core::f32;
 use log::error;
 use rand::Rng;
 use rose_data_irose::IroseSkillPageType;
-use std::sync::Arc;
+use std::{num::NonZeroU32, sync::Arc};
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemClass, ItemDatabase,
@@ -1054,6 +1054,18 @@ impl AbilityValueCalculator for AbilityValuesData {
                 * (item.durability + 10) as f32
                 * (1100 - item.life) as f32) as i64,
         )
+    }
+
+    fn calculate_clan_max_members(&self, level: NonZeroU32) -> usize {
+        match level.get() {
+            1 => 15,
+            2 => 20,
+            3 => 25,
+            4 => 30,
+            5 => 36,
+            6 => 43,
+            _ => 50,
+        }
     }
 }
 

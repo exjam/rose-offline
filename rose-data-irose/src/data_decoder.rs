@@ -4,9 +4,9 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 use rose_data::{
-    AbilityType, AmmoIndex, DataDecoder, EffectBulletMoveType, EquipmentIndex, ItemClass,
-    ItemReference, ItemType, SkillActionMode, SkillBasicCommand, SkillTargetFilter, SkillType,
-    StatusEffectClearedByType, StatusEffectType, VehiclePartIndex, VehicleType,
+    AbilityType, AmmoIndex, ClanMemberPosition, DataDecoder, EffectBulletMoveType, EquipmentIndex,
+    ItemClass, ItemReference, ItemType, SkillActionMode, SkillBasicCommand, SkillTargetFilter,
+    SkillType, StatusEffectClearedByType, StatusEffectType, VehiclePartIndex, VehicleType,
 };
 
 macro_rules! impl_conversions {
@@ -472,6 +472,22 @@ pub enum IroseSkillType {
     Resurrection = 20,
 }
 impl_conversions!(IroseSkillType, SkillType, decode_skill_type);
+
+#[derive(FromPrimitive, ToPrimitive)]
+pub enum IroseClanMemberPosition {
+    Penalty = 0,
+    Junior = 1,
+    Senior = 2,
+    Veteran = 3,
+    Commander = 4,
+    DeputyMaster = 5,
+    Master = 6,
+}
+impl_conversions!(
+    IroseClanMemberPosition,
+    ClanMemberPosition,
+    decode_clan_member_position
+);
 
 struct IroseDataDecoder {}
 
@@ -1179,5 +1195,29 @@ pub fn encode_skill_type(skill_type: SkillType) -> Option<usize> {
         SkillType::Warp => IroseSkillType::Warp.to_usize(),
         SkillType::SelfAndTarget => IroseSkillType::SelfAndTarget.to_usize(),
         SkillType::Resurrection => IroseSkillType::Resurrection.to_usize(),
+    }
+}
+
+pub fn decode_clan_member_position(id: usize) -> Option<ClanMemberPosition> {
+    match FromPrimitive::from_usize(id)? {
+        IroseClanMemberPosition::Penalty => Some(ClanMemberPosition::Penalty),
+        IroseClanMemberPosition::Junior => Some(ClanMemberPosition::Junior),
+        IroseClanMemberPosition::Senior => Some(ClanMemberPosition::Senior),
+        IroseClanMemberPosition::Veteran => Some(ClanMemberPosition::Veteran),
+        IroseClanMemberPosition::Commander => Some(ClanMemberPosition::Commander),
+        IroseClanMemberPosition::DeputyMaster => Some(ClanMemberPosition::DeputyMaster),
+        IroseClanMemberPosition::Master => Some(ClanMemberPosition::Master),
+    }
+}
+
+pub fn encode_clan_member_position(position: ClanMemberPosition) -> Option<usize> {
+    match position {
+        ClanMemberPosition::Penalty => IroseClanMemberPosition::Penalty.to_usize(),
+        ClanMemberPosition::Junior => IroseClanMemberPosition::Junior.to_usize(),
+        ClanMemberPosition::Senior => IroseClanMemberPosition::Senior.to_usize(),
+        ClanMemberPosition::Veteran => IroseClanMemberPosition::Veteran.to_usize(),
+        ClanMemberPosition::Commander => IroseClanMemberPosition::Commander.to_usize(),
+        ClanMemberPosition::DeputyMaster => IroseClanMemberPosition::DeputyMaster.to_usize(),
+        ClanMemberPosition::Master => IroseClanMemberPosition::Master.to_usize(),
     }
 }

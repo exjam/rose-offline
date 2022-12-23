@@ -18,11 +18,11 @@ use rose_game_common::{
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
-    decode_item_slot, encode_item_slot, PacketReadEntityId, PacketReadEquipmentIndex,
-    PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadPartyRules,
-    PacketReadSkillSlot, PacketReadVehiclePartIndex, PacketWriteEntityId,
-    PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot, PacketWriteItems,
-    PacketWritePartyRules, PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
+    decode_item_slot, encode_item_slot, PacketReadClanMark, PacketReadEntityId,
+    PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
+    PacketReadPartyRules, PacketReadSkillSlot, PacketReadVehiclePartIndex, PacketWriteClanMark,
+    PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot,
+    PacketWriteItems, PacketWritePartyRules, PacketWriteSkillSlot, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -435,6 +435,26 @@ impl From<&PacketClientReviveRequest> for Packet {
         }
 
         writer.into()
+    }
+}
+
+pub struct PacketClientSetReviveZone;
+
+impl TryFrom<&Packet> for PacketClientSetReviveZone {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::SetReviveZone as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        Ok(PacketClientSetReviveZone)
+    }
+}
+
+impl From<&PacketClientSetReviveZone> for Packet {
+    fn from(_: &PacketClientSetReviveZone) -> Self {
+        PacketWriter::new(ClientPackets::SetReviveZone as u16).into()
     }
 }
 
@@ -1527,18 +1547,30 @@ impl TryFrom<&Packet> for PacketClientClanCommand {
         let mut reader = PacketReader::from(packet);
         match reader.read_u8()? {
             0 => Ok(PacketClientClanCommand::Create {
-                mark: {
-                    let background = reader.read_u16()?;
-                    let foreground = reader.read_u16()?;
-                    ClanMark::Premade {
-                        foreground,
-                        background,
-                    }
-                },
+                mark: reader.read_clan_mark_u32()?,
                 name: reader.read_null_terminated_utf8()?.to_string(),
                 description: reader.read_null_terminated_utf8()?.to_string(),
             }),
             _ => Err(PacketError::InvalidPacket),
         }
+    }
+}
+
+impl From<&PacketClientClanCommand> for Packet {
+    fn from(packet: &PacketClientClanCommand) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ClanCommand as u16);
+        match packet {
+            PacketClientClanCommand::Create {
+                name,
+                description,
+                mark,
+            } => {
+                writer.write_u8(0);
+                writer.write_clan_mark_u32(mark);
+                writer.write_null_terminated_utf8(name);
+                writer.write_null_terminated_utf8(description);
+            }
+        }
+        writer.into()
     }
 }

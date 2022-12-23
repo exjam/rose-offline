@@ -1,9 +1,9 @@
 use modular_bitfield::prelude::*;
-use std::convert::TryInto;
+use std::{convert::TryInto, num::NonZeroU16};
 
 use rose_data::{
-    AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, StackableItem,
-    StatusEffectId, StatusEffectType, VehiclePartIndex,
+    AmmoIndex, ClanMemberPosition, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType,
+    StackableItem, StatusEffectId, StatusEffectType, VehiclePartIndex,
 };
 use rose_data_irose::{
     decode_ammo_index, decode_equipment_index, decode_item_type, decode_vehicle_part_index,
@@ -11,8 +11,8 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveStatusEffect, CharacterGender, ClanMark, ClanMemberPosition, Equipment, HealthPoints,
-        HotbarSlot, InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot, Stamina,
+        ActiveStatusEffect, CharacterGender, ClanMark, Equipment, HealthPoints, HotbarSlot,
+        InventoryPageType, ItemSlot, Money, MoveMode, SkillSlot, Stamina,
     },
     data::Damage,
     messages::{
@@ -1153,16 +1153,16 @@ pub trait PacketReadClanMark {
 
 impl<'a> PacketReadClanMark for PacketReader<'a> {
     fn read_clan_mark_u32(&mut self) -> Result<ClanMark, PacketError> {
-        let background = self.read_u16()?;
+        let background = NonZeroU16::new(self.read_u16()?);
         let foreground = self.read_u16()?;
 
-        if background == 0 {
-            Ok(ClanMark::Custom { crc16: foreground })
-        } else {
+        if let Some(background) = background {
             Ok(ClanMark::Premade {
-                foreground,
                 background,
+                foreground: NonZeroU16::new(foreground).ok_or(PacketError::InvalidPacket)?,
             })
+        } else {
+            Ok(ClanMark::Custom { crc16: foreground })
         }
     }
 }
@@ -1178,8 +1178,8 @@ impl PacketWriteClanMark for PacketWriter {
                 foreground,
                 background,
             } => {
-                self.write_u16(background);
-                self.write_u16(foreground);
+                self.write_u16(background.get());
+                self.write_u16(foreground.get());
             }
             ClanMark::Custom { crc16 } => {
                 self.write_u16(0);

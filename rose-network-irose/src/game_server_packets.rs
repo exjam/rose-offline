@@ -6,8 +6,9 @@ use num_traits::FromPrimitive;
 use std::{num::NonZeroUsize, time::Duration};
 
 use rose_data::{
-    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, MotionId,
-    NpcId, SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks, ZoneId,
+    AbilityType, AmmoIndex, ClanMemberPosition, EquipmentIndex, EquipmentItem, Item, ItemReference,
+    ItemType, MotionId, NpcId, SkillId, SkillPageType, StackableItem, VehiclePartIndex, WorldTicks,
+    ZoneId,
 };
 use rose_data_irose::{
     decode_ability_type, decode_ammo_index, encode_ability_type, encode_ammo_index,
@@ -15,11 +16,10 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, ClanLevel, ClanMark,
-        ClanMemberPosition, ClanPoints, ClanUniqueId, DroppedItem, Equipment, ExperiencePoints,
-        HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode,
-        MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina,
-        StatPoints, Team, UnionMembership,
+        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, ClanLevel, ClanMark, ClanPoints,
+        ClanUniqueId, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
+        Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState,
+        SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::{
@@ -1589,10 +1589,10 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
         };
 
         let clan_membership = |reader: &mut PacketReader| -> Option<CharacterClanMembership> {
-            let clan_unique_id = ClanUniqueId(reader.read_u32().ok()?);
+            let clan_unique_id = ClanUniqueId::new(reader.read_u32().ok()?)?;
             let mark = reader.read_clan_mark_u32().ok()?;
-            let level = ClanLevel(reader.read_u8().ok()? as u32);
-            let _clan_member_position = reader.read_u8().ok()?;
+            let level = ClanLevel::new(reader.read_u8().ok()? as u32)?;
+            let position = reader.read_clan_member_position_u8().ok()?;
             let name = reader.read_null_terminated_utf8().ok()?.to_string();
 
             Some(CharacterClanMembership {
@@ -1600,6 +1600,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
                 mark,
                 level,
                 name,
+                position,
             })
         }(&mut reader);
 
@@ -1709,10 +1710,10 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
         }
 
         if let Some(clan_membership) = packet.clan_membership.as_ref() {
-            writer.write_u32(clan_membership.clan_unique_id.0);
+            writer.write_u32(clan_membership.clan_unique_id.get());
             writer.write_clan_mark_u32(&clan_membership.mark);
-            writer.write_u8(clan_membership.level.0 as u8);
-            writer.write_u8(0);
+            writer.write_u8(clan_membership.level.get() as u8);
+            writer.write_clan_member_position_u8(&clan_membership.position);
             writer.write_null_terminated_utf8(&clan_membership.name);
         }
 
@@ -4102,6 +4103,7 @@ pub enum PacketServerClanCommand {
         name: String,
         mark: ClanMark,
         level: ClanLevel,
+        position: ClanMemberPosition,
     },
     ClanMemberConnected {
         name: String,
@@ -4129,9 +4131,10 @@ impl TryFrom<&Packet> for PacketServerClanCommand {
         let mut reader = PacketReader::from(packet);
         match reader.read_u8()? {
             0x33 => {
-                let id = ClanUniqueId(reader.read_u32()?);
+                let id = ClanUniqueId::new(reader.read_u32()?).ok_or(PacketError::InvalidPacket)?;
                 let mark = reader.read_clan_mark_u32()?;
-                let level = ClanLevel(reader.read_u8()? as u32);
+                let level =
+                    ClanLevel::new(reader.read_u8()? as u32).ok_or(PacketError::InvalidPacket)?;
                 let position = reader.read_clan_member_position_u8()?;
 
                 let points = ClanPoints(reader.read_u32()? as u64);
@@ -4165,10 +4168,11 @@ impl TryFrom<&Packet> for PacketServerClanCommand {
             }
             0x35 => {
                 let client_entity_id = reader.read_entity_id()?;
-                let id = ClanUniqueId(reader.read_u32()?);
+                let id = ClanUniqueId::new(reader.read_u32()?).ok_or(PacketError::InvalidPacket)?;
                 let mark = reader.read_clan_mark_u32()?;
-                let level = ClanLevel(reader.read_u8()? as u32);
-                let _position = reader.read_clan_member_position_u8()?;
+                let level =
+                    ClanLevel::new(reader.read_u8()? as u32).ok_or(PacketError::InvalidPacket)?;
+                let position = reader.read_clan_member_position_u8()?;
                 let name = reader.read_null_terminated_utf8()?.to_string();
 
                 Ok(Self::CharacterUpdateClan {
@@ -4177,6 +4181,7 @@ impl TryFrom<&Packet> for PacketServerClanCommand {
                     name,
                     mark,
                     level,
+                    position,
                 })
             }
             0x41 => Ok(Self::ClanCreateError {
@@ -4256,9 +4261,9 @@ impl From<&PacketServerClanCommand> for Packet {
                 writer.write_u8(0x33);
 
                 // tag_CLAN_ID
-                writer.write_u32(id.0);
+                writer.write_u32(id.get());
                 writer.write_clan_mark_u32(mark);
-                writer.write_u8(level.0 as u8);
+                writer.write_u8(level.get() as u8);
                 writer.write_clan_member_position_u8(position);
 
                 // tag_MY_CLAN
@@ -4285,15 +4290,17 @@ impl From<&PacketServerClanCommand> for Packet {
                 name,
                 mark,
                 level,
+                position,
             } => {
                 writer.write_u8(0x35);
 
                 writer.write_entity_id(*client_entity_id);
 
-                writer.write_u32(id.0);
+                writer.write_u32(id.get());
                 writer.write_clan_mark_u32(mark);
-                writer.write_u8(level.0 as u8);
-                writer.write_u8(0);
+                writer.write_u8(level.get() as u8);
+                writer.write_clan_member_position_u8(position);
+
                 writer.write_null_terminated_utf8(name);
             }
             PacketServerClanCommand::ClanMemberList { members } => {

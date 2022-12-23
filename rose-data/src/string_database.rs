@@ -4,17 +4,18 @@ use std::fmt::Write;
 
 use rose_file_readers::{StlFile, StlItemEntry, StlNormalEntry, StlQuestEntry};
 
-use crate::{AbilityType, ItemClass, ItemType, SkillTargetFilter, SkillType};
+use crate::{AbilityType, ClanMemberPosition, ItemClass, ItemType, SkillTargetFilter, SkillType};
 
 // Strictly speaking we should abstract away from StlFile here, but it is not worth
 // the effort until a ROSE version comes along which does not use STL...
 pub struct StringDatabase {
     pub language: usize,
 
-    pub encode_ability_type: Box<dyn Fn(AbilityType) -> Option<usize> + Send + Sync>,
-    pub encode_item_class: Box<dyn Fn(ItemClass) -> Option<usize> + Send + Sync>,
-    pub encode_skill_target_filter: Box<dyn Fn(SkillTargetFilter) -> Option<usize> + Send + Sync>,
-    pub encode_skill_type: Box<dyn Fn(SkillType) -> Option<usize> + Send + Sync>,
+    pub encode_ability_type: fn(AbilityType) -> Option<usize>,
+    pub encode_clan_member_position: fn(ClanMemberPosition) -> Option<usize>,
+    pub encode_item_class: fn(ItemClass) -> Option<usize>,
+    pub encode_skill_target_filter: fn(SkillTargetFilter) -> Option<usize>,
+    pub encode_skill_type: fn(SkillType) -> Option<usize>,
 
     pub ability: StlFile,
     pub clan: StlFile,
@@ -49,6 +50,18 @@ impl StringDatabase {
         self.ability
             .get_text_string(self.language, &key)
             .unwrap_or("")
+    }
+
+    pub fn get_clan_member_position(&self, position: ClanMemberPosition) -> &str {
+        let index = if let Some(index) = (self.encode_clan_member_position)(position) {
+            index as u16
+        } else {
+            return "";
+        };
+
+        let mut key = ArrayString::<16>::new();
+        write!(&mut key, "{}", index).ok();
+        self.clan.get_text_string(self.language, &key).unwrap_or("")
     }
 
     pub fn get_item(&self, item_type: ItemType, key: &str) -> Option<StlItemEntry> {

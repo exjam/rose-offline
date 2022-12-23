@@ -1,7 +1,7 @@
 use num_derive::FromPrimitive;
 use std::convert::TryFrom;
 
-use rose_game_common::components::CharacterGender;
+use rose_game_common::components::{CharacterGender, Level};
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{PacketReadCharacterGender, PacketWriteCharacterGender};
@@ -192,7 +192,7 @@ impl<'a> From<&'a PacketClientSelectCharacter<'a>> for Packet {
 #[derive(Debug)]
 pub enum PacketClientClanCommand {
     GetMemberList,
-    UpdateLevelAndJob { level: u16, job: u16 },
+    UpdateLevelAndJob { level: Level, job: u16 },
 }
 
 impl TryFrom<&Packet> for PacketClientClanCommand {
@@ -207,10 +207,29 @@ impl TryFrom<&Packet> for PacketClientClanCommand {
         match reader.read_u8()? {
             8 => Ok(PacketClientClanCommand::GetMemberList),
             15 => Ok(PacketClientClanCommand::UpdateLevelAndJob {
-                level: reader.read_u16()?,
+                level: Level::new(reader.read_u16()? as u32),
                 job: reader.read_u16()?,
             }),
             _ => Err(PacketError::InvalidPacket),
         }
+    }
+}
+
+impl From<&PacketClientClanCommand> for Packet {
+    fn from(packet: &PacketClientClanCommand) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ClanCommand as u16);
+
+        match *packet {
+            PacketClientClanCommand::GetMemberList => {
+                writer.write_u8(8);
+            }
+            PacketClientClanCommand::UpdateLevelAndJob { level, job } => {
+                writer.write_u8(15);
+                writer.write_u16(level.level as u16);
+                writer.write_u16(job);
+            }
+        }
+
+        writer.into()
     }
 }

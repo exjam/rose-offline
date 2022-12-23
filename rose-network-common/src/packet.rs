@@ -2,6 +2,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use encoding_rs::WINDOWS_1252;
 use std::borrow::Cow;
 use std::io::Cursor;
+use std::num::NonZeroU16;
 use std::str;
 use thiserror::Error;
 
@@ -87,6 +88,10 @@ impl<'a> PacketReader<'a> {
         } else {
             Ok(self.cursor.get_u16_le())
         }
+    }
+
+    pub fn read_nonzero_u16(&mut self) -> Result<NonZeroU16, PacketError> {
+        NonZeroU16::new(self.read_u16()?).ok_or(PacketError::InvalidPacket)
     }
 
     pub fn read_i32(&mut self) -> Result<i32, PacketError> {

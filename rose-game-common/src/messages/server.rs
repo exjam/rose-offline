@@ -5,18 +5,18 @@ use std::{num::NonZeroUsize, time::Duration};
 use thiserror::Error;
 
 use rose_data::{
-    AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemReference, MotionId, NpcId,
-    QuestTriggerHash, SkillId, StackableItem, StatusEffectType, VehiclePartIndex, WorldTicks,
-    ZoneId,
+    AbilityType, AmmoIndex, ClanMemberPosition, EquipmentIndex, EquipmentItem, Item, ItemReference,
+    MotionId, NpcId, QuestTriggerHash, SkillId, StackableItem, StatusEffectType, VehiclePartIndex,
+    WorldTicks, ZoneId,
 };
 
 use crate::{
     components::{
         ActiveStatusEffect, BasicStatType, BasicStats, CharacterDeleteTime, CharacterInfo,
-        CharacterUniqueId, ClanLevel, ClanMark, ClanMemberPosition, ClanPoints, ClanUniqueId,
-        DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
-        ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList,
-        SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        CharacterUniqueId, ClanLevel, ClanMark, ClanPoints, ClanUniqueId, DroppedItem, Equipment,
+        ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints,
+        Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPoints, SkillSlot, Stamina,
+        StatPoints, Team, UnionMembership,
     },
     data::Damage,
     messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
@@ -280,6 +280,7 @@ pub struct CharacterClanMembership {
     pub mark: ClanMark,
     pub level: ClanLevel,
     pub name: String,
+    pub position: ClanMemberPosition,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -810,6 +811,7 @@ pub enum ServerMessage {
         name: String,
         mark: ClanMark,
         level: ClanLevel,
+        position: ClanMemberPosition,
     },
     ClanMemberConnected {
         name: String,

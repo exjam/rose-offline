@@ -1471,6 +1471,7 @@ impl GameServer {
                 name,
                 mark,
                 level,
+                position,
             } => {
                 client
                     .connection
@@ -1481,6 +1482,7 @@ impl GameServer {
                             name,
                             mark,
                             level,
+                            position,
                         },
                     ))
                     .await?;

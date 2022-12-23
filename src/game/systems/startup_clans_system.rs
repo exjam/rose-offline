@@ -25,9 +25,9 @@ pub fn startup_clans_system(mut commands: Commands) {
             }
         }
 
-        let unique_id = QuestTriggerHash::from(clan_storage.name.as_str()).hash;
         commands.spawn(Clan {
-            unique_id: ClanUniqueId(unique_id),
+            unique_id: ClanUniqueId::new(QuestTriggerHash::from(clan_storage.name.as_str()).hash)
+                .unwrap(),
             name: clan_storage.name,
             description: clan_storage.description,
             mark: clan_storage.mark,

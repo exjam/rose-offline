@@ -2,6 +2,7 @@ use bevy::ecs::{
     prelude::{Entity, Query, Res, ResMut},
     query::WorldQuery,
 };
+use rose_data::ClanMemberPosition;
 use rose_game_common::messages::server::CharacterClanMembership;
 
 use crate::game::{
@@ -166,6 +167,12 @@ pub fn client_entity_visibility_system(
                                                             mark: clan.mark,
                                                             level: clan.level,
                                                             name: clan.name.clone(),
+                                                            position: clan
+                                                                .find_online_member(*spawn_entity)
+                                                                .map_or(
+                                                                    ClanMemberPosition::Junior,
+                                                                    |member| member.position(),
+                                                                ),
                                                         })
                                                     } else {
                                                         None

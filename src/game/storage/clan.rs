@@ -3,7 +3,8 @@ use std::{io::Write, path::PathBuf};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use rose_game_common::components::{ClanLevel, ClanMark, ClanMemberPosition, ClanPoints, Money};
+use rose_data::ClanMemberPosition;
+use rose_game_common::components::{ClanLevel, ClanMark, ClanPoints, Money};
 
 use crate::game::storage::CLAN_STORAGE_DIR;
 
@@ -47,7 +48,7 @@ impl ClanStorage {
             mark,
             money: Money(0),
             points: ClanPoints(0),
-            level: ClanLevel(1),
+            level: ClanLevel::new(1).unwrap(),
             members: Vec::default(),
         }
     }

@@ -1,8 +1,7 @@
 use bevy::prelude::{Component, Deref, DerefMut, Entity};
 
-use rose_game_common::components::{
-    ClanLevel, ClanMark, ClanMemberPosition, ClanPoints, ClanUniqueId, Level, Money,
-};
+use rose_data::ClanMemberPosition;
+use rose_game_common::components::{ClanLevel, ClanMark, ClanPoints, ClanUniqueId, Level, Money};
 
 #[derive(Component, Clone, Default, Deref, DerefMut)]
 pub struct ClanMembership(pub Option<Entity>);
@@ -21,6 +20,22 @@ pub enum ClanMember {
         level: Level,
         job: u16,
     },
+}
+
+impl ClanMember {
+    pub fn position(&self) -> ClanMemberPosition {
+        match self {
+            ClanMember::Online { position, .. } => *position,
+            ClanMember::Offline { position, .. } => *position,
+        }
+    }
+
+    pub fn contribution(&self) -> ClanPoints {
+        match self {
+            ClanMember::Online { contribution, .. } => *contribution,
+            ClanMember::Offline { contribution, .. } => *contribution,
+        }
+    }
 }
 
 #[derive(Component)]

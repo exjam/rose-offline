@@ -29,7 +29,7 @@ pub use ability_values::{AbilityValues, AbilityValuesAdjust, DamageCategory, Dam
 pub use basic_stats::{BasicStatType, BasicStats};
 pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::{CharacterGender, CharacterInfo, CharacterUniqueId};
-pub use clan::{ClanLevel, ClanMark, ClanMemberPosition, ClanPoints, ClanUniqueId};
+pub use clan::{ClanLevel, ClanMark, ClanPoints, ClanUniqueId};
 pub use destination::Destination;
 pub use equipment::{Equipment, EquipmentItemDatabase, EquipmentItemReference};
 pub use experience_points::ExperiencePoints;

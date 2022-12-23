@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{
-        BasicStatType, CharacterGender, CharacterUniqueId, ClanMark, HotbarSlot, ItemSlot,
+        BasicStatType, CharacterGender, CharacterUniqueId, ClanMark, HotbarSlot, ItemSlot, Level,
         SkillSlot,
     },
     data::Password,
@@ -242,4 +242,8 @@ pub enum ClientMessage {
         mark: ClanMark,
     },
     ClanGetMemberList,
+    ClanUpdateCharacterInfo {
+        level: Level,
+        job: u16,
+    },
 }

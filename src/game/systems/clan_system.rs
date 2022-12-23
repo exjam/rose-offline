@@ -5,9 +5,9 @@ use bevy::{
     prelude::{Changed, Commands, Entity, EventReader, Query, ResMut},
 };
 
-use rose_data::QuestTriggerHash;
+use rose_data::{ClanMemberPosition, QuestTriggerHash};
 use rose_game_common::{
-    components::{ClanMemberPosition, ClanPoints, ClanUniqueId},
+    components::{ClanPoints, ClanUniqueId},
     messages::server::{ClanCreateError, ClanMemberInfo, ServerMessage},
 };
 
@@ -29,6 +29,7 @@ pub struct CreatorQuery<'w> {
     level: &'w Level,
     inventory: &'w mut Inventory,
     game_client: Option<&'w GameClient>,
+    clan_membership: Option<&'w ClanMembership>,
 }
 
 #[derive(WorldQuery)]
@@ -60,6 +61,19 @@ pub fn clan_system(
                 let Ok(mut creator) = query_creator.get_mut(*creator_entity) else {
                     continue;
                 };
+
+                // Cannot create a clan if already in one
+                if creator.clan_membership.is_some() {
+                    if let Some(game_client) = creator.game_client {
+                        game_client
+                            .server_message_tx
+                            .send(ServerMessage::ClanCreateError {
+                                error: ClanCreateError::Failed,
+                            })
+                            .ok();
+                    }
+                    continue;
+                }
 
                 if creator.level.level < 30 {
                     if let Some(game_client) = creator.game_client {
@@ -112,7 +126,8 @@ pub fn clan_system(
                 }
 
                 // Create clan entity
-                let unique_id = ClanUniqueId(QuestTriggerHash::from(name.as_str()).hash);
+                let unique_id =
+                    ClanUniqueId::new(QuestTriggerHash::from(name.as_str()).hash).unwrap();
                 let members = vec![ClanMember::Online {
                     entity: *creator_entity,
                     position: ClanMemberPosition::Master,
@@ -145,6 +160,7 @@ pub fn clan_system(
                         mark: clan_storage.mark,
                         level: clan_storage.level,
                         name: clan_storage.name,
+                        position: ClanMemberPosition::Master,
                     },
                 );
             }

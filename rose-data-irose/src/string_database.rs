@@ -6,7 +6,8 @@ use rose_data::{ItemType, StringDatabase};
 use rose_file_readers::{StlFile, StlReadOptions, VirtualFilesystem};
 
 use crate::{
-    encode_ability_type, encode_item_class, encode_skill_target_filter, encode_skill_type,
+    encode_ability_type, encode_clan_member_position, encode_item_class,
+    encode_skill_target_filter, encode_skill_type,
 };
 
 pub fn get_string_database(
@@ -19,10 +20,11 @@ pub fn get_string_database(
 
     Ok(Arc::new(StringDatabase {
         language,
-        encode_ability_type: Box::new(encode_ability_type),
-        encode_item_class: Box::new(encode_item_class),
-        encode_skill_target_filter: Box::new(encode_skill_target_filter),
-        encode_skill_type: Box::new(encode_skill_type),
+        encode_ability_type,
+        encode_clan_member_position,
+        encode_item_class,
+        encode_skill_target_filter,
+        encode_skill_type,
         ability: vfs
             .read_file_with::<StlFile, _>("3DDATA/STB/STR_ABILITY.STL", &stl_read_options)?,
         clan: vfs.read_file_with::<StlFile, _>("3DDATA/STB/STR_CLAN.STL", &stl_read_options)?,
