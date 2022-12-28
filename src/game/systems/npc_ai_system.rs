@@ -14,7 +14,7 @@ use std::{
     time::Duration,
 };
 
-use rose_data::{Item, MotionId, NpcId, SkillId, ZoneId, ClanMemberPosition};
+use rose_data::{ClanMemberPosition, Item, MotionId, NpcId, SkillId, ZoneId};
 use rose_file_readers::{
     AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition, AipConditionFindNearbyEntities,
     AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistance,
@@ -25,19 +25,19 @@ use rose_file_readers::{
 };
 use rose_game_common::{data::Damage, messages::PartyXpSharing};
 
-use crate::{game::{
+use crate::game::{
     bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
     components::{
-        AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command, CommandData,
-        CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints, Level, MonsterSpawnPoint,
-        MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Party, PartyMember,
-        PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team, ClanMembership, Clan
+        AbilityValues, Clan, ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType,
+        Command, CommandData, CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints,
+        Level, MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Party,
+        PartyMember, PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team,
     },
     events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
     resources::{ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList},
     GameData,
-}};
+};
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 
@@ -790,10 +790,10 @@ fn npc_ai_check_conditions(
             AipCondition::OwnerHasTarget => {
                 ai_condition_owner_has_target(ai_system_parameters, ai_parameters)
             }
-            AipCondition::IsAttackerClanMaster =>  {
+            AipCondition::IsAttackerClanMaster => {
                 ai_condition_is_attacker_clan_master(ai_system_parameters, ai_parameters)
             }
-            AipCondition::IsTargetClanMaster =>  {
+            AipCondition::IsTargetClanMaster => {
                 ai_condition_is_target_clan_master(ai_system_parameters, ai_parameters)
             }
         };

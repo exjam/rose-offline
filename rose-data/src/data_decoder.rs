@@ -1,5 +1,6 @@
 use crate::{
-    AbilityType, AmmoIndex, EquipmentIndex, ItemClass, ItemReference, ItemType, VehiclePartIndex, ClanMemberPosition
+    AbilityType, AmmoIndex, ClanMemberPosition, EquipmentIndex, ItemClass, ItemReference, ItemType,
+    VehiclePartIndex,
 };
 
 pub trait DataDecoder {
