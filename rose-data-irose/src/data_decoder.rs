@@ -519,6 +519,10 @@ impl DataDecoder for IroseDataDecoder {
     fn decode_ammo_index(&self, id: usize) -> Option<AmmoIndex> {
         decode_ammo_index(id)
     }
+
+    fn encode_clan_member_position(&self, position: ClanMemberPosition) -> Option<usize> {
+        encode_clan_member_position(position)
+    }
 }
 
 pub fn get_data_decoder() -> Box<impl DataDecoder + Send + Sync> {
