@@ -4098,6 +4098,14 @@ pub enum PacketServerClanCommand {
         contribution: ClanPoints,
         skills: Vec<SkillId>,
     },
+    ClanUpdateInfo {
+        id: ClanUniqueId,
+        mark: ClanMark,
+        level: ClanLevel,
+        points: ClanPoints,
+        money: Money,
+        skills: Vec<SkillId>,
+    },
     CharacterUpdateClan {
         client_entity_id: ClientEntityId,
         id: ClanUniqueId,
@@ -4202,6 +4210,37 @@ impl TryFrom<&Packet> for PacketServerClanCommand {
             0x44 => Ok(Self::ClanCreateError {
                 error: ClanCreateError::UnmetCondition,
             }),
+            0x71 => {
+                let id = ClanUniqueId::new(reader.read_u32()?).ok_or(PacketError::InvalidPacket)?;
+                let mark = reader.read_clan_mark_u32()?;
+                let level =
+                    ClanLevel::new(reader.read_u8()? as u32).ok_or(PacketError::InvalidPacket)?;
+                let _position = reader.read_u8()?;
+
+                let points = ClanPoints(reader.read_u32()? as u64);
+                let _storage_rate = reader.read_u32()?;
+                let money = Money(reader.read_i64()?);
+                let _member_count = reader.read_u16()?;
+                let _contribution = reader.read_u32()?;
+
+                let mut skills = Vec::new();
+                for _ in 0..20 {
+                    let skill_id = reader.read_u16()?;
+                    let _expire_secs = reader.read_u32()?;
+                    if let Some(skill_id) = SkillId::new(skill_id) {
+                        skills.push(skill_id);
+                    }
+                }
+
+                Ok(Self::ClanUpdateInfo {
+                    id,
+                    mark,
+                    level,
+                    points,
+                    money,
+                    skills,
+                })
+            }
             0x72 => {
                 let try_read_clan_member =
                     |reader: &mut PacketReader| -> Result<ClanMemberInfo, PacketError> {
@@ -4314,6 +4353,40 @@ impl From<&PacketServerClanCommand> for Packet {
                 writer.write_clan_member_position_u8(position);
 
                 writer.write_null_terminated_utf8(name);
+            }
+            PacketServerClanCommand::ClanUpdateInfo {
+                id,
+                mark,
+                level,
+                points,
+                money,
+                skills,
+            } => {
+                writer.write_u8(0x71);
+
+                // tag_CLAN_ID
+                writer.write_u32(id.get());
+                writer.write_clan_mark_u32(mark);
+                writer.write_u8(level.get() as u8);
+                writer.write_u8(0); // unused: position
+
+                // tag_MY_CLAN
+                writer.write_u32(points.0 as u32);
+                writer.write_u32(0); // unused: clan storage rate
+                writer.write_i64(money.0);
+                writer.write_u16(0); // unused: member count
+                writer.write_u32(0); // unused: contribution
+
+                // 20 clan skills
+                for i in 0..20 {
+                    if let Some(skill_id) = skills.get(i) {
+                        writer.write_u16(skill_id.get());
+                        writer.write_u32(0); // TODO: Expire secs
+                    } else {
+                        writer.write_u16(0);
+                        writer.write_u32(0);
+                    }
+                }
             }
             PacketServerClanCommand::ClanMemberList { members } => {
                 writer.write_u8(0x72);

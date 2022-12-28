@@ -1467,6 +1467,26 @@ impl GameServer {
                     }))
                     .await?;
             }
+            ServerMessage::ClanUpdateInfo {
+                id,
+                mark,
+                level,
+                points,
+                money,
+                skills,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerClanCommand::ClanUpdateInfo {
+                        id,
+                        mark,
+                        level,
+                        points,
+                        money,
+                        skills,
+                    }))
+                    .await?;
+            }
             ServerMessage::CharacterUpdateClan {
                 client_entity_id,
                 id,

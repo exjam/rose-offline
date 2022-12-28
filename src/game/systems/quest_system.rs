@@ -7,7 +7,12 @@ use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use chrono::{Datelike, Timelike};
 use log::warn;
 use rand::Rng;
-use std::{marker::PhantomData, num::NonZeroU8, ops::RangeInclusive};
+use rose_game_common::components::{ClanLevel, ClanPoints};
+use std::{
+    marker::PhantomData,
+    num::{NonZeroU32, NonZeroU8},
+    ops::RangeInclusive,
+};
 
 use rose_data::{EquipmentItem, Item, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId};
 use rose_file_readers::{
@@ -33,7 +38,7 @@ use crate::game::{
         Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, Team,
         UnionMembership,
     },
-    events::{QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
+    events::{ClanEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
     resources::{ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList},
     GameData,
@@ -47,6 +52,7 @@ pub struct QuestSystemParameters<'w, 's> {
     zone_list: ResMut<'w, ZoneList>,
     reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
     reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
+    clan_events: EventWriter<'w, 's, ClanEvent>,
     object_variables_query: Query<'w, 's, (&'static mut ObjectVariables, &'static Position)>,
     party_query: Query<'w, 's, &'static Party>,
     clan_query: Query<'w, 's, &'static Clan>,
@@ -1886,6 +1892,189 @@ fn quest_reward_npc_message(
     true
 }
 
+fn quest_reward_clan_level(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &mut QuestParameters,
+    operator: QsdRewardOperator,
+    value: i32,
+) -> bool {
+    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+        match operator {
+            QsdRewardOperator::Set => {
+                if let Some(value) = NonZeroU32::new(value as u32) {
+                    quest_system_parameters
+                        .clan_events
+                        .send(ClanEvent::SetLevel {
+                            clan_entity,
+                            level: ClanLevel(value),
+                        });
+                }
+            }
+            QsdRewardOperator::Add => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::AddLevel {
+                        clan_entity,
+                        level: value,
+                    });
+            }
+            QsdRewardOperator::Subtract => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::AddLevel {
+                        clan_entity,
+                        level: -value,
+                    });
+            }
+            _ => {
+                log::warn!(
+                    "Unimplemented quest_reward_clan_money: operator {:?} value {}",
+                    operator,
+                    value
+                );
+            }
+        }
+
+        true
+    } else {
+        false
+    }
+}
+
+fn quest_reward_clan_money(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &mut QuestParameters,
+    operator: QsdRewardOperator,
+    value: i32,
+) -> bool {
+    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+        match operator {
+            QsdRewardOperator::Set => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::SetMoney {
+                        clan_entity,
+                        money: Money(value as i64),
+                    });
+            }
+            QsdRewardOperator::Add => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::AddMoney {
+                        clan_entity,
+                        money: value as i64,
+                    });
+            }
+            QsdRewardOperator::Subtract => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::AddMoney {
+                        clan_entity,
+                        money: -value as i64,
+                    });
+            }
+            _ => {
+                log::warn!(
+                    "Unimplemented quest_reward_clan_money: operator {:?} value {}",
+                    operator,
+                    value
+                );
+            }
+        }
+
+        true
+    } else {
+        false
+    }
+}
+
+fn quest_reward_clan_points(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &mut QuestParameters,
+    operator: QsdRewardOperator,
+    value: i32,
+) -> bool {
+    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+        match operator {
+            QsdRewardOperator::Set => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::SetPoints {
+                        clan_entity,
+                        points: ClanPoints(value as u64),
+                    });
+            }
+            QsdRewardOperator::Add => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::AddPoints {
+                        clan_entity,
+                        points: value as i64,
+                    });
+            }
+            QsdRewardOperator::Subtract => {
+                quest_system_parameters
+                    .clan_events
+                    .send(ClanEvent::AddPoints {
+                        clan_entity,
+                        points: -value as i64,
+                    });
+            }
+            _ => {
+                log::warn!(
+                    "Unimplemented quest_reward_clan_points: operator {:?} value {}",
+                    operator,
+                    value
+                );
+            }
+        }
+
+        true
+    } else {
+        false
+    }
+}
+
+fn quest_reward_clan_add_skill(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &mut QuestParameters,
+    skill_id: QsdSkillId,
+) -> bool {
+    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+        if let Some(skill_id) = SkillId::new(skill_id as u16) {
+            quest_system_parameters
+                .clan_events
+                .send(ClanEvent::AddSkill {
+                    clan_entity,
+                    skill_id,
+                });
+        }
+        true
+    } else {
+        false
+    }
+}
+
+fn quest_reward_clan_remove_skill(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &mut QuestParameters,
+    skill_id: QsdSkillId,
+) -> bool {
+    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+        if let Some(skill_id) = SkillId::new(skill_id as u16) {
+            quest_system_parameters
+                .clan_events
+                .send(ClanEvent::RemoveSkill {
+                    clan_entity,
+                    skill_id,
+                });
+        }
+        true
+    } else {
+        false
+    }
+}
+
 fn quest_trigger_apply_rewards(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
@@ -2053,6 +2242,21 @@ fn quest_trigger_apply_rewards(
                 message_type,
                 string_id,
             ),
+            QsdReward::ClanLevel(operator, value) => {
+                quest_reward_clan_level(quest_system_parameters, quest_parameters, operator, value)
+            }
+            QsdReward::ClanMoney(operator, value) => {
+                quest_reward_clan_money(quest_system_parameters, quest_parameters, operator, value)
+            }
+            QsdReward::ClanPoints(operator, value) => {
+                quest_reward_clan_points(quest_system_parameters, quest_parameters, operator, value)
+            }
+            QsdReward::AddClanSkill(skill_id) => {
+                quest_reward_clan_add_skill(quest_system_parameters, quest_parameters, skill_id)
+            }
+            QsdReward::RemoveClanSkill(skill_id) => {
+                quest_reward_clan_remove_skill(quest_system_parameters, quest_parameters, skill_id)
+            }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
@@ -2062,13 +2266,7 @@ fn quest_trigger_apply_rewards(
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
               QsdReward::SetRevivePosition(_) => todo!(),
 
-
               // TODO: Implement clans
-              QsdReward::ClanLevel(_, _) => todo!(),
-              QsdReward::ClanMoney(_, _) => todo!(),
-              QsdReward::ClanPoints(_, _) => todo!(),
-              QsdReward::AddClanSkill(_) => todo!(),
-              QsdReward::RemoveClanSkill(_) => todo!(),
               QsdReward::ClanPointContribution(_, _) => todo!(),
               QsdReward::TeleportNearbyClanMembers(_, _, _) => todo!(),
               */

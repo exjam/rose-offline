@@ -1,4 +1,4 @@
-use std::num::NonZeroUsize;
+use std::num::{NonZeroU32, NonZeroUsize};
 
 use bevy::{
     ecs::query::WorldQuery,
@@ -7,7 +7,7 @@ use bevy::{
 
 use rose_data::{ClanMemberPosition, QuestTriggerHash};
 use rose_game_common::{
-    components::{ClanPoints, ClanUniqueId},
+    components::{ClanLevel, ClanPoints, ClanUniqueId},
     messages::server::{ClanCreateError, ClanMemberInfo, ServerMessage},
 };
 
@@ -39,6 +39,30 @@ pub struct MemberQuery<'w> {
     clan_membership: &'w ClanMembership,
     level: &'w Level,
     game_client: Option<&'w GameClient>,
+}
+
+fn send_update_clan_info(clan: &Clan, query_member: &Query<MemberQuery>) {
+    for clan_member in clan.members.iter() {
+        let &ClanMember::Online { entity: clan_member_entity, .. } = clan_member else {
+            continue;
+        };
+
+        if let Ok(online_member) = query_member.get(clan_member_entity) {
+            if let Some(online_member_game_client) = online_member.game_client {
+                online_member_game_client
+                    .server_message_tx
+                    .send(ServerMessage::ClanUpdateInfo {
+                        id: clan.unique_id,
+                        mark: clan.mark,
+                        level: clan.level,
+                        points: clan.points,
+                        money: clan.money,
+                        skills: clan.skills.clone(),
+                    })
+                    .ok();
+            }
+        }
+    }
 }
 
 pub fn clan_system(
@@ -254,6 +278,82 @@ pub fn clan_system(
                                 .send(ServerMessage::ClanMemberList { members })
                                 .ok();
                         }
+                    }
+                }
+            }
+            &ClanEvent::AddLevel { clan_entity, level } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    if let Some(level) = clan
+                        .level
+                        .0
+                        .get()
+                        .checked_add_signed(level)
+                        .and_then(NonZeroU32::new)
+                    {
+                        clan.level = ClanLevel(level);
+                        send_update_clan_info(&clan, &query_member);
+                    }
+                }
+            }
+            &ClanEvent::SetLevel { clan_entity, level } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    clan.level = level;
+                    send_update_clan_info(&clan, &query_member);
+                }
+            }
+            &ClanEvent::AddMoney { clan_entity, money } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    if let Some(money) = clan.money.0.checked_add(money) {
+                        clan.money = Money(money);
+                        send_update_clan_info(&clan, &query_member);
+                    }
+                }
+            }
+            &ClanEvent::SetMoney { clan_entity, money } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    clan.money = money;
+                    send_update_clan_info(&clan, &query_member);
+                }
+            }
+            &ClanEvent::AddPoints {
+                clan_entity,
+                points,
+            } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    if let Some(points) = clan.points.0.checked_add_signed(points) {
+                        clan.points = ClanPoints(points);
+                        send_update_clan_info(&clan, &query_member);
+                    }
+                }
+            }
+            &ClanEvent::SetPoints {
+                clan_entity,
+                points,
+            } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    clan.points = points;
+                    send_update_clan_info(&clan, &query_member);
+                }
+            }
+            &ClanEvent::AddSkill {
+                clan_entity,
+                skill_id,
+            } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    if !clan.skills.iter().any(|id| *id == skill_id) {
+                        clan.skills.push(skill_id);
+                        send_update_clan_info(&clan, &query_member);
+                    }
+                }
+            }
+            &ClanEvent::RemoveSkill {
+                clan_entity,
+                skill_id,
+            } => {
+                if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
+                    if clan.skills.iter().any(|id| *id == skill_id) {
+                        clan.skills.retain(|id| *id != skill_id);
+                        send_update_clan_info(&clan, &query_member);
                     }
                 }
             }

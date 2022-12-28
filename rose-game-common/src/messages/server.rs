@@ -805,6 +805,14 @@ pub enum ServerMessage {
         contribution: ClanPoints,
         skills: Vec<SkillId>,
     },
+    ClanUpdateInfo {
+        id: ClanUniqueId,
+        mark: ClanMark,
+        level: ClanLevel,
+        points: ClanPoints,
+        money: Money,
+        skills: Vec<SkillId>,
+    },
     CharacterUpdateClan {
         client_entity_id: ClientEntityId,
         id: ClanUniqueId,
