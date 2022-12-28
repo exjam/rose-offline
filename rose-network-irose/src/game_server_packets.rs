@@ -4096,6 +4096,7 @@ pub enum PacketServerClanCommand {
         money: Money,
         position: ClanMemberPosition,
         contribution: ClanPoints,
+        skills: Vec<SkillId>,
     },
     CharacterUpdateClan {
         client_entity_id: ClientEntityId,
@@ -4143,9 +4144,13 @@ impl TryFrom<&Packet> for PacketServerClanCommand {
                 let _member_count = reader.read_u16()?;
                 let contribution = ClanPoints(reader.read_u32()? as u64);
 
+                let mut skills = Vec::new();
                 for _ in 0..20 {
-                    let _skill_id = reader.read_u16()?;
+                    let skill_id = reader.read_u16()?;
                     let _expire_secs = reader.read_u32()?;
+                    if let Some(skill_id) = SkillId::new(skill_id) {
+                        skills.push(skill_id);
+                    }
                 }
 
                 let name = reader.read_null_terminated_utf8()?.to_string();
@@ -4164,6 +4169,7 @@ impl TryFrom<&Packet> for PacketServerClanCommand {
                     money,
                     position,
                     contribution,
+                    skills,
                 })
             }
             0x35 => {
@@ -4257,6 +4263,7 @@ impl From<&PacketServerClanCommand> for Packet {
                 money,
                 name,
                 description,
+                skills,
             } => {
                 writer.write_u8(0x33);
 
@@ -4274,9 +4281,14 @@ impl From<&PacketServerClanCommand> for Packet {
                 writer.write_u32(contribution.0 as u32);
 
                 // 20 clan skills
-                for _ in 0..20 {
-                    writer.write_u16(0); // Skill id
-                    writer.write_u32(0); // Expire secs
+                for i in 0..20 {
+                    if let Some(skill_id) = skills.get(i) {
+                        writer.write_u16(skill_id.get());
+                        writer.write_u32(0); // TODO: Expire secs
+                    } else {
+                        writer.write_u16(0);
+                        writer.write_u32(0);
+                    }
                 }
 
                 writer.write_null_terminated_utf8(name);

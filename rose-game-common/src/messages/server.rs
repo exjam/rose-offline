@@ -803,7 +803,7 @@ pub enum ServerMessage {
         description: String,
         position: ClanMemberPosition,
         contribution: ClanPoints,
-        // TODO: Clan skill list ?
+        skills: Vec<SkillId>,
     },
     CharacterUpdateClan {
         client_entity_id: ClientEntityId,

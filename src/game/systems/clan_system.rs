@@ -142,6 +142,7 @@ pub fn clan_system(
                         money: clan_storage.money,
                         points: clan_storage.points,
                         level: clan_storage.level,
+                        skills: clan_storage.skills,
                         members,
                     })
                     .id();
@@ -277,6 +278,7 @@ pub fn clan_system(
                     level: clan.level,
                     points: clan.points,
                     money: clan.money,
+                    skills: clan.skills.clone(),
                     position: connected_member_position,
                     contribution: connected_member_contribution,
                 })

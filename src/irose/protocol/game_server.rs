@@ -1449,6 +1449,7 @@ impl GameServer {
                 description,
                 position,
                 contribution,
+                skills,
             } => {
                 client
                     .connection
@@ -1462,6 +1463,7 @@ impl GameServer {
                         money,
                         position,
                         contribution,
+                        skills,
                     }))
                     .await?;
             }

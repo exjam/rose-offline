@@ -34,6 +34,7 @@ pub fn startup_clans_system(mut commands: Commands) {
             money: clan_storage.money,
             points: clan_storage.points,
             level: clan_storage.level,
+            skills: clan_storage.skills,
             members,
         });
     }

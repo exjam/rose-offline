@@ -3,7 +3,7 @@ use std::{io::Write, path::PathBuf};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
-use rose_data::ClanMemberPosition;
+use rose_data::{ClanMemberPosition, SkillId};
 use rose_game_common::components::{ClanLevel, ClanMark, ClanPoints, Money};
 
 use crate::game::storage::CLAN_STORAGE_DIR;
@@ -34,6 +34,7 @@ pub struct ClanStorage {
     pub points: ClanPoints,
     pub level: ClanLevel,
     pub members: Vec<ClanStorageMember>,
+    pub skills: Vec<SkillId>,
 }
 
 fn get_clan_path(name: &str) -> PathBuf {
@@ -50,6 +51,7 @@ impl ClanStorage {
             points: ClanPoints(0),
             level: ClanLevel::new(1).unwrap(),
             members: Vec::default(),
+            skills: Vec::default(),
         }
     }
 
