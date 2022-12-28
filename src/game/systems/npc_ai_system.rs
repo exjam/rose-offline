@@ -14,7 +14,7 @@ use std::{
     time::Duration,
 };
 
-use rose_data::{Item, MotionId, NpcId, SkillId, ZoneId};
+use rose_data::{Item, MotionId, NpcId, SkillId, ZoneId, ClanMemberPosition};
 use rose_file_readers::{
     AipAbilityType, AipAction, AipAttackNearbyStat, AipCondition, AipConditionFindNearbyEntities,
     AipConditionMonthDayTime, AipConditionWeekDayTime, AipDamageType, AipDistance,
@@ -25,19 +25,19 @@ use rose_file_readers::{
 };
 use rose_game_common::{data::Damage, messages::PartyXpSharing};
 
-use crate::game::{
+use crate::{game::{
     bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
     components::{
         AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command, CommandData,
         CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints, Level, MonsterSpawnPoint,
         MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Party, PartyMember,
-        PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team,
+        PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team, ClanMembership, Clan
     },
     events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
     resources::{ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList},
     GameData,
-};
+}};
 
 const DAMAGE_REWARD_EXPIRE_TIME: Duration = Duration::from_secs(5 * 60);
 
@@ -70,6 +70,7 @@ pub struct AttackerQuery<'w> {
     team: &'w Team,
     ability_values: &'w AbilityValues,
     health_points: &'w HealthPoints,
+    clan_membership: Option<&'w ClanMembership>,
 }
 
 #[derive(WorldQuery)]
@@ -94,6 +95,7 @@ pub struct TargetQuery<'w> {
     status_effects: &'w StatusEffects,
     target: Option<&'w Target>,
     npc: Option<&'w Npc>,
+    clan_membership: Option<&'w ClanMembership>,
 }
 
 #[derive(SystemParam)]
@@ -104,6 +106,7 @@ pub struct AiSystemParameters<'w, 's> {
     target_query: Query<'w, 's, TargetQuery<'static>>,
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
+    clan_query: Query<'w, 's, &'static Clan>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
     quest_trigger_events: EventWriter<'w, 's, QuestTriggerEvent>,
     reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
@@ -634,6 +637,44 @@ fn ai_condition_owner_has_target(
         .map_or(false, |(_, target)| target.is_some())
 }
 
+fn ai_condition_is_attacker_clan_master(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &AiParameters,
+) -> bool {
+    if let Some(attacker) = ai_parameters.attacker {
+        if let Some(ClanMembership(Some(clan_entity))) = attacker.clan_membership {
+            if let Ok(clan) = ai_system_parameters.clan_query.get(*clan_entity) {
+                if let Some(clan_member) = clan.find_online_member(attacker.entity) {
+                    return matches!(clan_member.position(), ClanMemberPosition::Master);
+                }
+            }
+        }
+    }
+
+    false
+}
+
+fn ai_condition_is_target_clan_master(
+    ai_system_parameters: &mut AiSystemParameters,
+    ai_parameters: &AiParameters,
+) -> bool {
+    if let Some(target) = ai_parameters
+        .source
+        .target
+        .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+    {
+        if let Some(ClanMembership(Some(clan_entity))) = target.clan_membership {
+            if let Ok(clan) = ai_system_parameters.clan_query.get(*clan_entity) {
+                if let Some(clan_member) = clan.find_online_member(target.entity) {
+                    return matches!(clan_member.position(), ClanMemberPosition::Master);
+                }
+            }
+        }
+    }
+
+    false
+}
+
 fn npc_ai_check_conditions(
     ai_system_parameters: &mut AiSystemParameters,
     ai_system_resources: &AiSystemResources,
@@ -749,13 +790,11 @@ fn npc_ai_check_conditions(
             AipCondition::OwnerHasTarget => {
                 ai_condition_owner_has_target(ai_system_parameters, ai_parameters)
             }
-            /*
-            AipCondition::IsAttackerClanMaster => false,
-            AipCondition::IsTargetClanMaster => false,
-            */
-            _ => {
-                log::warn!(target: "npc_ai_unimplemented", "  - Unimplemented AI condition: {:?}", condition);
-                false
+            AipCondition::IsAttackerClanMaster =>  {
+                ai_condition_is_attacker_clan_master(ai_system_parameters, ai_parameters)
+            }
+            AipCondition::IsTargetClanMaster =>  {
+                ai_condition_is_target_clan_master(ai_system_parameters, ai_parameters)
             }
         };
         log::trace!(target: "npc_ai", "  - AI condition: {:?} = {}", condition, result);
@@ -1527,6 +1566,7 @@ fn npc_ai_do_actions(
                 quantity,
             ),
             /*
+            AipAction::RunAway(_) => {},
             AipAction::SetPvpFlag(_, _) => {}
             */
             _ => {
