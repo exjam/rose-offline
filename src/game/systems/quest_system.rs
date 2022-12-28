@@ -11,7 +11,7 @@ use std::{marker::PhantomData, num::NonZeroU8, ops::RangeInclusive};
 
 use rose_data::{EquipmentItem, Item, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId};
 use rose_file_readers::{
-    QsdAbilityType, QsdCondition, QsdConditionCheckParty, QsdConditionMonthDayTime,
+    QsdAbilityType, QsdClanPoints, QsdCondition, QsdConditionCheckParty, QsdConditionMonthDayTime,
     QsdConditionObjectVariable, QsdConditionOperator, QsdConditionQuestItem,
     QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdDistance, QsdEquipmentIndex,
     QsdEventId, QsdItemBase1000, QsdNpcId, QsdObjectType, QsdReward, QsdRewardCalculatedItem,
@@ -27,10 +27,11 @@ use crate::game::{
         client_entity_teleport_zone, skill_list_try_learn_skill, MonsterBundle,
     },
     components::{
-        AbilityValues, ActiveQuest, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector,
-        Equipment, ExperiencePoints, GameClient, HealthPoints, Inventory, Level, ManaPoints, Money,
-        MoveSpeed, Npc, ObjectVariables, Party, PartyMembership, Position, QuestState, SkillList,
-        SkillPoints, SpawnOrigin, Stamina, StatPoints, Team, UnionMembership,
+        AbilityValues, ActiveQuest, BasicStats, CharacterInfo, Clan, ClanMembership, ClientEntity,
+        ClientEntitySector, Equipment, ExperiencePoints, GameClient, HealthPoints, Inventory,
+        Level, ManaPoints, Money, MoveSpeed, Npc, ObjectVariables, Party, PartyMembership,
+        Position, QuestState, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, Team,
+        UnionMembership,
     },
     events::{QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
@@ -48,6 +49,7 @@ pub struct QuestSystemParameters<'w, 's> {
     reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
     object_variables_query: Query<'w, 's, (&'static mut ObjectVariables, &'static Position)>,
     party_query: Query<'w, 's, &'static Party>,
+    clan_query: Query<'w, 's, &'static Clan>,
 }
 
 #[derive(SystemParam)]
@@ -88,6 +90,7 @@ pub struct QuestSourceEntityQuery<'w> {
     stat_points: Option<&'w mut StatPoints>,
     team: &'w mut Team,
     union_membership: Option<&'w mut UnionMembership>,
+    clan_membership: Option<&'w ClanMembership>,
 }
 
 struct QuestParameters<'a, 'b, 'w> {
@@ -632,6 +635,147 @@ fn quest_condition_check_party_member_count(
     false
 }
 
+fn quest_condition_check_in_clan(
+    _quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    in_clan: bool,
+) -> bool {
+    let has_clan = matches!(
+        quest_parameters.source.clan_membership,
+        Some(&ClanMembership(Some(_)))
+    );
+    has_clan == in_clan
+}
+
+fn quest_condition_check_clan_position(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_system_resources: &QuestSystemResources,
+    quest_parameters: &QuestParameters,
+    compare_operator: QsdConditionOperator,
+    compare_value: usize,
+) -> bool {
+    let value =
+        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+            quest_system_parameters
+                .clan_query
+                .get(clan_entity)
+                .ok()
+                .and_then(|clan| clan.find_online_member(quest_parameters.source.entity))
+                .and_then(|member| {
+                    quest_system_resources
+                        .game_data
+                        .data_decoder
+                        .encode_clan_member_position(member.position())
+                })
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
+    quest_condition_operator(compare_operator, value, compare_value)
+}
+
+fn quest_condition_check_clan_contribution(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    compare_operator: QsdConditionOperator,
+    compare_value: i32,
+) -> bool {
+    let value =
+        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+            quest_system_parameters
+                .clan_query
+                .get(clan_entity)
+                .ok()
+                .and_then(|clan| clan.find_online_member(quest_parameters.source.entity))
+                .map_or(0, |member| member.contribution().0)
+        } else {
+            0
+        };
+
+    quest_condition_operator(compare_operator, value as i64, compare_value as i64)
+}
+
+fn quest_condition_check_clan_level(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    compare_operator: QsdConditionOperator,
+    compare_value: i32,
+) -> bool {
+    let value =
+        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+            quest_system_parameters
+                .clan_query
+                .get(clan_entity)
+                .ok()
+                .map_or(0, |clan| clan.level.get())
+        } else {
+            0
+        };
+
+    quest_condition_operator(compare_operator, value as i32, compare_value)
+}
+
+fn quest_condition_check_clan_points(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    compare_operator: QsdConditionOperator,
+    compare_value: QsdClanPoints,
+) -> bool {
+    let value =
+        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+            quest_system_parameters
+                .clan_query
+                .get(clan_entity)
+                .ok()
+                .map_or(0, |clan| clan.points.0)
+        } else {
+            0
+        };
+
+    quest_condition_operator(compare_operator, value as i64, compare_value as i64)
+}
+
+fn quest_condition_check_clan_money(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    compare_operator: QsdConditionOperator,
+    compare_value: i32,
+) -> bool {
+    let value =
+        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+            quest_system_parameters
+                .clan_query
+                .get(clan_entity)
+                .ok()
+                .map_or(0, |clan| clan.money.0)
+        } else {
+            0
+        };
+
+    quest_condition_operator(compare_operator, value, compare_value as i64)
+}
+
+fn quest_condition_check_clan_member_count(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    compare_operator: QsdConditionOperator,
+    compare_value: usize,
+) -> bool {
+    let value =
+        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+            quest_system_parameters
+                .clan_query
+                .get(clan_entity)
+                .ok()
+                .map_or(0, |clan| clan.members.len())
+        } else {
+            0
+        };
+
+    quest_condition_operator(compare_operator, value, compare_value)
+}
+
 fn quest_trigger_check_conditions(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
@@ -767,20 +911,63 @@ fn quest_trigger_check_conditions(
                 // Random percent is only checked on client
                 true
             }
+            QsdCondition::InClan(in_clan) => {
+                quest_condition_check_in_clan(quest_system_parameters, quest_parameters, in_clan)
+            }
+            QsdCondition::ClanPosition(compare_operator, compare_value) => {
+                quest_condition_check_clan_position(
+                    quest_system_parameters,
+                    quest_system_resources,
+                    quest_parameters,
+                    compare_operator,
+                    compare_value,
+                )
+            }
+            QsdCondition::ClanPointContribution(compare_operator, compare_value) => {
+                quest_condition_check_clan_contribution(
+                    quest_system_parameters,
+                    quest_parameters,
+                    compare_operator,
+                    compare_value,
+                )
+            }
+            QsdCondition::ClanLevel(compare_operator, compare_value) => {
+                quest_condition_check_clan_level(
+                    quest_system_parameters,
+                    quest_parameters,
+                    compare_operator,
+                    compare_value,
+                )
+            }
+            QsdCondition::ClanPoints(compare_operator, compare_value) => {
+                quest_condition_check_clan_points(
+                    quest_system_parameters,
+                    quest_parameters,
+                    compare_operator,
+                    compare_value,
+                )
+            }
+            QsdCondition::ClanMoney(compare_operator, compare_value) => {
+                quest_condition_check_clan_money(
+                    quest_system_parameters,
+                    quest_parameters,
+                    compare_operator,
+                    compare_value,
+                )
+            }
+            QsdCondition::ClanMemberCount(compare_operator, compare_value) => {
+                quest_condition_check_clan_member_count(
+                    quest_system_parameters,
+                    quest_parameters,
+                    compare_operator,
+                    compare_value,
+                )
+            }
+            // QsdCondition::HasClanSkill(_, _) => todo!(),
             _ => {
                 warn!("Unimplemented quest condition: {:?}", condition);
                 false
-            } /*
-              // TODO: Implement clan system
-              QsdCondition::InClan(_) => todo!(),
-              QsdCondition::ClanPosition(_, _) => todo!(),
-              QsdCondition::ClanPointContribution(_, _) => todo!(),
-              QsdCondition::ClanLevel(_, _) => todo!(),
-              QsdCondition::ClanPoints(_, _) => todo!(),
-              QsdCondition::ClanMoney(_, _) => todo!(),
-              QsdCondition::ClanMemberCount(_, _) => todo!(),
-              QsdCondition::HasClanSkill(_, _) => todo!(),
-              */
+            }
         };
 
         if !result {
