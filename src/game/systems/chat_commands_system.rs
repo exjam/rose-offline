@@ -17,7 +17,7 @@ use rose_data::{
     StackableItem, ZoneId,
 };
 use rose_game_common::{
-    components::{DroppedItem, ExperiencePoints},
+    components::{ClanLevel, ClanPoints, DroppedItem, ExperiencePoints},
     data::Damage,
 };
 
@@ -34,7 +34,7 @@ use crate::game::{
         PersonalStore, Position, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
         StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
     },
-    events::{ChatCommandEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
+    events::{ChatCommandEvent, ClanEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
     resources::{BotList, BotListEntry, ClientEntityList, ServerMessages, ServerTime},
     GameData,
@@ -46,6 +46,7 @@ pub struct ChatCommandParams<'w, 's> {
     bot_list: ResMut<'w, BotList>,
     client_entity_list: ResMut<'w, ClientEntityList>,
     game_data: Res<'w, GameData>,
+    clan_events: EventWriter<'w, 's, ClanEvent>,
     reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
     damage_events: EventWriter<'w, 's, DamageEvent>,
     reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
@@ -74,6 +75,7 @@ pub struct ChatCommandUserQuery<'w> {
     stamina: &'w mut Stamina,
     stat_points: &'w mut StatPoints,
     union_membership: &'w mut UnionMembership,
+    clan_membership: &'w ClanMembership,
 }
 
 lazy_static! {
@@ -145,6 +147,57 @@ lazy_static! {
                             .required(true),
                     )
                     .arg(Arg::new("id").required(true)),
+            )
+            .subcommand(
+                clap::Command::new("clan")
+                    .subcommand(
+                        clap::Command::new("level")
+                            .arg(
+                                Arg::new("cmd")
+                                    .possible_values([
+                                        PossibleValue::new("add"),
+                                        PossibleValue::new("set"),
+                                    ])
+                                    .required(true),
+                            )
+                            .arg(Arg::new("value").required(true)),
+                    )
+                    .subcommand(
+                        clap::Command::new("points")
+                            .arg(
+                                Arg::new("cmd")
+                                    .possible_values([
+                                        PossibleValue::new("add"),
+                                        PossibleValue::new("set"),
+                                    ])
+                                    .required(true),
+                            )
+                            .arg(Arg::new("value").required(true)),
+                    )
+                    .subcommand(
+                        clap::Command::new("money")
+                            .arg(
+                                Arg::new("cmd")
+                                    .possible_values([
+                                        PossibleValue::new("add"),
+                                        PossibleValue::new("set"),
+                                    ])
+                                    .required(true),
+                            )
+                            .arg(Arg::new("value").required(true)),
+                    )
+                    .subcommand(
+                        clap::Command::new("skill")
+                            .arg(
+                                Arg::new("cmd")
+                                    .possible_values([
+                                        PossibleValue::new("add"),
+                                        PossibleValue::new("remove"),
+                                    ])
+                                    .required(true),
+                            )
+                            .arg(Arg::new("value").required(true)),
+                    ),
             )
     };
 }
@@ -566,19 +619,19 @@ fn handle_chat_command(
             let ability_type_str = arg_matches.value_of("ability_type").unwrap();
             let value = arg_matches.value_of("value").unwrap().parse::<i32>()?;
             let ability_type = match ability_type_str {
-                "strength" => AbilityType::Strength,
-                "dexterity" => AbilityType::Dexterity,
-                "intelligence" => AbilityType::Intelligence,
-                "concentration" => AbilityType::Concentration,
-                "charm" => AbilityType::Charm,
-                "sense" => AbilityType::Sense,
+                "str" | "strength" => AbilityType::Strength,
+                "dex" | "dexterity" => AbilityType::Dexterity,
+                "int" | "intelligence" => AbilityType::Intelligence,
+                "con" | "concentration" => AbilityType::Concentration,
+                "cha" | "charm" => AbilityType::Charm,
+                "sen" | "sense" => AbilityType::Sense,
                 "bonus_point" => AbilityType::BonusPoint,
                 "skillpoint" => AbilityType::Skillpoint,
                 "money" => AbilityType::Money,
                 "stamina" => AbilityType::Stamina,
-                "health" => AbilityType::Health,
-                "mana" => AbilityType::Mana,
-                "experience" => AbilityType::Experience,
+                "hp" | "health" => AbilityType::Health,
+                "mp" | "mana" => AbilityType::Mana,
+                "xp" | "experience" => AbilityType::Experience,
                 "level" => AbilityType::Level,
                 "union_point1" => AbilityType::UnionPoint1,
                 "union_point2" => AbilityType::UnionPoint2,
@@ -622,18 +675,18 @@ fn handle_chat_command(
                 "face" => AbilityType::Face,
                 "hair" => AbilityType::Hair,
                 "job" => AbilityType::Job,
-                "strength" => AbilityType::Strength,
-                "dexterity" => AbilityType::Dexterity,
-                "intelligence" => AbilityType::Intelligence,
-                "concentration" => AbilityType::Concentration,
-                "charm" => AbilityType::Charm,
-                "sense" => AbilityType::Sense,
-                "health" => AbilityType::Health,
-                "mana" => AbilityType::Mana,
-                "experience" => AbilityType::Experience,
+                "str" | "strength" => AbilityType::Strength,
+                "dex" | "dexterity" => AbilityType::Dexterity,
+                "int" | "intelligence" => AbilityType::Intelligence,
+                "con" | "concentration" => AbilityType::Concentration,
+                "cha" | "charm" => AbilityType::Charm,
+                "sen" | "sense" => AbilityType::Sense,
+                "hp" | "health" => AbilityType::Health,
+                "mp" | "mana" => AbilityType::Mana,
+                "xp" | "experience" => AbilityType::Experience,
                 "level" => AbilityType::Level,
                 "pvp_flag" => AbilityType::PvpFlag,
-                "team_number" => AbilityType::TeamNumber,
+                "team" | "team_number" => AbilityType::TeamNumber,
                 "union" => AbilityType::Union,
                 "union_point1" => AbilityType::UnionPoint1,
                 "union_point2" => AbilityType::UnionPoint2,
@@ -867,6 +920,98 @@ fn handle_chat_command(
                 chat_command_params
                     .reward_item_events
                     .send(RewardItemEvent::new(chat_command_user.entity, item, true));
+            }
+        }
+        ("clan", arg_matches) => {
+            if let Some(sub_matches) = arg_matches.subcommand_matches("level") {
+                let cmd = sub_matches.value_of("cmd").unwrap();
+                let value = sub_matches.value_of("value").unwrap().parse::<i32>()?;
+
+                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                    match cmd {
+                        "add" => {
+                            chat_command_params.clan_events.send(ClanEvent::AddLevel {
+                                clan_entity,
+                                level: value,
+                            });
+                        }
+                        "set" => {
+                            chat_command_params.clan_events.send(ClanEvent::SetLevel {
+                                clan_entity,
+                                level: ClanLevel::new(value as u32)
+                                    .ok_or(ChatCommandError::InvalidArguments)?,
+                            });
+                        }
+                        _ => return Err(ChatCommandError::InvalidArguments),
+                    }
+                }
+            } else if let Some(sub_matches) = arg_matches.subcommand_matches("points") {
+                let cmd = sub_matches.value_of("cmd").unwrap();
+                let value = sub_matches.value_of("value").unwrap().parse::<i64>()?;
+
+                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                    match cmd {
+                        "add" => {
+                            chat_command_params.clan_events.send(ClanEvent::AddPoints {
+                                clan_entity,
+                                points: value,
+                            });
+                        }
+                        "set" => {
+                            chat_command_params.clan_events.send(ClanEvent::SetPoints {
+                                clan_entity,
+                                points: ClanPoints(value as u64),
+                            });
+                        }
+                        _ => return Err(ChatCommandError::InvalidArguments),
+                    }
+                }
+            } else if let Some(sub_matches) = arg_matches.subcommand_matches("money") {
+                let cmd = sub_matches.value_of("cmd").unwrap();
+                let value = sub_matches.value_of("value").unwrap().parse::<i64>()?;
+
+                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                    match cmd {
+                        "add" => {
+                            chat_command_params.clan_events.send(ClanEvent::AddMoney {
+                                clan_entity,
+                                money: value,
+                            });
+                        }
+                        "set" => {
+                            chat_command_params.clan_events.send(ClanEvent::SetMoney {
+                                clan_entity,
+                                money: Money(value),
+                            });
+                        }
+                        _ => return Err(ChatCommandError::InvalidArguments),
+                    }
+                }
+            } else if let Some(sub_matches) = arg_matches.subcommand_matches("skill") {
+                let cmd = sub_matches.value_of("cmd").unwrap();
+                let value = sub_matches.value_of("value").unwrap().parse::<u16>()?;
+
+                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                    match cmd {
+                        "add" => {
+                            chat_command_params.clan_events.send(ClanEvent::AddSkill {
+                                clan_entity,
+                                skill_id: SkillId::new(value)
+                                    .ok_or(ChatCommandError::InvalidArguments)?,
+                            });
+                        }
+                        "remove" => {
+                            chat_command_params
+                                .clan_events
+                                .send(ClanEvent::RemoveSkill {
+                                    clan_entity,
+                                    skill_id: SkillId::new(value)
+                                        .ok_or(ChatCommandError::InvalidArguments)?,
+                                });
+                        }
+                        _ => return Err(ChatCommandError::InvalidArguments),
+                    }
+                }
             }
         }
         _ => return Err(ChatCommandError::InvalidCommand),
