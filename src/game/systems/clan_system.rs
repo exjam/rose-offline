@@ -29,7 +29,7 @@ pub struct CreatorQuery<'w> {
     level: &'w Level,
     inventory: &'w mut Inventory,
     game_client: Option<&'w GameClient>,
-    clan_membership: Option<&'w ClanMembership>,
+    clan_membership: &'w ClanMembership,
 }
 
 #[derive(WorldQuery)]
