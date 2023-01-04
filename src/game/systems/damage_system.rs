@@ -8,7 +8,7 @@ use rose_game_common::data::Damage;
 
 use crate::game::{
     components::{
-        ClientEntity, ClientEntityType, Command, DamageSource, DamageSources, HealthPoints,
+        ClientEntity, ClientEntityType, Command, DamageSource, DamageSources, Dead, HealthPoints,
         MotionData, NpcAi,
     },
     events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged, ItemLifeEvent},
@@ -152,13 +152,16 @@ pub fn damage_system(
             }
 
             if health_points.hp == 0 {
-                commands.entity(defender_entity).insert(Command::with_die(
-                    Some(attacker_entity),
-                    Some(damage),
-                    motion_data
-                        .and_then(|motion_data| motion_data.get_die())
-                        .map(|die_motion| die_motion.duration)
-                        .or_else(|| Some(Duration::from_secs(1))),
+                commands.entity(defender_entity).insert((
+                    Dead,
+                    Command::with_die(
+                        Some(attacker_entity),
+                        Some(damage),
+                        motion_data
+                            .and_then(|motion_data| motion_data.get_die())
+                            .map(|die_motion| die_motion.duration)
+                            .or_else(|| Some(Duration::from_secs(1))),
+                    ),
                 ));
             }
         }

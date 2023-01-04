@@ -24,11 +24,11 @@ use crate::game::{
     components::{
         AbilityValues, Account, Bank, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
         ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
-        CommandSit, DrivingTime, DroppedItem, Equipment, EquipmentItemDatabase, ExperiencePoints,
-        GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, ManaPoints, Money, MotionData,
-        MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership, PassiveRecoveryTime,
-        Position, QuestState, SkillList, SkillPoints, StatPoints, StatusEffects,
-        StatusEffectsRegen, Team, WorldClient,
+        CommandSit, Dead, DrivingTime, DroppedItem, Equipment, EquipmentItemDatabase,
+        ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, ManaPoints, Money,
+        MotionData, MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership,
+        PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints, StatPoints,
+        StatusEffects, StatusEffectsRegen, Team, WorldClient,
     },
     events::{
         BankEvent, ChatCommandEvent, ItemLifeEvent, NpcStoreEvent, PartyEvent,
@@ -169,8 +169,8 @@ fn handle_game_connection_request(
     // If the character was saved as dead, we must respawn them!
     let (health_points, mana_points, position) = if character.health_points.hp == 0 {
         (
-            HealthPoints::new(ability_values.get_max_health()),
-            ManaPoints::new(ability_values.get_max_mana()),
+            HealthPoints::new((3 * ability_values.get_max_health()) / 10),
+            ManaPoints::new((3 * ability_values.get_max_mana()) / 10),
             Position::new(
                 character.info.revive_position,
                 character.info.revive_zone_id,
@@ -628,6 +628,7 @@ pub fn game_server_main_system(
         &Position,
         &AbilityValues,
         &Command,
+        Option<&Dead>,
         (
             &mut BasicStats,
             &mut CharacterInfo,
@@ -665,6 +666,7 @@ pub fn game_server_main_system(
             position,
             ability_values,
             command,
+            dead,
             (
                 mut basic_stats,
                 mut character_info,
@@ -967,7 +969,7 @@ pub fn game_server_main_system(
                         );
                     }
                     ClientMessage::ReviveRequest(revive_request_type) => {
-                        if command.is_dead() {
+                        if dead.is_some() {
                             let new_position = match revive_request_type {
                                 ReviveRequestType::RevivePosition => {
                                     let revive_position = if let Some(zone_data) =
@@ -992,9 +994,14 @@ pub fn game_server_main_system(
                                 ),
                             };
 
-                            entity_commands
-                                .insert(HealthPoints::new(ability_values.get_max_health()))
-                                .insert(ManaPoints::new(ability_values.get_max_mana()));
+                            entity_commands.remove::<Dead>();
+                            entity_commands.insert((
+                                HealthPoints::new((3 * ability_values.get_max_health()) / 10),
+                                ManaPoints::new((3 * ability_values.get_max_mana()) / 10),
+                                Command::with_stop(),
+                                NextCommand::default(),
+                            ));
+
                             client_entity_teleport_zone(
                                 &mut commands,
                                 &mut client_entity_list,

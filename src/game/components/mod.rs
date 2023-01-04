@@ -8,6 +8,7 @@ mod client_entity_sector;
 mod client_entity_visibility;
 mod command;
 mod damage_sources;
+mod dead;
 mod driving_time;
 mod entity_expire_time;
 mod event_object;
@@ -55,6 +56,7 @@ pub use command::{
     CommandEmote, CommandMove, CommandPickupItemDrop, CommandSit, CommandStop,
 };
 pub use damage_sources::{DamageSource, DamageSources};
+pub use dead::Dead;
 pub use driving_time::DrivingTime;
 pub use entity_expire_time::EntityExpireTime;
 pub use event_object::EventObject;
