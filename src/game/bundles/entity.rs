@@ -238,11 +238,10 @@ impl ItemDropBundle {
         let entity = entity_commands.id();
 
         if let Some(owner_entity) = owner_entity {
-            entity_commands
-                .insert(Owner::new(owner_entity))
-                .insert(OwnerExpireTime::new(
-                    server_time.now + ITEM_DROP_OWNER_EXPIRE_TIME,
-                ));
+            entity_commands.insert((
+                Owner::new(owner_entity),
+                OwnerExpireTime::new(server_time.now + ITEM_DROP_OWNER_EXPIRE_TIME),
+            ));
         }
 
         if let Some(party_owner_entity) = party_owner_entity {
@@ -285,8 +284,7 @@ pub fn client_entity_join_zone(
     let client_entity_id = client_entity.id;
     commands
         .entity(entity)
-        .insert(client_entity)
-        .insert(client_entity_sector);
+        .insert((client_entity, client_entity_sector));
     Ok(client_entity_id)
 }
 
@@ -303,9 +301,7 @@ pub fn client_entity_leave_zone(
     }
     commands
         .entity(entity)
-        .remove::<ClientEntity>()
-        .remove::<ClientEntitySector>()
-        .remove::<ClientEntityVisibility>();
+        .remove::<(ClientEntity, ClientEntitySector, ClientEntityVisibility)>();
 }
 
 pub fn client_entity_teleport_zone(
@@ -326,11 +322,11 @@ pub fn client_entity_teleport_zone(
         client_entity_sector,
         previous_position,
     );
-    commands
-        .entity(entity)
-        .insert(Command::with_stop())
-        .insert(NextCommand::default())
-        .insert(new_position.clone());
+    commands.entity(entity).insert((
+        Command::with_stop(),
+        NextCommand::default(),
+        new_position.clone(),
+    ));
 
     if let Some(game_client) = game_client {
         game_client
