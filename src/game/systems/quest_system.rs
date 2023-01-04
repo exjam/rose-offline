@@ -809,6 +809,29 @@ fn quest_condition_check_clan_member_count(
     quest_condition_operator(compare_operator, value, compare_value)
 }
 
+fn quest_condition_check_clan_have_skill(
+    quest_system_parameters: &mut QuestSystemParameters,
+    quest_parameters: &QuestParameters,
+    skill_id_range: &RangeInclusive<QsdSkillId>,
+    have: bool,
+) -> bool {
+    if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        if let Ok(clan) = quest_system_parameters.clan_query.get(clan_entity) {
+            for skill_id in clan.skills.iter() {
+                if skill_id_range.contains(&(skill_id.get() as QsdSkillId)) {
+                    return have;
+                }
+            }
+        }
+    }
+
+    !have
+}
+
 fn quest_trigger_check_conditions(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
@@ -996,10 +1019,13 @@ fn quest_trigger_check_conditions(
                     compare_value,
                 )
             }
-            // QsdCondition::HasClanSkill(_, _) => todo!(),
-            _ => {
-                warn!("Unimplemented quest condition: {:?}", condition);
-                false
+            QsdCondition::HasClanSkill(ref skill_id_range, have) => {
+                quest_condition_check_clan_have_skill(
+                    quest_system_parameters,
+                    quest_parameters,
+                    skill_id_range,
+                    have,
+                )
             }
         };
 
@@ -2312,8 +2338,6 @@ fn quest_trigger_apply_rewards(
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
               QsdReward::SetRevivePosition(_) => todo!(),
-
-              // TODO: Implement clans
               QsdReward::ClanPointContribution(_, _) => todo!(),
               QsdReward::TeleportNearbyClanMembers(_, _, _) => todo!(),
               */
