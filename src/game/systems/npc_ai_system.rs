@@ -642,8 +642,11 @@ fn ai_condition_is_attacker_clan_master(
     ai_parameters: &AiParameters,
 ) -> bool {
     if let Some(attacker) = ai_parameters.attacker {
-        if let Some(ClanMembership(Some(clan_entity))) = attacker.clan_membership {
-            if let Ok(clan) = ai_system_parameters.clan_query.get(*clan_entity) {
+        if let Some(clan_entity) = attacker
+            .clan_membership
+            .and_then(|clan_membership| clan_membership.clan())
+        {
+            if let Ok(clan) = ai_system_parameters.clan_query.get(clan_entity) {
                 if let Some(clan_member) = clan.find_online_member(attacker.entity) {
                     return matches!(clan_member.position(), ClanMemberPosition::Master);
                 }
@@ -663,8 +666,11 @@ fn ai_condition_is_target_clan_master(
         .target
         .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
     {
-        if let Some(ClanMembership(Some(clan_entity))) = target.clan_membership {
-            if let Ok(clan) = ai_system_parameters.clan_query.get(*clan_entity) {
+        if let Some(clan_entity) = target
+            .clan_membership
+            .and_then(|clan_membership| clan_membership.clan())
+        {
+            if let Ok(clan) = ai_system_parameters.clan_query.get(clan_entity) {
                 if let Some(clan_member) = clan.find_online_member(target.entity) {
                     return matches!(clan_member.position(), ClanMemberPosition::Master);
                 }
@@ -1784,10 +1790,9 @@ pub fn npc_ai_system(
                                     continue;
                                 }
 
-                                if let Some(party_entity) =
-                                    attacker.party_membership.and_then(|party_membership| {
-                                        party_membership.get_party_entity()
-                                    })
+                                if let Some(party_entity) = attacker
+                                    .party_membership
+                                    .and_then(|party_membership| party_membership.party())
                                 {
                                     // Accumulate party XP for later distribution
                                     if let Some((_, party_total_xp, _)) = pending_party_xp
@@ -1949,7 +1954,7 @@ pub fn npc_ai_system(
                                             source.position,
                                             Some(killer_entity),
                                             killer.party_membership.and_then(|party_membership| {
-                                                party_membership.get_party_entity()
+                                                party_membership.party()
                                             }),
                                             &ai_system_resources.server_time,
                                         );

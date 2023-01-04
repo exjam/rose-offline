@@ -141,7 +141,7 @@ fn handle_game_connection_request(
                 position,
                 contribution,
             };
-            clan_membership = ClanMembership(Some(clan_entity));
+            clan_membership = ClanMembership::new(clan_entity);
             break;
         }
     }
@@ -218,7 +218,7 @@ fn handle_game_connection_request(
             move_mode,
             move_speed,
             next_command: NextCommand::default(),
-            party_membership: PartyMembership::None,
+            party_membership: PartyMembership::default(),
             passive_recovery_time: PassiveRecoveryTime::default(),
             position: position.clone(),
             quest_state: character.quest_state.clone(),

@@ -183,8 +183,7 @@ pub fn bot_ai_system(
                                 bot.ai.time_since_last_idle_check += BOT_IDLE_CHECK_DURATION;
                             } else {
                                 //  Move near party owner if we are too far away
-                                if let &PartyMembership::Member(party_entity) = bot.party_membership
-                                {
+                                if let Some(party_entity) = bot.party_membership.party() {
                                     if let Ok(party) = party_query.get(party_entity) {
                                         if let Ok(owner) = team_query.get(party.owner) {
                                             if bot.position.zone_id == owner.position.zone_id

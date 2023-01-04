@@ -174,7 +174,7 @@ pub fn clan_system(
                 // Add clan membership to creator
                 commands
                     .entity(*creator_entity)
-                    .insert(ClanMembership(Some(clan_entity)));
+                    .insert(ClanMembership::new(clan_entity));
 
                 // Update clan to nearby entities
                 server_messages.send_entity_message(

@@ -6,6 +6,16 @@ use rose_game_common::components::{ClanLevel, ClanMark, ClanPoints, ClanUniqueId
 #[derive(Component, Clone, Default, Deref, DerefMut)]
 pub struct ClanMembership(pub Option<Entity>);
 
+impl ClanMembership {
+    pub fn new(entity: Entity) -> Self {
+        Self(Some(entity))
+    }
+
+    pub fn clan(&self) -> Option<Entity> {
+        self.0
+    }
+}
+
 #[derive(Clone)]
 pub enum ClanMember {
     Online {

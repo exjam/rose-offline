@@ -109,10 +109,10 @@ pub fn save_system(
                             );
                         }
 
-                        if let PartyMembership::Member(party_entity) = character.party_membership {
+                        if let Some(party_entity) = character.party_membership.party() {
                             party_member_events.send(PartyMemberEvent::Disconnect(
                                 PartyMemberDisconnect {
-                                    party_entity: *party_entity,
+                                    party_entity,
                                     disconnect_entity: entity,
                                     character_id: character.character_info.unique_id,
                                     name: character.character_info.name.clone(),

@@ -927,7 +927,7 @@ fn handle_chat_command(
                 let cmd = sub_matches.value_of("cmd").unwrap();
                 let value = sub_matches.value_of("value").unwrap().parse::<i32>()?;
 
-                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                if let Some(clan_entity) = chat_command_user.clan_membership.clan() {
                     match cmd {
                         "add" => {
                             chat_command_params.clan_events.send(ClanEvent::AddLevel {
@@ -949,7 +949,7 @@ fn handle_chat_command(
                 let cmd = sub_matches.value_of("cmd").unwrap();
                 let value = sub_matches.value_of("value").unwrap().parse::<i64>()?;
 
-                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                if let Some(clan_entity) = chat_command_user.clan_membership.clan() {
                     match cmd {
                         "add" => {
                             chat_command_params.clan_events.send(ClanEvent::AddPoints {
@@ -970,7 +970,7 @@ fn handle_chat_command(
                 let cmd = sub_matches.value_of("cmd").unwrap();
                 let value = sub_matches.value_of("value").unwrap().parse::<i64>()?;
 
-                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                if let Some(clan_entity) = chat_command_user.clan_membership.clan() {
                     match cmd {
                         "add" => {
                             chat_command_params.clan_events.send(ClanEvent::AddMoney {
@@ -991,7 +991,7 @@ fn handle_chat_command(
                 let cmd = sub_matches.value_of("cmd").unwrap();
                 let value = sub_matches.value_of("value").unwrap().parse::<u16>()?;
 
-                if let Some(clan_entity) = chat_command_user.clan_membership.0 {
+                if let Some(clan_entity) = chat_command_user.clan_membership.clan() {
                     match cmd {
                         "add" => {
                             chat_command_params.clan_events.send(ClanEvent::AddSkill {

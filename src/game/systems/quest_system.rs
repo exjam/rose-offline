@@ -614,7 +614,11 @@ fn quest_condition_check_party(
     level_operator: QsdConditionOperator,
     level: i32,
 ) -> bool {
-    if let Some(&PartyMembership::Member(party_entity)) = quest_parameters.source.party_membership {
+    if let Some(party_entity) = quest_parameters
+        .source
+        .party_membership
+        .and_then(|party_membership| party_membership.party())
+    {
         if let Ok(party) = quest_system_parameters.party_query.get(party_entity) {
             if is_leader && party.owner != quest_parameters.source.entity {
                 return false;
@@ -632,7 +636,11 @@ fn quest_condition_check_party_member_count(
     quest_parameters: &QuestParameters,
     range: &RangeInclusive<usize>,
 ) -> bool {
-    if let Some(&PartyMembership::Member(party_entity)) = quest_parameters.source.party_membership {
+    if let Some(party_entity) = quest_parameters
+        .source
+        .party_membership
+        .and_then(|party_membership| party_membership.party())
+    {
         if let Ok(party) = quest_system_parameters.party_query.get(party_entity) {
             return range.contains(&party.members.len());
         }
@@ -646,10 +654,11 @@ fn quest_condition_check_in_clan(
     quest_parameters: &QuestParameters,
     in_clan: bool,
 ) -> bool {
-    let has_clan = matches!(
-        quest_parameters.source.clan_membership,
-        Some(&ClanMembership(Some(_)))
-    );
+    let has_clan = quest_parameters
+        .source
+        .clan_membership
+        .map_or(false, |clan_membership| clan_membership.is_some());
+
     has_clan == in_clan
 }
 
@@ -660,23 +669,26 @@ fn quest_condition_check_clan_position(
     compare_operator: QsdConditionOperator,
     compare_value: usize,
 ) -> bool {
-    let value =
-        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
-            quest_system_parameters
-                .clan_query
-                .get(clan_entity)
-                .ok()
-                .and_then(|clan| clan.find_online_member(quest_parameters.source.entity))
-                .and_then(|member| {
-                    quest_system_resources
-                        .game_data
-                        .data_decoder
-                        .encode_clan_member_position(member.position())
-                })
-                .unwrap_or(0)
-        } else {
-            0
-        };
+    let value = if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        quest_system_parameters
+            .clan_query
+            .get(clan_entity)
+            .ok()
+            .and_then(|clan| clan.find_online_member(quest_parameters.source.entity))
+            .and_then(|member| {
+                quest_system_resources
+                    .game_data
+                    .data_decoder
+                    .encode_clan_member_position(member.position())
+            })
+            .unwrap_or(0)
+    } else {
+        0
+    };
 
     quest_condition_operator(compare_operator, value, compare_value)
 }
@@ -687,17 +699,20 @@ fn quest_condition_check_clan_contribution(
     compare_operator: QsdConditionOperator,
     compare_value: i32,
 ) -> bool {
-    let value =
-        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
-            quest_system_parameters
-                .clan_query
-                .get(clan_entity)
-                .ok()
-                .and_then(|clan| clan.find_online_member(quest_parameters.source.entity))
-                .map_or(0, |member| member.contribution().0)
-        } else {
-            0
-        };
+    let value = if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        quest_system_parameters
+            .clan_query
+            .get(clan_entity)
+            .ok()
+            .and_then(|clan| clan.find_online_member(quest_parameters.source.entity))
+            .map_or(0, |member| member.contribution().0)
+    } else {
+        0
+    };
 
     quest_condition_operator(compare_operator, value as i64, compare_value as i64)
 }
@@ -708,16 +723,19 @@ fn quest_condition_check_clan_level(
     compare_operator: QsdConditionOperator,
     compare_value: i32,
 ) -> bool {
-    let value =
-        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
-            quest_system_parameters
-                .clan_query
-                .get(clan_entity)
-                .ok()
-                .map_or(0, |clan| clan.level.get())
-        } else {
-            0
-        };
+    let value = if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        quest_system_parameters
+            .clan_query
+            .get(clan_entity)
+            .ok()
+            .map_or(0, |clan| clan.level.get())
+    } else {
+        0
+    };
 
     quest_condition_operator(compare_operator, value as i32, compare_value)
 }
@@ -728,16 +746,19 @@ fn quest_condition_check_clan_points(
     compare_operator: QsdConditionOperator,
     compare_value: QsdClanPoints,
 ) -> bool {
-    let value =
-        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
-            quest_system_parameters
-                .clan_query
-                .get(clan_entity)
-                .ok()
-                .map_or(0, |clan| clan.points.0)
-        } else {
-            0
-        };
+    let value = if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        quest_system_parameters
+            .clan_query
+            .get(clan_entity)
+            .ok()
+            .map_or(0, |clan| clan.points.0)
+    } else {
+        0
+    };
 
     quest_condition_operator(compare_operator, value as i64, compare_value as i64)
 }
@@ -748,16 +769,19 @@ fn quest_condition_check_clan_money(
     compare_operator: QsdConditionOperator,
     compare_value: i32,
 ) -> bool {
-    let value =
-        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
-            quest_system_parameters
-                .clan_query
-                .get(clan_entity)
-                .ok()
-                .map_or(0, |clan| clan.money.0)
-        } else {
-            0
-        };
+    let value = if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        quest_system_parameters
+            .clan_query
+            .get(clan_entity)
+            .ok()
+            .map_or(0, |clan| clan.money.0)
+    } else {
+        0
+    };
 
     quest_condition_operator(compare_operator, value, compare_value as i64)
 }
@@ -768,16 +792,19 @@ fn quest_condition_check_clan_member_count(
     compare_operator: QsdConditionOperator,
     compare_value: usize,
 ) -> bool {
-    let value =
-        if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
-            quest_system_parameters
-                .clan_query
-                .get(clan_entity)
-                .ok()
-                .map_or(0, |clan| clan.members.len())
-        } else {
-            0
-        };
+    let value = if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
+        quest_system_parameters
+            .clan_query
+            .get(clan_entity)
+            .ok()
+            .map_or(0, |clan| clan.members.len())
+    } else {
+        0
+    };
 
     quest_condition_operator(compare_operator, value, compare_value)
 }
@@ -1898,7 +1925,11 @@ fn quest_reward_clan_level(
     operator: QsdRewardOperator,
     value: i32,
 ) -> bool {
-    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+    if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
         match operator {
             QsdRewardOperator::Set => {
                 if let Some(value) = NonZeroU32::new(value as u32) {
@@ -1947,7 +1978,11 @@ fn quest_reward_clan_money(
     operator: QsdRewardOperator,
     value: i32,
 ) -> bool {
-    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+    if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
         match operator {
             QsdRewardOperator::Set => {
                 quest_system_parameters
@@ -1994,7 +2029,11 @@ fn quest_reward_clan_points(
     operator: QsdRewardOperator,
     value: i32,
 ) -> bool {
-    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+    if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
         match operator {
             QsdRewardOperator::Set => {
                 quest_system_parameters
@@ -2040,7 +2079,11 @@ fn quest_reward_clan_add_skill(
     quest_parameters: &mut QuestParameters,
     skill_id: QsdSkillId,
 ) -> bool {
-    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+    if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
         if let Some(skill_id) = SkillId::new(skill_id as u16) {
             quest_system_parameters
                 .clan_events
@@ -2060,7 +2103,11 @@ fn quest_reward_clan_remove_skill(
     quest_parameters: &mut QuestParameters,
     skill_id: QsdSkillId,
 ) -> bool {
-    if let Some(&ClanMembership(Some(clan_entity))) = quest_parameters.source.clan_membership {
+    if let Some(clan_entity) = quest_parameters
+        .source
+        .clan_membership
+        .and_then(|clan_membership| clan_membership.clan())
+    {
         if let Some(skill_id) = SkillId::new(skill_id as u16) {
             quest_system_parameters
                 .clan_events
