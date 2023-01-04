@@ -19,9 +19,9 @@ use rose_game_common::data::Damage;
 use crate::game::{
     bundles::{ability_values_add_value, ability_values_get_value, MonsterBundle},
     components::{
-        AbilityValues, ClientEntity, ClientEntityType, ExperiencePoints, GameClient, HealthPoints,
-        Inventory, Level, ManaPoints, MoveSpeed, Position, SpawnOrigin, Stamina, StatusEffects,
-        Team,
+        AbilityValues, ClientEntity, ClientEntityType, Dead, ExperiencePoints, GameClient,
+        HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, Position, SpawnOrigin, Stamina,
+        StatusEffects, Team,
     },
     events::{DamageEvent, ItemLifeEvent, SkillEvent, SkillEventTarget},
     messages::server::{
@@ -82,6 +82,7 @@ pub struct SkillTargetQuery<'w> {
     level: &'w Level,
     move_speed: &'w MoveSpeed,
     stamina: Option<&'w mut Stamina>,
+    dead: Option<&'w Dead>,
 }
 
 fn check_skill_target_filter(
@@ -89,41 +90,58 @@ fn check_skill_target_filter(
     skill_target: &mut SkillTargetQueryItem,
     skill_data: &SkillData,
 ) -> bool {
+    let target_is_alive = skill_target.health_points.hp <= 0 && skill_target.dead.is_none();
+
     match skill_data.target_filter {
-        SkillTargetFilter::OnlySelf => skill_caster.entity == skill_target.entity,
-        SkillTargetFilter::Group => true, // TODO: Implement SkillTargetFilter::Group
-        SkillTargetFilter::Guild => true, // TODO: Implement SkillTargetFilter::Guild
-        SkillTargetFilter::Allied => skill_caster.team.id == skill_target.team.id,
-        SkillTargetFilter::Monster => matches!(
-            skill_target.client_entity.entity_type,
-            ClientEntityType::Monster
-        ),
-        SkillTargetFilter::Enemy => skill_caster.team.id != skill_target.team.id,
+        SkillTargetFilter::OnlySelf => {
+            target_is_alive && skill_caster.entity == skill_target.entity
+        }
+        SkillTargetFilter::Group => target_is_alive, // TODO: Implement SkillTargetFilter::Group
+        SkillTargetFilter::Guild => target_is_alive, // TODO: Implement SkillTargetFilter::Guild
+        SkillTargetFilter::Allied => {
+            target_is_alive && skill_caster.team.id == skill_target.team.id
+        }
+        SkillTargetFilter::Monster => {
+            target_is_alive
+                && matches!(
+                    skill_target.client_entity.entity_type,
+                    ClientEntityType::Monster
+                )
+        }
+        SkillTargetFilter::Enemy => target_is_alive && skill_caster.team.id != skill_target.team.id,
         SkillTargetFilter::EnemyCharacter => {
-            skill_caster.team.id != skill_target.team.id
+            target_is_alive
+                && skill_caster.team.id != skill_target.team.id
                 && matches!(
                     skill_target.client_entity.entity_type,
                     ClientEntityType::Character
                 )
         }
-        SkillTargetFilter::Character => matches!(
-            skill_target.client_entity.entity_type,
-            ClientEntityType::Character
-        ),
-        SkillTargetFilter::CharacterOrMonster => matches!(
-            skill_target.client_entity.entity_type,
-            ClientEntityType::Character | ClientEntityType::Monster
-        ),
+        SkillTargetFilter::Character => {
+            target_is_alive
+                && matches!(
+                    skill_target.client_entity.entity_type,
+                    ClientEntityType::Character
+                )
+        }
+        SkillTargetFilter::CharacterOrMonster => {
+            target_is_alive
+                && matches!(
+                    skill_target.client_entity.entity_type,
+                    ClientEntityType::Character | ClientEntityType::Monster
+                )
+        }
         SkillTargetFilter::DeadAlliedCharacter => {
-            skill_caster.team.id == skill_target.team.id
-                && skill_target.health_points.hp == 0
+            !target_is_alive
+                && skill_caster.team.id == skill_target.team.id
                 && matches!(
                     skill_target.client_entity.entity_type,
                     ClientEntityType::Character
                 )
         }
         SkillTargetFilter::EnemyMonster => {
-            skill_caster.team.id != skill_target.team.id
+            target_is_alive
+                && skill_caster.team.id != skill_target.team.id
                 && matches!(
                     skill_target.client_entity.entity_type,
                     ClientEntityType::Monster
