@@ -19,9 +19,9 @@ use rose_game_common::data::Damage;
 use crate::game::{
     bundles::{ability_values_add_value, ability_values_get_value, MonsterBundle},
     components::{
-        AbilityValues, ClientEntity, ClientEntityType, Dead, ExperiencePoints, GameClient,
-        HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, Position, SpawnOrigin, Stamina,
-        StatusEffects, Team,
+        AbilityValues, ClanMembership, ClientEntity, ClientEntityType, Dead, ExperiencePoints,
+        GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, PartyMembership,
+        Position, SpawnOrigin, Stamina, StatusEffects, Team,
     },
     events::{DamageEvent, ItemLifeEvent, SkillEvent, SkillEventTarget},
     messages::server::{
@@ -66,6 +66,8 @@ pub struct SkillCasterQuery<'w> {
     team: &'w Team,
     game_client: Option<&'w GameClient>,
     inventory: Option<&'w mut Inventory>,
+    party_membership: Option<&'w PartyMembership>,
+    clan_membership: Option<&'w ClanMembership>,
 }
 
 #[derive(WorldQuery)]
@@ -83,6 +85,8 @@ pub struct SkillTargetQuery<'w> {
     move_speed: &'w MoveSpeed,
     stamina: Option<&'w mut Stamina>,
     dead: Option<&'w Dead>,
+    party_membership: Option<&'w PartyMembership>,
+    clan_membership: Option<&'w ClanMembership>,
 }
 
 fn check_skill_target_filter(
@@ -96,8 +100,24 @@ fn check_skill_target_filter(
         SkillTargetFilter::OnlySelf => {
             target_is_alive && skill_caster.entity == skill_target.entity
         }
-        SkillTargetFilter::Group => target_is_alive, // TODO: Implement SkillTargetFilter::Group
-        SkillTargetFilter::Guild => target_is_alive, // TODO: Implement SkillTargetFilter::Guild
+        SkillTargetFilter::Group => {
+            let caster_party = skill_caster
+                .party_membership
+                .and_then(|party_membership| party_membership.party());
+            let target_party = skill_target
+                .party_membership
+                .and_then(|party_membership| party_membership.party());
+            target_is_alive && caster_party.is_some() && caster_party == target_party
+        }
+        SkillTargetFilter::Guild => {
+            let caster_party = skill_caster
+                .clan_membership
+                .and_then(|clan_membership| clan_membership.clan());
+            let target_party = skill_target
+                .clan_membership
+                .and_then(|clan_membership| clan_membership.clan());
+            target_is_alive && caster_party.is_some() && caster_party == target_party
+        }
         SkillTargetFilter::Allied => {
             target_is_alive && skill_caster.team.id == skill_target.team.id
         }
