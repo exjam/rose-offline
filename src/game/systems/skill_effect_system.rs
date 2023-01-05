@@ -94,7 +94,7 @@ fn check_skill_target_filter(
     skill_target: &mut SkillTargetQueryItem,
     skill_data: &SkillData,
 ) -> bool {
-    let target_is_alive = skill_target.health_points.hp <= 0 && skill_target.dead.is_none();
+    let target_is_alive = skill_target.health_points.hp > 0 && skill_target.dead.is_none();
 
     match skill_data.target_filter {
         SkillTargetFilter::OnlySelf => {
