@@ -16,6 +16,7 @@ pub struct ZmdBone {
 
 impl RoseFile for ZmdFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let magic = reader.read_fixed_length_string(7)?;

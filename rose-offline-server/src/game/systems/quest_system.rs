@@ -7,23 +7,19 @@ use bevy::math::{Vec2, Vec3, Vec3Swizzles};
 use chrono::{Datelike, Timelike};
 use log::warn;
 use rand::Rng;
-use rose_game_common::components::{ClanLevel, ClanPoints};
+use rose_game_common::components::ClanPoints;
 use std::{
     marker::PhantomData,
-    num::{NonZeroU32, NonZeroU8},
+    num::{NonZeroU8, NonZeroUsize},
     ops::RangeInclusive,
 };
 
 use rose_data::{EquipmentItem, Item, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId};
 use rose_file_readers::{
-    QsdAbilityType, QsdClanPoints, QsdCondition, QsdConditionCheckParty, QsdConditionMonthDayTime,
-    QsdConditionObjectVariable, QsdConditionOperator, QsdConditionQuestItem,
-    QsdConditionSelectEventObject, QsdConditionWeekDayTime, QsdDistance, QsdEquipmentIndex,
-    QsdEventId, QsdItemBase1000, QsdNpcId, QsdObjectType, QsdReward, QsdRewardCalculatedItem,
-    QsdRewardMonsterSpawnState, QsdRewardNpcMessageType, QsdRewardObjectVariable,
-    QsdRewardOperator, QsdRewardQuestAction, QsdRewardSetTeamNumberSource, QsdRewardSpawnMonster,
-    QsdRewardSpawnMonsterLocation, QsdRewardTarget, QsdServerChannelId, QsdSkillId, QsdTeamNumber,
-    QsdVariableId, QsdVariableType, QsdZoneId,
+    QsdAbilityType, QsdClanPoints, QsdCondition, QsdConditionOperator, QsdDistance,
+    QsdEquipmentIndex, QsdEventId, QsdItem, QsdNpcId, QsdNpcMessageType, QsdObjectType, QsdQuestId,
+    QsdReward, QsdRewardOperator, QsdServerChannelId, QsdSkillId, QsdSpawnMonsterLocation,
+    QsdTeamNumber, QsdTeamNumberSource, QsdVariableId, QsdVariableType, QsdZoneId,
 };
 
 use crate::game::{
@@ -162,16 +158,16 @@ fn quest_condition_quest_switch(
 fn quest_condition_quest_item(
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &QuestParameters,
-    item_base1000: Option<QsdItemBase1000>,
+    item: Option<QsdItem>,
     equipment_index: Option<QsdEquipmentIndex>,
     required_count: u32,
     operator: QsdConditionOperator,
 ) -> bool {
-    let item_reference = item_base1000.and_then(|item_base1000| {
+    let item_reference = item.and_then(|item| {
         quest_system_resources
             .game_data
             .data_decoder
-            .decode_item_base1000(item_base1000.get())
+            .decode_item_reference(item.item_number, item.item_type)
     });
 
     let equipment_index = equipment_index.and_then(|equipment_index| {
@@ -226,68 +222,41 @@ fn quest_condition_quest_item(
     }
 }
 
-fn quest_condition_quest_items(
+fn quest_condition_ability_value(
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &QuestParameters,
-    items: &[QsdConditionQuestItem],
+    ability_type: QsdAbilityType,
+    operator: QsdConditionOperator,
+    compare_value: i32,
 ) -> bool {
-    for &QsdConditionQuestItem {
-        item,
-        equipment_index,
-        required_count,
-        operator,
-    } in items
-    {
-        if !quest_condition_quest_item(
-            quest_system_resources,
-            quest_parameters,
-            item,
-            equipment_index,
-            required_count,
-            operator,
-        ) {
-            return false;
-        }
+    let ability_type = quest_system_resources
+        .game_data
+        .data_decoder
+        .decode_ability_type(ability_type.get());
+    if ability_type.is_none() {
+        return false;
     }
 
-    true
-}
+    let current_value = ability_values_get_value(
+        ability_type.unwrap(),
+        Some(quest_parameters.source.ability_values),
+        Some(quest_parameters.source.level),
+        Some(quest_parameters.source.move_speed),
+        Some(quest_parameters.source.team.as_ref()),
+        quest_parameters.source.character_info.as_deref(),
+        quest_parameters.source.experience_points.as_deref(),
+        quest_parameters.source.inventory.as_deref(),
+        quest_parameters.source.skill_points.as_deref(),
+        quest_parameters.source.stamina.as_deref(),
+        quest_parameters.source.stat_points.as_deref(),
+        quest_parameters.source.union_membership.as_deref(),
+        quest_parameters.source.health_points.as_deref(),
+        quest_parameters.source.mana_points.as_deref(),
+    )
+    .unwrap_or(0);
 
-fn quest_condition_ability_values(
-    quest_system_resources: &QuestSystemResources,
-    quest_parameters: &QuestParameters,
-    ability_values: &[(QsdAbilityType, QsdConditionOperator, i32)],
-) -> bool {
-    for &(ability_type, operator, compare_value) in ability_values {
-        let ability_type = quest_system_resources
-            .game_data
-            .data_decoder
-            .decode_ability_type(ability_type.get());
-        if ability_type.is_none() {
-            return false;
-        }
-
-        let current_value = ability_values_get_value(
-            ability_type.unwrap(),
-            Some(quest_parameters.source.ability_values),
-            Some(quest_parameters.source.level),
-            Some(quest_parameters.source.move_speed),
-            Some(quest_parameters.source.team.as_ref()),
-            quest_parameters.source.character_info.as_deref(),
-            quest_parameters.source.experience_points.as_deref(),
-            quest_parameters.source.inventory.as_deref(),
-            quest_parameters.source.skill_points.as_deref(),
-            quest_parameters.source.stamina.as_deref(),
-            quest_parameters.source.stat_points.as_deref(),
-            quest_parameters.source.union_membership.as_deref(),
-            quest_parameters.source.health_points.as_deref(),
-            quest_parameters.source.mana_points.as_deref(),
-        )
-        .unwrap_or(0);
-
-        if !quest_condition_operator(operator, current_value, compare_value) {
-            return false;
-        }
+    if !quest_condition_operator(operator, current_value, compare_value) {
+        return false;
     }
 
     true
@@ -490,8 +459,8 @@ fn quest_condition_object_variable(
     value: i32,
 ) -> bool {
     let entity = match object_type {
-        QsdObjectType::Event => quest_parameters.selected_event_object,
-        QsdObjectType::Npc => quest_parameters.selected_npc,
+        QsdObjectType::SelectedEvent => quest_parameters.selected_event_object,
+        QsdObjectType::SelectedNpc => quest_parameters.selected_npc,
         _ => return false,
     };
 
@@ -519,9 +488,9 @@ fn quest_condition_object_zone_time(
     range: &RangeInclusive<u32>,
 ) -> bool {
     let entity = match object_type {
-        QsdObjectType::Event => quest_parameters.selected_event_object,
-        QsdObjectType::Npc => quest_parameters.selected_npc,
-        QsdObjectType::Owner => Some(quest_parameters.source.entity),
+        QsdObjectType::SelectedEvent => quest_parameters.selected_event_object,
+        QsdObjectType::SelectedNpc => quest_parameters.selected_npc,
+        QsdObjectType::QuestOwner => Some(quest_parameters.source.entity),
     };
 
     let zone_data = entity
@@ -550,8 +519,8 @@ fn quest_condition_object_distance(
     distance: i32,
 ) -> bool {
     let entity = match object_type {
-        QsdObjectType::Event => quest_parameters.selected_event_object,
-        QsdObjectType::Npc => quest_parameters.selected_npc,
+        QsdObjectType::SelectedEvent => quest_parameters.selected_event_object,
+        QsdObjectType::SelectedNpc => quest_parameters.selected_npc,
         _ => return false,
     };
 
@@ -840,193 +809,217 @@ fn quest_trigger_check_conditions(
 ) -> bool {
     for condition in quest_trigger.conditions.iter() {
         let result = match *condition {
-            QsdCondition::AbilityValue(ref ability_values) => quest_condition_ability_values(
+            QsdCondition::AbilityValue {
+                ability_type,
+                operator,
+                value,
+            } => quest_condition_ability_value(
                 quest_system_resources,
                 quest_parameters,
-                ability_values,
+                ability_type,
+                operator,
+                value,
             ),
-            QsdCondition::SelectQuest(quest_id) => {
-                quest_condition_select_quest(quest_parameters, quest_id)
-            }
-            QsdCondition::QuestItems(ref items) => {
-                quest_condition_quest_items(quest_system_resources, quest_parameters, items)
-            }
-            QsdCondition::QuestSwitch(switch_id, value) => {
-                quest_condition_quest_switch(quest_parameters, switch_id, value)
-            }
-            QsdCondition::Position(zone_id, ref position, distance) => quest_condition_position(
+            QsdCondition::SelectQuest { id } => quest_condition_select_quest(quest_parameters, id),
+            QsdCondition::QuestItem {
+                item,
+                equipment_index,
+                required_count,
+                operator,
+            } => quest_condition_quest_item(
+                quest_system_resources,
                 quest_parameters,
-                zone_id,
-                Vec2::new(position.x, position.y),
-                distance,
+                item,
+                equipment_index,
+                required_count,
+                operator,
             ),
-            QsdCondition::QuestVariable(ref quest_variables) => {
-                quest_variables.iter().all(|quest_variable| {
-                    quest_condition_quest_variable(
-                        quest_system_resources,
-                        quest_parameters,
-                        quest_variable.variable_type,
-                        quest_variable.variable_id,
-                        quest_variable.operator,
-                        quest_variable.value,
-                    )
-                })
+            QsdCondition::QuestSwitch { id, value } => {
+                quest_condition_quest_switch(quest_parameters, id, value)
             }
-            QsdCondition::WorldTime(ref range) => {
+            QsdCondition::Position {
+                zone,
+                x,
+                y,
+                distance,
+            } => quest_condition_position(quest_parameters, zone, Vec2::new(x, y), distance),
+            QsdCondition::QuestVariable {
+                variable_type,
+                variable_id,
+                operator,
+                value,
+            } => quest_condition_quest_variable(
+                quest_system_resources,
+                quest_parameters,
+                variable_type,
+                variable_id,
+                operator,
+                value,
+            ),
+            QsdCondition::WorldTime { ref range } => {
                 quest_condition_world_time(quest_system_resources, range)
             }
-            QsdCondition::MonthDayTime(QsdConditionMonthDayTime {
+            QsdCondition::MonthDayTime {
                 month_day,
                 ref day_minutes_range,
-            }) => {
+            } => {
                 quest_condition_month_day_time(quest_system_resources, month_day, day_minutes_range)
             }
-            QsdCondition::WeekDayTime(QsdConditionWeekDayTime {
+            QsdCondition::WeekDayTime {
                 week_day,
                 ref day_minutes_range,
-            }) => {
-                quest_condition_week_day_time(quest_system_resources, week_day, day_minutes_range)
+            } => quest_condition_week_day_time(quest_system_resources, week_day, day_minutes_range),
+            QsdCondition::HasSkill { id, has_skill } => {
+                quest_condition_have_skill(quest_parameters, &(id..=id), has_skill)
             }
-            QsdCondition::HasSkill(ref skill_id_range, have) => {
-                quest_condition_have_skill(quest_parameters, skill_id_range, have)
-            }
-            QsdCondition::TeamNumber(ref range) => {
+            QsdCondition::HasSkillInRange {
+                ref range,
+                has_skill,
+            } => quest_condition_have_skill(quest_parameters, range, has_skill),
+            QsdCondition::TeamNumber { ref range } => {
                 quest_condition_team_number(quest_parameters, range)
             }
-            QsdCondition::ServerChannelNumber(ref range) => {
+            QsdCondition::ServerChannelNumber { ref range } => {
                 quest_condition_server_channel_number(range)
             }
-            QsdCondition::SelectNpc(npc_id) => {
-                quest_condition_select_npc(quest_system_parameters, quest_parameters, npc_id)
+            QsdCondition::SelectNpc { id } => {
+                quest_condition_select_npc(quest_system_parameters, quest_parameters, id)
             }
-            QsdCondition::SelectEventObject(QsdConditionSelectEventObject {
+            QsdCondition::SelectEventObject {
                 zone,
-                ref chunk,
+                chunk_x,
+                chunk_y,
                 event_id,
-            }) => quest_condition_select_event_object(
+            } => quest_condition_select_event_object(
                 quest_system_parameters,
                 quest_parameters,
                 zone,
                 event_id,
-                chunk.x as i32,
-                chunk.y as i32,
+                chunk_x as i32,
+                chunk_y as i32,
             ),
-            QsdCondition::ObjectVariable(QsdConditionObjectVariable {
-                object_type,
+            QsdCondition::ObjectVariable {
+                object,
                 variable_id,
                 operator,
                 value,
-            }) => quest_condition_object_variable(
+            } => quest_condition_object_variable(
                 quest_system_parameters,
                 quest_parameters,
-                object_type,
+                object,
                 variable_id,
                 operator,
                 value,
             ),
-            QsdCondition::ObjectZoneTime(object_type, ref range) => {
-                quest_condition_object_zone_time(
+            QsdCondition::ObjectZoneTime {
+                object,
+                ref time_range,
+            } => quest_condition_object_zone_time(
+                quest_system_parameters,
+                quest_system_resources,
+                quest_parameters,
+                object,
+                time_range,
+            ),
+            QsdCondition::ObjectDistance { object, distance } => quest_condition_object_distance(
+                quest_system_parameters,
+                quest_parameters,
+                object,
+                distance,
+            ),
+            QsdCondition::CompareNpcVariables {
+                npc_id_1,
+                variable_id_1,
+                operator,
+                npc_id_2,
+                variable_id_2,
+            } => quest_condition_compare_npc_object_variables(
+                quest_system_parameters,
+                (npc_id_1, variable_id_1),
+                operator,
+                (npc_id_2, variable_id_2),
+            ),
+            QsdCondition::Party {
+                is_leader,
+                level_operator,
+                level,
+            } => quest_condition_check_party(
+                quest_system_parameters,
+                quest_parameters,
+                is_leader,
+                level_operator,
+                level,
+            ),
+            QsdCondition::PartyMemberCount { ref range } => {
+                quest_condition_check_party_member_count(
                     quest_system_parameters,
-                    quest_system_resources,
                     quest_parameters,
-                    object_type,
                     range,
                 )
             }
-            QsdCondition::ObjectDistance(object_type, distance) => quest_condition_object_distance(
-                quest_system_parameters,
-                quest_parameters,
-                object_type,
-                distance,
-            ),
-            QsdCondition::CompareNpcVariables(npc_variable1, operator, npc_variable2) => {
-                quest_condition_compare_npc_object_variables(
-                    quest_system_parameters,
-                    npc_variable1,
-                    operator,
-                    npc_variable2,
-                )
-            }
-            QsdCondition::Party(QsdConditionCheckParty {
-                is_leader,
-                level_operator,
-                level,
-            }) => quest_condition_check_party(
-                quest_system_parameters,
-                quest_parameters,
-                is_leader,
-                level_operator,
-                level,
-            ),
-            QsdCondition::PartyMemberCount(ref range) => quest_condition_check_party_member_count(
-                quest_system_parameters,
-                quest_parameters,
-                range,
-            ),
-            QsdCondition::RandomPercent(_) => {
+            QsdCondition::RandomPercent { .. } => {
                 // Random percent is only checked on client
                 true
             }
-            QsdCondition::InClan(in_clan) => {
-                quest_condition_check_in_clan(quest_system_parameters, quest_parameters, in_clan)
+            QsdCondition::HasClan { has_clan } => {
+                quest_condition_check_in_clan(quest_system_parameters, quest_parameters, has_clan)
             }
-            QsdCondition::ClanPosition(compare_operator, compare_value) => {
-                quest_condition_check_clan_position(
-                    quest_system_parameters,
-                    quest_system_resources,
-                    quest_parameters,
-                    compare_operator,
-                    compare_value,
-                )
-            }
-            QsdCondition::ClanPointContribution(compare_operator, compare_value) => {
+            QsdCondition::ClanPosition { operator, value } => quest_condition_check_clan_position(
+                quest_system_parameters,
+                quest_system_resources,
+                quest_parameters,
+                operator,
+                value,
+            ),
+            QsdCondition::ClanPointContribution { operator, value } => {
                 quest_condition_check_clan_contribution(
                     quest_system_parameters,
                     quest_parameters,
-                    compare_operator,
-                    compare_value,
+                    operator,
+                    value,
                 )
             }
-            QsdCondition::ClanLevel(compare_operator, compare_value) => {
-                quest_condition_check_clan_level(
-                    quest_system_parameters,
-                    quest_parameters,
-                    compare_operator,
-                    compare_value,
-                )
-            }
-            QsdCondition::ClanPoints(compare_operator, compare_value) => {
-                quest_condition_check_clan_points(
-                    quest_system_parameters,
-                    quest_parameters,
-                    compare_operator,
-                    compare_value,
-                )
-            }
-            QsdCondition::ClanMoney(compare_operator, compare_value) => {
-                quest_condition_check_clan_money(
-                    quest_system_parameters,
-                    quest_parameters,
-                    compare_operator,
-                    compare_value,
-                )
-            }
-            QsdCondition::ClanMemberCount(compare_operator, compare_value) => {
+            QsdCondition::ClanLevel { operator, value } => quest_condition_check_clan_level(
+                quest_system_parameters,
+                quest_parameters,
+                operator,
+                value,
+            ),
+            QsdCondition::ClanPoints { operator, value } => quest_condition_check_clan_points(
+                quest_system_parameters,
+                quest_parameters,
+                operator,
+                value,
+            ),
+            QsdCondition::ClanMoney { operator, value } => quest_condition_check_clan_money(
+                quest_system_parameters,
+                quest_parameters,
+                operator,
+                value,
+            ),
+            QsdCondition::ClanMemberCount { operator, value } => {
                 quest_condition_check_clan_member_count(
                     quest_system_parameters,
                     quest_parameters,
-                    compare_operator,
-                    compare_value,
+                    operator,
+                    value,
                 )
             }
-            QsdCondition::HasClanSkill(ref skill_id_range, have) => {
-                quest_condition_check_clan_have_skill(
-                    quest_system_parameters,
-                    quest_parameters,
-                    skill_id_range,
-                    have,
-                )
-            }
+            QsdCondition::HasClanSkill { id, has_skill } => quest_condition_check_clan_have_skill(
+                quest_system_parameters,
+                quest_parameters,
+                &(id..=id),
+                has_skill,
+            ),
+            QsdCondition::HasClanSkillInRange {
+                ref range,
+                has_skill,
+            } => quest_condition_check_clan_have_skill(
+                quest_system_parameters,
+                quest_parameters,
+                range,
+                has_skill,
+            ),
         };
 
         if !result {
@@ -1059,7 +1052,6 @@ fn quest_reward_calculated_experience_points(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    _reward_target: QsdRewardTarget,
     reward_equation_id: usize,
     base_reward_value: i32,
 ) -> bool {
@@ -1102,16 +1094,15 @@ fn quest_reward_calculated_item(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    _reward_target: QsdRewardTarget,
     reward_equation_id: usize,
     base_reward_value: i32,
-    reward_item_base1000: QsdItemBase1000,
-    reward_gem_base1000: Option<QsdItemBase1000>,
+    reward_item: QsdItem,
+    reward_gem_id: Option<NonZeroUsize>,
 ) -> bool {
     let reward_item = quest_system_resources
         .game_data
         .data_decoder
-        .decode_item_base1000(reward_item_base1000.get());
+        .decode_item_reference(reward_item.item_number, reward_item.item_type);
     if reward_item.is_none() {
         return false;
     }
@@ -1125,13 +1116,6 @@ fn quest_reward_calculated_item(
         return false;
     }
     let reward_item_data = reward_item_data.unwrap();
-
-    let reward_gem = reward_gem_base1000.and_then(|item_base1000| {
-        quest_system_resources
-            .game_data
-            .data_decoder
-            .decode_item_base1000(item_base1000.get())
-    });
 
     let item = if reward_item.item_type.is_stackable_item() {
         let reward_quantity = quest_system_resources
@@ -1162,11 +1146,11 @@ fn quest_reward_calculated_item(
             None
         }
     } else if let Some(mut item) = EquipmentItem::new(reward_item, reward_item_data.durability) {
-        if let Some(gem) = reward_gem {
-            if gem.item_number < 300 {
+        if let Some(gem_id) = reward_gem_id {
+            if gem_id.get() < 300 {
                 item.is_appraised = true;
                 item.has_socket = false;
-                item.gem = gem.item_number as u16;
+                item.gem = gem_id.get() as u16;
             }
         }
 
@@ -1234,7 +1218,6 @@ fn get_quest_calculated_money_dup_count_var(
 fn quest_reward_calculated_money(
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    _reward_target: QsdRewardTarget,
     reward_equation_id: usize,
     base_reward_value: i32,
 ) -> bool {
@@ -1286,58 +1269,78 @@ fn quest_reward_calculated_money(
     true
 }
 
-fn quest_reward_quest_action(
-    quest_system_resources: &QuestSystemResources,
+fn quest_reward_remove_selected_quest(
+    _quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    action: &QsdRewardQuestAction,
 ) -> bool {
     if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
-        match *action {
-            QsdRewardQuestAction::RemoveSelected => {
-                if let Some(quest_index) = quest_parameters.selected_quest_index {
-                    if let Some(quest_slot) = quest_state.get_quest_slot_mut(quest_index) {
-                        *quest_slot = None;
-                        return true;
-                    }
-                }
+        if let Some(quest_index) = quest_parameters.selected_quest_index {
+            if let Some(quest_slot) = quest_state.get_quest_slot_mut(quest_index) {
+                *quest_slot = None;
+                return true;
             }
-            QsdRewardQuestAction::Add(quest_id) => {
-                if let Some(quest_index) = quest_state.try_add_quest(ActiveQuest::new(
-                    quest_id,
-                    quest_get_expire_time(quest_system_resources, quest_id),
-                )) {
-                    if quest_parameters.selected_quest_index.is_none() {
-                        quest_parameters.selected_quest_index = Some(quest_index);
-                    }
+        }
+    }
 
-                    return true;
-                }
+    false
+}
+
+fn quest_reward_add_quest(
+    quest_system_resources: &QuestSystemResources,
+    quest_parameters: &mut QuestParameters,
+    quest_id: QsdQuestId,
+) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
+        if let Some(quest_index) = quest_state.try_add_quest(ActiveQuest::new(
+            quest_id,
+            quest_get_expire_time(quest_system_resources, quest_id),
+        )) {
+            if quest_parameters.selected_quest_index.is_none() {
+                quest_parameters.selected_quest_index = Some(quest_index);
             }
-            QsdRewardQuestAction::ChangeSelectedIdKeepData(quest_id) => {
-                if let Some(quest_index) = quest_parameters.selected_quest_index {
-                    if let Some(Some(active_quest)) = quest_state.get_quest_slot_mut(quest_index) {
-                        active_quest.quest_id = quest_id;
-                        return true;
-                    }
+
+            return true;
+        }
+    }
+
+    false
+}
+
+fn quest_reward_change_selected_quest(
+    quest_system_resources: &QuestSystemResources,
+    quest_parameters: &mut QuestParameters,
+    quest_id: QsdQuestId,
+    keep_data: bool,
+) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
+        if let Some(quest_index) = quest_parameters.selected_quest_index {
+            if let Some(Some(active_quest)) = quest_state.get_quest_slot_mut(quest_index) {
+                if keep_data {
+                    active_quest.quest_id = quest_id;
+                } else {
+                    *active_quest = ActiveQuest::new(
+                        quest_id,
+                        quest_get_expire_time(quest_system_resources, quest_id),
+                    );
                 }
+
+                return true;
             }
-            QsdRewardQuestAction::ChangeSelectedIdResetData(quest_id) => {
-                if let Some(quest_index) = quest_parameters.selected_quest_index {
-                    if let Some(Some(active_quest)) = quest_state.get_quest_slot_mut(quest_index) {
-                        *active_quest = ActiveQuest::new(
-                            quest_id,
-                            quest_get_expire_time(quest_system_resources, quest_id),
-                        );
-                        return true;
-                    }
-                }
-            }
-            QsdRewardQuestAction::Select(quest_id) => {
-                if let Some(quest_index) = quest_state.find_active_quest_index(quest_id) {
-                    quest_parameters.selected_quest_index = Some(quest_index);
-                    return true;
-                }
-            }
+        }
+    }
+
+    false
+}
+
+fn quest_reward_select_quest(
+    _quest_system_resources: &QuestSystemResources,
+    quest_parameters: &mut QuestParameters,
+    quest_id: QsdQuestId,
+) -> bool {
+    if let Some(quest_state) = quest_parameters.source.quest_state.as_mut() {
+        if let Some(quest_index) = quest_state.find_active_quest_index(quest_id) {
+            quest_parameters.selected_quest_index = Some(quest_index);
+            return true;
         }
     }
 
@@ -1348,13 +1351,13 @@ fn quest_reward_add_item(
     quest_system_resources: &QuestSystemResources,
     quest_system_parameters: &mut QuestSystemParameters,
     quest_parameters: &mut QuestParameters,
-    item_base1000: QsdItemBase1000,
+    qsd_item: QsdItem,
     quantity: usize,
 ) -> bool {
     let item_reference = quest_system_resources
         .game_data
         .data_decoder
-        .decode_item_base1000(item_base1000.get());
+        .decode_item_reference(qsd_item.item_number, qsd_item.item_type);
     if item_reference.is_none() {
         return false;
     }
@@ -1403,13 +1406,13 @@ fn quest_reward_add_item(
 fn quest_reward_remove_item(
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    item_base1000: QsdItemBase1000,
+    qsd_item: QsdItem,
     quantity: usize,
 ) -> bool {
     let item_reference = quest_system_resources
         .game_data
         .data_decoder
-        .decode_item_base1000(item_base1000.get());
+        .decode_item_reference(qsd_item.item_number, qsd_item.item_type);
     if item_reference.is_none() {
         return false;
     }
@@ -1742,8 +1745,8 @@ fn quest_reward_object_variable(
     value: i32,
 ) -> bool {
     let entity = match object_type {
-        QsdObjectType::Event => quest_parameters.selected_event_object,
-        QsdObjectType::Npc => quest_parameters.selected_npc,
+        QsdObjectType::SelectedEvent => quest_parameters.selected_event_object,
+        QsdObjectType::SelectedNpc => quest_parameters.selected_npc,
         _ => return false,
     };
 
@@ -1771,17 +1774,17 @@ fn quest_reward_spawn_monster(
     quest_parameters: &mut QuestParameters,
     npc: QsdNpcId,
     count: usize,
-    location: QsdRewardSpawnMonsterLocation,
+    location: QsdSpawnMonsterLocation,
     distance: QsdDistance,
     team_number: QsdTeamNumber,
 ) -> bool {
     if let Some(npc_id) = NpcId::new(npc as u16) {
         if let Some((spawn_zone, spawn_position)) = match location {
-            QsdRewardSpawnMonsterLocation::Owner => Some((
+            QsdSpawnMonsterLocation::QuestOwner => Some((
                 quest_parameters.source.position.zone_id,
                 quest_parameters.source.position.position,
             )),
-            QsdRewardSpawnMonsterLocation::Npc => quest_parameters
+            QsdSpawnMonsterLocation::SelectedNpc => quest_parameters
                 .selected_event_object
                 .and_then(|entity| {
                     quest_system_parameters
@@ -1790,7 +1793,7 @@ fn quest_reward_spawn_monster(
                         .ok()
                 })
                 .map(|(_, position)| (position.zone_id, position.position)),
-            QsdRewardSpawnMonsterLocation::Event => quest_parameters
+            QsdSpawnMonsterLocation::SelectedEvent => quest_parameters
                 .selected_npc
                 .and_then(|entity| {
                     quest_system_parameters
@@ -1799,9 +1802,8 @@ fn quest_reward_spawn_monster(
                         .ok()
                 })
                 .map(|(_, position)| (position.zone_id, position.position)),
-            QsdRewardSpawnMonsterLocation::Position(zone_id, position) => {
-                ZoneId::new(zone_id as u16)
-                    .map(|zone_id| (zone_id, Vec3::new(position.x, position.y, 0.0)))
+            QsdSpawnMonsterLocation::Position { zone, x, y } => {
+                ZoneId::new(zone as u16).map(|zone| (zone, Vec3::new(x, y, 0.0)))
             }
         } {
             for _ in 0..count {
@@ -1848,10 +1850,10 @@ fn quest_reward_clear_switch_group(quest_parameters: &mut QuestParameters, group
 
 fn quest_reward_set_team_number(
     quest_parameters: &mut QuestParameters,
-    source: QsdRewardSetTeamNumberSource,
+    source: QsdTeamNumberSource,
 ) -> bool {
     let team = match source {
-        QsdRewardSetTeamNumberSource::Unique => {
+        QsdTeamNumberSource::Unique => {
             Team::with_unique_id(quest_parameters.source.client_entity.id.0 as u32)
         }
         _ => {
@@ -1864,16 +1866,22 @@ fn quest_reward_set_team_number(
     true
 }
 
+enum MonsterSpawnState {
+    Disabled,
+    Enabled,
+    Toggle,
+}
+
 fn quest_reward_set_monster_spawn_state(
     quest_system_parameters: &mut QuestSystemParameters,
     zone_id: QsdZoneId,
-    state: QsdRewardMonsterSpawnState,
+    state: MonsterSpawnState,
 ) -> bool {
     if let Some(zone_id) = ZoneId::new(zone_id as u16) {
         let enabled = match state {
-            QsdRewardMonsterSpawnState::Disabled => false,
-            QsdRewardMonsterSpawnState::Enabled => true,
-            QsdRewardMonsterSpawnState::Toggle => !quest_system_parameters
+            MonsterSpawnState::Disabled => false,
+            MonsterSpawnState::Enabled => true,
+            MonsterSpawnState::Toggle => !quest_system_parameters
                 .zone_list
                 .get_monster_spawns_enabled(zone_id),
         };
@@ -1890,7 +1898,7 @@ fn quest_reward_npc_message(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    message_type: QsdRewardNpcMessageType,
+    message_type: QsdNpcMessageType,
     string_id: usize,
 ) -> bool {
     if let Some(message) = quest_system_resources
@@ -1911,7 +1919,7 @@ fn quest_reward_npc_message(
         };
 
         match message_type {
-            QsdRewardNpcMessageType::Chat => {
+            QsdNpcMessageType::Chat => {
                 quest_system_parameters.server_messages.send_entity_message(
                     quest_parameters.source.client_entity,
                     ServerMessage::LocalChat(LocalChat {
@@ -1920,7 +1928,7 @@ fn quest_reward_npc_message(
                     }),
                 );
             }
-            QsdRewardNpcMessageType::Shout => {
+            QsdNpcMessageType::Shout => {
                 // TODO: A shout message actually goes to adjacent 3 sectors rather than full zone
                 quest_system_parameters.server_messages.send_zone_message(
                     quest_parameters.source.position.zone_id,
@@ -1930,7 +1938,7 @@ fn quest_reward_npc_message(
                     }),
                 );
             }
-            QsdRewardNpcMessageType::Announce => {
+            QsdNpcMessageType::Announce => {
                 quest_system_parameters.server_messages.send_zone_message(
                     quest_parameters.source.position.zone_id,
                     ServerMessage::AnnounceChat(AnnounceChat {
@@ -1945,52 +1953,21 @@ fn quest_reward_npc_message(
     true
 }
 
-fn quest_reward_clan_level(
+fn quest_reward_clan_level_increase(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_parameters: &mut QuestParameters,
-    operator: QsdRewardOperator,
-    value: i32,
 ) -> bool {
     if let Some(clan_entity) = quest_parameters
         .source
         .clan_membership
         .and_then(|clan_membership| clan_membership.clan())
     {
-        match operator {
-            QsdRewardOperator::Set => {
-                if let Some(value) = NonZeroU32::new(value as u32) {
-                    quest_system_parameters
-                        .clan_events
-                        .send(ClanEvent::SetLevel {
-                            clan_entity,
-                            level: ClanLevel(value),
-                        });
-                }
-            }
-            QsdRewardOperator::Add => {
-                quest_system_parameters
-                    .clan_events
-                    .send(ClanEvent::AddLevel {
-                        clan_entity,
-                        level: value,
-                    });
-            }
-            QsdRewardOperator::Subtract => {
-                quest_system_parameters
-                    .clan_events
-                    .send(ClanEvent::AddLevel {
-                        clan_entity,
-                        level: -value,
-                    });
-            }
-            _ => {
-                log::warn!(
-                    "Unimplemented quest_reward_clan_money: operator {:?} value {}",
-                    operator,
-                    value
-                );
-            }
-        }
+        quest_system_parameters
+            .clan_events
+            .send(ClanEvent::AddLevel {
+                clan_entity,
+                level: 1,
+            });
 
         true
     } else {
@@ -2156,37 +2133,47 @@ fn quest_trigger_apply_rewards(
 ) -> bool {
     for reward in quest_trigger.rewards.iter() {
         let result = match *reward {
-            QsdReward::Quest(ref action) => {
-                quest_reward_quest_action(quest_system_resources, quest_parameters, action)
+            QsdReward::RemoveSelectedQuest => {
+                quest_reward_remove_selected_quest(quest_system_resources, quest_parameters)
             }
-            QsdReward::AbilityValue(ref values) => {
-                for &(ability_type, reward_operator, value) in values {
-                    quest_reward_ability_value(
-                        quest_system_resources,
-                        quest_parameters,
-                        reward_operator,
-                        ability_type,
-                        value,
-                    );
-                }
-                true
+            QsdReward::AddQuest { id } => {
+                quest_reward_add_quest(quest_system_resources, quest_parameters, id)
             }
-            QsdReward::AddItem(_reward_target, item, quantity) => quest_reward_add_item(
+            QsdReward::ChangeSelectedQuest { id, keep_data } => quest_reward_change_selected_quest(
+                quest_system_resources,
+                quest_parameters,
+                id,
+                keep_data,
+            ),
+            QsdReward::SelectQuest { id } => {
+                quest_reward_select_quest(quest_system_resources, quest_parameters, id)
+            }
+            QsdReward::AbilityValue {
+                ability_type,
+                operator,
+                value,
+            } => quest_reward_ability_value(
+                quest_system_resources,
+                quest_parameters,
+                operator,
+                ability_type,
+                value,
+            ),
+            QsdReward::AddItem { item, quantity } => quest_reward_add_item(
                 quest_system_resources,
                 quest_system_parameters,
                 quest_parameters,
                 item,
                 quantity,
             ),
-            QsdReward::RemoveItem(_reward_target, item, quantity) => {
+            QsdReward::RemoveItem { item, quantity } => {
                 quest_reward_remove_item(quest_system_resources, quest_parameters, item, quantity)
             }
-            QsdReward::AddSkill(skill_id) => {
-                quest_reward_add_skill(quest_system_resources, quest_parameters, skill_id).is_some()
+            QsdReward::AddSkill { id } => {
+                quest_reward_add_skill(quest_system_resources, quest_parameters, id).is_some()
             }
-            QsdReward::RemoveSkill(skill_id) => {
-                quest_reward_remove_skill(quest_system_resources, quest_parameters, skill_id)
-                    .is_some()
+            QsdReward::RemoveSkill { id } => {
+                quest_reward_remove_skill(quest_system_resources, quest_parameters, id).is_some()
             }
             QsdReward::ResetBasicStats => {
                 quest_reward_reset_basic_stats(quest_system_resources, quest_parameters)
@@ -2194,101 +2181,93 @@ fn quest_trigger_apply_rewards(
             QsdReward::ResetSkills => {
                 quest_reward_reset_skills(quest_system_resources, quest_parameters)
             }
-            QsdReward::SetQuestSwitch(switch_id, value) => {
-                quest_reward_set_quest_switch(quest_parameters, switch_id, value)
+            QsdReward::SetQuestSwitch { id, value } => {
+                quest_reward_set_quest_switch(quest_parameters, id, value)
             }
-            QsdReward::CalculatedExperiencePoints(
-                reward_target,
-                reward_equation_id,
-                base_reward_value,
-            ) => quest_reward_calculated_experience_points(
+            QsdReward::CalculatedExperiencePoints { equation, value } => {
+                quest_reward_calculated_experience_points(
+                    quest_system_parameters,
+                    quest_system_resources,
+                    quest_parameters,
+                    equation,
+                    value,
+                )
+            }
+            QsdReward::CalculatedItem {
+                equation,
+                value,
+                item,
+                gem,
+            } => quest_reward_calculated_item(
                 quest_system_parameters,
                 quest_system_resources,
                 quest_parameters,
-                reward_target,
-                reward_equation_id,
-                base_reward_value,
-            ),
-            QsdReward::CalculatedItem(
-                reward_target,
-                QsdRewardCalculatedItem {
-                    equation: reward_equation_id,
-                    value: base_reward_value,
-                    item,
-                    gem,
-                },
-            ) => quest_reward_calculated_item(
-                quest_system_parameters,
-                quest_system_resources,
-                quest_parameters,
-                reward_target,
-                reward_equation_id,
-                base_reward_value,
+                equation,
+                value,
                 item,
                 gem,
             ),
-            QsdReward::CalculatedMoney(reward_target, reward_equation_id, base_reward_value) => {
-                quest_reward_calculated_money(
-                    quest_system_resources,
-                    quest_parameters,
-                    reward_target,
-                    reward_equation_id,
-                    base_reward_value,
-                )
-            }
-            QsdReward::CallLuaFunction(_) => {
+            QsdReward::CalculatedMoney { equation, value } => quest_reward_calculated_money(
+                quest_system_resources,
+                quest_parameters,
+                equation,
+                value,
+            ),
+            QsdReward::CallLuaFunction { .. } => {
                 // CallLuaFunction is for client side only.
                 true
             }
-            QsdReward::Teleport(_reward_target, zone_id, ref position) => quest_reward_teleport(
+            QsdReward::Teleport { zone, x, y } => quest_reward_teleport(
                 quest_system_parameters,
                 quest_parameters,
-                ZoneId::new(zone_id as u16).unwrap(),
-                Vec3::new(position.x, position.y, 0.0),
+                ZoneId::new(zone as u16).unwrap(),
+                Vec3::new(x as f32, y as f32, 0.0),
             ),
-            QsdReward::Trigger(ref name) => {
+            QsdReward::Trigger { ref name } => {
                 quest_parameters.next_trigger_name = Some(name.clone());
                 true
             }
-            QsdReward::QuestVariable(ref quest_variables) => {
-                quest_variables.iter().all(|quest_variable| {
-                    quest_reward_quest_variable(
-                        quest_system_resources,
-                        quest_parameters,
-                        quest_variable.variable_type,
-                        quest_variable.variable_id,
-                        quest_variable.operator,
-                        quest_variable.value,
-                    )
-                })
-            }
-            QsdReward::SetHealthManaPercent(_target, health_percent, mana_percent) => {
-                quest_reward_set_health_mana_percent(
-                    quest_parameters,
-                    health_percent as i32,
-                    mana_percent as i32,
-                )
-            }
-            QsdReward::ObjectVariable(QsdRewardObjectVariable {
-                object_type,
+            QsdReward::QuestVariable {
+                variable_type,
                 variable_id,
                 operator,
                 value,
-            }) => quest_reward_object_variable(
-                quest_system_parameters,
+            } => quest_reward_quest_variable(
+                quest_system_resources,
                 quest_parameters,
-                object_type,
+                variable_type,
                 variable_id,
                 operator,
                 value,
             ),
-            QsdReward::SpawnMonster(QsdRewardSpawnMonster {
+            QsdReward::SetHealthManaPercent {
+                health_percent,
+                mana_percent,
+            } => quest_reward_set_health_mana_percent(
+                quest_parameters,
+                health_percent as i32,
+                mana_percent as i32,
+            ),
+            QsdReward::ObjectVariable {
+                object,
+                variable_id,
+                operator,
+                value,
+            } => quest_reward_object_variable(
+                quest_system_parameters,
+                quest_parameters,
+                object,
+                variable_id,
+                operator,
+                value,
+            ),
+            QsdReward::SpawnMonster {
                 npc,
                 count,
                 location,
                 distance,
                 team_number,
-            }) => quest_reward_spawn_monster(
+            } => quest_reward_spawn_monster(
                 quest_system_parameters,
                 quest_system_resources,
                 quest_parameters,
@@ -2299,42 +2278,57 @@ fn quest_trigger_apply_rewards(
                 team_number,
             ),
             QsdReward::ClearAllSwitches => quest_reward_clear_all_switches(quest_parameters),
-            QsdReward::ClearSwitchGroup(group) => {
+            QsdReward::ClearSwitchGroup { group } => {
                 quest_reward_clear_switch_group(quest_parameters, group)
             }
-            QsdReward::SetTeamNumber(source) => {
+            QsdReward::SetTeamNumber { source } => {
                 quest_reward_set_team_number(quest_parameters, source)
             }
-            QsdReward::SetMonsterSpawnState(zone_id, state) => {
-                quest_reward_set_monster_spawn_state(quest_system_parameters, zone_id, state)
-            }
-            QsdReward::NpcMessage(message_type, string_id) => quest_reward_npc_message(
+            QsdReward::EnableMonsterSpawns { zone } => quest_reward_set_monster_spawn_state(
+                quest_system_parameters,
+                zone,
+                MonsterSpawnState::Enabled,
+            ),
+            QsdReward::DisableMonsterSpawns { zone } => quest_reward_set_monster_spawn_state(
+                quest_system_parameters,
+                zone,
+                MonsterSpawnState::Disabled,
+            ),
+            QsdReward::ToggleMonsterSpawns { zone } => quest_reward_set_monster_spawn_state(
+                quest_system_parameters,
+                zone,
+                MonsterSpawnState::Toggle,
+            ),
+            QsdReward::NpcMessage {
+                message_type,
+                string_id,
+            } => quest_reward_npc_message(
                 quest_system_parameters,
                 quest_system_resources,
                 quest_parameters,
                 message_type,
                 string_id,
             ),
-            QsdReward::ClanLevel(operator, value) => {
-                quest_reward_clan_level(quest_system_parameters, quest_parameters, operator, value)
+            QsdReward::ClanLevelIncrease => {
+                quest_reward_clan_level_increase(quest_system_parameters, quest_parameters)
             }
-            QsdReward::ClanMoney(operator, value) => {
+            QsdReward::ClanMoney { operator, value } => {
                 quest_reward_clan_money(quest_system_parameters, quest_parameters, operator, value)
             }
-            QsdReward::ClanPoints(operator, value) => {
+            QsdReward::ClanPoints { operator, value } => {
                 quest_reward_clan_points(quest_system_parameters, quest_parameters, operator, value)
             }
-            QsdReward::AddClanSkill(skill_id) => {
-                quest_reward_clan_add_skill(quest_system_parameters, quest_parameters, skill_id)
+            QsdReward::AddClanSkill { id } => {
+                quest_reward_clan_add_skill(quest_system_parameters, quest_parameters, id)
             }
-            QsdReward::RemoveClanSkill(skill_id) => {
-                quest_reward_clan_remove_skill(quest_system_parameters, quest_parameters, skill_id)
+            QsdReward::RemoveClanSkill { id } => {
+                quest_reward_clan_remove_skill(quest_system_parameters, quest_parameters, id)
             }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
                 false
             } /*
-              QsdReward::TriggerAfterDelayForObject(_, _, _) => todo!(),
+              QsdReward::TriggerAfterDelay(_, _, _) => todo!(),
               QsdReward::FormatAnnounceMessage(_, _) => todo!(),
               QsdReward::TriggerForZoneTeam(_, _, _) => todo!(),
               QsdReward::SetRevivePosition(_) => todo!(),

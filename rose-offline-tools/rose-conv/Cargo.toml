@@ -1,0 +1,13 @@
+[package]
+name = "rose-conv"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+rose-file-readers = { path = "../../rose-file-readers" }
+clap = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_yaml = { workspace = true }

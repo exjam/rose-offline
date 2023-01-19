@@ -120,6 +120,7 @@ pub struct IfoReadOptions {
 
 impl RoseFile for IfoFile {
     type ReadOptions = IfoReadOptions;
+    type WriteOptions = ();
 
     fn read(
         mut reader: RoseFileReader,

@@ -272,6 +272,7 @@ pub enum AipReadError {
 
 impl RoseFile for AipFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let num_triggers = reader.read_u32()?;

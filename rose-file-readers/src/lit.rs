@@ -21,6 +21,7 @@ pub struct LitFile {
 
 impl RoseFile for LitFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let object_count = reader.read_u32()? as usize;

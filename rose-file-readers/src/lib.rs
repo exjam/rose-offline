@@ -1,14 +1,26 @@
 mod aruavfs;
 mod reader;
 mod virtual_filesystem;
+mod writer;
+
 pub use reader::RoseFileReader;
+pub use writer::RoseFileWriter;
 
 pub trait RoseFile {
     type ReadOptions: Default;
+    type WriteOptions: Default;
 
     fn read(reader: RoseFileReader, options: &Self::ReadOptions) -> Result<Self, anyhow::Error>
     where
         Self: Sized;
+
+    fn write(
+        &self,
+        _writer: &mut RoseFileWriter,
+        _options: &Self::WriteOptions,
+    ) -> Result<(), anyhow::Error> {
+        unimplemented!();
+    }
 }
 
 pub mod types;
@@ -71,3 +83,7 @@ pub use zsc::{
     ZscCollisionFlags, ZscCollisionShape, ZscEffectType, ZscFile, ZscMaterial, ZscMaterialBlend,
     ZscMaterialGlow, ZscObject, ZscObjectEffect, ZscObjectPart,
 };
+
+pub mod editor_friendly {
+    pub use crate::qsd::editor_friendly::*;
+}

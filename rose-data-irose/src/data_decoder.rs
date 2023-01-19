@@ -508,6 +508,10 @@ impl DataDecoder for IroseDataDecoder {
         decode_item_base1000(id)
     }
 
+    fn decode_item_reference(&self, item_number: usize, item_type: usize) -> Option<ItemReference> {
+        decode_item_reference(item_number, item_type)
+    }
+
     fn decode_equipment_index(&self, id: usize) -> Option<EquipmentIndex> {
         decode_equipment_index(id)
     }
@@ -540,6 +544,15 @@ pub fn decode_item_base1000(id: usize) -> Option<ItemReference> {
         } else {
             Some(ItemReference::new(item_type, item_number))
         }
+    }
+}
+
+pub fn decode_item_reference(item_number: usize, item_type: usize) -> Option<ItemReference> {
+    let item_type = decode_item_type(item_type)?;
+    if item_number == 0 {
+        None
+    } else {
+        Some(ItemReference::new(item_type, item_number))
     }
 }
 

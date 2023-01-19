@@ -19,6 +19,7 @@ pub struct ChrFile {
 
 impl RoseFile for ChrFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let skeleton_count = reader.read_u16()?;

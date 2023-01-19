@@ -44,6 +44,7 @@ pub enum ZmoChannel {
 
 impl RoseFile for ZmoFile {
     type ReadOptions = ZmoReadOptions;
+    type WriteOptions = ();
 
     fn read(
         mut reader: RoseFileReader,

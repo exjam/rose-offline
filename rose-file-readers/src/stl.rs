@@ -61,6 +61,7 @@ enum StlType {
 
 impl RoseFile for StlFile {
     type ReadOptions = StlReadOptions;
+    type WriteOptions = ();
 
     fn read(
         mut reader: RoseFileReader,

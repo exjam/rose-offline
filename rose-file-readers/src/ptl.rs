@@ -75,6 +75,7 @@ pub struct PtlFile {
 
 impl RoseFile for PtlFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let num_sequences = reader.read_u32()? as usize;

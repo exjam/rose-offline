@@ -16,6 +16,7 @@ impl TilFile {
 
 impl RoseFile for TilFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let width = reader.read_u32()?;

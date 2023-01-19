@@ -25,6 +25,7 @@ impl LtbFile {
 
 impl RoseFile for LtbFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &()) -> Result<Self, anyhow::Error> {
         let columns = reader.read_u32()? as usize;

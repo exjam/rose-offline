@@ -50,6 +50,7 @@ pub struct EftFile {
 
 impl RoseFile for EftFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let skip_len = reader.read_u32()? as u64;

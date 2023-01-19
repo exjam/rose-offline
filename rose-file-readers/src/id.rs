@@ -14,6 +14,7 @@ impl Deref for IdFile {
 
 impl RoseFile for IdFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let mut line = String::new();

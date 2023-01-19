@@ -43,6 +43,7 @@ pub enum ZmsReadError {
 
 impl RoseFile for ZmsFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let magic = reader.read_null_terminated_string()?;

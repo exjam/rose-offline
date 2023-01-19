@@ -24,6 +24,7 @@ pub struct TsiFile {
 
 impl RoseFile for TsiFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let num_textures = reader.read_u16()? as usize;

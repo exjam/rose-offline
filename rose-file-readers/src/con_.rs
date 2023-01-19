@@ -77,6 +77,7 @@ fn decode_message_type(index: u32) -> Result<ConMessageType, anyhow::Error> {
 
 impl RoseFile for ConFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let event_mask = reader.read_u16()?;

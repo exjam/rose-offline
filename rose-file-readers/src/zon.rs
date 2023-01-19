@@ -52,6 +52,7 @@ pub struct ZonReadOptions {
 #[allow(dead_code)]
 impl RoseFile for ZonFile {
     type ReadOptions = ZonReadOptions;
+    type WriteOptions = ();
 
     fn read(
         mut reader: RoseFileReader,

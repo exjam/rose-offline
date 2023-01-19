@@ -106,6 +106,7 @@ pub struct ZscFile {
 
 impl RoseFile for ZscFile {
     type ReadOptions = ();
+    type WriteOptions = ();
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let mesh_count = reader.read_u16()? as usize;

@@ -22,6 +22,7 @@ pub struct StbReadOptions {
 
 impl RoseFile for StbFile {
     type ReadOptions = StbReadOptions;
+    type WriteOptions = ();
 
     fn read(
         mut reader: RoseFileReader,
