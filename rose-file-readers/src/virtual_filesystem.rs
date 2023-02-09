@@ -114,7 +114,7 @@ impl<'a> From<&'a VfsPathBuf> for VfsPath<'a> {
 }
 
 pub trait VirtualFilesystemDevice {
-    fn open_file<'a>(&self, path: &'a VfsPath) -> Result<VfsFile, anyhow::Error>;
+    fn open_file(&self, path: &VfsPath) -> Result<VfsFile, anyhow::Error>;
     fn exists(&self, path: &VfsPath) -> bool;
 }
 
@@ -129,7 +129,7 @@ impl HostFilesystemDevice {
 }
 
 impl VirtualFilesystemDevice for HostFilesystemDevice {
-    fn open_file<'a>(&self, vfs_path: &'a VfsPath) -> Result<VfsFile, anyhow::Error> {
+    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile, anyhow::Error> {
         let buffer = std::fs::read(self.root_path.join(vfs_path.path()))
             .map_err(|_| VfsError::FileNotFound(vfs_path.path().into()))?;
         Ok(VfsFile::Buffer(buffer))
