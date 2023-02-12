@@ -1,14 +1,14 @@
 [package]
 name = "rose-data"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
 rose-file-readers = { path = "../rose-file-readers" }
-arrayvec.workspace = true
-bevy.workspace = true
-bitflags.workspace = true
-enum-map.workspace = true
-num-derive.workspace = true
-serde.workspace = true
+arrayvec = { workspace = true }
+bevy = { workspace = true }
+bitflags = { workspace = true }
+enum-map = { workspace = true }
+num-derive = { workspace = true }
+serde = { workspace = true }

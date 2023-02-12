@@ -1,13 +1,13 @@
 [package]
 name = "rose-game-irose"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
 rose-data = { path = "../rose-data" }
 rose-data-irose = { path = "../rose-data-irose" }
 rose-file-readers = { path = "../rose-file-readers" }
 rose-game-common = { path = "../rose-game-common" }
-log.workspace = true
-rand.workspace = true
+log = { workspace = true }
+rand = { workspace = true }

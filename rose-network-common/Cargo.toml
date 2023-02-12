@@ -1,15 +1,15 @@
 [package]
 name = "rose-network-common"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
 rose-game-common = { path = "../rose-game-common" }
-anyhow.workspace = true
-bytes.workspace = true
-crossbeam-channel.workspace = true
-encoding_rs.workspace = true
-log.workspace = true
-thiserror.workspace = true
-tokio.workspace = true
+anyhow = { workspace = true }
+bytes = { workspace = true }
+crossbeam-channel = { workspace = true }
+encoding_rs = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }

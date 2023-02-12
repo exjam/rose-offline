@@ -1,15 +1,15 @@
 [package]
 name = "rose-game-common"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
 rose-data = { path = "../rose-data" }
-bevy.workspace = true
-bitvec.workspace = true
-enum-map.workspace = true
-log.workspace = true
-md5.workspace = true
-serde.workspace = true
-thiserror.workspace = true
+bevy = { workspace = true }
+bitvec = { workspace = true }
+enum-map = { workspace = true }
+log = { workspace = true }
+md5 = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

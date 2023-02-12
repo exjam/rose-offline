@@ -1,19 +1,19 @@
 [package]
 name = "rose-file-readers"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
 
 [dependencies]
-aes.workspace = true
-anyhow.workspace = true
-bitflags.workspace = true
-bytes.workspace = true
-ctr.workspace = true
-encoding_rs.workspace = true
-flate2.workspace = true
-log.workspace = true
-memmap.workspace = true
-num-derive.workspace = true
-num-traits.workspace = true
-thiserror.workspace = true
+aes = { workspace = true }
+anyhow = { workspace = true }
+bitflags = { workspace = true }
+bytes = { workspace = true }
+ctr = { workspace = true }
+encoding_rs = { workspace = true }
+flate2 = { workspace = true }
+log = { workspace = true }
+memmap = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+thiserror = { workspace = true }
