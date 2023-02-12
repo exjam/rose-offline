@@ -1,56 +1,10 @@
-[package]
-name = "rose-offline"
+[workspace.package]
 version = "0.1.0"
-authors = ["James Benton <james.benton2@gmail.com>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[workspace.dependencies]
-bevy = { version = "0.9.1", default-features = false }
-
-[dependencies]
-anyhow = "1.0"
-arrayvec = "0.7"
-async-trait = "0.1"
-bevy = { workspace = true, default-features = false }
-bitvec = { version = "1.0", features = ["serde"] }
-bytes = "1.1"
-chrono = "0.4"
-clap = "3.2"
-crossbeam-channel = "0.5"
-directories = "4.0"
-encoding_rs = "0.8"
-enum-map = { version = "2.0", features = ["serde"] }
-hex = "0.4"
-lazy_static = "1.4"
-log = "0.4"
-memmap = "0.7"
-modular-bitfield = "0.11"
-num-derive = "0.3"
-num-traits = "0.2"
-rand = "0.8"
-rose-data = { path = "rose-data" }
-rose-data-irose = { path = "rose-data-irose" }
-rose-file-readers = { path = "rose-file-readers" }
-rose-game-common = { path = "rose-game-common" }
-rose-game-irose = { path = "rose-game-irose" }
-rose-network-common = { path = "rose-network-common" }
-rose-network-irose = { path = "rose-network-irose" }
-scopeguard = "1.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-sha2 = "0.10"
-shellwords = "1.1"
-simplelog = "0.11"
-tempfile = "3.3"
-thiserror = "1.0"
-tokio = { version = "1.17", features = ["full"] }
-
-[patch.crates-io]
-bevy = { git = "https://github.com/exjam/bevy", rev = "5992246001ff7f9cb63a97d79a1eb89deffe079b" }
+authors = ["James Benton <james.benton2@gmail.com>"]
 
 [workspace]
+resolver = "2"
 members = [
     "rose-data",
     "rose-data-irose",
@@ -59,7 +13,47 @@ members = [
     "rose-game-irose",
     "rose-network-common",
     "rose-network-irose",
+    "rose-offline-server",
 ]
+
+[workspace.dependencies]
+aes = "0.8.1"
+anyhow = "1.0"
+arrayvec = "0.7"
+async-trait = "0.1"
+bevy = { version = "0.9.1", default-features = false }
+bitflags = "1.2"
+bitvec = { version = "1.0", features = ["serde"] }
+bytes = "1.1"
+chrono = "0.4"
+clap = "3.2"
+crossbeam-channel = "0.5"
+ctr = "0.9.1"
+directories = "4.0"
+encoding_rs = "0.8"
+enum-map = { version = "2.0", features = ["serde"] }
+flate2 = "1.0"
+hex = "0.4"
+lazy_static = "1.4"
+log = "0.4"
+md5 = "0.7"
+memmap = "0.7"
+modular-bitfield = "0.11"
+num-derive = "0.3"
+num-traits = "0.2"
+rand = "0.8"
+scopeguard = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+shellwords = "1.1"
+simplelog = "0.11"
+tempfile = "3.3"
+thiserror = "1.0"
+tokio = { version = "1.17", default-features = false, features = ["rt", "rt-multi-thread", "net", "sync", "macros", "io-util"] }
+
+[patch.crates-io]
+bevy = { git = "https://github.com/exjam/bevy", rev = "5992246001ff7f9cb63a97d79a1eb89deffe079b" }
 
 [profile.dev.package."*"]
 opt-level = 3

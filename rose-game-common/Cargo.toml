@@ -1,15 +1,15 @@
 [package]
 name = "rose-game-common"
-version = "0.1.0"
-authors = ["James Benton <james.benton2@gmail.com>"]
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
-bevy = { workspace = true, default-features = false }
-bitvec = { version = "1.0", features = ["serde"] }
-enum-map = { version = "2.0", features = ["serde"] }
-log = "0.4"
-md5 = "0.7"
 rose-data = { path = "../rose-data" }
-serde = { version = "1.0", features = ["derive"] }
-thiserror = "1.0"
+bevy.workspace = true
+bitvec.workspace = true
+enum-map.workspace = true
+log.workspace = true
+md5.workspace = true
+serde.workspace = true
+thiserror.workspace = true

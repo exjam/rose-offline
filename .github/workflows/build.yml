@@ -30,11 +30,11 @@ jobs:
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v3
         with:
-          name: rose-offline-${{ matrix.os }}
-          path: target/release/rose-offline.exe
+          name: rose-offline-server-${{ matrix.os }}
+          path: target/release/rose-offline-server.exe
       - name: 'Upload Artifact (Ubuntu, MacOS)'
         if: matrix.os != 'windows-latest'
         uses: actions/upload-artifact@v3
         with:
-          name: rose-offline-${{ matrix.os }}
-          path: target/release/rose-offline
+          name: rose-offline-server-${{ matrix.os }}
+          path: target/release/rose-offline-server

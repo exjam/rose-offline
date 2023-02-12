@@ -1,15 +1,15 @@
 [package]
 name = "rose-network-common"
-version = "0.1.0"
-authors = ["James Benton <james.benton2@gmail.com>"]
-edition = "2021"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
 
 [dependencies]
-anyhow = "1.0"
-bytes = "1.1"
-crossbeam-channel = "0.5"
-encoding_rs = "0.8"
-log = "0.4"
 rose-game-common = { path = "../rose-game-common" }
-thiserror = "1.0"
-tokio = { version = "1.17", features = ["net", "sync", "macros"] }
+anyhow.workspace = true
+bytes.workspace = true
+crossbeam-channel.workspace = true
+encoding_rs.workspace = true
+log.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
