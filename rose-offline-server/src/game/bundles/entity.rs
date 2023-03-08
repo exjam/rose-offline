@@ -1,6 +1,7 @@
 use bevy::{
     ecs::prelude::{Bundle, Commands, Entity},
     math::Vec3,
+    time::Time,
 };
 use rand::Rng;
 use std::time::Duration;
@@ -19,7 +20,7 @@ use crate::game::{
         StatusEffectsRegen, Team, UnionMembership,
     },
     messages::server::{ServerMessage, Teleport},
-    resources::{ClientEntityList, ServerTime},
+    resources::ClientEntityList,
     GameData,
 };
 
@@ -216,7 +217,7 @@ impl ItemDropBundle {
         position: &Position,
         owner_entity: Option<Entity>,
         party_owner_entity: Option<Entity>,
-        server_time: &ServerTime,
+        time: &Time,
     ) -> Option<Entity> {
         let mut rng = rand::thread_rng();
 
@@ -232,7 +233,7 @@ impl ItemDropBundle {
             drop: ItemDrop::with_dropped_item(item),
             position: drop_position.clone(),
             entity_expire_time: EntityExpireTime::new(
-                server_time.now + ITEM_DROP_ENTITY_EXPIRE_TIME,
+                time.last_update().unwrap() + ITEM_DROP_ENTITY_EXPIRE_TIME,
             ),
         });
         let entity = entity_commands.id();
@@ -240,7 +241,7 @@ impl ItemDropBundle {
         if let Some(owner_entity) = owner_entity {
             entity_commands.insert((
                 Owner::new(owner_entity),
-                OwnerExpireTime::new(server_time.now + ITEM_DROP_OWNER_EXPIRE_TIME),
+                OwnerExpireTime::new(time.last_update().unwrap() + ITEM_DROP_OWNER_EXPIRE_TIME),
             ));
         }
 

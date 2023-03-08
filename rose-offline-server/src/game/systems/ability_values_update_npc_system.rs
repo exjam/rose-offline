@@ -1,5 +1,5 @@
 use bevy::ecs::{
-    prelude::{Changed, Entity, Or, Res},
+    prelude::{Changed, Or, Res},
     query::WorldQuery,
     system::Query,
 };

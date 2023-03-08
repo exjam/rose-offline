@@ -1,5 +1,6 @@
 use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
 use bevy::math::{Vec3, Vec3Swizzles};
+use bevy::time::Time;
 use log::warn;
 
 use rose_data::{
@@ -46,9 +47,7 @@ use crate::game::{
             UpdateBasicStat,
         },
     },
-    resources::{
-        ClientEntityList, GameData, LoginTokens, ServerMessages, ServerTime, WorldRates, WorldTime,
-    },
+    resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, WorldRates, WorldTime},
     storage::{account::AccountStorage, bank::BankStorage, character::CharacterStorage},
 };
 
@@ -655,7 +654,7 @@ pub fn game_server_main_system(
     mut use_item_events: EventWriter<UseItemEvent>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
 ) {
     game_client_query.for_each_mut(
         |(
@@ -1224,7 +1223,7 @@ pub fn game_server_main_system(
                                 position,
                                 None,
                                 None,
-                                &server_time,
+                                &time,
                             );
 
                             client
@@ -1252,7 +1251,7 @@ pub fn game_server_main_system(
                                     position,
                                     None,
                                     None,
-                                    &server_time,
+                                    &time,
                                 );
 
                                 client

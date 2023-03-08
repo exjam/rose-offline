@@ -1,6 +1,7 @@
 use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res};
 use bevy::ecs::query::WorldQuery;
 use bevy::math::{Vec3, Vec3Swizzles};
+use bevy::time::Time;
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -12,7 +13,7 @@ use crate::game::{
         ItemDrop, ItemSlot, NextCommand, Npc, Owner, Position, Team, BOT_IDLE_CHECK_DURATION,
     },
     events::UseItemEvent,
-    resources::{ClientEntityList, ServerTime},
+    resources::ClientEntityList,
     GameData,
 };
 
@@ -53,7 +54,7 @@ pub fn bot_ai_system(
     party_query: Query<&Party>,
     client_entity_list: Res<ClientEntityList>,
     game_data: Res<GameData>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
     mut use_item_events: EventWriter<UseItemEvent>,
     mut party_events: EventWriter<PartyEvent>,
 ) {
@@ -73,7 +74,7 @@ pub fn bot_ai_system(
 
         match bot.command.command {
             CommandData::Stop(_) => {
-                bot.ai.time_since_last_idle_check += server_time.delta;
+                bot.ai.time_since_last_idle_check += time.delta();
                 if bot.ai.time_since_last_idle_check < BOT_IDLE_CHECK_DURATION {
                     continue;
                 }

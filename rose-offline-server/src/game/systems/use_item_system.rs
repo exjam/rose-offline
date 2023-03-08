@@ -1,9 +1,12 @@
-use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, Query, Res, ResMut},
-    query::WorldQuery,
-    system::SystemParam,
-};
 use bevy::math::Vec3;
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventReader, Query, Res, ResMut},
+        query::WorldQuery,
+        system::SystemParam,
+    },
+    time::Time,
+};
 use log::warn;
 use std::time::Duration;
 
@@ -23,7 +26,7 @@ use crate::game::{
     },
     events::UseItemEvent,
     messages::server::{ServerMessage, UseInventoryItem, UseItem},
-    resources::{ClientEntityList, ServerMessages, ServerTime},
+    resources::{ClientEntityList, ServerMessages},
     GameData,
 };
 
@@ -33,7 +36,7 @@ pub struct UseItemSystemParameters<'w, 's> {
     game_data: Res<'w, GameData>,
     client_entity_list: ResMut<'w, ClientEntityList>,
     server_messages: ResMut<'w, ServerMessages>,
-    server_time: Res<'w, ServerTime>,
+    time: Res<'w, Time>,
 }
 
 #[derive(WorldQuery)]
@@ -98,7 +101,7 @@ fn apply_item_effect(
                     use_item_user.status_effects.apply_potion(
                         &mut use_item_user.status_effects_regen,
                         status_effect_data,
-                        use_item_system_parameters.server_time.now
+                        use_item_system_parameters.time.last_update().unwrap()
                             + Duration::from_micros(
                                 total_potion_value as u64 * 1000000
                                     / potion_value_per_second as u64,

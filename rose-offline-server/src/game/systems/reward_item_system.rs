@@ -3,11 +3,14 @@ use crate::game::{
     components::{DroppedItem, GameClient, Inventory, Position},
     events::RewardItemEvent,
     messages::server::ServerMessage,
-    resources::{ClientEntityList, ServerTime},
+    resources::ClientEntityList,
 };
-use bevy::ecs::{
-    prelude::{Commands, EventReader, Query, ResMut},
-    system::Res,
+use bevy::{
+    ecs::{
+        prelude::{Commands, EventReader, Query, ResMut},
+        system::Res,
+    },
+    time::Time,
 };
 
 pub fn reward_item_system(
@@ -15,7 +18,7 @@ pub fn reward_item_system(
     mut query: Query<(&Position, &mut Inventory, Option<&GameClient>)>,
     mut reward_item_events: EventReader<RewardItemEvent>,
     mut client_entity_list: ResMut<ClientEntityList>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
 ) {
     for event in reward_item_events.iter() {
         if let Ok((position, mut inventory, game_client)) = query.get_mut(event.entity) {
@@ -37,7 +40,7 @@ pub fn reward_item_system(
                             position,
                             Some(event.entity),
                             None,
-                            &server_time,
+                            &time,
                         );
                     }
                 }

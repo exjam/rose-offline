@@ -1,9 +1,12 @@
-use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut},
-    query::WorldQuery,
-    system::SystemParam,
-};
 use bevy::math::{UVec2, Vec3, Vec3Swizzles};
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut},
+        query::WorldQuery,
+        system::SystemParam,
+    },
+    time::Time,
+};
 use clap::{Arg, PossibleValue};
 use lazy_static::lazy_static;
 use rand::prelude::SliceRandom;
@@ -36,7 +39,7 @@ use crate::game::{
     },
     events::{ChatCommandEvent, ClanEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
-    resources::{BotList, BotListEntry, ClientEntityList, ServerMessages, ServerTime},
+    resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
     GameData,
 };
 
@@ -46,12 +49,12 @@ pub struct ChatCommandParams<'w, 's> {
     bot_list: ResMut<'w, BotList>,
     client_entity_list: ResMut<'w, ClientEntityList>,
     game_data: Res<'w, GameData>,
-    clan_events: EventWriter<'w, 's, ClanEvent>,
-    reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
-    damage_events: EventWriter<'w, 's, DamageEvent>,
-    reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
+    clan_events: EventWriter<'w, ClanEvent>,
+    reward_xp_events: EventWriter<'w, RewardXpEvent>,
+    damage_events: EventWriter<'w, DamageEvent>,
+    reward_item_events: EventWriter<'w, RewardItemEvent>,
     server_messages: ResMut<'w, ServerMessages>,
-    server_time: ResMut<'w, ServerTime>,
+    time: Res<'w, Time>,
 }
 
 #[derive(WorldQuery)]
@@ -914,7 +917,7 @@ fn handle_chat_command(
                     chat_command_user.position,
                     None,
                     None,
-                    &chat_command_params.server_time,
+                    &chat_command_params.time,
                 );
             } else {
                 chat_command_params

@@ -3,12 +3,12 @@ use std::time::Duration;
 use bevy::{
     ecs::prelude::{Query, Res},
     prelude::Without,
+    time::Time,
 };
 use rose_game_common::data::PassiveRecoveryState;
 
 use crate::game::{
     components::{AbilityValues, Command, Dead, HealthPoints, ManaPoints, PassiveRecoveryTime},
-    resources::ServerTime,
     GameData,
 };
 
@@ -26,12 +26,12 @@ pub fn passive_recovery_system(
         Without<Dead>,
     >,
     game_data: Res<GameData>,
-    time: Res<ServerTime>,
+    time: Res<Time>,
 ) {
     for (mut passive_recovery_time, ability_values, command, mut health_points, mut mana_points) in
         query.iter_mut()
     {
-        passive_recovery_time.time += time.delta;
+        passive_recovery_time.time += time.delta();
 
         if passive_recovery_time.time > RECOVERY_INTERVAL {
             passive_recovery_time.time -= RECOVERY_INTERVAL;

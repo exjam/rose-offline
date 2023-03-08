@@ -1,6 +1,6 @@
 use bevy::ecs::{
     event::EventWriter,
-    prelude::{Commands, Entity, EventReader, Query, ResMut},
+    prelude::{Commands, EventReader, Query, ResMut},
     query::WorldQuery,
 };
 use log::{error, info};

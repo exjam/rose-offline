@@ -3,6 +3,7 @@ use std::time::Duration;
 use bevy::{
     ecs::prelude::{Commands, EventReader, Query, Res, ResMut},
     prelude::EventWriter,
+    time::Time,
 };
 use rose_game_common::data::Damage;
 
@@ -13,7 +14,7 @@ use crate::game::{
     },
     events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged, ItemLifeEvent},
     messages::server::{DamageEntity, ServerMessage},
-    resources::{ServerMessages, ServerTime},
+    resources::ServerMessages,
 };
 
 pub fn damage_system(
@@ -29,7 +30,7 @@ pub fn damage_system(
     mut damage_events: EventReader<DamageEvent>,
     mut item_life_events: EventWriter<ItemLifeEvent>,
     mut server_messages: ResMut<ServerMessages>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
 ) {
     for damage_event in damage_events.iter() {
         let (attacker_entity, defender_entity, damage, from_skill) = match *damage_event {
@@ -116,12 +117,12 @@ pub fn damage_system(
                     .iter_mut()
                     .find(|source| source.entity == attacker_entity)
                 {
-                    source.last_damage_time = server_time.now;
+                    source.last_damage_time = time.last_update().unwrap();
                     source.total_damage += damage.amount as usize;
                 } else {
                     // If we have a full list of damage sources, remove the oldest
                     if damage_sources.damage_sources.len() == damage_sources.max_damage_sources {
-                        let mut oldest_time = server_time.now;
+                        let mut oldest_time = time.last_update().unwrap();
                         let mut oldest_index = None;
 
                         for i in 0..damage_sources.damage_sources.len() {
@@ -141,8 +142,8 @@ pub fn damage_system(
                     damage_sources.damage_sources.push(DamageSource {
                         entity: attacker_entity,
                         total_damage: damage.amount as usize,
-                        first_damage_time: server_time.now,
-                        last_damage_time: server_time.now,
+                        first_damage_time: time.last_update().unwrap(),
+                        last_damage_time: time.last_update().unwrap(),
                     });
                 }
             }

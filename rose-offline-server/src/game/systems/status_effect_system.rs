@@ -1,7 +1,10 @@
-use bevy::ecs::{
-    entity::Entity,
-    event::EventWriter,
-    prelude::{Query, Res, ResMut},
+use bevy::{
+    ecs::{
+        entity::Entity,
+        event::EventWriter,
+        prelude::{Query, Res, ResMut},
+    },
+    time::Time,
 };
 use enum_map::EnumMap;
 use std::time::Duration;
@@ -16,17 +19,14 @@ use crate::game::{
     },
     events::DamageEvent,
     messages::server::{ServerMessage, UpdateStatusEffects},
-    resources::{ServerMessages, ServerTime},
+    resources::ServerMessages,
     GameData,
 };
 
-fn update_status_effect_regen(
-    regen: &mut ActiveStatusEffectRegen,
-    server_time: &ServerTime,
-) -> i32 {
+fn update_status_effect_regen(regen: &mut ActiveStatusEffectRegen, time: &Time) -> i32 {
     let prev_applied_value = regen.applied_value;
 
-    regen.applied_duration += server_time.delta;
+    regen.applied_duration += time.delta();
     regen.applied_value = i32::min(
         ((regen.applied_duration.as_micros() as f32 / 1000000.0) * regen.value_per_second as f32)
             as i32,
@@ -49,7 +49,7 @@ pub fn status_effect_system(
     mut damage_events: EventWriter<DamageEvent>,
     mut server_messages: ResMut<ServerMessages>,
     game_data: Res<GameData>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
 ) {
     for (
         entity,
@@ -63,7 +63,7 @@ pub fn status_effect_system(
     {
         let mut expired_status_effects: EnumMap<StatusEffectType, bool> = Default::default();
         let apply_per_second_effect = {
-            status_effects_regen.per_second_tick_counter += server_time.delta;
+            status_effects_regen.per_second_tick_counter += time.delta();
             if status_effects_regen.per_second_tick_counter > Duration::from_secs(1) {
                 status_effects_regen.per_second_tick_counter -= Duration::from_secs(1);
                 true
@@ -80,8 +80,7 @@ pub fn status_effect_system(
                             &mut status_effects_regen.regens[status_effect_type]
                         {
                             // Calculate regen for this tick
-                            let regen =
-                                update_status_effect_regen(status_effect_regen, &server_time);
+                            let regen = update_status_effect_regen(status_effect_regen, &time);
 
                             // Update hp
                             let max_hp = ability_values.get_max_health();
@@ -99,8 +98,7 @@ pub fn status_effect_system(
                         {
                             if let Some(mana_points) = mana_points.as_mut() {
                                 // Calculate regen for this tick
-                                let regen =
-                                    update_status_effect_regen(status_effect_regen, &server_time);
+                                let regen = update_status_effect_regen(status_effect_regen, &time);
 
                                 // Update mp
                                 let max_mp = ability_values.get_max_mana();
@@ -150,7 +148,7 @@ pub fn status_effect_system(
 
                 // Check if expire time has been reached
                 if let Some(expire_time) = status_effects.expire_times[status_effect_type] {
-                    if expire_time <= server_time.now {
+                    if expire_time <= time.last_update().unwrap() {
                         expired_status_effects[status_effect_type] = true;
                     }
                 }

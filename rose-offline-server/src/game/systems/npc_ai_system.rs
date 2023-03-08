@@ -1,11 +1,14 @@
 use arrayvec::ArrayVec;
-use bevy::ecs::{
-    prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
-    query::WorldQuery,
-    system::SystemParam,
-};
 use bevy::math::{Vec3, Vec3Swizzles};
-use chrono::{Datelike, Timelike};
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
+        query::WorldQuery,
+        system::SystemParam,
+    },
+    time::Time,
+};
+use chrono::{Datelike, Local, Timelike};
 use rand::{prelude::SliceRandom, Rng};
 use std::{
     marker::PhantomData,
@@ -35,7 +38,7 @@ use crate::game::{
     },
     events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
-    resources::{ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList},
+    resources::{ClientEntityList, ServerMessages, WorldRates, WorldTime, ZoneList},
     GameData,
 };
 
@@ -107,16 +110,16 @@ pub struct AiSystemParameters<'w, 's> {
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
     owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
     clan_query: Query<'w, 's, &'static Clan>,
-    damage_events: EventWriter<'w, 's, DamageEvent>,
-    quest_trigger_events: EventWriter<'w, 's, QuestTriggerEvent>,
-    reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
+    damage_events: EventWriter<'w, DamageEvent>,
+    quest_trigger_events: EventWriter<'w, QuestTriggerEvent>,
+    reward_item_events: EventWriter<'w, RewardItemEvent>,
     zone_list: ResMut<'w, ZoneList>,
 }
 
 #[derive(SystemParam)]
 pub struct AiSystemResources<'w, 's> {
     game_data: Res<'w, GameData>,
-    server_time: Res<'w, ServerTime>,
+    time: Res<'w, Time>,
     world_time: Res<'w, WorldTime>,
 
     #[system_param(ignore)]
@@ -379,11 +382,10 @@ fn ai_condition_select_local_npc(
 }
 
 fn ai_condition_month_day_time(
-    ai_system_resources: &AiSystemResources,
     month_day: Option<NonZeroU8>,
     day_minutes_range: &RangeInclusive<i32>,
 ) -> bool {
-    let local_time = &ai_system_resources.server_time.local_time;
+    let local_time = Local::now();
 
     if let Some(month_day) = month_day {
         if month_day.get() as u32 != local_time.day() {
@@ -395,12 +397,8 @@ fn ai_condition_month_day_time(
     day_minutes_range.contains(&local_day_minutes)
 }
 
-fn ai_condition_week_day_time(
-    ai_system_resources: &AiSystemResources,
-    week_day: u8,
-    day_minutes_range: &RangeInclusive<i32>,
-) -> bool {
-    let local_time = &ai_system_resources.server_time.local_time;
+fn ai_condition_week_day_time(week_day: u8, day_minutes_range: &RangeInclusive<i32>) -> bool {
+    let local_time = Local::now();
 
     if week_day as u32 != local_time.weekday().num_days_from_sunday() {
         return false;
@@ -740,11 +738,11 @@ fn npc_ai_check_conditions(
             AipCondition::MonthDay(AipConditionMonthDayTime {
                 month_day,
                 ref day_minutes_range,
-            }) => ai_condition_month_day_time(ai_system_resources, month_day, day_minutes_range),
+            }) => ai_condition_month_day_time(month_day, day_minutes_range),
             AipCondition::WeekDay(AipConditionWeekDayTime {
                 week_day,
                 ref day_minutes_range,
-            }) => ai_condition_week_day_time(ai_system_resources, week_day, day_minutes_range),
+            }) => ai_condition_week_day_time(week_day, day_minutes_range),
             AipCondition::WorldTime(ref range) => {
                 ai_condition_world_time(ai_system_resources, range)
             }
@@ -1418,7 +1416,7 @@ fn ai_action_drop_random_item(
             ai_parameters.source.position,
             None,
             None,
-            &ai_system_resources.server_time,
+            &ai_system_resources.time,
         );
     }
 }
@@ -1684,7 +1682,7 @@ pub fn npc_ai_system(
                     ai_system_resources.game_data.ai.get_ai(source.ai.ai_index)
                 {
                     if let Some(trigger_on_idle) = ai_program.trigger_on_idle.as_ref() {
-                        source.ai.idle_duration += ai_system_resources.server_time.delta;
+                        source.ai.idle_duration += ai_system_resources.time.delta();
 
                         if source.ai.idle_duration > ai_program.idle_trigger_interval {
                             npc_ai_run_trigger(
@@ -1748,8 +1746,9 @@ pub fn npc_ai_system(
 
                             // Reward XP to all attackers
                             for damage_source in damage_sources.damage_sources.iter() {
-                                let time_since_damage = ai_system_resources.server_time.now
-                                    - damage_source.last_damage_time;
+                                let time_since_damage =
+                                    ai_system_resources.time.last_update().unwrap()
+                                        - damage_source.last_damage_time;
                                 if time_since_damage > DAMAGE_REWARD_EXPIRE_TIME {
                                     // Damage expired, ignore.
                                     continue;
@@ -1956,7 +1955,7 @@ pub fn npc_ai_system(
                                             killer.party_membership.and_then(|party_membership| {
                                                 party_membership.party()
                                             }),
-                                            &ai_system_resources.server_time,
+                                            &ai_system_resources.time,
                                         );
                                     }
                                 }

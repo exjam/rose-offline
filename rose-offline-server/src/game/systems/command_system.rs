@@ -1,6 +1,7 @@
 use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
 use bevy::ecs::query::WorldQuery;
 use bevy::math::{Vec3, Vec3Swizzles};
+use bevy::time::Time;
 use std::time::Duration;
 
 use rose_data::{
@@ -20,7 +21,7 @@ use crate::game::{
     },
     events::{DamageEvent, PickupItemEvent, SkillEvent, SkillEventTarget},
     messages::server::{self, ServerMessage},
-    resources::{GameData, ServerMessages, ServerTime},
+    resources::{GameData, ServerMessages},
 };
 
 const NPC_MOVE_TO_DISTANCE: f32 = 250.0;
@@ -160,7 +161,7 @@ pub fn command_system(
     mut query_pickup_item: Query<CommandPickupItemTargetQuery>,
     query_skill_target: Query<CommandSkillTargetQuery>,
     game_data: Res<GameData>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
     mut damage_events: EventWriter<DamageEvent>,
     mut skill_events: EventWriter<SkillEvent>,
     mut pickup_item_event: EventWriter<PickupItemEvent>,
@@ -326,7 +327,7 @@ pub fn command_system(
                 next_command.has_sent_server_message = true;
             }
 
-            command.duration += server_time.delta;
+            command.duration += time.delta();
 
             let required_duration = match &mut command.command {
                 CommandData::Attack(_) => {
@@ -807,7 +808,7 @@ pub fn command_system(
                             // Send skill event for effect to be applied after casting motion
                             skill_events.send(SkillEvent::new(
                                 entity,
-                                server_time.now + casting_duration,
+                                time.last_update().unwrap() + casting_duration,
                                 skill_id,
                                 match skill_target {
                                     None => SkillEventTarget::Entity(entity),

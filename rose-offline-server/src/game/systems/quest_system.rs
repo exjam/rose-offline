@@ -1,9 +1,12 @@
-use bevy::ecs::{
-    prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
-    query::WorldQuery,
-    system::SystemParam,
-};
 use bevy::math::{Vec2, Vec3, Vec3Swizzles};
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
+        query::WorldQuery,
+        system::SystemParam,
+    },
+    time::Time,
+};
 use chrono::{Datelike, Timelike};
 use log::warn;
 use rand::Rng;
@@ -36,7 +39,7 @@ use crate::game::{
     },
     events::{ClanEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
-    resources::{ClientEntityList, ServerMessages, ServerTime, WorldRates, WorldTime, ZoneList},
+    resources::{ClientEntityList, ServerMessages, WorldRates, WorldTime, ZoneList},
     GameData,
 };
 
@@ -46,9 +49,9 @@ pub struct QuestSystemParameters<'w, 's> {
     client_entity_list: ResMut<'w, ClientEntityList>,
     server_messages: ResMut<'w, ServerMessages>,
     zone_list: ResMut<'w, ZoneList>,
-    reward_item_events: EventWriter<'w, 's, RewardItemEvent>,
-    reward_xp_events: EventWriter<'w, 's, RewardXpEvent>,
-    clan_events: EventWriter<'w, 's, ClanEvent>,
+    reward_item_events: EventWriter<'w, RewardItemEvent>,
+    reward_xp_events: EventWriter<'w, RewardXpEvent>,
+    clan_events: EventWriter<'w, ClanEvent>,
     object_variables_query: Query<'w, 's, (&'static mut ObjectVariables, &'static Position)>,
     party_query: Query<'w, 's, &'static Party>,
     clan_query: Query<'w, 's, &'static Clan>,
@@ -57,7 +60,7 @@ pub struct QuestSystemParameters<'w, 's> {
 #[derive(SystemParam)]
 pub struct QuestSystemResources<'w, 's> {
     game_data: Res<'w, GameData>,
-    server_time: Res<'w, ServerTime>,
+    time: Res<'w, Time>,
     world_rates: Res<'w, WorldRates>,
     world_time: Res<'w, WorldTime>,
 
@@ -357,11 +360,10 @@ fn quest_condition_world_time(
 }
 
 fn quest_condition_month_day_time(
-    quest_system_resources: &QuestSystemResources,
     month_day: Option<NonZeroU8>,
     day_minutes_range: &RangeInclusive<i32>,
 ) -> bool {
-    let local_time = &quest_system_resources.server_time.local_time;
+    let local_time = chrono::Local::now();
 
     if let Some(month_day) = month_day {
         if month_day.get() as u32 != local_time.day() {
@@ -373,12 +375,8 @@ fn quest_condition_month_day_time(
     day_minutes_range.contains(&local_day_minutes)
 }
 
-fn quest_condition_week_day_time(
-    quest_system_resources: &QuestSystemResources,
-    week_day: u8,
-    day_minutes_range: &RangeInclusive<i32>,
-) -> bool {
-    let local_time = &quest_system_resources.server_time.local_time;
+fn quest_condition_week_day_time(week_day: u8, day_minutes_range: &RangeInclusive<i32>) -> bool {
+    let local_time = chrono::Local::now();
 
     if week_day as u32 != local_time.weekday().num_days_from_sunday() {
         return false;
@@ -862,13 +860,11 @@ fn quest_trigger_check_conditions(
             QsdCondition::MonthDayTime {
                 month_day,
                 ref day_minutes_range,
-            } => {
-                quest_condition_month_day_time(quest_system_resources, month_day, day_minutes_range)
-            }
+            } => quest_condition_month_day_time(month_day, day_minutes_range),
             QsdCondition::WeekDayTime {
                 week_day,
                 ref day_minutes_range,
-            } => quest_condition_week_day_time(quest_system_resources, week_day, day_minutes_range),
+            } => quest_condition_week_day_time(week_day, day_minutes_range),
             QsdCondition::HasSkill { id, has_skill } => {
                 quest_condition_have_skill(quest_parameters, &(id..=id), has_skill)
             }

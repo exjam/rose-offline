@@ -1,6 +1,9 @@
-use bevy::ecs::{
-    prelude::{Entity, Query, Res, ResMut},
-    query::WorldQuery,
+use bevy::{
+    ecs::{
+        prelude::{Query, Res, ResMut},
+        query::WorldQuery,
+    },
+    time::Time,
 };
 use rose_data::ClanMemberPosition;
 use rose_game_common::messages::server::CharacterClanMembership;
@@ -17,7 +20,7 @@ use crate::game::{
         RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityItemDrop,
         SpawnEntityMonster, SpawnEntityNpc,
     },
-    resources::{ClientEntityList, ServerTime},
+    resources::ClientEntityList,
 };
 
 #[derive(WorldQuery)]
@@ -98,7 +101,7 @@ pub fn client_entity_visibility_system(
     npcs_query: Query<NpcQuery>,
     clan_query: Query<&Clan>,
     mut client_entity_list: ResMut<ClientEntityList>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
 ) {
     // First loop through all client entities and generate visibility changes that need to be sent
     for mut game_client in game_clients_query.iter_mut() {
@@ -201,7 +204,7 @@ pub fn client_entity_visibility_system(
                                                 dropped_item,
                                                 position: item_drop.position.position,
                                                 remaining_time: item_drop.expire_time.when
-                                                    - server_time.now,
+                                                    - time.last_update().unwrap(),
                                                 owner_entity_id,
                                             },
                                         ))

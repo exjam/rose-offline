@@ -1,17 +1,20 @@
-use bevy::ecs::prelude::{Commands, Entity, Query, Res, ResMut};
+use bevy::{
+    ecs::prelude::{Commands, Entity, Query, Res, ResMut},
+    time::Time,
+};
 
 use rose_data::NpcId;
 
 use crate::game::{
     bundles::MonsterBundle,
     components::{MonsterSpawnPoint, Position, SpawnOrigin, Team},
-    resources::{ClientEntityList, GameData, ServerTime, ZoneList},
+    resources::{ClientEntityList, GameData, ZoneList},
 };
 
 pub fn monster_spawn_system(
     mut commands: Commands,
     mut query: Query<(Entity, &mut MonsterSpawnPoint, &Position)>,
-    server_time: Res<ServerTime>,
+    time: Res<Time>,
     mut client_entity_list: ResMut<ClientEntityList>,
     game_data: Res<GameData>,
     zone_list: Res<ZoneList>,
@@ -23,7 +26,7 @@ pub fn monster_spawn_system(
             }
 
             let mut spawn_point = &mut *spawn_point;
-            spawn_point.time_since_last_check += server_time.delta;
+            spawn_point.time_since_last_check += time.delta();
             if spawn_point.time_since_last_check < spawn_point.interval {
                 return;
             }

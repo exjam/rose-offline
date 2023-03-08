@@ -5,6 +5,7 @@ use bevy::{
         system::SystemParam,
     },
     math::Vec3Swizzles,
+    time::Time,
 };
 use log::warn;
 use rand::Rng;
@@ -27,7 +28,7 @@ use crate::game::{
     messages::server::{
         ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseInventoryItem,
     },
-    resources::{ClientEntityList, ServerMessages, ServerTime},
+    resources::{ClientEntityList, ServerMessages},
     GameData,
 };
 
@@ -41,14 +42,17 @@ enum SkillCastError {
 #[derive(SystemParam)]
 pub struct SkillSystemParameters<'w, 's> {
     server_messages: ResMut<'w, ServerMessages>,
-    damage_events: EventWriter<'w, 's, DamageEvent>,
-    item_life_events: EventWriter<'w, 's, ItemLifeEvent>,
+    damage_events: EventWriter<'w, DamageEvent>,
+    item_life_events: EventWriter<'w, ItemLifeEvent>,
+
+    #[system_param(ignore)]
+    _secret: PhantomData<&'s ()>,
 }
 
 #[derive(SystemParam)]
 pub struct SkillSystemResources<'w, 's> {
     game_data: Res<'w, GameData>,
-    server_time: Res<'w, ServerTime>,
+    time: Res<'w, Time>,
 
     #[system_param(ignore)]
     _secret: PhantomData<&'s ()>,
@@ -273,7 +277,8 @@ fn apply_skill_status_effects_to_entity(
         {
             skill_target.status_effects.apply_status_effect(
                 status_effect_data,
-                skill_system_resources.server_time.now + skill_data.status_effect_duration,
+                skill_system_resources.time.last_update().unwrap()
+                    + skill_data.status_effect_duration,
                 adjust_value,
             );
 
@@ -537,7 +542,7 @@ pub fn skill_effect_system(
     // TODO: drain_filter pls
     let mut i = 0;
     while i != pending_skill_events.len() {
-        if pending_skill_events[i].when > skill_system_resources.server_time.now {
+        if pending_skill_events[i].when > skill_system_resources.time.last_update().unwrap() {
             i += 1;
             continue;
         }
