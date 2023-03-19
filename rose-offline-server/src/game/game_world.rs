@@ -1,9 +1,10 @@
 use bevy::{
     app::ScheduleRunnerSettings,
     prelude::{
-        App, CoreSet, IntoSystemAppConfigs, IntoSystemConfig, IntoSystemConfigs,
-        IntoSystemSetConfig, SystemSet,
-    }, MinimalPlugins,
+        apply_system_buffers, App, CoreSet, IntoSystemAppConfigs, IntoSystemConfig,
+        IntoSystemConfigs, IntoSystemSetConfig, IntoSystemSetConfigs, SystemSet,
+    },
+    MinimalPlugins,
 };
 use crossbeam_channel::Receiver;
 use std::time::Duration;
@@ -41,10 +42,7 @@ use crate::game::{
 #[system_set(base)]
 enum GameStages {
     Input,
-    PreUpdate,
-    Update,
-    PostUpdate,
-    Output,
+    InputFlush,
 }
 
 pub struct GameWorld {
@@ -128,7 +126,7 @@ impl GameWorld {
                 update_position_system,
                 clan_system,
             )
-                .in_base_set(GameStages::PreUpdate),
+                .in_base_set(CoreSet::PreUpdate),
         );
 
         app.add_systems(
@@ -142,7 +140,7 @@ impl GameWorld {
                 use_item_system,
                 reward_item_system,
             )
-                .in_base_set(GameStages::Update),
+                .in_base_set(CoreSet::Update),
         );
 
         app.add_systems(
@@ -153,7 +151,7 @@ impl GameWorld {
                 client_entity_visibility_system,
                 weight_system,
             )
-                .in_base_set(GameStages::PostUpdate),
+                .in_base_set(CoreSet::PostUpdate),
         );
 
         app.add_systems(
@@ -164,14 +162,16 @@ impl GameWorld {
                 server_messages_system,
                 save_system,
             )
-                .in_base_set(GameStages::Output),
+                .in_base_set(CoreSet::Last),
         );
 
-        app.configure_set(GameStages::Input.after(CoreSet::Update));
-        app.configure_set(GameStages::PreUpdate.after(GameStages::Input));
-        app.configure_set(GameStages::Update.after(GameStages::PreUpdate));
-        app.configure_set(GameStages::PostUpdate.after(GameStages::Update));
-        app.configure_set(GameStages::Output.after(GameStages::PostUpdate));
+        app.add_system(apply_system_buffers.in_base_set(GameStages::InputFlush));
+        app.configure_sets(
+            (GameStages::Input, GameStages::InputFlush)
+                .chain()
+                .after(CoreSet::FirstFlush)
+                .before(CoreSet::PreUpdate),
+        );
 
         app.insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
             1.0 / 30.0,
