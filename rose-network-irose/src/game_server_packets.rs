@@ -612,7 +612,7 @@ impl TryFrom<&Packet> for PacketServerCharacterQuestData {
         let mut planet_variables: [u16; 7] = Default::default();
         let mut union_variables: [u16; 10] = Default::default();
         let mut active_quests: [Option<ActiveQuest>; 10] = Default::default();
-        let mut quest_switches_u32: [u32; (1024 / 32)] = Default::default();
+        let mut quest_switches_u32: [u32; 1024 / 32] = Default::default();
 
         // Episode Variables
         for variable in episode_variables.iter_mut() {

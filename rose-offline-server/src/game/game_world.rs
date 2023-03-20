@@ -2,7 +2,7 @@ use bevy::{
     app::ScheduleRunnerSettings,
     prelude::{
         apply_system_buffers, App, CoreSet, IntoSystemAppConfigs, IntoSystemConfig,
-        IntoSystemConfigs, IntoSystemSetConfig, IntoSystemSetConfigs, SystemSet,
+        IntoSystemConfigs, IntoSystemSetConfigs, SystemSet,
     },
     MinimalPlugins,
 };
