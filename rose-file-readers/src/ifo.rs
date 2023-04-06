@@ -1,10 +1,13 @@
+use std::time::Duration;
+
+use anyhow::bail;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use crate::{
     reader::RoseFileReader,
     types::{Quat4, Vec2, Vec3},
-    RoseFile,
+    RoseFile, VfsPathBuf,
 };
 
 #[derive(Debug)]
@@ -63,10 +66,22 @@ pub struct IfoMonsterSpawnPoint {
     pub tactic_points: u32,
 }
 
+pub struct IfoEffectObject {
+    pub object: IfoObject,
+    pub effect_path: VfsPathBuf,
+}
+
 pub struct IfoEventObject {
     pub object: IfoObject,
     pub quest_trigger_name: String,
     pub script_function_name: String,
+}
+
+pub struct IfoSoundObject {
+    pub object: IfoObject,
+    pub sound_path: VfsPathBuf,
+    pub range: u32,
+    pub interval: Duration,
 }
 
 pub struct IfoNpc {
@@ -83,6 +98,8 @@ pub struct IfoFile {
     pub collision_objects: Vec<IfoObject>,
     pub deco_objects: Vec<IfoObject>,
     pub cnst_objects: Vec<IfoObject>,
+    pub effect_objects: Vec<IfoEffectObject>,
+    pub sound_objects: Vec<IfoSoundObject>,
     pub water_size: f32,
     pub water_planes: Vec<(Vec3<f32>, Vec3<f32>)>,
     pub warps: Vec<IfoObject>,
@@ -90,14 +107,14 @@ pub struct IfoFile {
 
 #[derive(FromPrimitive)]
 enum BlockType {
-    MapInfo = 0,
+    DeprecatedMapInfo = 0,
     DecoObject = 1,
     Npc = 2,
     CnstObject = 3,
-    Sound = 4,
-    Effect = 5,
+    SoundObject = 4,
+    EffectObject = 5,
     AnimatedObject = 6,
-    LegacyWater = 7,
+    DeprecatedWater = 7,
     MonsterSpawn = 8,
     WaterPlanes = 9,
     Warp = 10,
@@ -114,6 +131,8 @@ pub struct IfoReadOptions {
     pub skip_event_objects: bool,
     pub skip_cnst_objects: bool,
     pub skip_deco_objects: bool,
+    pub skip_effect_objects: bool,
+    pub skip_sound_objects: bool,
     pub skip_water_planes: bool,
     pub skip_warp_objects: bool,
 }
@@ -133,6 +152,8 @@ impl RoseFile for IfoFile {
         let mut collision_objects = Vec::new();
         let mut cnst_objects = Vec::new();
         let mut deco_objects = Vec::new();
+        let mut effect_objects = Vec::new();
+        let mut sound_objects = Vec::new();
         let mut water_size = 0.0;
         let mut water_planes = Vec::new();
         let mut warps = Vec::new();
@@ -294,7 +315,44 @@ impl RoseFile for IfoFile {
                         }
                     }
                 }
-                _ => {} // We do not need every block when reading for server
+                Some(BlockType::EffectObject) => {
+                    if !read_options.skip_effect_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        effect_objects.reserve_exact(object_count);
+
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            let effect_path = reader.read_u8_length_string()?;
+                            effect_objects.push(IfoEffectObject {
+                                object,
+                                effect_path: VfsPathBuf::new(&effect_path),
+                            })
+                        }
+                    }
+                }
+                Some(BlockType::SoundObject) => {
+                    if !read_options.skip_sound_objects {
+                        let object_count = reader.read_u32()? as usize;
+                        sound_objects.reserve_exact(object_count);
+
+                        for _ in 0..object_count {
+                            let object = read_object(&mut reader)?;
+                            let sound_path = reader.read_u8_length_string()?;
+                            let range = reader.read_u32()?;
+                            let interval = Duration::from_secs(reader.read_u32()? as u64);
+                            sound_objects.push(IfoSoundObject {
+                                object,
+                                sound_path: VfsPathBuf::new(&sound_path),
+                                range,
+                                interval,
+                            })
+                        }
+                    }
+                }
+                Some(BlockType::DeprecatedMapInfo) | Some(BlockType::DeprecatedWater) => {}
+                None => {
+                    bail!("Invalid block type {}", block_type)
+                }
             }
 
             reader.set_position(next_block_header_offset);
@@ -308,6 +366,8 @@ impl RoseFile for IfoFile {
             collision_objects,
             deco_objects,
             cnst_objects,
+            effect_objects,
+            sound_objects,
             water_size,
             water_planes,
             warps,

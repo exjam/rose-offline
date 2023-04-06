@@ -58,8 +58,8 @@ pub use eft::{EftFile, EftMesh, EftParticle};
 pub use him::HimFile;
 pub use id::IdFile;
 pub use ifo::{
-    IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc, IfoObject,
-    IfoReadOptions,
+    IfoEffectObject, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
+    IfoObject, IfoReadOptions, IfoSoundObject,
 };
 pub use lit::{LitFile, LitObject, LitObjectPart};
 pub use ltb::LtbFile;

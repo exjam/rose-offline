@@ -179,6 +179,8 @@ fn load_zone(
         skip_collision_objects: true,
         skip_cnst_objects: true,
         skip_deco_objects: true,
+        skip_effect_objects: true,
+        skip_sound_objects: true,
         skip_water_planes: true,
         skip_warp_objects: true,
     };
