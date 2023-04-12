@@ -65,4 +65,8 @@ impl SoundDatabase {
     pub fn iter(&self) -> impl Iterator<Item = &SoundData> {
         self.sounds.iter().filter_map(|x| x.as_ref())
     }
+
+    pub fn len(&self) -> usize {
+        self.sounds.len()
+    }
 }
