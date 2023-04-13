@@ -40,6 +40,18 @@ impl SoundDatabase {
         }
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = &SoundData> {
+        self.sounds.iter().filter_map(|x| x.as_ref())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.sounds.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.sounds.len()
+    }
+
     pub fn get_sound(&self, id: SoundId) -> Option<&SoundData> {
         self.sounds.get(id.get() as usize).and_then(|x| x.as_ref())
     }
@@ -60,13 +72,5 @@ impl SoundDatabase {
             .get(zone_type + tile_number * self.step_sound_zone_types)
             .and_then(|id| *id)
             .and_then(|id| self.get_sound(id))
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = &SoundData> {
-        self.sounds.iter().filter_map(|x| x.as_ref())
-    }
-
-    pub fn len(&self) -> usize {
-        self.sounds.len()
     }
 }

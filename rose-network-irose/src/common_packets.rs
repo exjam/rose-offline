@@ -655,6 +655,78 @@ impl PacketWriteMoveMode for PacketWriter {
     }
 }
 
+fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
+    match status_effect_type {
+        StatusEffectType::IncreaseHp => 0x00000001,
+        StatusEffectType::IncreaseMp => 0x00000002,
+        StatusEffectType::Poisoned => 0x00000004,
+        StatusEffectType::IncreaseMaxHp => 0x00000010,
+        StatusEffectType::IncreaseMaxMp => 0x00000020,
+        StatusEffectType::IncreaseMoveSpeed => 0x00000040,
+        StatusEffectType::DecreaseMoveSpeed => 0x00000080,
+        StatusEffectType::IncreaseAttackSpeed => 0x00000100,
+        StatusEffectType::DecreaseAttackSpeed => 0x00000200,
+        StatusEffectType::IncreaseAttackPower => 0x00000400,
+        StatusEffectType::DecreaseAttackPower => 0x00000800,
+        StatusEffectType::IncreaseDefence => 0x00001000,
+        StatusEffectType::DecreaseDefence => 0x00002000,
+        StatusEffectType::IncreaseResistance => 0x00004000,
+        StatusEffectType::DecreaseResistance => 0x00008000,
+        StatusEffectType::IncreaseHit => 0x00010000,
+        StatusEffectType::DecreaseHit => 0x00020000,
+        StatusEffectType::IncreaseCritical => 0x00040000,
+        StatusEffectType::DecreaseCritical => 0x00080000,
+        StatusEffectType::IncreaseAvoid => 0x00100000,
+        StatusEffectType::DecreaseAvoid => 0x00200000,
+        StatusEffectType::Dumb => 0x00400000,
+        StatusEffectType::Sleep => 0x00800000,
+        StatusEffectType::Fainting => 0x01000000,
+        StatusEffectType::Disguise => 0x02000000,
+        StatusEffectType::Transparent => 0x04000000,
+        StatusEffectType::ShieldDamage => 0x08000000,
+        StatusEffectType::AdditionalDamageRate => 0x10000000,
+        StatusEffectType::DecreaseLifeTime => 0x20000000,
+        StatusEffectType::Revive => 0x40000000,
+        StatusEffectType::Taunt => 0x80000000,
+        _ => 0,
+    }
+}
+
+fn get_status_effect_type_id(status_effect_type: StatusEffectType) -> Option<StatusEffectId> {
+    match status_effect_type {
+        StatusEffectType::IncreaseHp => StatusEffectId::new(1),
+        StatusEffectType::IncreaseMp => StatusEffectId::new(4),
+        StatusEffectType::Poisoned => StatusEffectId::new(7),
+        StatusEffectType::IncreaseMaxHp => StatusEffectId::new(12),
+        StatusEffectType::IncreaseMaxMp => StatusEffectId::new(13),
+        StatusEffectType::IncreaseMoveSpeed => StatusEffectId::new(14),
+        StatusEffectType::DecreaseMoveSpeed => StatusEffectId::new(15),
+        StatusEffectType::IncreaseAttackSpeed => StatusEffectId::new(16),
+        StatusEffectType::DecreaseAttackSpeed => StatusEffectId::new(17),
+        StatusEffectType::IncreaseAttackPower => StatusEffectId::new(18),
+        StatusEffectType::DecreaseAttackPower => StatusEffectId::new(19),
+        StatusEffectType::IncreaseDefence => StatusEffectId::new(20),
+        StatusEffectType::DecreaseDefence => StatusEffectId::new(21),
+        StatusEffectType::IncreaseResistance => StatusEffectId::new(22),
+        StatusEffectType::DecreaseResistance => StatusEffectId::new(23),
+        StatusEffectType::IncreaseHit => StatusEffectId::new(24),
+        StatusEffectType::DecreaseHit => StatusEffectId::new(25),
+        StatusEffectType::IncreaseCritical => StatusEffectId::new(26),
+        StatusEffectType::DecreaseCritical => StatusEffectId::new(27),
+        StatusEffectType::IncreaseAvoid => StatusEffectId::new(28),
+        StatusEffectType::DecreaseAvoid => StatusEffectId::new(29),
+        StatusEffectType::Dumb => StatusEffectId::new(30),
+        StatusEffectType::Sleep => StatusEffectId::new(31),
+        StatusEffectType::Fainting => StatusEffectId::new(32),
+        StatusEffectType::Disguise => StatusEffectId::new(33),
+        StatusEffectType::Transparent => StatusEffectId::new(34),
+        StatusEffectType::ShieldDamage => StatusEffectId::new(35),
+        StatusEffectType::AdditionalDamageRate => StatusEffectId::new(36),
+        StatusEffectType::DecreaseLifeTime => StatusEffectId::new(43),
+        _ => None,
+    }
+}
+
 pub trait PacketReadStatusEffects {
     fn read_status_effects_flags_u32(
         &mut self,
@@ -676,10 +748,9 @@ impl<'a> PacketReadStatusEffects for PacketReader<'a> {
 
         for (status_effect_type, status_effect) in status_effects.iter_mut() {
             if (flags & get_status_effect_type_flag(status_effect_type)) != 0 {
-                *status_effect = Some(ActiveStatusEffect {
-                    id: StatusEffectId::new(1).unwrap(),
-                    value: 0,
-                });
+                if let Some(id) = get_status_effect_type_id(status_effect_type) {
+                    *status_effect = Some(ActiveStatusEffect { id, value: 0 });
+                }
             }
         }
 
@@ -717,43 +788,6 @@ impl<'a> PacketReadStatusEffects for PacketReader<'a> {
 pub trait PacketWriteStatusEffects {
     fn write_status_effects_flags_u32(&mut self, status_effects: &ActiveStatusEffects);
     fn write_status_effects_values(&mut self, status_effects: &ActiveStatusEffects);
-}
-
-fn get_status_effect_type_flag(status_effect_type: StatusEffectType) -> u32 {
-    match status_effect_type {
-        StatusEffectType::IncreaseHp => 0x00000001,
-        StatusEffectType::IncreaseMp => 0x00000002,
-        StatusEffectType::Poisoned => 0x00000004,
-        StatusEffectType::IncreaseMaxHp => 0x00000010,
-        StatusEffectType::IncreaseMaxMp => 0x00000020,
-        StatusEffectType::IncreaseMoveSpeed => 0x00000040,
-        StatusEffectType::DecreaseMoveSpeed => 0x00000080,
-        StatusEffectType::IncreaseAttackSpeed => 0x00000100,
-        StatusEffectType::DecreaseAttackSpeed => 0x00000200,
-        StatusEffectType::IncreaseAttackPower => 0x00000400,
-        StatusEffectType::DecreaseAttackPower => 0x00000800,
-        StatusEffectType::IncreaseDefence => 0x00001000,
-        StatusEffectType::DecreaseDefence => 0x00002000,
-        StatusEffectType::IncreaseResistance => 0x00004000,
-        StatusEffectType::DecreaseResistance => 0x00008000,
-        StatusEffectType::IncreaseHit => 0x00010000,
-        StatusEffectType::DecreaseHit => 0x00020000,
-        StatusEffectType::IncreaseCritical => 0x00040000,
-        StatusEffectType::DecreaseCritical => 0x00080000,
-        StatusEffectType::IncreaseAvoid => 0x00100000,
-        StatusEffectType::DecreaseAvoid => 0x00200000,
-        StatusEffectType::Dumb => 0x00400000,
-        StatusEffectType::Sleep => 0x00800000,
-        StatusEffectType::Fainting => 0x01000000,
-        StatusEffectType::Disguise => 0x02000000,
-        StatusEffectType::Transparent => 0x04000000,
-        StatusEffectType::ShieldDamage => 0x08000000,
-        StatusEffectType::AdditionalDamageRate => 0x10000000,
-        StatusEffectType::DecreaseLifeTime => 0x20000000,
-        StatusEffectType::Revive => 0x40000000,
-        StatusEffectType::Taunt => 0x80000000,
-        _ => 0,
-    }
 }
 
 fn get_status_effect_value(
