@@ -71,13 +71,26 @@ impl CharacterMotionDatabase {
         weapon_motion_type: usize,
         gender: usize,
     ) -> Option<&MotionFileData> {
+        // Only ever use this weapon_motion_type
         let index = *self
             .motion_indices
             .get(motion_id.get() as usize * self.weapon_type_count + weapon_motion_type)?
             as usize;
 
+        // First try specific gender
+        if gender != 0 {
+            if let Some(motion_file_data) = self
+                .motion_data
+                .get(gender)
+                .and_then(|x| x.get(index).and_then(|x| x.as_ref()))
+            {
+                return Some(motion_file_data);
+            }
+        }
+
+        // Fallback to gender 0
         self.motion_data
-            .get(gender)
+            .get(0)
             .and_then(|x| x.get(index).and_then(|x| x.as_ref()))
     }
 
