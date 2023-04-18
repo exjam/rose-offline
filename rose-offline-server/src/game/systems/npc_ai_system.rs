@@ -187,7 +187,8 @@ fn ai_condition_count_nearby_entities(
                     let level_diff =
                         ai_parameters.source.level.level as i32 - target.level.level as i32;
 
-                    is_allied == (target.team.id == ai_parameters.source.team.id)
+                    target.health_points.hp > 0
+                        && is_allied == (target.team.id == ai_parameters.source.team.id)
                         && level_diff_range.contains(&level_diff)
                 });
         if !meets_requirements {
@@ -958,6 +959,7 @@ fn ai_action_attack_owner_target(
         if let Ok(target) = ai_system_parameters.target_query.get(owner_target_entity) {
             if target.team.id != Team::DEFAULT_NPC_TEAM_ID
                 && target.team.id != ai_parameters.source.team.id
+                && target.health_points.hp > 0
             {
                 ai_system_parameters
                     .commands
@@ -989,6 +991,7 @@ fn ai_action_attack_nearby_entity_by_stat(
         .unwrap()
         .iter_entities_within_distance(ai_parameters.source.position.position.xy(), distance as f32)
     {
+        // Ignore self entity
         if entity == ai_parameters.source.entity {
             continue;
         }
@@ -996,6 +999,7 @@ fn ai_action_attack_nearby_entity_by_stat(
         if let Ok(nearby_target) = ai_system_parameters.target_query.get(entity) {
             if nearby_target.team.id != Team::DEFAULT_NPC_TEAM_ID
                 && nearby_target.team.id != ai_parameters.source.team.id
+                && nearby_target.health_points.hp > 0
             {
                 let value = match ability_type {
                     AipAbilityType::Level => nearby_target.level.level as i32,
@@ -1102,6 +1106,7 @@ fn ai_action_nearby_allies_attack_target(
         .unwrap()
         .iter_entities_within_distance(ai_parameters.source.position.position.xy(), distance as f32)
     {
+        // Ignore self entity
         if nearby_entity == ai_parameters.source.entity {
             continue;
         }
@@ -1110,6 +1115,7 @@ fn ai_action_nearby_allies_attack_target(
             if nearby_ally.target.is_some()
                 || nearby_ally.team.id != ai_parameters.source.team.id
                 || nearby_ally.npc.is_none()
+                || nearby_ally.health_points.hp <= 0
             {
                 continue;
             }
