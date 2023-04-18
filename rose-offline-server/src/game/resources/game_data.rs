@@ -2,8 +2,9 @@ use bevy::prelude::Resource;
 use std::sync::Arc;
 
 use rose_data::{
-    AiDatabase, CharacterMotionDatabase, DataDecoder, ItemDatabase, NpcDatabase, QuestDatabase,
-    SkillDatabase, StatusEffectDatabase, StringDatabase, WarpGateDatabase, ZoneDatabase,
+    AiDatabase, CharacterMotionDatabase, DataDecoder, ItemDatabase, JobClassDatabase, NpcDatabase,
+    QuestDatabase, SkillDatabase, StatusEffectDatabase, StringDatabase, WarpGateDatabase,
+    ZoneDatabase,
 };
 use rose_game_common::data::{AbilityValueCalculator, DropTable};
 
@@ -17,6 +18,7 @@ pub struct GameData {
     pub drop_table: Box<dyn DropTable + Send + Sync>,
     pub ai: Arc<AiDatabase>,
     pub items: Arc<ItemDatabase>,
+    pub job_class: Arc<JobClassDatabase>,
     pub motions: Arc<CharacterMotionDatabase>,
     pub npcs: Arc<NpcDatabase>,
     pub quests: Arc<QuestDatabase>,
