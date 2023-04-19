@@ -17,12 +17,13 @@ use std::{
 
 use clap::{Arg, Command};
 use log::debug;
-use rose_file_readers::{
-    HostFilesystemDevice, VfsIndex, VirtualFilesystem, VirtualFilesystemDevice,
-};
 use simplelog::*;
 use tokio::net::TcpListener;
 use tokio::runtime::Builder;
+
+use rose_file_readers::{
+    HostFilesystemDevice, VfsIndex, VirtualFilesystem, VirtualFilesystemDevice,
+};
 
 use crate::{
     game::GameConfig,

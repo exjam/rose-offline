@@ -39,6 +39,7 @@ fn get_character_path(name: &str) -> PathBuf {
 }
 
 #[allow(dead_code)]
+#[derive(Copy, Clone, Debug)]
 pub enum CharacterCreatorError {
     InvalidName,
     InvalidGender,

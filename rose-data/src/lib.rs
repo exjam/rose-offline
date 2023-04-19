@@ -2,7 +2,7 @@ macro_rules! id_wrapper_impl {
     ($name:ident, String) => {
         impl $name {
             #[allow(dead_code)]
-            pub fn new(value: String) -> Self {
+            pub const fn new(value: String) -> Self {
                 Self(value)
             }
 
@@ -15,12 +15,12 @@ macro_rules! id_wrapper_impl {
     ($name:ident, $value_type:ty) => {
         impl $name {
             #[allow(dead_code)]
-            pub fn new(value: $value_type) -> Self {
+            pub const fn new(value: $value_type) -> Self {
                 Self(value)
             }
 
             #[allow(dead_code)]
-            pub fn get(&self) -> $value_type {
+            pub const fn get(&self) -> $value_type {
                 self.0
             }
         }

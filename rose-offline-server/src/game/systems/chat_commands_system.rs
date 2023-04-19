@@ -1,19 +1,21 @@
-use bevy::math::{UVec2, Vec3, Vec3Swizzles};
+use std::{
+    f32::consts::PI,
+    num::{ParseFloatError, ParseIntError},
+};
+
 use bevy::{
     ecs::{
         prelude::{Commands, Entity, EventReader, EventWriter, Query, Res, ResMut},
         query::WorldQuery,
         system::SystemParam,
     },
+    math::{UVec2, Vec3, Vec3Swizzles},
     time::Time,
+    utils::HashSet,
 };
 use clap::{Arg, PossibleValue};
 use lazy_static::lazy_static;
-use rand::prelude::SliceRandom;
-use std::{
-    f32::consts::PI,
-    num::{ParseFloatError, ParseIntError},
-};
+use rand::Rng;
 
 use rose_data::{
     AbilityType, EquipmentIndex, EquipmentItem, Item, ItemReference, ItemType, NpcId, SkillId,
@@ -25,17 +27,18 @@ use rose_game_common::{
 };
 
 use crate::game::{
+    bots::create_bot,
     bundles::{
         ability_values_add_value, ability_values_set_value, client_entity_join_zone,
         client_entity_teleport_zone, CharacterBundle, ItemDropBundle, MonsterBundle,
     },
     components::{
-        AbilityValues, BasicStats, BotAi, BotAiState, CharacterGender, CharacterInfo,
-        ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType, Command,
-        EquipmentItemDatabase, GameClient, HealthPoints, Inventory, Level, ManaPoints, Money,
-        MotionData, MoveMode, MoveSpeed, NextCommand, PartyMembership, PassiveRecoveryTime,
-        PersonalStore, Position, SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints,
-        StatusEffects, StatusEffectsRegen, Team, UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+        AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClanMembership, ClientEntity,
+        ClientEntitySector, ClientEntityType, Command, EquipmentItemDatabase, GameClient,
+        HealthPoints, Inventory, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
+        NextCommand, PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList,
+        SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
+        UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
     },
     events::{ChatCommandEvent, ClanEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
@@ -281,16 +284,10 @@ impl From<ParseFloatError> for ChatCommandError {
 fn create_bot_entity(
     chat_command_params: &mut ChatCommandParams,
     name: String,
-    gender: CharacterGender,
-    face: u8,
-    hair: u8,
     position: Position,
+    level: u32,
 ) -> Option<Entity> {
-    let mut bot_data = chat_command_params
-        .game_data
-        .character_creator
-        .create(name, gender, 1, face, hair)
-        .ok()?;
+    let mut bot_data = create_bot(&chat_command_params.game_data, name, level);
 
     let status_effects = StatusEffects::new();
     let status_effects_regen = StatusEffectsRegen::new();
@@ -384,12 +381,41 @@ fn create_random_bot_entities(
     origin: Position,
 ) -> Vec<Entity> {
     let mut rng = rand::thread_rng();
-    let genders = [CharacterGender::Male, CharacterGender::Female];
-    let faces = [1, 8, 15, 22, 29, 36, 43];
-    let hair = [0, 5, 10, 15, 20];
-
     let spawn_radius = f32::max(num_bots as f32 * spacing, 100.0);
     let mut bot_entities = Vec::new();
+
+    // Try to calculate an ideal bot level range based on the current zone
+    let mut bot_level_range = 1..=170;
+    if let Some(zone_data) = chat_command_params.game_data.zones.get_zone(origin.zone_id) {
+        // Find all monsters which spawn in this zone
+        let mut monster_ids = HashSet::new();
+        for spawn in zone_data.monster_spawns.iter() {
+            for npc_id in spawn.basic_spawns.iter().map(|(npc_id, _)| *npc_id) {
+                monster_ids.insert(npc_id);
+            }
+
+            for npc_id in spawn.tactic_spawns.iter().map(|(npc_id, _)| *npc_id) {
+                monster_ids.insert(npc_id);
+            }
+        }
+
+        // Create a sorted list of the levels of the monsters in this zone
+        let mut monster_levels: Vec<_> = monster_ids
+            .iter()
+            .filter_map(|npc_id| chat_command_params.game_data.npcs.get_npc(*npc_id))
+            .map(|npc_data| npc_data.level)
+            .collect();
+        monster_levels.sort();
+
+        // Calculate a bot level range based on the median monster level +/- 20%
+        if let Some(median_monster_level) = monster_levels.get((monster_levels.len() + 1) / 2) {
+            // Ensure delta_level is mininum of 2 to ensure at least some variation in bot levels
+            let delta_level = (*median_monster_level / 5).max(2);
+
+            bot_level_range = (median_monster_level - delta_level).max(1)
+                ..=(median_monster_level + delta_level).min(170);
+        }
+    }
 
     for i in 0..num_bots {
         let angle = (i as f32 * (2.0 * PI)) / num_bots as f32;
@@ -400,10 +426,8 @@ fn create_random_bot_entities(
         if let Some(bot_entity) = create_bot_entity(
             chat_command_params,
             format!("Friend {}", chat_command_params.bot_list.len()),
-            *genders.choose(&mut rng).unwrap(),
-            *faces.choose(&mut rng).unwrap() as u8,
-            *hair.choose(&mut rng).unwrap() as u8,
             bot_position,
+            rng.gen_range::<i32, _>(bot_level_range.clone()) as u32,
         ) {
             chat_command_params
                 .bot_list

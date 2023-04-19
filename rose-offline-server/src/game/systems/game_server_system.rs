@@ -1,6 +1,8 @@
-use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without};
-use bevy::math::{Vec3, Vec3Swizzles};
-use bevy::time::Time;
+use bevy::{
+    ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without},
+    math::{Vec3, Vec3Swizzles},
+    time::Time,
+};
 use log::warn;
 
 use rose_data::{
@@ -8,6 +10,7 @@ use rose_data::{
     StackableSlotBehaviour, VehiclePartIndex,
 };
 use rose_game_common::{
+    components::Level,
     data::Password,
     messages::server::{
         CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
@@ -15,24 +18,22 @@ use rose_game_common::{
     },
 };
 
-use crate::game::components::{Clan, ClanMember, ClanMembership};
-use crate::game::events::ClanEvent;
 use crate::game::{
     bundles::{
         client_entity_join_zone, client_entity_leave_zone, client_entity_teleport_zone,
-        skill_list_try_level_up_skill, CharacterBundle, ItemDropBundle,
+        skill_list_try_level_up_skill, CharacterBundle, ItemDropBundle, SkillListBundle,
     },
     components::{
-        AbilityValues, Account, Bank, BasicStatType, BasicStats, CharacterInfo, ClientEntity,
-        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, CommandData,
-        CommandSit, Dead, DrivingTime, DroppedItem, Equipment, EquipmentItemDatabase,
-        ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, ManaPoints, Money,
-        MotionData, MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership,
-        PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints, StatPoints,
-        StatusEffects, StatusEffectsRegen, Team, WorldClient,
+        AbilityValues, Account, Bank, BasicStatType, BasicStats, CharacterInfo, Clan, ClanMember,
+        ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType, ClientEntityVisibility,
+        Command, CommandData, CommandSit, Dead, DrivingTime, DroppedItem, Equipment,
+        EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
+        ItemSlot, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party,
+        PartyMember, PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList,
+        SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
     },
     events::{
-        BankEvent, ChatCommandEvent, ItemLifeEvent, NpcStoreEvent, PartyEvent,
+        BankEvent, ChatCommandEvent, ClanEvent, ItemLifeEvent, NpcStoreEvent, PartyEvent,
         PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
         PartyEventUpdateRules, PartyMemberEvent, PartyMemberReconnect, PersonalStoreEvent,
         PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
@@ -628,6 +629,9 @@ pub fn game_server_main_system(
         &AbilityValues,
         &Command,
         Option<&Dead>,
+        &Level,
+        &MoveSpeed,
+        &Team,
         (
             &mut BasicStats,
             &mut CharacterInfo,
@@ -666,6 +670,9 @@ pub fn game_server_main_system(
             ability_values,
             command,
             dead,
+            level,
+            move_speed,
+            team,
             (
                 mut basic_stats,
                 mut character_info,
@@ -1094,11 +1101,25 @@ pub fn game_server_main_system(
                     }
                     ClientMessage::LevelUpSkill(skill_slot) => {
                         skill_list_try_level_up_skill(
-                            &game_data.skills,
+                            &game_data,
+                            &mut SkillListBundle {
+                                skill_list: &mut skill_list,
+                                skill_points: Some(&mut skill_points),
+                                game_client: Some(client),
+                                ability_values,
+                                level,
+                                move_speed: Some(move_speed),
+                                team: Some(team),
+                                character_info: Some(&character_info),
+                                experience_points: None,
+                                inventory: Some(&inventory),
+                                stamina: None,
+                                stat_points: None,
+                                union_membership: None,
+                                health_points: None,
+                                mana_points: None,
+                            },
                             skill_slot,
-                            &mut skill_list,
-                            Some(&mut skill_points),
-                            Some(client),
                         )
                         .ok();
                     }

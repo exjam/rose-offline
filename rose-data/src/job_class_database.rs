@@ -15,6 +15,7 @@ pub struct JobClassId(NonZeroU16);
 id_wrapper_impl!(JobClassId, NonZeroU16, u16);
 
 pub struct JobClassData {
+    pub id: JobClassId,
     pub name: &'static str,
     pub jobs: ArrayVec<JobId, 8>,
 }
@@ -33,6 +34,10 @@ impl JobClassDatabase {
             _string_database: string_database,
             job_classes,
         }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &JobClassData> {
+        self.job_classes.iter().filter_map(|data| data.as_ref())
     }
 
     pub fn get(&self, id: JobClassId) -> Option<&JobClassData> {

@@ -1,14 +1,15 @@
-use bevy::math::Vec3;
+use std::time::Duration;
+
 use bevy::{
     ecs::{
         prelude::{Commands, Entity, EventReader, Query, Res, ResMut},
         query::WorldQuery,
         system::SystemParam,
     },
+    math::Vec3,
     time::Time,
 };
 use log::warn;
-use std::time::Duration;
 
 use rose_data::{AbilityType, ItemClass, ItemType, SkillType, VehiclePartIndex};
 use rose_game_common::components::{Equipment, HealthPoints, ManaPoints};
@@ -16,7 +17,7 @@ use rose_game_common::components::{Equipment, HealthPoints, ManaPoints};
 use crate::game::{
     bundles::{
         ability_values_add_value, ability_values_get_value, client_entity_teleport_zone,
-        skill_list_try_learn_skill,
+        skill_list_try_learn_skill, SkillListBundle,
     },
     components::{
         AbilityValues, BasicStats, CharacterInfo, ClientEntity, ClientEntitySector,
@@ -63,7 +64,7 @@ pub struct UseItemUserQuery<'w> {
     stat_points: &'w mut StatPoints,
     status_effects: &'w mut StatusEffects,
     status_effects_regen: &'w mut StatusEffectsRegen,
-    team_number: &'w Team,
+    team: &'w Team,
     union_membership: &'w mut UnionMembership,
 }
 
@@ -161,7 +162,7 @@ fn use_inventory_item(
             Some(use_item_user.ability_values),
             Some(use_item_user.level),
             Some(use_item_user.move_speed),
-            Some(use_item_user.team_number),
+            Some(use_item_user.team),
             Some(use_item_user.character_info),
             Some(&use_item_user.experience_points),
             Some(&use_item_user.inventory),
@@ -261,11 +262,25 @@ fn use_inventory_item(
             if let Some(skill_id) = item_data.learn_skill_id {
                 (
                     skill_list_try_learn_skill(
-                        use_item_system_parameters.game_data.skills.as_ref(),
+                        &use_item_system_parameters.game_data,
+                        &mut SkillListBundle {
+                            skill_list: &mut use_item_user.skill_list,
+                            skill_points: Some(&mut use_item_user.skill_points),
+                            game_client: use_item_user.game_client,
+                            ability_values: use_item_user.ability_values,
+                            level: use_item_user.level,
+                            move_speed: Some(use_item_user.move_speed),
+                            team: Some(use_item_user.team),
+                            character_info: Some(use_item_user.character_info),
+                            experience_points: Some(&use_item_user.experience_points),
+                            inventory: Some(&use_item_user.inventory),
+                            stamina: Some(&use_item_user.stamina),
+                            stat_points: Some(&use_item_user.stat_points),
+                            union_membership: Some(&use_item_user.union_membership),
+                            health_points: Some(&use_item_user.health_points),
+                            mana_points: Some(&use_item_user.mana_points),
+                        },
                         skill_id,
-                        &mut use_item_user.skill_list,
-                        Some(&mut use_item_user.skill_points),
-                        use_item_user.game_client,
                     )
                     .is_ok(),
                     false,

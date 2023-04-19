@@ -1,3 +1,4 @@
+mod bots;
 mod bundles;
 mod events;
 mod game_world;

@@ -1,21 +1,21 @@
-use bevy::math::{Vec2, Vec3, Vec3Swizzles};
+use std::{
+    marker::PhantomData,
+    num::{NonZeroU8, NonZeroUsize},
+    ops::RangeInclusive,
+};
+
 use bevy::{
     ecs::{
         prelude::{Commands, Entity, EventReader, EventWriter, Mut, Query, Res, ResMut},
         query::WorldQuery,
         system::SystemParam,
     },
+    math::{Vec2, Vec3, Vec3Swizzles},
     time::Time,
 };
 use chrono::{Datelike, Timelike};
 use log::warn;
 use rand::Rng;
-use rose_game_common::components::ClanPoints;
-use std::{
-    marker::PhantomData,
-    num::{NonZeroU8, NonZeroUsize},
-    ops::RangeInclusive,
-};
 
 use rose_data::{EquipmentItem, Item, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId};
 use rose_file_readers::{
@@ -24,11 +24,12 @@ use rose_file_readers::{
     QsdReward, QsdRewardOperator, QsdServerChannelId, QsdSkillId, QsdSpawnMonsterLocation,
     QsdTeamNumber, QsdTeamNumberSource, QsdVariableId, QsdVariableType, QsdZoneId,
 };
+use rose_game_common::components::ClanPoints;
 
 use crate::game::{
     bundles::{
         ability_values_add_value, ability_values_get_value, ability_values_set_value,
-        client_entity_teleport_zone, skill_list_try_learn_skill, MonsterBundle,
+        client_entity_teleport_zone, skill_list_try_learn_skill, MonsterBundle, SkillListBundle,
     },
     components::{
         AbilityValues, ActiveQuest, BasicStats, CharacterInfo, Clan, ClanMembership, ClientEntity,
@@ -1446,11 +1447,25 @@ fn quest_reward_add_skill(
 
     if let Some(skill_list) = quest_parameters.source.skill_list.as_mut() {
         skill_list_try_learn_skill(
-            quest_system_resources.game_data.skills.as_ref(),
+            &quest_system_resources.game_data,
+            &mut SkillListBundle {
+                skill_list,
+                skill_points: quest_parameters.source.skill_points.as_deref_mut(),
+                game_client: quest_parameters.source.game_client,
+                ability_values: quest_parameters.source.ability_values,
+                level: quest_parameters.source.level,
+                move_speed: Some(quest_parameters.source.move_speed),
+                team: Some(&quest_parameters.source.team),
+                character_info: quest_parameters.source.character_info.as_deref(),
+                experience_points: quest_parameters.source.experience_points.as_deref(),
+                inventory: quest_parameters.source.inventory.as_deref(),
+                stamina: quest_parameters.source.stamina.as_deref(),
+                stat_points: quest_parameters.source.stat_points.as_deref(),
+                union_membership: quest_parameters.source.union_membership.as_deref(),
+                health_points: quest_parameters.source.health_points.as_deref(),
+                mana_points: quest_parameters.source.mana_points.as_deref(),
+            },
             skill_id,
-            skill_list,
-            quest_parameters.source.skill_points.as_mut(),
-            quest_parameters.source.game_client,
         )
         .ok()
         .map(|_| ())
