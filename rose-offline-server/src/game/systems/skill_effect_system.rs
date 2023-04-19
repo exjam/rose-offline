@@ -784,10 +784,10 @@ pub fn skill_effect_system(
                                     // When the item has been fully consumed we send UpdateInventory packet
                                     caster_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::UpdateInventory(
-                                            vec![(item_slot, None)],
-                                            None,
-                                        ))
+                                        .send(ServerMessage::UpdateInventory {
+                                            items: vec![(item_slot, None)],
+                                            money: None,
+                                        })
                                         .ok();
                                 }
                                 Some(item) => {

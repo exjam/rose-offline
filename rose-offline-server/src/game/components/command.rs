@@ -130,6 +130,20 @@ impl Command {
         )
     }
 
+    pub fn can_equip_items(&self) -> bool {
+        matches!(
+            self.command,
+            CommandData::Stop(_)
+                | CommandData::Move(_)
+                | CommandData::Sit(_)
+                | CommandData::PickupItemDrop(_)
+        )
+    }
+
+    pub fn can_equip_ammo(&self) -> bool {
+        !self.is_dead()
+    }
+
     pub fn with_die(
         killer: Option<Entity>,
         damage: Option<Damage>,

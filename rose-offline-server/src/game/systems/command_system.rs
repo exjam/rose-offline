@@ -621,8 +621,8 @@ pub fn command_system(
                                                                 game_client
                                                                 .server_message_tx
                                                                 .send(
-                                                                    ServerMessage::UpdateInventory(
-                                                                        vec![(
+                                                                    ServerMessage::UpdateInventory {
+                                                                        items: vec![(
                                                                             ItemSlot::Ammo(
                                                                                 ammo_index,
                                                                             ),
@@ -630,8 +630,8 @@ pub fn command_system(
                                                                                 ammo_item.clone(),
                                                                             )),
                                                                         )],
-                                                                        None,
-                                                                    ),
+                                                                       money: None,
+                                                                    }
                                                                 )
                                                                 .ok();
                                                             }
@@ -639,11 +639,11 @@ pub fn command_system(
                                                         None => {
                                                             server_messages.send_entity_message(
                                                                 client_entity,
-                                                                ServerMessage::UpdateAmmo(
-                                                                    client_entity.id,
+                                                                ServerMessage::UpdateAmmo {
+                                                                    entity_id: client_entity.id,
                                                                     ammo_index,
-                                                                    None,
-                                                                ),
+                                                                    item: None,
+                                                                },
                                                             );
                                                         }
                                                     }

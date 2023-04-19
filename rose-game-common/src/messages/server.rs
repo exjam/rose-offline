@@ -379,20 +379,6 @@ pub struct UpdateBasicStat {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateEquipment {
-    pub entity_id: ClientEntityId,
-    pub equipment_index: EquipmentIndex,
-    pub item: Option<EquipmentItem>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateVehiclePart {
-    pub entity_id: ClientEntityId,
-    pub vehicle_part_index: VehiclePartIndex,
-    pub item: Option<EquipmentItem>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateStatusEffects {
     pub entity_id: ClientEntityId,
     pub status_effects: ActiveStatusEffects,
@@ -700,11 +686,26 @@ pub enum ServerMessage {
     StopMoveEntity(StopMoveEntity),
     Teleport(Teleport),
     UpdateAbilityValue(UpdateAbilityValue),
-    UpdateAmmo(ClientEntityId, AmmoIndex, Option<StackableItem>),
     UpdateBasicStat(UpdateBasicStat),
-    UpdateEquipment(UpdateEquipment),
-    UpdateVehiclePart(UpdateVehiclePart),
-    UpdateInventory(Vec<(ItemSlot, Option<Item>)>, Option<Money>),
+    UpdateAmmo {
+        entity_id: ClientEntityId,
+        ammo_index: AmmoIndex,
+        item: Option<StackableItem>,
+    },
+    UpdateEquipment {
+        entity_id: ClientEntityId,
+        equipment_index: EquipmentIndex,
+        item: Option<EquipmentItem>,
+    },
+    UpdateVehiclePart {
+        entity_id: ClientEntityId,
+        vehicle_part_index: VehiclePartIndex,
+        item: Option<EquipmentItem>,
+    },
+    UpdateInventory {
+        items: Vec<(ItemSlot, Option<Item>)>,
+        money: Option<Money>,
+    },
     UpdateLevel(UpdateLevel),
     UpdateMoney(Money),
     UpdateStatusEffects(UpdateStatusEffects),

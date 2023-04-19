@@ -9,17 +9,16 @@ use rose_game_common::{
     data::Password,
     messages::{
         client::{
-            Attack, ChangeEquipment, ClientMessage, GameConnectionRequest, LogoutRequest, Move,
-            NpcStoreTransaction, PersonalStoreBuyItem, QuestDelete, SetHotbarSlot,
+            Attack, ClientMessage, GameConnectionRequest, LogoutRequest, Move, NpcStoreTransaction,
+            PersonalStoreBuyItem, QuestDelete, SetHotbarSlot,
         },
         server::{
             AnnounceChat, ApplySkillEffect, CastSkillSelf, CastSkillTargetEntity,
             CastSkillTargetPosition, LevelUpSkillResult, LocalChat, MoveToggle, OpenPersonalStore,
             PickupItemDropResult, QuestDeleteResult, QuestTriggerResult, RemoveEntities,
             ServerMessage, ShoutChat, SpawnEntityItemDrop, SpawnEntityMonster, SpawnEntityNpc,
-            UpdateAbilityValue, UpdateBasicStat, UpdateEquipment, UpdateLevel, UpdateSpeed,
-            UpdateStatusEffects, UpdateVehiclePart, UpdateXpStamina, UseEmote, UseInventoryItem,
-            UseItem, Whisper,
+            UpdateAbilityValue, UpdateBasicStat, UpdateLevel, UpdateSpeed, UpdateStatusEffects,
+            UpdateXpStamina, UseEmote, UseInventoryItem, UseItem, Whisper,
         },
     },
 };
@@ -98,9 +97,10 @@ impl GameServer {
                     ammo_index,
                     item_slot,
                 } = PacketClientChangeAmmo::try_from(packet)?;
-                client
-                    .client_message_tx
-                    .send(ClientMessage::ChangeAmmo(ammo_index, item_slot))?;
+                client.client_message_tx.send(ClientMessage::ChangeAmmo {
+                    ammo_index,
+                    item_slot,
+                })?;
             }
             Some(ClientPackets::ChangeEquipment) => {
                 let PacketClientChangeEquipment {
@@ -109,10 +109,10 @@ impl GameServer {
                 } = PacketClientChangeEquipment::try_from(packet)?;
                 client
                     .client_message_tx
-                    .send(ClientMessage::ChangeEquipment(ChangeEquipment {
+                    .send(ClientMessage::ChangeEquipment {
                         equipment_index,
                         item_slot,
-                    }))?;
+                    })?;
             }
             Some(ClientPackets::ChangeVehiclePart) => {
                 let PacketClientChangeVehiclePart {
@@ -121,10 +121,10 @@ impl GameServer {
                 } = PacketClientChangeVehiclePart::try_from(packet)?;
                 client
                     .client_message_tx
-                    .send(ClientMessage::ChangeVehiclePart(
+                    .send(ClientMessage::ChangeVehiclePart {
                         vehicle_part_index,
                         item_slot,
-                    ))?;
+                    })?;
             }
             Some(ClientPackets::IncreaseBasicStat) => {
                 let PacketClientIncreaseBasicStat { basic_stat_type } =
@@ -770,12 +770,12 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::UpdateInventory(items, with_money) => {
+            ServerMessage::UpdateInventory { items, money } => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateInventory {
                         items,
-                        with_money,
+                        with_money: money,
                     }))
                     .await?;
             }
@@ -825,7 +825,11 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::UpdateAmmo(entity_id, ammo_index, item) => {
+            ServerMessage::UpdateAmmo {
+                entity_id,
+                ammo_index,
+                item,
+            } => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateAmmo {
@@ -835,11 +839,11 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::UpdateEquipment(UpdateEquipment {
+            ServerMessage::UpdateEquipment {
                 entity_id,
                 equipment_index,
                 item,
-            }) => {
+            } => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateEquipment {
@@ -850,11 +854,11 @@ impl GameServer {
                     }))
                     .await?;
             }
-            ServerMessage::UpdateVehiclePart(UpdateVehiclePart {
+            ServerMessage::UpdateVehiclePart {
                 entity_id,
                 vehicle_part_index,
                 item,
-            }) => {
+            } => {
                 client
                     .connection
                     .write_packet(Packet::from(&PacketServerUpdateVehiclePart {

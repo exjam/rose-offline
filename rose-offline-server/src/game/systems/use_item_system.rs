@@ -226,13 +226,13 @@ fn use_inventory_item(
                         if let Some(game_client) = use_item_user.game_client {
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::UpdateInventory(
-                                    vec![(
+                                .send(ServerMessage::UpdateInventory {
+                                    items: vec![(
                                         item_slot,
                                         use_item_user.inventory.get_item(item_slot).cloned(),
                                     )],
-                                    None,
-                                ))
+                                    money: None,
+                                })
                                 .ok();
                         }
 
@@ -346,10 +346,10 @@ fn use_inventory_item(
                     // When the item has been fully consumed we send UpdateInventory packet
                     game_client
                         .server_message_tx
-                        .send(ServerMessage::UpdateInventory(
-                            vec![(item_slot, None)],
-                            None,
-                        ))
+                        .send(ServerMessage::UpdateInventory {
+                            items: vec![(item_slot, None)],
+                            money: None,
+                        })
                         .ok();
                 }
                 Some(item) => {

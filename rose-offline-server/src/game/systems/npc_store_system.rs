@@ -187,13 +187,13 @@ pub fn npc_store_system(
                     if let Some(game_client) = game_client {
                         game_client
                             .server_message_tx
-                            .send(ServerMessage::UpdateInventory(
-                                updated_items
+                            .send(ServerMessage::UpdateInventory {
+                                items: updated_items
                                     .iter()
                                     .map(|slot| (*slot, inventory.get_item(*slot).cloned()))
                                     .collect(),
-                                Some(inventory.money),
-                            ))
+                                money: Some(inventory.money),
+                            })
                             .ok();
                     }
                 }

@@ -100,12 +100,6 @@ pub struct SetHotbarSlot {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ChangeEquipment {
-    pub equipment_index: EquipmentIndex,
-    pub item_slot: Option<ItemSlot>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LogoutRequest {
     Logout,
     ReturnToCharacterSelect,
@@ -161,9 +155,18 @@ pub enum ClientMessage {
     MoveCollision(Vec3),
     Attack(Attack),
     SetHotbarSlot(SetHotbarSlot),
-    ChangeAmmo(AmmoIndex, Option<ItemSlot>),
-    ChangeEquipment(ChangeEquipment),
-    ChangeVehiclePart(VehiclePartIndex, Option<ItemSlot>),
+    ChangeAmmo {
+        ammo_index: AmmoIndex,
+        item_slot: Option<ItemSlot>,
+    },
+    ChangeEquipment {
+        equipment_index: EquipmentIndex,
+        item_slot: Option<ItemSlot>,
+    },
+    ChangeVehiclePart {
+        vehicle_part_index: VehiclePartIndex,
+        item_slot: Option<ItemSlot>,
+    },
     IncreaseBasicStat(BasicStatType),
     PickupItemDrop(ClientEntityId),
     LogoutRequest(LogoutRequest),

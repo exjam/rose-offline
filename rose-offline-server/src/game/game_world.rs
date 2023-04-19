@@ -11,9 +11,9 @@ use std::time::Duration;
 
 use crate::game::{
     events::{
-        BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, ItemLifeEvent, NpcStoreEvent,
-        PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent, QuestTriggerEvent,
-        RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
+        BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, EquipmentEvent, ItemLifeEvent,
+        NpcStoreEvent, PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent,
+        QuestTriggerEvent, RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
@@ -24,14 +24,14 @@ use crate::game::{
         ability_values_changed_system, ability_values_update_character_system,
         ability_values_update_npc_system, bank_system, bot_ai_system, chat_commands_system,
         clan_system, client_entity_visibility_system, command_system, control_server_system,
-        damage_system, driving_time_system, experience_points_system, expire_time_system,
-        game_server_authentication_system, game_server_join_system, game_server_main_system,
-        item_life_system, login_server_authentication_system, login_server_system,
-        monster_spawn_system, npc_ai_system, npc_store_system, party_member_event_system,
-        party_member_update_info_system, party_system, party_update_average_level_system,
-        passive_recovery_system, personal_store_system, pickup_item_system, quest_system,
-        reward_item_system, save_system, server_messages_system, skill_effect_system,
-        startup_clans_system, startup_zones_system, status_effect_system,
+        damage_system, driving_time_system, equipment_event_system, experience_points_system,
+        expire_time_system, game_server_authentication_system, game_server_join_system,
+        game_server_main_system, item_life_system, login_server_authentication_system,
+        login_server_system, monster_spawn_system, npc_ai_system, npc_store_system,
+        party_member_event_system, party_member_update_info_system, party_system,
+        party_update_average_level_system, passive_recovery_system, personal_store_system,
+        pickup_item_system, quest_system, reward_item_system, save_system, server_messages_system,
+        skill_effect_system, startup_clans_system, startup_zones_system, status_effect_system,
         update_character_motion_data_system, update_npc_motion_data_system, update_position_system,
         use_item_system, weight_system, world_server_authentication_system, world_server_system,
         world_time_system,
@@ -70,22 +70,40 @@ impl GameWorld {
         app.insert_resource(game_config);
         app.insert_resource(game_data);
 
-        app.add_event::<BankEvent>();
-        app.add_event::<ChatCommandEvent>();
-        app.add_event::<ClanEvent>();
-        app.add_event::<DamageEvent>();
-        app.add_event::<ItemLifeEvent>();
-        app.add_event::<NpcStoreEvent>();
-        app.add_event::<PartyEvent>();
-        app.add_event::<PartyMemberEvent>();
-        app.add_event::<PersonalStoreEvent>();
-        app.add_event::<PickupItemEvent>();
-        app.add_event::<QuestTriggerEvent>();
-        app.add_event::<RewardItemEvent>();
-        app.add_event::<RewardXpEvent>();
-        app.add_event::<SaveEvent>();
-        app.add_event::<SkillEvent>();
-        app.add_event::<UseItemEvent>();
+        app.add_event::<BankEvent>()
+            .add_event::<ChatCommandEvent>()
+            .add_event::<ClanEvent>()
+            .add_event::<DamageEvent>()
+            .add_event::<EquipmentEvent>()
+            .add_event::<ItemLifeEvent>()
+            .add_event::<NpcStoreEvent>()
+            .add_event::<PartyEvent>()
+            .add_event::<PartyMemberEvent>()
+            .add_event::<PersonalStoreEvent>()
+            .add_event::<PickupItemEvent>()
+            .add_event::<QuestTriggerEvent>()
+            .add_event::<RewardItemEvent>()
+            .add_event::<RewardXpEvent>()
+            .add_event::<SaveEvent>()
+            .add_event::<SkillEvent>()
+            .add_event::<UseItemEvent>();
+
+        /*
+        Stage order:
+        - CoreSet::First
+        - CoreSet::PreUpdate
+        - GameStages::Input
+        - CoreSet::Update
+        - CoreSet::PostUpdate
+        - CoreSet::Last
+        */
+        app.add_system(apply_system_buffers.in_base_set(GameStages::InputFlush));
+        app.configure_sets(
+            (GameStages::Input, GameStages::InputFlush)
+                .chain()
+                .after(CoreSet::FirstFlush)
+                .before(CoreSet::PreUpdate),
+        );
 
         app.add_systems((startup_clans_system, startup_zones_system).on_startup());
 
@@ -108,22 +126,19 @@ impl GameWorld {
                 status_effect_system,
             )
                 .in_base_set(GameStages::Input),
-        );
-
-        app.add_systems(
-            (passive_recovery_system, driving_time_system).in_base_set(GameStages::Input),
-        );
+        )
+        .add_systems((passive_recovery_system, driving_time_system).in_base_set(GameStages::Input));
 
         app.add_systems(
             (
                 update_character_motion_data_system.before(command_system),
                 update_npc_motion_data_system.before(command_system),
+                update_position_system.before(command_system),
                 command_system,
                 pickup_item_system.after(command_system),
                 party_member_event_system,
                 party_system.after(party_member_event_system),
                 party_member_update_info_system.after(party_system),
-                update_position_system,
                 clan_system,
             )
                 .in_base_set(CoreSet::PreUpdate),
@@ -132,24 +147,25 @@ impl GameWorld {
         app.add_systems(
             (
                 bank_system,
-                skill_effect_system,
                 personal_store_system,
                 npc_store_system,
-                damage_system,
                 quest_system,
                 use_item_system,
                 reward_item_system,
+                damage_system.before(item_life_system),
+                skill_effect_system.before(item_life_system),
+                item_life_system,
+                equipment_event_system.after(item_life_system),
             )
                 .in_base_set(CoreSet::Update),
         );
 
         app.add_systems(
             (
-                item_life_system,
+                weight_system,
                 experience_points_system,
                 party_update_average_level_system.after(experience_points_system),
                 client_entity_visibility_system,
-                weight_system,
             )
                 .in_base_set(CoreSet::PostUpdate),
         );
@@ -163,14 +179,6 @@ impl GameWorld {
                 save_system,
             )
                 .in_base_set(CoreSet::Last),
-        );
-
-        app.add_system(apply_system_buffers.in_base_set(GameStages::InputFlush));
-        app.configure_sets(
-            (GameStages::Input, GameStages::InputFlush)
-                .chain()
-                .after(CoreSet::FirstFlush)
-                .before(CoreSet::PreUpdate),
         );
 
         app.insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
