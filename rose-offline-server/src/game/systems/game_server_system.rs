@@ -1,5 +1,8 @@
 use bevy::{
-    ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without},
+    ecs::{
+        prelude::{Commands, Entity, EventWriter, Query, Res, ResMut, Without},
+        query::WorldQuery,
+    },
     math::{Vec3, Vec3Swizzles},
     time::Time,
 };
@@ -618,33 +621,35 @@ fn equip_vehicle_from_inventory(
     Ok(updated_inventory_items)
 }
 
+#[derive(WorldQuery)]
+#[world_query(mutable)]
+pub struct GameClientQuery<'w> {
+    entity: Entity,
+    game_client: &'w GameClient,
+    client_entity: &'w ClientEntity,
+    client_entity_sector: &'w ClientEntitySector,
+    position: &'w Position,
+    ability_values: &'w AbilityValues,
+    command: &'w Command,
+    dead: Option<&'w Dead>,
+    level: &'w Level,
+    move_speed: &'w MoveSpeed,
+    team: &'w Team,
+    basic_stats: &'w mut BasicStats,
+    character_info: &'w mut CharacterInfo,
+    stat_points: &'w mut StatPoints,
+    skill_points: &'w mut SkillPoints,
+    skill_list: &'w mut SkillList,
+    hotbar: &'w mut Hotbar,
+    equipment: &'w mut Equipment,
+    inventory: &'w mut Inventory,
+    quest_state: &'w mut QuestState,
+    move_mode: &'w mut MoveMode,
+}
+
 pub fn game_server_main_system(
     mut commands: Commands,
-    mut game_client_query: Query<(
-        Entity,
-        &GameClient,
-        &ClientEntity,
-        &ClientEntitySector,
-        &Position,
-        &AbilityValues,
-        &Command,
-        Option<&Dead>,
-        &Level,
-        &MoveSpeed,
-        &Team,
-        (
-            &mut BasicStats,
-            &mut CharacterInfo,
-            &mut StatPoints,
-            &mut SkillPoints,
-            &mut SkillList,
-            &mut Hotbar,
-            &mut Equipment,
-            &mut Inventory,
-            &mut QuestState,
-            &mut MoveMode,
-        ),
-    )>,
+    mut game_client_query: Query<GameClientQuery>,
     world_client_query: Query<&WorldClient>,
     mut client_entity_list: ResMut<ClientEntityList>,
     mut bank_events: EventWriter<BankEvent>,
@@ -660,882 +665,914 @@ pub fn game_server_main_system(
     game_data: Res<GameData>,
     time: Res<Time>,
 ) {
-    game_client_query.for_each_mut(
-        |(
-            entity,
-            client,
-            client_entity,
-            client_entity_sector,
-            position,
-            ability_values,
-            command,
-            dead,
-            level,
-            move_speed,
-            team,
-            (
-                mut basic_stats,
-                mut character_info,
-                mut stat_points,
-                mut skill_points,
-                mut skill_list,
-                mut hotbar,
-                mut equipment,
-                mut inventory,
-                mut quest_state,
-                mut move_mode,
-            ),
-        )| {
-            let mut entity_commands = commands.entity(entity);
+    for mut game_client in game_client_query.iter_mut() {
+        let mut entity_commands = commands.entity(game_client.entity);
 
-            if let Ok(message) = client.client_message_rx.try_recv() {
-                match message {
-                    ClientMessage::Chat(text) => {
-                        if text.chars().next().map_or(false, |c| c == '/') {
-                            chat_command_events.send(ChatCommandEvent::new(entity, text));
-                        } else {
-                            server_messages.send_entity_message(
-                                client_entity,
-                                ServerMessage::LocalChat(server::LocalChat {
-                                    entity_id: client_entity.id,
-                                    text,
-                                }),
-                            );
+        if let Ok(message) = game_client.game_client.client_message_rx.try_recv() {
+            match message {
+                ClientMessage::Chat(text) => {
+                    if text.chars().next().map_or(false, |c| c == '/') {
+                        chat_command_events.send(ChatCommandEvent::new(game_client.entity, text));
+                    } else {
+                        server_messages.send_entity_message(
+                            game_client.client_entity,
+                            ServerMessage::LocalChat(server::LocalChat {
+                                entity_id: game_client.client_entity.id,
+                                text,
+                            }),
+                        );
+                    }
+                }
+                ClientMessage::Move(message) => {
+                    let mut move_target_entity = None;
+                    if let Some(target_entity_id) = message.target_entity_id {
+                        if let Some((target_entity, _, _)) = client_entity_list
+                            .get_zone(game_client.position.zone_id)
+                            .and_then(|zone| zone.get_entity(target_entity_id))
+                        {
+                            move_target_entity = Some(*target_entity);
                         }
                     }
-                    ClientMessage::Move(message) => {
-                        let mut move_target_entity = None;
-                        if let Some(target_entity_id) = message.target_entity_id {
-                            if let Some((target_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone_id)
-                                .and_then(|zone| zone.get_entity(target_entity_id))
-                            {
-                                move_target_entity = Some(*target_entity);
+
+                    let destination = Vec3::new(message.x, message.y, message.z as f32);
+                    entity_commands.insert(NextCommand::with_move(
+                        destination,
+                        move_target_entity,
+                        None,
+                    ));
+                }
+                ClientMessage::Attack(message) => {
+                    if let Some((target_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(message.target_entity_id))
+                    {
+                        entity_commands.insert(NextCommand::with_attack(*target_entity));
+                    } else {
+                        entity_commands.insert(NextCommand::with_stop(true));
+                    }
+                }
+                ClientMessage::SetHotbarSlot(SetHotbarSlot { slot_index, slot }) => {
+                    if game_client
+                        .hotbar
+                        .set_slot(slot_index, slot.clone())
+                        .is_some()
+                    {
+                        game_client
+                            .game_client
+                            .server_message_tx
+                            .send(ServerMessage::SetHotbarSlot(slot_index, slot))
+                            .ok();
+                    }
+                }
+                ClientMessage::ChangeEquipment(ChangeEquipment {
+                    equipment_index,
+                    item_slot,
+                }) => {
+                    let updated_inventory_items = if let Some(item_slot) = item_slot {
+                        equip_from_inventory(
+                            &game_data,
+                            &mut game_client.equipment,
+                            &mut game_client.inventory,
+                            equipment_index,
+                            item_slot,
+                        )
+                        .ok()
+                    } else {
+                        unequip_to_inventory(
+                            &mut game_client.equipment,
+                            &mut game_client.inventory,
+                            equipment_index,
+                        )
+                        .ok()
+                    };
+
+                    if let Some(updated_inventory_items) = updated_inventory_items {
+                        game_client
+                            .game_client
+                            .server_message_tx
+                            .send(ServerMessage::UpdateInventory(
+                                updated_inventory_items,
+                                None,
+                            ))
+                            .ok();
+
+                        server_messages.send_entity_message(
+                            game_client.client_entity,
+                            ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                entity_id: game_client.client_entity.id,
+                                equipment_index,
+                                item: game_client
+                                    .equipment
+                                    .get_equipment_item(equipment_index)
+                                    .cloned(),
+                            }),
+                        );
+                    }
+                }
+                ClientMessage::ChangeVehiclePart(vehicle_part_index, item_slot) => {
+                    let updated_inventory_items = if let Some(item_slot) = item_slot {
+                        equip_vehicle_from_inventory(
+                            &game_data,
+                            &mut game_client.equipment,
+                            &mut game_client.inventory,
+                            vehicle_part_index,
+                            item_slot,
+                        )
+                        .ok()
+                    } else {
+                        unequip_vehicle_to_inventory(
+                            &mut game_client.equipment,
+                            &mut game_client.inventory,
+                            vehicle_part_index,
+                        )
+                        .ok()
+                    };
+
+                    if let Some(updated_inventory_items) = updated_inventory_items {
+                        game_client
+                            .game_client
+                            .server_message_tx
+                            .send(ServerMessage::UpdateInventory(
+                                updated_inventory_items,
+                                None,
+                            ))
+                            .ok();
+
+                        server_messages.send_entity_message(
+                            game_client.client_entity,
+                            ServerMessage::UpdateVehiclePart(server::UpdateVehiclePart {
+                                entity_id: game_client.client_entity.id,
+                                vehicle_part_index,
+                                item: game_client
+                                    .equipment
+                                    .get_vehicle_item(vehicle_part_index)
+                                    .cloned(),
+                            }),
+                        );
+                    }
+                }
+                ClientMessage::ChangeAmmo(ammo_index, item_slot) => {
+                    if let Some(item_slot) = item_slot {
+                        // Try equip ammo from inventory
+                        if let Some(inventory_slot) =
+                            game_client.inventory.get_item_slot_mut(item_slot)
+                        {
+                            let ammo_slot = game_client.equipment.get_ammo_slot_mut(ammo_index);
+
+                            if let Some(Item::Stackable(ammo_item)) = inventory_slot {
+                                // TODO: Verify bullet type
+                                match ammo_slot.can_stack_with(ammo_item) {
+                                    Ok(_) => {
+                                        // Can fully stack into ammo slot
+                                        ammo_slot.try_stack_with(ammo_item.clone()).unwrap();
+                                        *inventory_slot = None;
+                                    }
+                                    Err(StackError::PartialStack(partial_stack_quantity)) => {
+                                        // Can partially stack
+                                        ammo_slot
+                                            .try_stack_with(
+                                                ammo_item
+                                                    .try_take_subquantity(partial_stack_quantity)
+                                                    .unwrap(),
+                                            )
+                                            .unwrap();
+                                    }
+                                    Err(_) => {
+                                        // Can't stack, must swap
+                                        let previous = ammo_slot.take();
+                                        *ammo_slot = Some(ammo_item.clone());
+                                        *inventory_slot = previous.map(Item::Stackable);
+                                    }
+                                }
+
+                                game_client
+                                    .game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::UpdateInventory(
+                                        vec![
+                                            (
+                                                ItemSlot::Ammo(ammo_index),
+                                                ammo_slot.clone().map(Item::Stackable),
+                                            ),
+                                            (item_slot, inventory_slot.clone()),
+                                        ],
+                                        None,
+                                    ))
+                                    .ok();
+
+                                server_messages.send_entity_message(
+                                    game_client.client_entity,
+                                    ServerMessage::UpdateAmmo(
+                                        game_client.client_entity.id,
+                                        ammo_index,
+                                        ammo_slot.clone(),
+                                    ),
+                                );
                             }
                         }
+                    } else {
+                        // Try unequip to inventory
+                        let ammo_slot = game_client.equipment.get_ammo_slot_mut(ammo_index);
+                        let item = ammo_slot.take();
+                        if let Some(item) = item {
+                            match game_client.inventory.try_add_stackable_item(item) {
+                                Ok((inventory_slot, item)) => {
+                                    *ammo_slot = None;
 
-                        let destination = Vec3::new(message.x, message.y, message.z as f32);
-                        entity_commands.insert(NextCommand::with_move(
-                            destination,
-                            move_target_entity,
-                            None,
-                        ));
-                    }
-                    ClientMessage::Attack(message) => {
-                        if let Some((target_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(message.target_entity_id))
-                        {
-                            entity_commands.insert(NextCommand::with_attack(*target_entity));
-                        } else {
-                            entity_commands.insert(NextCommand::with_stop(true));
-                        }
-                    }
-                    ClientMessage::SetHotbarSlot(SetHotbarSlot { slot_index, slot }) => {
-                        if hotbar.set_slot(slot_index, slot.clone()).is_some() {
-                            client
-                                .server_message_tx
-                                .send(ServerMessage::SetHotbarSlot(slot_index, slot))
-                                .ok();
-                        }
-                    }
-                    ClientMessage::ChangeEquipment(ChangeEquipment {
-                        equipment_index,
-                        item_slot,
-                    }) => {
-                        let updated_inventory_items = if let Some(item_slot) = item_slot {
-                            equip_from_inventory(
-                                &game_data,
-                                &mut equipment,
-                                &mut inventory,
-                                equipment_index,
-                                item_slot,
-                            )
-                            .ok()
-                        } else {
-                            unequip_to_inventory(&mut equipment, &mut inventory, equipment_index)
-                                .ok()
-                        };
-
-                        if let Some(updated_inventory_items) = updated_inventory_items {
-                            client
-                                .server_message_tx
-                                .send(ServerMessage::UpdateInventory(
-                                    updated_inventory_items,
-                                    None,
-                                ))
-                                .ok();
-
-                            server_messages.send_entity_message(
-                                client_entity,
-                                ServerMessage::UpdateEquipment(server::UpdateEquipment {
-                                    entity_id: client_entity.id,
-                                    equipment_index,
-                                    item: equipment.get_equipment_item(equipment_index).cloned(),
-                                }),
-                            );
-                        }
-                    }
-                    ClientMessage::ChangeVehiclePart(vehicle_part_index, item_slot) => {
-                        let updated_inventory_items = if let Some(item_slot) = item_slot {
-                            equip_vehicle_from_inventory(
-                                &game_data,
-                                &mut equipment,
-                                &mut inventory,
-                                vehicle_part_index,
-                                item_slot,
-                            )
-                            .ok()
-                        } else {
-                            unequip_vehicle_to_inventory(
-                                &mut equipment,
-                                &mut inventory,
-                                vehicle_part_index,
-                            )
-                            .ok()
-                        };
-
-                        if let Some(updated_inventory_items) = updated_inventory_items {
-                            client
-                                .server_message_tx
-                                .send(ServerMessage::UpdateInventory(
-                                    updated_inventory_items,
-                                    None,
-                                ))
-                                .ok();
-
-                            server_messages.send_entity_message(
-                                client_entity,
-                                ServerMessage::UpdateVehiclePart(server::UpdateVehiclePart {
-                                    entity_id: client_entity.id,
-                                    vehicle_part_index,
-                                    item: equipment.get_vehicle_item(vehicle_part_index).cloned(),
-                                }),
-                            );
-                        }
-                    }
-                    ClientMessage::ChangeAmmo(ammo_index, item_slot) => {
-                        if let Some(item_slot) = item_slot {
-                            // Try equip ammo from inventory
-                            if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
-                                let ammo_slot = equipment.get_ammo_slot_mut(ammo_index);
-
-                                if let Some(Item::Stackable(ammo_item)) = inventory_slot {
-                                    // TODO: Verify bullet type
-                                    match ammo_slot.can_stack_with(ammo_item) {
-                                        Ok(_) => {
-                                            // Can fully stack into ammo slot
-                                            ammo_slot.try_stack_with(ammo_item.clone()).unwrap();
-                                            *inventory_slot = None;
-                                        }
-                                        Err(StackError::PartialStack(partial_stack_quantity)) => {
-                                            // Can partially stack
-                                            ammo_slot
-                                                .try_stack_with(
-                                                    ammo_item
-                                                        .try_take_subquantity(
-                                                            partial_stack_quantity,
-                                                        )
-                                                        .unwrap(),
-                                                )
-                                                .unwrap();
-                                        }
-                                        Err(_) => {
-                                            // Can't stack, must swap
-                                            let previous = ammo_slot.take();
-                                            *ammo_slot = Some(ammo_item.clone());
-                                            *inventory_slot = previous.map(Item::Stackable);
-                                        }
-                                    }
-
-                                    client
+                                    game_client
+                                        .game_client
                                         .server_message_tx
                                         .send(ServerMessage::UpdateInventory(
                                             vec![
-                                                (
-                                                    ItemSlot::Ammo(ammo_index),
-                                                    ammo_slot.clone().map(Item::Stackable),
-                                                ),
-                                                (item_slot, inventory_slot.clone()),
+                                                (ItemSlot::Ammo(ammo_index), None),
+                                                (inventory_slot, Some(item.clone())),
                                             ],
                                             None,
                                         ))
                                         .ok();
 
                                     server_messages.send_entity_message(
-                                        client_entity,
+                                        game_client.client_entity,
                                         ServerMessage::UpdateAmmo(
-                                            client_entity.id,
+                                            game_client.client_entity.id,
                                             ammo_index,
-                                            ammo_slot.clone(),
+                                            None,
                                         ),
                                     );
                                 }
-                            }
-                        } else {
-                            // Try unequip to inventory
-                            let ammo_slot = equipment.get_ammo_slot_mut(ammo_index);
-                            let item = ammo_slot.take();
-                            if let Some(item) = item {
-                                match inventory.try_add_stackable_item(item) {
-                                    Ok((inventory_slot, item)) => {
-                                        *ammo_slot = None;
-
-                                        client
-                                            .server_message_tx
-                                            .send(ServerMessage::UpdateInventory(
-                                                vec![
-                                                    (ItemSlot::Ammo(ammo_index), None),
-                                                    (inventory_slot, Some(item.clone())),
-                                                ],
-                                                None,
-                                            ))
-                                            .ok();
-
-                                        server_messages.send_entity_message(
-                                            client_entity,
-                                            ServerMessage::UpdateAmmo(
-                                                client_entity.id,
-                                                ammo_index,
-                                                None,
-                                            ),
-                                        );
-                                    }
-                                    Err(item) => {
-                                        *ammo_slot = Some(item);
-                                    }
+                                Err(item) => {
+                                    *ammo_slot = Some(item);
                                 }
                             }
                         }
                     }
-                    ClientMessage::IncreaseBasicStat(basic_stat_type) => {
-                        if let Some(cost) = game_data
-                            .ability_value_calculator
-                            .calculate_basic_stat_increase_cost(&basic_stats, basic_stat_type)
-                        {
-                            if cost < stat_points.points {
-                                let value = match basic_stat_type {
-                                    BasicStatType::Strength => &mut basic_stats.strength,
-                                    BasicStatType::Dexterity => &mut basic_stats.dexterity,
-                                    BasicStatType::Intelligence => &mut basic_stats.intelligence,
-                                    BasicStatType::Concentration => &mut basic_stats.concentration,
-                                    BasicStatType::Charm => &mut basic_stats.charm,
-                                    BasicStatType::Sense => &mut basic_stats.sense,
+                }
+                ClientMessage::IncreaseBasicStat(basic_stat_type) => {
+                    if let Some(cost) = game_data
+                        .ability_value_calculator
+                        .calculate_basic_stat_increase_cost(
+                            &game_client.basic_stats,
+                            basic_stat_type,
+                        )
+                    {
+                        if cost < game_client.stat_points.points {
+                            let value = match basic_stat_type {
+                                BasicStatType::Strength => &mut game_client.basic_stats.strength,
+                                BasicStatType::Dexterity => &mut game_client.basic_stats.dexterity,
+                                BasicStatType::Intelligence => {
+                                    &mut game_client.basic_stats.intelligence
+                                }
+                                BasicStatType::Concentration => {
+                                    &mut game_client.basic_stats.concentration
+                                }
+                                BasicStatType::Charm => &mut game_client.basic_stats.charm,
+                                BasicStatType::Sense => &mut game_client.basic_stats.sense,
+                            };
+
+                            game_client.stat_points.points -= cost;
+                            *value += 1;
+
+                            game_client
+                                .game_client
+                                .server_message_tx
+                                .send(ServerMessage::UpdateBasicStat(UpdateBasicStat {
+                                    basic_stat_type,
+                                    value: *value,
+                                }))
+                                .ok();
+                        }
+                    }
+                }
+                ClientMessage::PickupItemDrop(target_entity_id) => {
+                    if let Some((target_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(target_entity_id))
+                    {
+                        entity_commands.insert(NextCommand::with_pickup_item_drop(*target_entity));
+                    } else {
+                        entity_commands.insert(NextCommand::with_stop(true));
+                    }
+                }
+                ClientMessage::LogoutRequest(request) => {
+                    if let LogoutRequest::ReturnToCharacterSelect = request {
+                        // Send ReturnToCharacterSelect via world_client
+                        world_client_query.for_each(|world_client| {
+                            if world_client.login_token == game_client.game_client.login_token {
+                                world_client
+                                    .server_message_tx
+                                    .send(ServerMessage::ReturnToCharacterSelect)
+                                    .ok();
+                            }
+                        });
+                    }
+
+                    game_client
+                        .game_client
+                        .server_message_tx
+                        .send(ServerMessage::LogoutSuccess)
+                        .ok();
+
+                    client_entity_leave_zone(
+                        &mut commands,
+                        &mut client_entity_list,
+                        game_client.entity,
+                        game_client.client_entity,
+                        game_client.client_entity_sector,
+                        game_client.position,
+                    );
+                }
+                ClientMessage::ReviveRequest(revive_request_type) => {
+                    if game_client.dead.is_some() {
+                        let new_position = match revive_request_type {
+                            ReviveRequestType::RevivePosition => {
+                                let revive_position = if let Some(zone_data) =
+                                    game_data.zones.get_zone(game_client.position.zone_id)
+                                {
+                                    if let Some(revive_position) = zone_data
+                                        .get_closest_revive_position(game_client.position.position)
+                                    {
+                                        revive_position
+                                    } else {
+                                        zone_data.start_position
+                                    }
+                                } else {
+                                    game_client.position.position
                                 };
 
-                                stat_points.points -= cost;
-                                *value += 1;
+                                Position::new(revive_position, game_client.position.zone_id)
+                            }
+                            ReviveRequestType::SavePosition => Position::new(
+                                game_client.character_info.revive_position,
+                                game_client.character_info.revive_zone_id,
+                            ),
+                        };
 
-                                client
+                        entity_commands.remove::<Dead>();
+                        entity_commands.insert((
+                            HealthPoints::new(
+                                (3 * game_client.ability_values.get_max_health()) / 10,
+                            ),
+                            ManaPoints::new((3 * game_client.ability_values.get_max_mana()) / 10),
+                            Command::with_stop(),
+                            NextCommand::default(),
+                        ));
+
+                        client_entity_teleport_zone(
+                            &mut commands,
+                            &mut client_entity_list,
+                            game_client.entity,
+                            game_client.client_entity,
+                            game_client.client_entity_sector,
+                            game_client.position,
+                            new_position,
+                            Some(game_client.game_client),
+                        );
+                    }
+                }
+                ClientMessage::SetReviveZone => {
+                    if let Some(zone_data) = game_data.zones.get_zone(game_client.position.zone_id)
+                    {
+                        let revive_position = zone_data
+                            .get_closest_revive_position(zone_data.start_position)
+                            .unwrap_or(zone_data.start_position);
+                        game_client.character_info.revive_zone_id = game_client.position.zone_id;
+                        game_client.character_info.revive_position = revive_position;
+                    }
+                }
+                ClientMessage::QuestDelete(QuestDelete { slot, quest_id }) => {
+                    if let Some(quest_slot) = game_client.quest_state.get_quest_slot_mut(slot) {
+                        if let Some(quest) = quest_slot {
+                            if quest.quest_id == quest_id {
+                                *quest_slot = None;
+                                game_client
+                                    .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::UpdateBasicStat(UpdateBasicStat {
-                                        basic_stat_type,
-                                        value: *value,
+                                    .send(ServerMessage::QuestDeleteResult(QuestDeleteResult {
+                                        success: true,
+                                        slot,
+                                        quest_id,
                                     }))
                                     .ok();
                             }
                         }
                     }
-                    ClientMessage::PickupItemDrop(target_entity_id) => {
-                        if let Some((target_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(target_entity_id))
-                        {
-                            entity_commands
-                                .insert(NextCommand::with_pickup_item_drop(*target_entity));
-                        } else {
-                            entity_commands.insert(NextCommand::with_stop(true));
-                        }
-                    }
-                    ClientMessage::LogoutRequest(request) => {
-                        if let LogoutRequest::ReturnToCharacterSelect = request {
-                            // Send ReturnToCharacterSelect via world_client
-                            world_client_query.for_each(|world_client| {
-                                if world_client.login_token == client.login_token {
-                                    world_client
-                                        .server_message_tx
-                                        .send(ServerMessage::ReturnToCharacterSelect)
-                                        .ok();
-                                }
-                            });
-                        }
-
-                        client
-                            .server_message_tx
-                            .send(ServerMessage::LogoutSuccess)
-                            .ok();
-
-                        client_entity_leave_zone(
-                            &mut commands,
-                            &mut client_entity_list,
-                            entity,
-                            client_entity,
-                            client_entity_sector,
-                            position,
-                        );
-                    }
-                    ClientMessage::ReviveRequest(revive_request_type) => {
-                        if dead.is_some() {
-                            let new_position = match revive_request_type {
-                                ReviveRequestType::RevivePosition => {
-                                    let revive_position = if let Some(zone_data) =
-                                        game_data.zones.get_zone(position.zone_id)
-                                    {
-                                        if let Some(revive_position) =
-                                            zone_data.get_closest_revive_position(position.position)
-                                        {
-                                            revive_position
-                                        } else {
-                                            zone_data.start_position
-                                        }
-                                    } else {
-                                        position.position
-                                    };
-
-                                    Position::new(revive_position, position.zone_id)
-                                }
-                                ReviveRequestType::SavePosition => Position::new(
-                                    character_info.revive_position,
-                                    character_info.revive_zone_id,
-                                ),
-                            };
-
-                            entity_commands.remove::<Dead>();
-                            entity_commands.insert((
-                                HealthPoints::new((3 * ability_values.get_max_health()) / 10),
-                                ManaPoints::new((3 * ability_values.get_max_mana()) / 10),
-                                Command::with_stop(),
-                                NextCommand::default(),
-                            ));
-
-                            client_entity_teleport_zone(
-                                &mut commands,
-                                &mut client_entity_list,
-                                entity,
-                                client_entity,
-                                client_entity_sector,
-                                position,
-                                new_position,
-                                Some(client),
-                            );
-                        }
-                    }
-                    ClientMessage::SetReviveZone => {
-                        if let Some(zone_data) = game_data.zones.get_zone(position.zone_id) {
-                            let revive_position = zone_data
-                                .get_closest_revive_position(zone_data.start_position)
-                                .unwrap_or(zone_data.start_position);
-                            character_info.revive_zone_id = position.zone_id;
-                            character_info.revive_position = revive_position;
-                        }
-                    }
-                    ClientMessage::QuestDelete(QuestDelete { slot, quest_id }) => {
-                        if let Some(quest_slot) = quest_state.get_quest_slot_mut(slot) {
-                            if let Some(quest) = quest_slot {
-                                if quest.quest_id == quest_id {
-                                    *quest_slot = None;
-                                    client
-                                        .server_message_tx
-                                        .send(ServerMessage::QuestDeleteResult(QuestDeleteResult {
-                                            success: true,
-                                            slot,
-                                            quest_id,
-                                        }))
-                                        .ok();
-                                }
-                            }
-                        }
-                    }
-                    ClientMessage::QuestTrigger(trigger_hash) => {
-                        quest_trigger_events.send(QuestTriggerEvent {
-                            trigger_entity: entity,
-                            trigger_hash,
-                        });
-                    }
-                    ClientMessage::PersonalStoreListItems(store_entity_id) => {
-                        if let Some((store_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(store_entity_id))
-                        {
-                            personal_store_events.send(PersonalStoreEvent::ListItems(
-                                PersonalStoreEventListItems {
-                                    store_entity: *store_entity,
-                                    list_entity: entity,
-                                },
-                            ));
-                        }
-                    }
-                    ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
-                        store_entity_id,
-                        store_slot_index,
-                        buy_item,
-                    }) => {
-                        if let Some((store_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(store_entity_id))
-                        {
-                            personal_store_events.send(PersonalStoreEvent::BuyItem(
-                                PersonalStoreEventBuyItem {
-                                    store_entity: *store_entity,
-                                    buyer_entity: entity,
-                                    store_slot_index,
-                                    buy_item,
-                                },
-                            ));
-                        }
-                    }
-                    ClientMessage::UseItem(item_slot, target_entity_id) => {
-                        let target_entity = target_entity_id
-                            .and_then(|target_entity_id| {
-                                client_entity_list
-                                    .get_zone(position.zone_id)
-                                    .and_then(|zone| zone.get_entity(target_entity_id))
-                            })
-                            .map(|(target_entity, _, _)| *target_entity);
-
-                        use_item_events.send(UseItemEvent::from_inventory(
-                            entity,
-                            item_slot,
-                            target_entity,
+                }
+                ClientMessage::QuestTrigger(trigger_hash) => {
+                    quest_trigger_events.send(QuestTriggerEvent {
+                        trigger_entity: game_client.entity,
+                        trigger_hash,
+                    });
+                }
+                ClientMessage::PersonalStoreListItems(store_entity_id) => {
+                    if let Some((store_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(store_entity_id))
+                    {
+                        personal_store_events.send(PersonalStoreEvent::ListItems(
+                            PersonalStoreEventListItems {
+                                store_entity: *store_entity,
+                                list_entity: game_client.entity,
+                            },
                         ));
                     }
-                    ClientMessage::LevelUpSkill(skill_slot) => {
-                        skill_list_try_level_up_skill(
-                            &game_data,
-                            &mut SkillListBundle {
-                                skill_list: &mut skill_list,
-                                skill_points: Some(&mut skill_points),
-                                game_client: Some(client),
-                                ability_values,
-                                level,
-                                move_speed: Some(move_speed),
-                                team: Some(team),
-                                character_info: Some(&character_info),
-                                experience_points: None,
-                                inventory: Some(&inventory),
-                                stamina: None,
-                                stat_points: None,
-                                union_membership: None,
-                                health_points: None,
-                                mana_points: None,
+                }
+                ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
+                    store_entity_id,
+                    store_slot_index,
+                    buy_item,
+                }) => {
+                    if let Some((store_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(store_entity_id))
+                    {
+                        personal_store_events.send(PersonalStoreEvent::BuyItem(
+                            PersonalStoreEventBuyItem {
+                                store_entity: *store_entity,
+                                buyer_entity: game_client.entity,
+                                store_slot_index,
+                                buy_item,
                             },
-                            skill_slot,
-                        )
-                        .ok();
+                        ));
                     }
-                    ClientMessage::CastSkillSelf(skill_slot) => {
-                        if let Some(skill) = skill_list.get_skill(skill_slot) {
-                            entity_commands
-                                .insert(NextCommand::with_cast_skill_target_self(skill, None));
-                        }
-                    }
-                    ClientMessage::CastSkillTargetEntity(skill_slot, target_entity_id) => {
-                        if let Some(skill) = skill_list.get_skill(skill_slot) {
-                            if let Some((target_entity, _, _)) = client_entity_list
-                                .get_zone(position.zone_id)
+                }
+                ClientMessage::UseItem(item_slot, target_entity_id) => {
+                    let target_entity = target_entity_id
+                        .and_then(|target_entity_id| {
+                            client_entity_list
+                                .get_zone(game_client.position.zone_id)
                                 .and_then(|zone| zone.get_entity(target_entity_id))
-                            {
-                                entity_commands.insert(NextCommand::with_cast_skill_target_entity(
-                                    skill,
-                                    *target_entity,
-                                    None,
-                                ));
-                            }
-                        }
+                        })
+                        .map(|(target_entity, _, _)| *target_entity);
+
+                    use_item_events.send(UseItemEvent::from_inventory(
+                        game_client.entity,
+                        item_slot,
+                        target_entity,
+                    ));
+                }
+                ClientMessage::LevelUpSkill(skill_slot) => {
+                    skill_list_try_level_up_skill(
+                        &game_data,
+                        &mut SkillListBundle {
+                            skill_list: &mut game_client.skill_list,
+                            skill_points: Some(&mut game_client.skill_points),
+                            game_client: Some(game_client.game_client),
+                            ability_values: game_client.ability_values,
+                            level: game_client.level,
+                            move_speed: Some(game_client.move_speed),
+                            team: Some(game_client.team),
+                            character_info: Some(&game_client.character_info),
+                            experience_points: None,
+                            inventory: Some(&game_client.inventory),
+                            stamina: None,
+                            stat_points: None,
+                            union_membership: None,
+                            health_points: None,
+                            mana_points: None,
+                        },
+                        skill_slot,
+                    )
+                    .ok();
+                }
+                ClientMessage::CastSkillSelf(skill_slot) => {
+                    if let Some(skill) = game_client.skill_list.get_skill(skill_slot) {
+                        entity_commands
+                            .insert(NextCommand::with_cast_skill_target_self(skill, None));
                     }
-                    ClientMessage::CastSkillTargetPosition(skill_slot, position) => {
-                        if let Some(skill) = skill_list.get_skill(skill_slot) {
-                            entity_commands.insert(NextCommand::with_cast_skill_target_position(
-                                skill, position,
+                }
+                ClientMessage::CastSkillTargetEntity(skill_slot, target_entity_id) => {
+                    if let Some(skill) = game_client.skill_list.get_skill(skill_slot) {
+                        if let Some((target_entity, _, _)) = client_entity_list
+                            .get_zone(game_client.position.zone_id)
+                            .and_then(|zone| zone.get_entity(target_entity_id))
+                        {
+                            entity_commands.insert(NextCommand::with_cast_skill_target_entity(
+                                skill,
+                                *target_entity,
+                                None,
                             ));
                         }
                     }
-                    ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
-                        npc_entity_id,
-                        buy_items,
-                        sell_items,
-                    }) => {
-                        if let Some((npc_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(npc_entity_id))
-                        {
-                            npc_store_events.send(NpcStoreEvent {
-                                store_entity: *npc_entity,
-                                transaction_entity: entity,
-                                buy_items,
-                                sell_items,
-                            });
-                        }
+                }
+                ClientMessage::CastSkillTargetPosition(skill_slot, position) => {
+                    if let Some(skill) = game_client.skill_list.get_skill(skill_slot) {
+                        entity_commands.insert(NextCommand::with_cast_skill_target_position(
+                            skill, position,
+                        ));
                     }
-                    ClientMessage::SitToggle => {
-                        if matches!(command.command, CommandData::Sit(CommandSit::Sit)) {
-                            entity_commands.insert(NextCommand::with_standing());
-                        } else {
-                            entity_commands.insert(NextCommand::with_sitting());
-                        }
+                }
+                ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
+                    npc_entity_id,
+                    buy_items,
+                    sell_items,
+                }) => {
+                    if let Some((npc_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(npc_entity_id))
+                    {
+                        npc_store_events.send(NpcStoreEvent {
+                            store_entity: *npc_entity,
+                            transaction_entity: game_client.entity,
+                            buy_items,
+                            sell_items,
+                        });
                     }
-                    ClientMessage::RunToggle => {
-                        if match *move_mode {
-                            MoveMode::Walk => {
-                                *move_mode = MoveMode::Run;
-                                true
-                            }
-                            MoveMode::Run => {
-                                *move_mode = MoveMode::Walk;
-                                true
-                            }
-                            MoveMode::Drive => false,
-                        } {
-                            server_messages.send_entity_message(
-                                client_entity,
-                                ServerMessage::MoveToggle(server::MoveToggle {
-                                    entity_id: client_entity.id,
-                                    move_mode: *move_mode,
-                                    run_speed: None,
-                                }),
-                            );
-                        }
+                }
+                ClientMessage::SitToggle => {
+                    if matches!(
+                        game_client.command.command,
+                        CommandData::Sit(CommandSit::Sit)
+                    ) {
+                        entity_commands.insert(NextCommand::with_standing());
+                    } else {
+                        entity_commands.insert(NextCommand::with_sitting());
                     }
-                    ClientMessage::DriveToggle => {
-                        if match *move_mode {
-                            MoveMode::Walk | MoveMode::Run => {
-                                // TODO: Check if we have a valid cart equipped....
-
-                                // Starting driving decreases vehicle engine life
-                                item_life_events
-                                    .send(ItemLifeEvent::DecreaseVehicleEngineLife(entity));
-
-                                // Start driving
-                                *move_mode = MoveMode::Drive;
-                                commands.entity(entity).insert(DrivingTime::default());
-
-                                true
-                            }
-                            MoveMode::Drive => {
-                                *move_mode = MoveMode::Run;
-                                commands.entity(entity).remove::<DrivingTime>();
-                                true
-                            }
-                        } {
-                            server_messages.send_entity_message(
-                                client_entity,
-                                ServerMessage::MoveToggle(server::MoveToggle {
-                                    entity_id: client_entity.id,
-                                    move_mode: *move_mode,
-                                    run_speed: None,
-                                }),
-                            );
+                }
+                ClientMessage::RunToggle => {
+                    if match *game_client.move_mode {
+                        MoveMode::Walk => {
+                            *game_client.move_mode = MoveMode::Run;
+                            true
                         }
+                        MoveMode::Run => {
+                            *game_client.move_mode = MoveMode::Walk;
+                            true
+                        }
+                        MoveMode::Drive => false,
+                    } {
+                        server_messages.send_entity_message(
+                            game_client.client_entity,
+                            ServerMessage::MoveToggle(server::MoveToggle {
+                                entity_id: game_client.client_entity.id,
+                                move_mode: *game_client.move_mode,
+                                run_speed: None,
+                            }),
+                        );
                     }
-                    ClientMessage::DropMoney(quantity) => {
-                        let mut money = Money(quantity as i64);
-                        if money > inventory.money {
-                            money = inventory.money;
-                            inventory.money = Money(0)
-                        } else {
-                            inventory.money = inventory.money - money;
-                        }
+                }
+                ClientMessage::DriveToggle => {
+                    if match *game_client.move_mode {
+                        MoveMode::Walk | MoveMode::Run => {
+                            // TODO: Check if we have a valid cart equipped....
 
-                        if money > Money(0) {
+                            // Starting driving decreases vehicle engine life
+                            item_life_events
+                                .send(ItemLifeEvent::DecreaseVehicleEngineLife(game_client.entity));
+
+                            // Start driving
+                            *game_client.move_mode = MoveMode::Drive;
+                            commands
+                                .entity(game_client.entity)
+                                .insert(DrivingTime::default());
+
+                            true
+                        }
+                        MoveMode::Drive => {
+                            *game_client.move_mode = MoveMode::Run;
+                            commands.entity(game_client.entity).remove::<DrivingTime>();
+                            true
+                        }
+                    } {
+                        server_messages.send_entity_message(
+                            game_client.client_entity,
+                            ServerMessage::MoveToggle(server::MoveToggle {
+                                entity_id: game_client.client_entity.id,
+                                move_mode: *game_client.move_mode,
+                                run_speed: None,
+                            }),
+                        );
+                    }
+                }
+                ClientMessage::DropMoney(quantity) => {
+                    let mut money = Money(quantity as i64);
+                    if money > game_client.inventory.money {
+                        money = game_client.inventory.money;
+                        game_client.inventory.money = Money(0)
+                    } else {
+                        game_client.inventory.money = game_client.inventory.money - money;
+                    }
+
+                    if money > Money(0) {
+                        ItemDropBundle::spawn(
+                            &mut commands,
+                            &mut client_entity_list,
+                            DroppedItem::Money(money),
+                            game_client.position,
+                            None,
+                            None,
+                            &time,
+                        );
+
+                        game_client
+                            .game_client
+                            .server_message_tx
+                            .send(ServerMessage::UpdateMoney(game_client.inventory.money))
+                            .ok();
+                    }
+                }
+                ClientMessage::DropItem(item_slot, quantity) => {
+                    if let Some(inventory_slot) = game_client.inventory.get_item_slot_mut(item_slot)
+                    {
+                        let quantity = u32::min(
+                            quantity as u32,
+                            inventory_slot
+                                .as_ref()
+                                .map(|item| item.get_quantity())
+                                .unwrap_or(0),
+                        );
+                        let item = inventory_slot.try_take_quantity(quantity);
+
+                        if let Some(item) = item {
                             ItemDropBundle::spawn(
                                 &mut commands,
                                 &mut client_entity_list,
-                                DroppedItem::Money(money),
-                                position,
+                                DroppedItem::Item(item),
+                                game_client.position,
                                 None,
                                 None,
                                 &time,
                             );
 
-                            client
+                            game_client
+                                .game_client
                                 .server_message_tx
-                                .send(ServerMessage::UpdateMoney(inventory.money))
+                                .send(ServerMessage::UpdateInventory(
+                                    vec![(item_slot, inventory_slot.clone())],
+                                    None,
+                                ))
                                 .ok();
                         }
                     }
-                    ClientMessage::DropItem(item_slot, quantity) => {
-                        if let Some(inventory_slot) = inventory.get_item_slot_mut(item_slot) {
-                            let quantity = u32::min(
-                                quantity as u32,
-                                inventory_slot
-                                    .as_ref()
-                                    .map(|item| item.get_quantity())
-                                    .unwrap_or(0),
-                            );
-                            let item = inventory_slot.try_take_quantity(quantity);
-
-                            if let Some(item) = item {
-                                ItemDropBundle::spawn(
+                }
+                ClientMessage::UseEmote(motion_id, is_stop) => {
+                    entity_commands.insert(NextCommand::with_emote(motion_id, is_stop));
+                }
+                ClientMessage::WarpGateRequest(warp_gate_id) => {
+                    if let Some(warp_gate) = game_data.warp_gates.get_warp_gate(warp_gate_id) {
+                        if let Some(zone) = game_data.zones.get_zone(warp_gate.target_zone) {
+                            if let Some(event_position) =
+                                zone.event_positions.get(&warp_gate.target_event_object)
+                            {
+                                client_entity_teleport_zone(
                                     &mut commands,
                                     &mut client_entity_list,
-                                    DroppedItem::Item(item),
-                                    position,
-                                    None,
-                                    None,
-                                    &time,
+                                    game_client.entity,
+                                    game_client.client_entity,
+                                    game_client.client_entity_sector,
+                                    game_client.position,
+                                    Position::new(*event_position, warp_gate.target_zone),
+                                    Some(game_client.game_client),
                                 );
-
-                                client
-                                    .server_message_tx
-                                    .send(ServerMessage::UpdateInventory(
-                                        vec![(item_slot, inventory_slot.clone())],
-                                        None,
-                                    ))
-                                    .ok();
                             }
                         }
                     }
-                    ClientMessage::UseEmote(motion_id, is_stop) => {
-                        entity_commands.insert(NextCommand::with_emote(motion_id, is_stop));
+                }
+                ClientMessage::PartyCreate(invited_entity_id)
+                | ClientMessage::PartyInvite(invited_entity_id) => {
+                    if let Some(&(invited_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(invited_entity_id))
+                    {
+                        party_events.send(PartyEvent::Invite(PartyEventInvite {
+                            owner_entity: game_client.entity,
+                            invited_entity,
+                        }));
                     }
-                    ClientMessage::WarpGateRequest(warp_gate_id) => {
-                        if let Some(warp_gate) = game_data.warp_gates.get_warp_gate(warp_gate_id) {
-                            if let Some(zone) = game_data.zones.get_zone(warp_gate.target_zone) {
-                                if let Some(event_position) =
-                                    zone.event_positions.get(&warp_gate.target_event_object)
+                }
+                ClientMessage::PartyLeave => {
+                    party_events.send(PartyEvent::Leave(PartyEventLeave {
+                        leaver_entity: game_client.entity,
+                    }));
+                }
+                ClientMessage::PartyChangeOwner(new_owner_entity_id) => {
+                    if let Some(&(new_owner_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(new_owner_entity_id))
+                    {
+                        party_events.send(PartyEvent::ChangeOwner(PartyEventChangeOwner {
+                            owner_entity: game_client.entity,
+                            new_owner_entity,
+                        }));
+                    }
+                }
+                ClientMessage::PartyKick(character_id) => {
+                    party_events.send(PartyEvent::Kick(PartyEventKick {
+                        owner_entity: game_client.entity,
+                        kick_character_id: character_id,
+                    }));
+                }
+                ClientMessage::PartyAcceptCreateInvite(owner_entity_id)
+                | ClientMessage::PartyAcceptJoinInvite(owner_entity_id) => {
+                    if let Some(&(owner_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(owner_entity_id))
+                    {
+                        party_events.send(PartyEvent::AcceptInvite(PartyEventInvite {
+                            owner_entity,
+                            invited_entity: game_client.entity,
+                        }));
+                    }
+                }
+                ClientMessage::PartyRejectInvite(reason, owner_entity_id) => {
+                    if let Some(&(owner_entity, _, _)) = client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(owner_entity_id))
+                    {
+                        party_events.send(PartyEvent::RejectInvite(
+                            reason,
+                            PartyEventInvite {
+                                owner_entity,
+                                invited_entity: game_client.entity,
+                            },
+                        ));
+                    }
+                }
+                ClientMessage::PartyUpdateRules(item_sharing, xp_sharing) => {
+                    party_events.send(PartyEvent::UpdateRules(PartyEventUpdateRules {
+                        owner_entity: game_client.entity,
+                        item_sharing,
+                        xp_sharing,
+                    }));
+                }
+                ClientMessage::MoveCollision(collision_position) => {
+                    // TODO: Sanity check position
+                    entity_commands
+                        .insert(NextCommand::with_move(collision_position, None, None))
+                        .insert(Position::new(
+                            collision_position,
+                            game_client.position.zone_id,
+                        ));
+                }
+                ClientMessage::CraftInsertGem {
+                    equipment_index,
+                    item_slot,
+                } => {
+                    if game_client
+                        .inventory
+                        .get_item(item_slot)
+                        .and_then(|item| {
+                            if !matches!(item.get_item_type(), ItemType::Gem) {
+                                None
+                            } else {
+                                game_data.items.get_base_item(item.get_item_reference())
+                            }
+                        })
+                        .map_or(false, |item_data| item_data.class == ItemClass::Jewel)
+                    {
+                        if let Some(equipment_item) =
+                            game_client.equipment.get_equipment_item(equipment_index)
+                        {
+                            if !equipment_item.has_socket {
+                                game_client
+                                    .game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::CraftInsertGem(Err(
+                                        CraftInsertGemError::NoSocket,
+                                    )))
+                                    .ok();
+                            } else if equipment_item.gem > 300 {
+                                game_client
+                                    .game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::CraftInsertGem(Err(
+                                        CraftInsertGemError::SocketFull,
+                                    )))
+                                    .ok();
+                            } else {
+                                let equipment_item = game_client
+                                    .equipment
+                                    .get_equipment_slot_mut(equipment_index)
+                                    .as_mut()
+                                    .unwrap();
+
+                                if let Some(gem_item) = game_client
+                                    .inventory
+                                    .get_item_slot_mut(item_slot)
+                                    .unwrap()
+                                    .try_take_quantity(1)
                                 {
-                                    client_entity_teleport_zone(
-                                        &mut commands,
-                                        &mut client_entity_list,
-                                        entity,
-                                        client_entity,
-                                        client_entity_sector,
-                                        position,
-                                        Position::new(*event_position, warp_gate.target_zone),
-                                        Some(client),
+                                    equipment_item.gem = gem_item.get_item_number() as u16;
+
+                                    game_client
+                                        .game_client
+                                        .server_message_tx
+                                        .send(ServerMessage::CraftInsertGem(Ok(vec![
+                                            (
+                                                item_slot,
+                                                game_client.inventory.get_item(item_slot).cloned(),
+                                            ),
+                                            (
+                                                ItemSlot::Equipment(equipment_index),
+                                                game_client
+                                                    .equipment
+                                                    .get_equipment_item(equipment_index)
+                                                    .cloned()
+                                                    .map(Item::Equipment),
+                                            ),
+                                        ])))
+                                        .ok();
+
+                                    server_messages.send_entity_message(
+                                        game_client.client_entity,
+                                        ServerMessage::UpdateEquipment(server::UpdateEquipment {
+                                            entity_id: game_client.client_entity.id,
+                                            equipment_index,
+                                            item: game_client
+                                                .equipment
+                                                .get_equipment_item(equipment_index)
+                                                .cloned(),
+                                        }),
                                     );
                                 }
                             }
                         }
                     }
-                    ClientMessage::PartyCreate(invited_entity_id)
-                    | ClientMessage::PartyInvite(invited_entity_id) => {
-                        if let Some(&(invited_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(invited_entity_id))
-                        {
-                            party_events.send(PartyEvent::Invite(PartyEventInvite {
-                                owner_entity: entity,
-                                invited_entity,
-                            }));
-                        }
-                    }
-                    ClientMessage::PartyLeave => {
-                        party_events.send(PartyEvent::Leave(PartyEventLeave {
-                            leaver_entity: entity,
-                        }));
-                    }
-                    ClientMessage::PartyChangeOwner(new_owner_entity_id) => {
-                        if let Some(&(new_owner_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(new_owner_entity_id))
-                        {
-                            party_events.send(PartyEvent::ChangeOwner(PartyEventChangeOwner {
-                                owner_entity: entity,
-                                new_owner_entity,
-                            }));
-                        }
-                    }
-                    ClientMessage::PartyKick(character_id) => {
-                        party_events.send(PartyEvent::Kick(PartyEventKick {
-                            owner_entity: entity,
-                            kick_character_id: character_id,
-                        }));
-                    }
-                    ClientMessage::PartyAcceptCreateInvite(owner_entity_id)
-                    | ClientMessage::PartyAcceptJoinInvite(owner_entity_id) => {
-                        if let Some(&(owner_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(owner_entity_id))
-                        {
-                            party_events.send(PartyEvent::AcceptInvite(PartyEventInvite {
-                                owner_entity,
-                                invited_entity: entity,
-                            }));
-                        }
-                    }
-                    ClientMessage::PartyRejectInvite(reason, owner_entity_id) => {
-                        if let Some(&(owner_entity, _, _)) = client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(owner_entity_id))
-                        {
-                            party_events.send(PartyEvent::RejectInvite(
-                                reason,
-                                PartyEventInvite {
-                                    owner_entity,
-                                    invited_entity: entity,
-                                },
-                            ));
-                        }
-                    }
-                    ClientMessage::PartyUpdateRules(item_sharing, xp_sharing) => {
-                        party_events.send(PartyEvent::UpdateRules(PartyEventUpdateRules {
-                            owner_entity: entity,
-                            item_sharing,
-                            xp_sharing,
-                        }));
-                    }
-                    ClientMessage::MoveCollision(collision_position) => {
-                        // TODO: Sanity check position
-                        entity_commands
-                            .insert(NextCommand::with_move(collision_position, None, None))
-                            .insert(Position::new(collision_position, position.zone_id));
-                    }
-                    ClientMessage::CraftInsertGem {
-                        equipment_index,
-                        item_slot,
-                    } => {
-                        if inventory
-                            .get_item(item_slot)
-                            .and_then(|item| {
-                                if !matches!(item.get_item_type(), ItemType::Gem) {
-                                    None
-                                } else {
-                                    game_data.items.get_base_item(item.get_item_reference())
-                                }
-                            })
-                            .map_or(false, |item_data| item_data.class == ItemClass::Jewel)
-                        {
-                            if let Some(equipment_item) =
-                                equipment.get_equipment_item(equipment_index)
-                            {
-                                if !equipment_item.has_socket {
-                                    client
-                                        .server_message_tx
-                                        .send(ServerMessage::CraftInsertGem(Err(
-                                            CraftInsertGemError::NoSocket,
-                                        )))
-                                        .ok();
-                                } else if equipment_item.gem > 300 {
-                                    client
-                                        .server_message_tx
-                                        .send(ServerMessage::CraftInsertGem(Err(
-                                            CraftInsertGemError::SocketFull,
-                                        )))
-                                        .ok();
-                                } else {
-                                    let equipment_item = equipment
-                                        .get_equipment_slot_mut(equipment_index)
-                                        .as_mut()
-                                        .unwrap();
-
-                                    if let Some(gem_item) = inventory
-                                        .get_item_slot_mut(item_slot)
-                                        .unwrap()
-                                        .try_take_quantity(1)
-                                    {
-                                        equipment_item.gem = gem_item.get_item_number() as u16;
-
-                                        client
-                                            .server_message_tx
-                                            .send(ServerMessage::CraftInsertGem(Ok(vec![
-                                                (item_slot, inventory.get_item(item_slot).cloned()),
-                                                (
-                                                    ItemSlot::Equipment(equipment_index),
-                                                    equipment
-                                                        .get_equipment_item(equipment_index)
-                                                        .cloned()
-                                                        .map(Item::Equipment),
-                                                ),
-                                            ])))
-                                            .ok();
-
-                                        server_messages.send_entity_message(
-                                            client_entity,
-                                            ServerMessage::UpdateEquipment(
-                                                server::UpdateEquipment {
-                                                    entity_id: client_entity.id,
-                                                    equipment_index,
-                                                    item: equipment
-                                                        .get_equipment_item(equipment_index)
-                                                        .cloned(),
-                                                },
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    ClientMessage::BankOpen => {
-                        bank_events.send(BankEvent::Open { entity });
-                    }
-                    ClientMessage::BankDepositItem {
+                }
+                ClientMessage::BankOpen => {
+                    bank_events.send(BankEvent::Open {
+                        entity: game_client.entity,
+                    });
+                }
+                ClientMessage::BankDepositItem {
+                    item_slot,
+                    item,
+                    is_premium,
+                } => {
+                    bank_events.send(BankEvent::DepositItem {
+                        entity: game_client.entity,
                         item_slot,
                         item,
                         is_premium,
-                    } => {
-                        bank_events.send(BankEvent::DepositItem {
-                            entity,
-                            item_slot,
-                            item,
-                            is_premium,
-                        });
-                    }
-                    ClientMessage::BankWithdrawItem {
+                    });
+                }
+                ClientMessage::BankWithdrawItem {
+                    bank_slot,
+                    item,
+                    is_premium,
+                } => {
+                    bank_events.send(BankEvent::WithdrawItem {
+                        entity: game_client.entity,
                         bank_slot,
                         item,
                         is_premium,
-                    } => {
-                        bank_events.send(BankEvent::WithdrawItem {
-                            entity,
-                            bank_slot,
-                            item,
-                            is_premium,
-                        });
-                    }
-                    ClientMessage::RepairItemUsingNpc {
-                        npc_entity_id,
-                        item_slot,
-                    } => {
-                        if client_entity_list
-                            .get_zone(position.zone_id)
-                            .and_then(|zone| zone.get_entity(npc_entity_id))
-                            .map(|(_, _, npc_position)| npc_position.xy())
-                            .map_or(false, |npc_position| {
-                                position.position.xy().distance(npc_position) <= 6000.0
-                            })
+                    });
+                }
+                ClientMessage::RepairItemUsingNpc {
+                    npc_entity_id,
+                    item_slot,
+                } => {
+                    if client_entity_list
+                        .get_zone(game_client.position.zone_id)
+                        .and_then(|zone| zone.get_entity(npc_entity_id))
+                        .map(|(_, _, npc_position)| npc_position.xy())
+                        .map_or(false, |npc_position| {
+                            game_client.position.position.xy().distance(npc_position) <= 6000.0
+                        })
+                    {
+                        if let Some(Item::Equipment(equipment_item)) =
+                            game_client.inventory.get_item(item_slot)
                         {
-                            if let Some(Item::Equipment(equipment_item)) =
-                                inventory.get_item(item_slot)
-                            {
-                                let cost = game_data
-                                    .ability_value_calculator
-                                    .calculate_repair_from_npc_price(equipment_item);
-                                if inventory.try_take_money(cost).is_ok() {
-                                    if let Some(Item::Equipment(equipment_item)) =
-                                        inventory.get_item_mut(item_slot)
-                                    {
-                                        equipment_item.life = 1000;
-                                    }
-
-                                    client
-                                        .server_message_tx
-                                        .send(ServerMessage::RepairedItemUsingNpc {
-                                            item_slot,
-                                            item: inventory.get_item(item_slot).unwrap().clone(),
-                                            updated_money: inventory.money,
-                                        })
-                                        .ok();
+                            let cost = game_data
+                                .ability_value_calculator
+                                .calculate_repair_from_npc_price(equipment_item);
+                            if game_client.inventory.try_take_money(cost).is_ok() {
+                                if let Some(Item::Equipment(equipment_item)) =
+                                    game_client.inventory.get_item_mut(item_slot)
+                                {
+                                    equipment_item.life = 1000;
                                 }
+
+                                game_client
+                                    .game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::RepairedItemUsingNpc {
+                                        item_slot,
+                                        item: game_client
+                                            .inventory
+                                            .get_item(item_slot)
+                                            .unwrap()
+                                            .clone(),
+                                        updated_money: game_client.inventory.money,
+                                    })
+                                    .ok();
                             }
                         }
                     }
-                    ClientMessage::ClanCreate {
+                }
+                ClientMessage::ClanCreate {
+                    name,
+                    description,
+                    mark,
+                } => {
+                    clan_events.send(ClanEvent::Create {
+                        creator: game_client.entity,
                         name,
                         description,
                         mark,
-                    } => {
-                        clan_events.send(ClanEvent::Create {
-                            creator: entity,
-                            name,
-                            description,
-                            mark,
-                        });
-                    }
-                    _ => warn!("[GS] Received unimplemented client message {:?}", message),
+                    });
                 }
+                _ => warn!("[GS] Received unimplemented client message {:?}", message),
             }
-        },
-    );
+        }
+    }
 }
