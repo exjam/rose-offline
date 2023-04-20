@@ -5,11 +5,8 @@ use std::convert::TryFrom;
 use rose_game_common::{
     data::Password,
     messages::{
-        client::{ClientMessage, ConnectionRequest, GetChannelList, JoinServer, LoginRequest},
-        server::{
-            ChannelList, ChannelListError, JoinServerError, LoginError, LoginResponse,
-            ServerMessage,
-        },
+        client::ClientMessage,
+        server::{ChannelListError, JoinServerError, LoginError, ServerMessage},
     },
 };
 use rose_network_common::{Packet, PacketError};
@@ -36,34 +33,30 @@ impl LoginServer {
             Some(ClientPackets::Connect) => {
                 client
                     .client_message_tx
-                    .send(ClientMessage::ConnectionRequest(ConnectionRequest {
+                    .send(ClientMessage::ConnectionRequest {
                         login_token: 0u32,
                         password: Password::Plaintext(String::new()),
-                    }))?;
+                    })?;
             }
             Some(ClientPackets::LoginRequest) => {
                 let request = PacketClientLoginRequest::try_from(packet)?;
-                client
-                    .client_message_tx
-                    .send(ClientMessage::LoginRequest(LoginRequest {
-                        username: String::from(request.username),
-                        password: Password::Md5(request.password_md5.into()),
-                    }))?;
+                client.client_message_tx.send(ClientMessage::LoginRequest {
+                    username: String::from(request.username),
+                    password: Password::Md5(request.password_md5.into()),
+                })?;
             }
             Some(ClientPackets::ChannelList) => {
                 let server_id = PacketClientChannelList::try_from(packet)?.server_id;
                 client
                     .client_message_tx
-                    .send(ClientMessage::GetChannelList(GetChannelList { server_id }))?;
+                    .send(ClientMessage::GetChannelList { server_id })?;
             }
             Some(ClientPackets::SelectServer) => {
                 let select_server = PacketClientSelectServer::try_from(packet)?;
-                client
-                    .client_message_tx
-                    .send(ClientMessage::JoinServer(JoinServer {
-                        server_id: select_server.server_id,
-                        channel_id: select_server.channel_id,
-                    }))?;
+                client.client_message_tx.send(ClientMessage::JoinServer {
+                    server_id: select_server.server_id,
+                    channel_id: select_server.channel_id,
+                })?;
             }
             _ => return Err(PacketError::InvalidPacket.into()),
         }
@@ -77,86 +70,108 @@ impl LoginServer {
         message: ServerMessage,
     ) -> Result<(), anyhow::Error> {
         match message {
-            ServerMessage::ConnectionResponse(response) => {
-                let packet = match response {
-                    Ok(result) => Packet::from(&PacketConnectionReply {
+            ServerMessage::ConnectionRequestSuccess { packet_sequence_id } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketConnectionReply {
                         status: ConnectionResult::Accepted,
-                        packet_sequence_id: result.packet_sequence_id,
-                    }),
-                    Err(_) => Packet::from(&PacketConnectionReply {
+                        packet_sequence_id,
+                    }))
+                    .await?;
+            }
+            ServerMessage::ConnectionRequestError { .. } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketConnectionReply {
                         status: ConnectionResult::Disconnect,
                         packet_sequence_id: 0u32,
-                    }),
-                };
-                client.connection.write_packet(packet).await?;
+                    }))
+                    .await?;
             }
-            ServerMessage::LoginResponse(response) => {
-                let packet = match response {
-                    Ok(LoginResponse { server_list }) => Packet::from(&PacketServerLoginReply {
+            ServerMessage::LoginSuccess { server_list } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerLoginReply {
                         result: LoginResult::Ok,
                         rights: 0x800,
                         pay_type: 0xff,
                         servers: server_list,
-                    }),
-                    Err(LoginError::Failed) => Packet::from(
-                        &PacketServerLoginReply::with_error_result(LoginResult::Failed),
-                    ),
-                    Err(LoginError::AlreadyLoggedIn) => Packet::from(
+                    }))
+                    .await?;
+            }
+            ServerMessage::LoginError { error } => {
+                let packet = match error {
+                    LoginError::Failed => Packet::from(&PacketServerLoginReply::with_error_result(
+                        LoginResult::Failed,
+                    )),
+                    LoginError::AlreadyLoggedIn => Packet::from(
                         &PacketServerLoginReply::with_error_result(LoginResult::AlreadyLoggedIn),
                     ),
-                    Err(LoginError::InvalidAccount) => Packet::from(
+                    LoginError::InvalidAccount => Packet::from(
                         &PacketServerLoginReply::with_error_result(LoginResult::UnknownAccount),
                     ),
-                    Err(LoginError::InvalidPassword) => Packet::from(
+                    LoginError::InvalidPassword => Packet::from(
                         &PacketServerLoginReply::with_error_result(LoginResult::InvalidPassword),
                     ),
                 };
                 client.connection.write_packet(packet).await?;
             }
-            ServerMessage::ChannelList(message) => {
-                let packet = match message {
-                    Ok(ChannelList {
-                        server_id,
-                        channels,
-                    }) => {
-                        let mut channel_list: Vec<PacketServerChannelListItem> = Vec::new();
-                        for (id, name) in &channels {
-                            channel_list.push(PacketServerChannelListItem {
-                                id: *id,
-                                low_age: 0u8,
-                                high_age: 100u8,
-                                percent_full: 50u16,
-                                name,
-                            });
-                        }
+            ServerMessage::ChannelList {
+                server_id,
+                channels,
+            } => {
+                let mut channel_list: Vec<PacketServerChannelListItem> = Vec::new();
+                for (id, name) in &channels {
+                    channel_list.push(PacketServerChannelListItem {
+                        id: *id,
+                        low_age: 0u8,
+                        high_age: 100u8,
+                        percent_full: 50u16,
+                        name,
+                    });
+                }
 
-                        Packet::from(&PacketServerChannelList {
-                            server_id,
-                            channels: channel_list,
-                        })
-                    }
-                    Err(ChannelListError::InvalidServerId(server_id)) => {
-                        Packet::from(&PacketServerChannelList {
-                            server_id,
-                            channels: Vec::new(),
-                        })
-                    }
-                };
-                client.connection.write_packet(packet).await?;
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerChannelList {
+                        server_id,
+                        channels: channel_list,
+                    }))
+                    .await?;
             }
-            ServerMessage::JoinServer(message) => {
-                let packet = match message {
-                    Ok(response) => Packet::from(&PacketServerSelectServer {
+            ServerMessage::ChannelListError { error } => {
+                let ChannelListError::InvalidServerId { server_id } = error;
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerChannelList {
+                        server_id,
+                        channels: Vec::new(),
+                    }))
+                    .await?;
+            }
+            ServerMessage::JoinServerSuccess {
+                login_token,
+                packet_codec_seed,
+                ref ip,
+                port,
+            } => {
+                client
+                    .connection
+                    .write_packet(Packet::from(&PacketServerSelectServer {
                         result: SelectServerResult::Ok,
-                        login_token: response.login_token,
-                        packet_codec_seed: response.packet_codec_seed,
-                        ip: &response.ip,
-                        port: response.port,
-                    }),
-                    Err(JoinServerError::InvalidChannelId) => Packet::from(
+                        login_token,
+                        packet_codec_seed,
+                        ip,
+                        port,
+                    }))
+                    .await?;
+            }
+            ServerMessage::JoinServerError { error } => {
+                let packet = match error {
+                    JoinServerError::InvalidServerId => Packet::from(
                         &PacketServerSelectServer::with_result(SelectServerResult::InvalidChannel),
                     ),
-                    Err(JoinServerError::InvalidServerId) => Packet::from(
+                    JoinServerError::InvalidChannelId => Packet::from(
                         &PacketServerSelectServer::with_result(SelectServerResult::Failed),
                     ),
                 };

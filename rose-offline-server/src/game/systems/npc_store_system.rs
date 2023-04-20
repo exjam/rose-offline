@@ -201,7 +201,7 @@ pub fn npc_store_system(
                     if let Some(game_client) = game_client {
                         game_client
                             .server_message_tx
-                            .send(ServerMessage::NpcStoreTransactionError(error))
+                            .send(ServerMessage::NpcStoreTransactionError { error })
                             .ok();
                     }
                 }

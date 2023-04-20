@@ -41,7 +41,7 @@ use crate::game::{
         UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
     },
     events::{ChatCommandEvent, ClanEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
-    messages::server::{LearnSkillSuccess, ServerMessage, UpdateSpeed, Whisper},
+    messages::server::ServerMessage,
     resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
     GameData,
 };
@@ -212,10 +212,10 @@ fn send_multiline_whisper(client: &GameClient, str: &str) {
     for line in str.lines() {
         client
             .server_message_tx
-            .send(ServerMessage::Whisper(Whisper {
+            .send(ServerMessage::Whisper {
                 from: String::from("SERVER"),
                 text: line.to_string(),
-            }))
+            })
             .ok();
     }
 }
@@ -240,10 +240,10 @@ fn send_chat_commands_help(client: &GameClient) {
 
         client
             .server_message_tx
-            .send(ServerMessage::Whisper(Whisper {
+            .send(ServerMessage::Whisper {
                 from: String::from("SERVER"),
                 text: help_string,
-            }))
+            })
             .ok();
     }
 }
@@ -467,7 +467,7 @@ fn handle_chat_command(
             chat_command_user
                 .game_client
                 .server_message_tx
-                .send(ServerMessage::Whisper(Whisper {
+                .send(ServerMessage::Whisper {
                     from: String::from("SERVER"),
                     text: format!(
                         "zone: {} position: ({}, {}, {}) sector: ({}, {})",
@@ -478,7 +478,7 @@ fn handle_chat_command(
                         sector.x,
                         sector.y,
                     ),
-                }))
+                })
                 .ok();
         }
         ("mm", arg_matches) => {
@@ -755,13 +755,13 @@ fn handle_chat_command(
                 .insert(MoveSpeed::new(value as f32));
             chat_command_params.server_messages.send_entity_message(
                 chat_command_user.client_entity,
-                ServerMessage::UpdateSpeed(UpdateSpeed {
+                ServerMessage::UpdateSpeed {
                     entity_id: chat_command_user.client_entity.id,
                     run_speed: value,
                     passive_attack_speed: chat_command_user
                         .ability_values
                         .get_passive_attack_speed(),
-                }),
+                },
             );
         }
         ("skill", arg_matches) => {
@@ -799,11 +799,11 @@ fn handle_chat_command(
                 chat_command_user
                     .game_client
                     .server_message_tx
-                    .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
+                    .send(ServerMessage::LearnSkillSuccess {
                         skill_slot,
                         skill_id,
                         updated_skill_points: *chat_command_user.skill_points,
-                    })))
+                    })
                     .ok();
             } else {
                 return Err(ChatCommandError::WithMessage(format!(

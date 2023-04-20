@@ -19,7 +19,7 @@ use crate::game::{
         SkillList, SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects,
         StatusEffectsRegen, Team, UnionMembership,
     },
-    messages::server::{ServerMessage, Teleport},
+    messages::server::ServerMessage,
     resources::ClientEntityList,
     GameData,
 };
@@ -332,14 +332,14 @@ pub fn client_entity_teleport_zone(
     if let Some(game_client) = game_client {
         game_client
             .server_message_tx
-            .send(ServerMessage::Teleport(Teleport {
+            .send(ServerMessage::Teleport {
                 entity_id: client_entity.id,
                 zone_id: new_position.zone_id,
                 x: new_position.position.x,
                 y: new_position.position.y,
                 run_mode: 1,  // TODO: Run mode
                 ride_mode: 0, // TODO: Ride mode
-            }))
+            })
             .ok();
     }
 }

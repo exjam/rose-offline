@@ -20,7 +20,7 @@ use crate::game::{
         PartyOwner, PersonalStore, Position, Target,
     },
     events::{DamageEvent, PickupItemEvent, SkillEvent, SkillEventTarget},
-    messages::server::{self, ServerMessage},
+    messages::server::ServerMessage,
     resources::{GameData, ServerMessages},
 };
 
@@ -79,12 +79,12 @@ fn command_stop(
     if let Some(server_messages) = server_messages {
         server_messages.send_entity_message(
             client_entity,
-            ServerMessage::StopMoveEntity(server::StopMoveEntity {
+            ServerMessage::StopMoveEntity {
                 entity_id: client_entity.id,
                 x: position.position.x,
                 y: position.position.y,
                 z: position.position.z as u16,
-            }),
+            },
         );
     }
 
@@ -217,7 +217,7 @@ pub fn command_system(
                         let distance = position.position.xy().distance(destination.xy());
                         server_messages.send_entity_message(
                             client_entity,
-                            ServerMessage::MoveEntity(server::MoveEntity {
+                            ServerMessage::MoveEntity {
                                 entity_id: client_entity.id,
                                 target_entity_id,
                                 distance: distance as u16,
@@ -225,7 +225,7 @@ pub fn command_system(
                                 y: destination.y,
                                 z: destination.z as u16,
                                 move_mode: *command_move_mode,
-                            }),
+                            },
                         );
                     }
                     &mut CommandData::Attack(CommandAttack {
@@ -243,14 +243,14 @@ pub fn command_system(
 
                             server_messages.send_entity_message(
                                 client_entity,
-                                ServerMessage::AttackEntity(server::AttackEntity {
+                                ServerMessage::AttackEntity {
                                     entity_id: client_entity.id,
                                     target_entity_id: target.client_entity.id,
                                     distance: distance as u16,
                                     x: target.position.position.x,
                                     y: target.position.position.y,
                                     z: target.position.position.z as u16,
-                                }),
+                                },
                             );
                         } else {
                             *next_command = NextCommand::with_stop(true);
@@ -264,11 +264,11 @@ pub fn command_system(
                     }) => {
                         server_messages.send_entity_message(
                             client_entity,
-                            ServerMessage::CastSkillSelf(server::CastSkillSelf {
+                            ServerMessage::CastSkillSelf {
                                 entity_id: client_entity.id,
                                 skill_id,
                                 cast_motion_id,
-                            }),
+                            },
                         );
                     }
                     &mut CommandData::CastSkill(CommandCastSkill {
@@ -289,16 +289,14 @@ pub fn command_system(
 
                             server_messages.send_entity_message(
                                 client_entity,
-                                ServerMessage::CastSkillTargetEntity(
-                                    server::CastSkillTargetEntity {
-                                        entity_id: client_entity.id,
-                                        skill_id,
-                                        target_entity_id: target.client_entity.id,
-                                        target_distance: distance,
-                                        target_position: target.position.position.xy(),
-                                        cast_motion_id,
-                                    },
-                                ),
+                                ServerMessage::CastSkillTargetEntity {
+                                    entity_id: client_entity.id,
+                                    skill_id,
+                                    target_entity_id: target.client_entity.id,
+                                    target_distance: distance,
+                                    target_position: target.position.position.xy(),
+                                    cast_motion_id,
+                                },
                             );
                         } else {
                             *next_command = NextCommand::with_stop(true);
@@ -312,14 +310,12 @@ pub fn command_system(
                     }) => {
                         server_messages.send_entity_message(
                             client_entity,
-                            ServerMessage::CastSkillTargetPosition(
-                                server::CastSkillTargetPosition {
-                                    entity_id: client_entity.id,
-                                    skill_id: *skill_id,
-                                    target_position: *target_position,
-                                    cast_motion_id: *cast_motion_id,
-                                },
-                            ),
+                            ServerMessage::CastSkillTargetPosition {
+                                entity_id: client_entity.id,
+                                skill_id: *skill_id,
+                                target_position: *target_position,
+                                cast_motion_id: *cast_motion_id,
+                            },
                         );
                     }
                 }
@@ -395,8 +391,12 @@ pub fn command_system(
 
                 *command = Command::with_standing(duration);
 
-                server_messages
-                    .send_entity_message(client_entity, ServerMessage::SitToggle(client_entity.id));
+                server_messages.send_entity_message(
+                    client_entity,
+                    ServerMessage::SitToggle {
+                        entity_id: client_entity.id,
+                    },
+                );
                 return;
             }
 
@@ -801,7 +801,9 @@ pub fn command_system(
                             if target_entity.is_some() {
                                 server_messages.send_entity_message(
                                     client_entity,
-                                    ServerMessage::StartCastingSkill(client_entity.id),
+                                    ServerMessage::StartCastingSkill {
+                                        entity_id: client_entity.id,
+                                    },
                                 );
                             }
 
@@ -890,11 +892,11 @@ pub fn command_system(
                     let personal_store = personal_store.unwrap();
                     server_messages.send_entity_message(
                         client_entity,
-                        ServerMessage::OpenPersonalStore(server::OpenPersonalStore {
+                        ServerMessage::OpenPersonalStore {
                             entity_id: client_entity.id,
                             skin: personal_store.skin,
                             title: personal_store.title.clone(),
-                        }),
+                        },
                     );
 
                     *command = Command::with_personal_store();
@@ -911,7 +913,9 @@ pub fn command_system(
 
                     server_messages.send_entity_message(
                         client_entity,
-                        ServerMessage::SitToggle(client_entity.id),
+                        ServerMessage::SitToggle {
+                            entity_id: client_entity.id,
+                        },
                     );
                 }
                 CommandData::Sit(CommandSit::Standing) => {
@@ -936,11 +940,11 @@ pub fn command_system(
                     // We wait to send emote message until now as client applies it immediately
                     server_messages.send_entity_message(
                         client_entity,
-                        ServerMessage::UseEmote(server::UseEmote {
+                        ServerMessage::UseEmote {
                             entity_id: client_entity.id,
                             motion_id,
                             is_stop,
-                        }),
+                        },
                     );
 
                     let duration = motion_data

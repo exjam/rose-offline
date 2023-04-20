@@ -10,12 +10,8 @@ use crate::game::{
     components::{Account, CharacterDeleteTime, CharacterList, ServerInfo, WorldClient},
     events::ClanEvent,
     messages::{
-        client::{ClientMessage, CreateCharacter},
-        server::{
-            CharacterListItem, ConnectionRequestError, ConnectionResponse, CreateCharacterError,
-            CreateCharacterResponse, DeleteCharacterError, DeleteCharacterResponse,
-            JoinServerResponse, SelectCharacterError, ServerMessage,
-        },
+        client::ClientMessage,
+        server::{CharacterListItem, ConnectionRequestError, CreateCharacterError, ServerMessage},
     },
     resources::{GameData, LoginTokens},
     storage::{
@@ -31,7 +27,7 @@ fn handle_world_connection_request(
     world_client: &mut WorldClient,
     token_id: u32,
     password: &Password,
-) -> Result<ConnectionResponse, ConnectionRequestError> {
+) -> Result<u32, ConnectionRequestError> {
     let login_token = login_tokens
         .get_token_mut(token_id)
         .ok_or(ConnectionRequestError::InvalidToken)?;
@@ -104,9 +100,7 @@ fn handle_world_connection_request(
     world_client.login_token = login_token.token;
     world_client.selected_game_server = Some(login_token.selected_game_server);
 
-    Ok(ConnectionResponse {
-        packet_sequence_id: 123,
-    })
+    Ok(123)
 }
 
 pub fn world_server_authentication_system(
@@ -117,42 +111,29 @@ pub fn world_server_authentication_system(
     query.for_each_mut(|(entity, mut world_client)| {
         if let Ok(message) = world_client.client_message_rx.try_recv() {
             match message {
-                ClientMessage::ConnectionRequest(message) => {
-                    let response =
-                        ServerMessage::ConnectionResponse(handle_world_connection_request(
-                            &mut commands,
-                            login_tokens.as_mut(),
-                            entity,
-                            world_client.as_mut(),
-                            message.login_token,
-                            &message.password,
-                        ));
+                ClientMessage::ConnectionRequest {
+                    login_token,
+                    password,
+                } => {
+                    let response = match handle_world_connection_request(
+                        &mut commands,
+                        login_tokens.as_mut(),
+                        entity,
+                        world_client.as_mut(),
+                        login_token,
+                        &password,
+                    ) {
+                        Ok(packet_sequence_id) => {
+                            ServerMessage::ConnectionRequestSuccess { packet_sequence_id }
+                        }
+                        Err(error) => ServerMessage::ConnectionRequestError { error },
+                    };
                     world_client.server_message_tx.send(response).ok();
                 }
                 _ => panic!("Received unexpected client message {:?}", message),
             }
         }
     });
-}
-
-fn create_character(
-    game_data: &GameData,
-    message: &CreateCharacter,
-) -> Result<CharacterStorage, anyhow::Error> {
-    let character = game_data
-        .character_creator
-        .create(
-            message.name.clone(),
-            message.gender,
-            message.birth_stone as u8,
-            message.face as u8,
-            message.hair as u8,
-        )
-        .map_err(|_| CreateCharacterError::InvalidValue)?;
-
-    character.try_create()?;
-
-    Ok(character)
 }
 
 pub fn world_server_system(
@@ -166,63 +147,94 @@ pub fn world_server_system(
         if let Ok(message) = world_client.client_message_rx.try_recv() {
             match message {
                 ClientMessage::GetCharacterList => {
-                    let mut characters = Vec::new();
-                    for character in character_list.iter() {
-                        characters.push(CharacterListItem {
-                            info: character.info.clone(),
-                            level: character.level,
-                            delete_time: character.delete_time.clone(),
-                            equipment: character.equipment.clone(),
-                        });
-                    }
                     world_client
                         .server_message_tx
-                        .send(ServerMessage::CharacterList(characters))
+                        .send(ServerMessage::CharacterList {
+                            character_list: character_list
+                                .iter()
+                                .map(|character| CharacterListItem {
+                                    info: character.info.clone(),
+                                    level: character.level,
+                                    delete_time: character.delete_time,
+                                    equipment: character.equipment.clone(),
+                                })
+                                .collect(),
+                        })
                         .ok();
                 }
-                ClientMessage::CreateCharacter(message) => {
+                ClientMessage::CreateCharacter {
+                    gender,
+                    hair,
+                    face,
+                    name,
+                    birth_stone,
+                    ..
+                } => {
                     let response = if account.character_names.len() >= 5 {
-                        Err(CreateCharacterError::NoMoreSlots)
-                    } else if message.name.len() < 4 || message.name.len() > 20 {
-                        Err(CreateCharacterError::InvalidValue)
-                    } else if CharacterStorage::exists(&message.name) {
-                        Err(CreateCharacterError::AlreadyExists)
+                        ServerMessage::CreateCharacterError {
+                            error: CreateCharacterError::NoMoreSlots,
+                        }
+                    } else if name.len() < 4 || name.len() > 20 {
+                        ServerMessage::CreateCharacterError {
+                            error: CreateCharacterError::InvalidValue,
+                        }
+                    } else if CharacterStorage::exists(&name) {
+                        ServerMessage::CreateCharacterError {
+                            error: CreateCharacterError::AlreadyExists,
+                        }
                     } else {
-                        match create_character(&game_data, &message) {
+                        match game_data.character_creator.create(
+                            name.clone(),
+                            gender,
+                            birth_stone as u8,
+                            face as u8,
+                            hair as u8,
+                        ) {
                             Ok(character) => {
-                                let character_slot = account.character_names.len();
-                                account.character_names.push(character.info.name.clone());
-                                AccountStorage::from(&*account).save().ok();
-                                character_list.push(character);
-                                Ok(CreateCharacterResponse { character_slot })
+                                if let Err(error) = character.try_create() {
+                                    log::error!(
+                                        "Failed to create character {} with error {:?}",
+                                        &name,
+                                        error
+                                    );
+                                    ServerMessage::CreateCharacterError {
+                                        error: CreateCharacterError::Failed,
+                                    }
+                                } else {
+                                    let character_slot = account.character_names.len();
+                                    account.character_names.push(character.info.name.clone());
+                                    AccountStorage::from(&*account).save().ok();
+                                    character_list.push(character);
+                                    ServerMessage::CreateCharacterSuccess { character_slot }
+                                }
                             }
                             Err(error) => {
                                 log::error!(
                                     "Failed to create character {} with error {:?}",
-                                    &message.name,
+                                    &name,
                                     error
                                 );
-                                Err(error
-                                    .downcast_ref::<CreateCharacterError>()
-                                    .unwrap_or(&CreateCharacterError::Failed)
-                                    .clone())
+                                ServerMessage::CreateCharacterError {
+                                    error: CreateCharacterError::InvalidValue,
+                                }
                             }
                         }
                     };
 
-                    world_client
-                        .server_message_tx
-                        .send(ServerMessage::CreateCharacter(response))
-                        .ok();
+                    world_client.server_message_tx.send(response).ok();
                 }
-                ClientMessage::DeleteCharacter(message) => {
+                ClientMessage::DeleteCharacter {
+                    slot,
+                    name,
+                    is_delete,
+                } => {
                     let response = character_list
-                        .get_mut(message.slot as usize)
-                        .filter(|character| character.info.name == message.name)
+                        .get_mut(slot as usize)
+                        .filter(|character| character.info.name == name)
                         .map_or_else(
-                            || Err(DeleteCharacterError::Failed(message.name.clone())),
+                            || ServerMessage::DeleteCharacterError { name: name.clone() },
                             |character| {
-                                if message.is_delete {
+                                if is_delete {
                                     if character.delete_time.is_none() {
                                         character.delete_time = Some(CharacterDeleteTime::new());
                                     }
@@ -239,22 +251,23 @@ pub fn world_server_system(
                                     ),
                                 }
 
-                                Ok(DeleteCharacterResponse {
-                                    name: message.name.clone(),
-                                    delete_time: character.delete_time.clone(),
-                                })
+                                if let Some(delete_time) = character.delete_time {
+                                    ServerMessage::DeleteCharacterStart {
+                                        name: name.clone(),
+                                        delete_time,
+                                    }
+                                } else {
+                                    ServerMessage::DeleteCharacterCancel { name: name.clone() }
+                                }
                             },
                         );
-                    world_client
-                        .server_message_tx
-                        .send(ServerMessage::DeleteCharacter(response))
-                        .ok();
+                    world_client.server_message_tx.send(response).ok();
                 }
-                ClientMessage::SelectCharacter(message) => {
+                ClientMessage::SelectCharacter { slot, name } => {
                     let response = character_list
-                        .get_mut(message.slot as usize)
-                        .filter(|character| character.info.name == message.name)
-                        .map_or(Err(SelectCharacterError::Failed), |selected_character| {
+                        .get_mut(slot as usize)
+                        .filter(|character| character.info.name == name)
+                        .map_or(ServerMessage::SelectCharacterError, |selected_character| {
                             // Set the selected_character for the login token
                             if let Some(token) = login_tokens
                                 .tokens
@@ -268,23 +281,20 @@ pub fn world_server_system(
                             if let Some(selected_game_server) = world_client.selected_game_server {
                                 if let Ok(server_info) = server_info_query.get(selected_game_server)
                                 {
-                                    Ok(JoinServerResponse {
+                                    ServerMessage::SelectCharacterSuccess {
                                         login_token: world_client.login_token,
                                         packet_codec_seed: server_info.packet_codec_seed,
                                         ip: server_info.ip.clone(),
                                         port: server_info.port,
-                                    })
+                                    }
                                 } else {
-                                    Err(SelectCharacterError::Failed)
+                                    ServerMessage::SelectCharacterError
                                 }
                             } else {
-                                Err(SelectCharacterError::Failed)
+                                ServerMessage::SelectCharacterError
                             }
                         });
-                    world_client
-                        .server_message_tx
-                        .send(ServerMessage::SelectCharacter(response))
-                        .ok();
+                    world_client.server_message_tx.send(response).ok();
                 }
                 ClientMessage::ClanGetMemberList => {
                     if let Some(game_client_entity) = world_client.game_client_entity {

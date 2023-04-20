@@ -18,7 +18,7 @@ use crate::game::{
         StatusEffects, StatusEffectsRegen,
     },
     events::DamageEvent,
-    messages::server::{ServerMessage, UpdateStatusEffects},
+    messages::server::ServerMessage,
     resources::ServerMessages,
     GameData,
 };
@@ -226,11 +226,11 @@ pub fn status_effect_system(
 
             server_messages.send_entity_message(
                 client_entity,
-                ServerMessage::UpdateStatusEffects(UpdateStatusEffects {
+                ServerMessage::UpdateStatusEffects {
                     entity_id: client_entity.id,
                     status_effects: status_effects.active.clone(),
                     updated_values,
-                }),
+                },
             );
         }
     }

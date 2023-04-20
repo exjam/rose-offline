@@ -17,8 +17,7 @@ use crate::game::{
         PartyEventUpdateRules, PartyMemberDisconnect, PartyMemberEvent, PartyMemberReconnect,
     },
     messages::server::{
-        PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, PartyMemberLeave,
-        PartyMemberList, ServerMessage,
+        PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, ServerMessage,
     },
 };
 
@@ -119,9 +118,13 @@ fn handle_party_invite(
 
     if let Some(invited_game_client) = invited.game_client {
         let message = if owner.party_membership.is_none() {
-            ServerMessage::PartyCreate(owner.client_entity.id)
+            ServerMessage::PartyCreate {
+                entity_id: owner.client_entity.id,
+            }
         } else {
-            ServerMessage::PartyInvite(owner.client_entity.id)
+            ServerMessage::PartyInvite {
+                entity_id: owner.client_entity.id,
+            }
         };
 
         invited_game_client.server_message_tx.send(message).ok();
@@ -245,7 +248,9 @@ fn handle_party_accept_invite(
         if let Some(owner_game_client) = owner.game_client {
             owner_game_client
                 .server_message_tx
-                .send(ServerMessage::PartyAcceptCreate(invited.client_entity.id))
+                .send(ServerMessage::PartyAcceptCreate {
+                    entity_id: invited.client_entity.id,
+                })
                 .ok();
         }
     }
@@ -264,12 +269,12 @@ fn handle_party_accept_invite(
     if let Some(invited_game_client) = invited.game_client {
         invited_game_client
             .server_message_tx
-            .send(ServerMessage::PartyMemberList(PartyMemberList {
+            .send(ServerMessage::PartyMemberList {
                 item_sharing,
                 xp_sharing,
                 owner_character_id: owner.character_info.unique_id,
                 members: other_members_info,
-            }))
+            })
             .ok();
     }
 
@@ -277,12 +282,12 @@ fn handle_party_accept_invite(
     send_message_to_members(
         party_member_info_query,
         &party_members,
-        ServerMessage::PartyMemberList(PartyMemberList {
+        ServerMessage::PartyMemberList {
             item_sharing,
             xp_sharing,
             owner_character_id: owner.character_info.unique_id,
             members: invited_member_info,
-        }),
+        },
         Some(invited_entity),
     );
 
@@ -302,10 +307,10 @@ fn handle_party_reject_invite(
     if let Some(owner_game_client) = owner.game_client {
         owner_game_client
             .server_message_tx
-            .send(ServerMessage::PartyRejectInvite(
+            .send(ServerMessage::PartyRejectInvite {
                 reason,
-                invited.client_entity.id,
-            ))
+                entity_id: invited.client_entity.id,
+            })
             .ok();
     }
 
@@ -383,10 +388,10 @@ fn handle_party_leave(
         send_message_to_members(
             party_member_info_query,
             &party.members,
-            ServerMessage::PartyMemberLeave(PartyMemberLeave {
+            ServerMessage::PartyMemberLeave {
                 leaver_character_id: leaver.character_info.unique_id,
                 owner_character_id: owner.character_info.unique_id,
-            }),
+            },
             None,
         );
     }
@@ -472,7 +477,9 @@ fn handle_party_kick(
         if let Some(kicked_game_client) = kicked.game_client {
             kicked_game_client
                 .server_message_tx
-                .send(ServerMessage::PartyMemberKicked(kick_character_id))
+                .send(ServerMessage::PartyMemberKicked {
+                    character_id: kick_character_id,
+                })
                 .ok();
         }
     }
@@ -481,7 +488,9 @@ fn handle_party_kick(
     send_message_to_members(
         party_member_info_query,
         &party.members,
-        ServerMessage::PartyMemberKicked(kick_character_id),
+        ServerMessage::PartyMemberKicked {
+            character_id: kick_character_id,
+        },
         None,
     );
 
@@ -538,7 +547,9 @@ fn handle_party_change_owner(
     send_message_to_members(
         party_member_info_query,
         &party.members,
-        ServerMessage::PartyChangeOwner(new_owner.client_entity.id),
+        ServerMessage::PartyChangeOwner {
+            entity_id: new_owner.client_entity.id,
+        },
         None,
     );
 
@@ -582,7 +593,10 @@ fn handle_party_update_rules(
     send_message_to_members(
         party_member_info_query,
         &party.members,
-        ServerMessage::PartyUpdateRules(item_sharing, xp_sharing),
+        ServerMessage::PartyUpdateRules {
+            item_sharing,
+            xp_sharing,
+        },
         None,
     );
 
@@ -634,7 +648,9 @@ fn handle_party_member_disconnect(
             send_message_to_members(
                 party_member_info_query,
                 &party.members,
-                ServerMessage::PartyChangeOwner(new_owner.client_entity.id),
+                ServerMessage::PartyChangeOwner {
+                    entity_id: new_owner.client_entity.id,
+                },
                 None,
             );
         } else {
@@ -648,7 +664,7 @@ fn handle_party_member_disconnect(
     send_message_to_members(
         party_member_info_query,
         &party.members,
-        ServerMessage::PartyMemberDisconnect(character_id),
+        ServerMessage::PartyMemberDisconnect { character_id },
         None,
     );
 
@@ -692,12 +708,12 @@ fn handle_party_member_reconnect(
         if let Some(game_client) = reconnect_member.game_client {
             game_client
                 .server_message_tx
-                .send(ServerMessage::PartyMemberList(PartyMemberList {
+                .send(ServerMessage::PartyMemberList {
                     item_sharing: party.item_sharing,
                     xp_sharing: party.xp_sharing,
                     owner_character_id,
                     members: other_members_info,
-                }))
+                })
                 .ok();
         }
     }
@@ -724,7 +740,7 @@ fn handle_party_member_update_info(
         send_message_to_members(
             party_member_info_query,
             &party.members,
-            ServerMessage::PartyMemberUpdateInfo(member_info),
+            ServerMessage::PartyMemberUpdateInfo { member_info },
             Some(member_entity),
         );
     }
@@ -900,7 +916,7 @@ pub fn party_member_update_info_system(
                     send_message_to_members(
                         &party_member_info_query,
                         &party.members,
-                        ServerMessage::PartyMemberUpdateInfo(member_info),
+                        ServerMessage::PartyMemberUpdateInfo { member_info },
                         Some(member_entity),
                     );
                 }

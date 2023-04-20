@@ -15,7 +15,7 @@ use rose_game_common::{
 use crate::game::{
     components::{ClientEntity, GameClient, Inventory, PersonalStore},
     events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},
-    messages::server::{PersonalStoreItemList, ServerMessage},
+    messages::server::ServerMessage,
 };
 
 #[derive(WorldQuery)]
@@ -51,12 +51,10 @@ fn personal_store_list_items(
     if let Some(game_client) = buyer.game_client {
         game_client
             .server_message_tx
-            .send(ServerMessage::PersonalStoreItemList(
-                PersonalStoreItemList {
-                    sell_items,
-                    buy_items,
-                },
-            ))
+            .send(ServerMessage::PersonalStoreItemList {
+                sell_items,
+                buy_items,
+            })
             .ok();
     }
 }

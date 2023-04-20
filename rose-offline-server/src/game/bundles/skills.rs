@@ -7,9 +7,7 @@ use rose_game_common::components::{
 use crate::game::{
     bundles::ability_values_get_value,
     components::{GameClient, SkillList, SkillPoints, SkillSlot},
-    messages::server::{
-        LearnSkillError, LearnSkillSuccess, LevelUpSkillError, LevelUpSkillResult, ServerMessage,
-    },
+    messages::server::{LearnSkillError, LevelUpSkillError, ServerMessage},
     GameData,
 };
 
@@ -259,20 +257,20 @@ pub fn skill_list_try_learn_skill(
             Ok(skill_slot) => {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::LearnSkillResult(Ok(LearnSkillSuccess {
+                    .send(ServerMessage::LearnSkillSuccess {
                         skill_slot,
                         skill_id: Some(skill_id),
                         updated_skill_points: skill_user
                             .skill_points
                             .as_deref()
                             .map_or_else(SkillPoints::default, |skill_points| *skill_points),
-                    })))
+                    })
                     .ok();
             }
             Err(error) => {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::LearnSkillResult(Err(error)))
+                    .send(ServerMessage::LearnSkillError { error })
                     .ok();
             }
         }
@@ -289,7 +287,7 @@ pub fn skill_list_try_level_up_skill(
     let result = try_level_up_skill(game_data, skill_user, skill_slot);
 
     if let Some(game_client) = skill_user.game_client {
-        let updated_skill_points = skill_user
+        let skill_points = skill_user
             .skill_points
             .as_deref()
             .map_or_else(SkillPoints::default, |skill_points| *skill_points);
@@ -298,19 +296,20 @@ pub fn skill_list_try_level_up_skill(
             Ok(skill_id) => {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::LevelUpSkillResult(LevelUpSkillResult {
-                        result: Ok((skill_slot, skill_id)),
-                        updated_skill_points,
-                    }))
+                    .send(ServerMessage::LevelUpSkillSuccess {
+                        skill_slot,
+                        skill_id,
+                        skill_points,
+                    })
                     .ok();
             }
             Err(error) => {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::LevelUpSkillResult(LevelUpSkillResult {
-                        result: Err(error),
-                        updated_skill_points,
-                    }))
+                    .send(ServerMessage::LevelUpSkillError {
+                        error,
+                        skill_points,
+                    })
                     .ok();
             }
         }

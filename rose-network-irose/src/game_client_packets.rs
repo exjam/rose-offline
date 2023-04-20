@@ -11,8 +11,8 @@ use rose_data_irose::{decode_ammo_index, encode_ammo_index};
 use rose_game_common::{
     components::{BasicStatType, CharacterUniqueId, ClanMark, HotbarSlot, ItemSlot, SkillSlot},
     messages::{
-        client::{NpcStoreBuyItem, ReviveRequestType},
-        ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
+        client::NpcStoreBuyItem, ClientEntityId, PartyItemSharing, PartyRejectInviteReason,
+        PartyXpSharing,
     },
 };
 use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
@@ -400,8 +400,9 @@ impl From<&PacketClientPickupItemDrop> for Packet {
     }
 }
 
-pub struct PacketClientReviveRequest {
-    pub revive_request_type: ReviveRequestType,
+pub enum PacketClientReviveRequest {
+    CurrentZone,
+    SaveZone,
 }
 
 impl TryFrom<&Packet> for PacketClientReviveRequest {
@@ -413,15 +414,11 @@ impl TryFrom<&Packet> for PacketClientReviveRequest {
         }
 
         let mut reader = PacketReader::from(packet);
-        let revive_request_type = match reader.read_u8()? {
-            1 => ReviveRequestType::RevivePosition,
-            2 => ReviveRequestType::SavePosition,
-            _ => return Err(PacketError::InvalidPacket),
-        };
-
-        Ok(PacketClientReviveRequest {
-            revive_request_type,
-        })
+        match reader.read_u8()? {
+            1 => Ok(PacketClientReviveRequest::CurrentZone),
+            2 => Ok(PacketClientReviveRequest::SaveZone),
+            _ => Err(PacketError::InvalidPacket),
+        }
     }
 }
 
@@ -429,9 +426,9 @@ impl From<&PacketClientReviveRequest> for Packet {
     fn from(packet: &PacketClientReviveRequest) -> Self {
         let mut writer = PacketWriter::new(ClientPackets::ReviveRequest as u16);
 
-        match packet.revive_request_type {
-            ReviveRequestType::RevivePosition => writer.write_u8(1),
-            ReviveRequestType::SavePosition => writer.write_u8(2),
+        match packet {
+            PacketClientReviveRequest::CurrentZone => writer.write_u8(1),
+            PacketClientReviveRequest::SaveZone => writer.write_u8(2),
         }
 
         writer.into()

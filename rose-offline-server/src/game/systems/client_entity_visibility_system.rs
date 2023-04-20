@@ -16,10 +16,7 @@ use crate::game::{
         MoveSpeed, Npc, NpcStandingDirection, Owner, PersonalStore, Position, StatusEffects,
         Target, Team,
     },
-    messages::server::{
-        RemoveEntities, ServerMessage, SpawnEntityCharacter, SpawnEntityItemDrop,
-        SpawnEntityMonster, SpawnEntityNpc,
-    },
+    messages::server::{ServerMessage, SpawnEntityCharacter},
     resources::ClientEntityList,
 };
 
@@ -136,8 +133,8 @@ pub fn client_entity_visibility_system(
                                 game_client
                                     .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::SpawnEntityCharacter(Box::new(
-                                        SpawnEntityCharacter {
+                                    .send(ServerMessage::SpawnEntityCharacter {
+                                        data: Box::new(SpawnEntityCharacter {
                                             entity_id: spawn_client_entity.id,
                                             character_info: character.character_info.clone(),
                                             position: character.position.position,
@@ -182,8 +179,8 @@ pub fn client_entity_visibility_system(
                                                     }
                                                 },
                                             ),
-                                        },
-                                    )))
+                                        }),
+                                    })
                                     .ok();
                             }
                         }
@@ -198,16 +195,14 @@ pub fn client_entity_visibility_system(
                                     game_client
                                         .game_client
                                         .server_message_tx
-                                        .send(ServerMessage::SpawnEntityItemDrop(
-                                            SpawnEntityItemDrop {
-                                                entity_id: spawn_client_entity.id,
-                                                dropped_item,
-                                                position: item_drop.position.position,
-                                                remaining_time: item_drop.expire_time.when
-                                                    - time.last_update().unwrap(),
-                                                owner_entity_id,
-                                            },
-                                        ))
+                                        .send(ServerMessage::SpawnEntityItemDrop {
+                                            entity_id: spawn_client_entity.id,
+                                            dropped_item,
+                                            position: item_drop.position.position,
+                                            remaining_time: item_drop.expire_time.when
+                                                - time.last_update().unwrap(),
+                                            owner_entity_id,
+                                        })
                                         .ok();
                                 }
                             }
@@ -222,7 +217,7 @@ pub fn client_entity_visibility_system(
                                 game_client
                                     .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::SpawnEntityMonster(SpawnEntityMonster {
+                                    .send(ServerMessage::SpawnEntityMonster {
                                         entity_id: spawn_client_entity.id,
                                         npc: monster.npc.clone(),
                                         position: monster.position.position,
@@ -233,7 +228,7 @@ pub fn client_entity_visibility_system(
                                         target_entity_id,
                                         move_mode: *monster.move_mode,
                                         status_effects: monster.status_effects.active.clone(),
-                                    }))
+                                    })
                                     .ok();
                             }
                         }
@@ -247,7 +242,7 @@ pub fn client_entity_visibility_system(
                                 game_client
                                     .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::SpawnEntityNpc(SpawnEntityNpc {
+                                    .send(ServerMessage::SpawnEntityNpc {
                                         entity_id: spawn_client_entity.id,
                                         npc: npc.npc.clone(),
                                         direction: npc.direction.direction,
@@ -259,7 +254,7 @@ pub fn client_entity_visibility_system(
                                         target_entity_id,
                                         move_mode: *npc.move_mode,
                                         status_effects: npc.status_effects.active.clone(),
-                                    }))
+                                    })
                                     .ok();
                             }
                         }
@@ -271,9 +266,9 @@ pub fn client_entity_visibility_system(
                 game_client
                     .game_client
                     .server_message_tx
-                    .send(ServerMessage::RemoveEntities(RemoveEntities::new(
-                        remove_entity_ids,
-                    )))
+                    .send(ServerMessage::RemoveEntities {
+                        entity_ids: remove_entity_ids,
+                    })
                     .ok();
             }
 

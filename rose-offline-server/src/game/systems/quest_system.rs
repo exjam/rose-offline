@@ -39,7 +39,7 @@ use crate::game::{
         UnionMembership,
     },
     events::{ClanEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
-    messages::server::{AnnounceChat, LocalChat, QuestTriggerResult, ServerMessage, ShoutChat},
+    messages::server::ServerMessage,
     resources::{ClientEntityList, ServerMessages, WorldRates, WorldTime, ZoneList},
     GameData,
 };
@@ -1257,7 +1257,9 @@ fn quest_reward_calculated_money(
             if let Some(game_client) = quest_parameters.source.game_client {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::RewardMoney(inventory.money))
+                    .send(ServerMessage::RewardMoney {
+                        money: inventory.money,
+                    })
                     .ok();
             }
         }
@@ -1933,29 +1935,29 @@ fn quest_reward_npc_message(
             QsdNpcMessageType::Chat => {
                 quest_system_parameters.server_messages.send_entity_message(
                     quest_parameters.source.client_entity,
-                    ServerMessage::LocalChat(LocalChat {
+                    ServerMessage::LocalChat {
                         entity_id: quest_parameters.source.client_entity.id,
                         text: message.clone(),
-                    }),
+                    },
                 );
             }
             QsdNpcMessageType::Shout => {
                 // TODO: A shout message actually goes to adjacent 3 sectors rather than full zone
                 quest_system_parameters.server_messages.send_zone_message(
                     quest_parameters.source.position.zone_id,
-                    ServerMessage::ShoutChat(ShoutChat {
+                    ServerMessage::ShoutChat {
                         name,
                         text: message.clone(),
-                    }),
+                    },
                 );
             }
             QsdNpcMessageType::Announce => {
                 quest_system_parameters.server_messages.send_zone_message(
                     quest_parameters.source.position.zone_id,
-                    ServerMessage::AnnounceChat(AnnounceChat {
+                    ServerMessage::AnnounceChat {
                         name: Some(name),
                         text: message.clone(),
-                    }),
+                    },
                 );
             }
         };
@@ -2428,10 +2430,10 @@ pub fn quest_system(
             if let Some(game_client) = quest_source_entity.game_client {
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::QuestTriggerResult(QuestTriggerResult {
+                    .send(ServerMessage::QuestTriggerResult {
                         success,
                         trigger_hash,
-                    }))
+                    })
                     .ok();
             }
         }

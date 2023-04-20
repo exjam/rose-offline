@@ -22,7 +22,7 @@ use crate::{
     messages::{ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing},
 };
 
-#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Error, Serialize, Deserialize)]
 pub enum ConnectionRequestError {
     #[error("Failed")]
     Failed,
@@ -32,12 +32,7 @@ pub enum ConnectionRequestError {
     InvalidPassword,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ConnectionResponse {
-    pub packet_sequence_id: u32,
-}
-
-#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Error, Serialize, Deserialize)]
 pub enum LoginError {
     #[error("Login failed")]
     Failed,
@@ -49,37 +44,18 @@ pub enum LoginError {
     AlreadyLoggedIn,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LoginResponse {
-    pub server_list: Vec<(u32, String)>,
-}
-
-#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Error, Serialize, Deserialize)]
 pub enum ChannelListError {
     #[error("Invalid server id")]
-    InvalidServerId(usize),
+    InvalidServerId { server_id: usize },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ChannelList {
-    pub server_id: usize,
-    pub channels: Vec<(u8, String)>,
-}
-
-#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Error, Serialize, Deserialize)]
 pub enum JoinServerError {
     #[error("Invalid server id")]
     InvalidServerId,
     #[error("Invalid channel id")]
     InvalidChannelId,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct JoinServerResponse {
-    pub login_token: u32,
-    pub packet_codec_seed: u32,
-    pub ip: String,
-    pub port: u16,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -90,7 +66,7 @@ pub struct CharacterListItem {
     pub equipment: Equipment,
 }
 
-#[derive(Clone, Debug, Error, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Error, Serialize, Deserialize)]
 pub enum CreateCharacterError {
     #[error("Failed")]
     Failed,
@@ -103,27 +79,6 @@ pub enum CreateCharacterError {
 
     #[error("No more free character slots")]
     NoMoreSlots,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CreateCharacterResponse {
-    pub character_slot: usize,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum DeleteCharacterError {
-    Failed(String),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DeleteCharacterResponse {
-    pub name: String,
-    pub delete_time: Option<CharacterDeleteTime>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum SelectCharacterError {
-    Failed,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -151,114 +106,16 @@ pub struct CharacterDataItems {
     pub equipment: Equipment,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CharacterDataQuest {
-    pub quest_state: QuestState,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct JoinZoneResponse {
-    pub entity_id: ClientEntityId,
-    pub experience_points: ExperiencePoints,
-    pub team: Team,
-    pub health_points: HealthPoints,
-    pub mana_points: ManaPoints,
-    pub world_ticks: WorldTicks,
-    pub craft_rate: i32,
-    pub world_price_rate: i32,
-    pub item_price_rate: i32,
-    pub town_price_rate: i32,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LocalChat {
-    pub entity_id: ClientEntityId,
-    pub text: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ShoutChat {
-    pub name: String,
-    pub text: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AnnounceChat {
-    pub name: Option<String>,
-    pub text: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct AttackEntity {
-    pub entity_id: ClientEntityId,
-    pub target_entity_id: ClientEntityId,
-    pub distance: u16,
-    pub x: f32,
-    pub y: f32,
-    pub z: u16,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MoveEntity {
-    pub entity_id: ClientEntityId,
-    pub target_entity_id: Option<ClientEntityId>,
-    pub distance: u16,
-    pub x: f32,
-    pub y: f32,
-    pub z: u16,
-    pub move_mode: Option<MoveMode>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum PickupItemDropError {
     NotExist,
     NoPermission,
     InventoryFull,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum PickupItemDropContent {
-    Item(ItemSlot, Item),
-    Money(Money),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PickupItemDropResult {
-    pub item_entity_id: ClientEntityId,
-    pub result: Result<PickupItemDropContent, PickupItemDropError>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct RemoveEntities {
-    pub entity_ids: Vec<ClientEntityId>,
-}
-
-impl From<ClientEntityId> for RemoveEntities {
-    fn from(entity_id: ClientEntityId) -> Self {
-        Self {
-            entity_ids: vec![entity_id],
-        }
-    }
-}
-
-impl RemoveEntities {
-    pub fn new(entity_ids: Vec<ClientEntityId>) -> Self {
-        Self { entity_ids }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SpawnEntityItemDrop {
-    pub entity_id: ClientEntityId,
-    pub dropped_item: DroppedItem,
-    pub position: Vec3,
-    pub remaining_time: Duration,
-    pub owner_entity_id: Option<ClientEntityId>,
-}
-
 pub type ActiveStatusEffects = EnumMap<StatusEffectType, Option<ActiveStatusEffect>>;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum CommandState {
     Stop,
     Emote,
@@ -303,124 +160,6 @@ pub struct SpawnEntityCharacter {
     pub clan_membership: Option<CharacterClanMembership>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SpawnEntityNpc {
-    pub entity_id: ClientEntityId,
-    pub npc: Npc,
-    pub direction: f32,
-    pub position: Vec3,
-    pub team: Team,
-    pub health: HealthPoints,
-    pub destination: Option<Vec3>,
-    pub command: CommandState,
-    pub target_entity_id: Option<ClientEntityId>,
-    pub move_mode: MoveMode,
-    pub status_effects: ActiveStatusEffects,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SpawnEntityMonster {
-    pub entity_id: ClientEntityId,
-    pub npc: Npc,
-    pub position: Vec3,
-    pub team: Team,
-    pub health: HealthPoints,
-    pub destination: Option<Vec3>,
-    pub command: CommandState,
-    pub target_entity_id: Option<ClientEntityId>,
-    pub move_mode: MoveMode,
-    pub status_effects: ActiveStatusEffects,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct StopMoveEntity {
-    pub entity_id: ClientEntityId,
-    pub x: f32,
-    pub y: f32,
-    pub z: u16,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DamageEntity {
-    pub attacker_entity_id: ClientEntityId,
-    pub defender_entity_id: ClientEntityId,
-    pub damage: Damage,
-    pub is_killed: bool,
-    pub is_immediate: bool,
-    pub from_skill: Option<(SkillId, i32)>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Whisper {
-    pub from: String,
-    pub text: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Teleport {
-    pub entity_id: ClientEntityId,
-    pub zone_id: ZoneId,
-    pub x: f32,
-    pub y: f32,
-    pub run_mode: u8,
-    pub ride_mode: u8,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum UpdateAbilityValue {
-    RewardAdd(AbilityType, i32),
-    RewardSet(AbilityType, i32),
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateBasicStat {
-    pub basic_stat_type: BasicStatType,
-    pub value: i32,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateStatusEffects {
-    pub entity_id: ClientEntityId,
-    pub status_effects: ActiveStatusEffects,
-    pub updated_values: Vec<i32>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateSpeed {
-    pub entity_id: ClientEntityId,
-    pub run_speed: i32,
-    pub passive_attack_speed: i32,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateLevel {
-    pub entity_id: ClientEntityId,
-    pub level: Level,
-    pub experience_points: ExperiencePoints,
-    pub stat_points: StatPoints,
-    pub skill_points: SkillPoints,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UpdateXpStamina {
-    pub xp: u64,
-    pub stamina: u32,
-    pub source_entity_id: Option<ClientEntityId>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct QuestTriggerResult {
-    pub success: bool,
-    pub trigger_hash: QuestTriggerHash,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct QuestDeleteResult {
-    pub success: bool,
-    pub slot: usize,
-    pub quest_id: usize,
-}
-
 #[allow(dead_code)]
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum LearnSkillError {
@@ -431,13 +170,6 @@ pub enum LearnSkillError {
     Full,
     InvalidSkillId,
     SkillPointRequirement,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LearnSkillSuccess {
-    pub skill_slot: SkillSlot,
-    pub skill_id: Option<SkillId>,
-    pub updated_skill_points: SkillPoints,
 }
 
 #[allow(dead_code)]
@@ -452,78 +184,12 @@ pub enum LevelUpSkillError {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LevelUpSkillResult {
-    pub result: Result<(SkillSlot, SkillId), LevelUpSkillError>,
-    pub updated_skill_points: SkillPoints,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct OpenPersonalStore {
-    pub entity_id: ClientEntityId,
-    pub skin: i32,
-    pub title: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum PersonalStoreTransactionStatus {
     Cancelled,
     SoldOut,
     NoMoreNeed, // Similar to SoldOut but when selling item to store
     BoughtFromStore,
     SoldToStore,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PersonalStoreItemList {
-    pub sell_items: Vec<(u8, Item, Money)>,
-    pub buy_items: Vec<(u8, Item, Money)>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UseItem {
-    pub entity_id: ClientEntityId,
-    pub item: ItemReference,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UseInventoryItem {
-    pub entity_id: ClientEntityId,
-    pub item: ItemReference,
-    pub inventory_slot: ItemSlot,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CastSkillSelf {
-    pub entity_id: ClientEntityId,
-    pub skill_id: SkillId,
-    pub cast_motion_id: Option<MotionId>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CastSkillTargetEntity {
-    pub entity_id: ClientEntityId,
-    pub skill_id: SkillId,
-    pub target_entity_id: ClientEntityId,
-    pub target_distance: f32,
-    pub target_position: Vec2,
-    pub cast_motion_id: Option<MotionId>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CastSkillTargetPosition {
-    pub entity_id: ClientEntityId,
-    pub skill_id: SkillId,
-    pub target_position: Vec2,
-    pub cast_motion_id: Option<MotionId>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ApplySkillEffect {
-    pub entity_id: ClientEntityId,
-    pub caster_entity_id: ClientEntityId,
-    pub caster_intelligence: i32,
-    pub skill_id: SkillId,
-    pub effect_success: [bool; 2],
 }
 
 #[allow(dead_code)]
@@ -543,20 +209,6 @@ pub enum NpcStoreTransactionError {
     NotEnoughMoney,
     NotSameUnion,
     NotEnoughUnionPoints,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MoveToggle {
-    pub entity_id: ClientEntityId,
-    pub move_mode: MoveMode,
-    pub run_speed: Option<i32>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UseEmote {
-    pub entity_id: ClientEntityId,
-    pub motion_id: MotionId,
-    pub is_stop: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -610,20 +262,6 @@ impl PartyMemberInfo {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PartyMemberList {
-    pub item_sharing: PartyItemSharing,
-    pub xp_sharing: PartyXpSharing,
-    pub owner_character_id: CharacterUniqueId,
-    pub members: Vec<PartyMemberInfo>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PartyMemberLeave {
-    pub leaver_character_id: CharacterUniqueId,
-    pub owner_character_id: CharacterUniqueId,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct UpdateSkillData {
     pub skill_slot: SkillSlot,
     pub skill_id: Option<SkillId>,
@@ -657,36 +295,201 @@ pub struct ClanMemberInfo {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ServerMessage {
-    ConnectionResponse(Result<ConnectionResponse, ConnectionRequestError>),
-    LoginResponse(Result<LoginResponse, LoginError>),
-    ChannelList(Result<ChannelList, ChannelListError>),
-    JoinServer(Result<JoinServerResponse, JoinServerError>),
-    CharacterList(Vec<CharacterListItem>),
-    CharacterListAppend(Vec<CharacterListItem>),
-    CreateCharacter(Result<CreateCharacterResponse, CreateCharacterError>),
-    DeleteCharacter(Result<DeleteCharacterResponse, DeleteCharacterError>),
-    SelectCharacter(Result<JoinServerResponse, SelectCharacterError>),
-    CharacterData(Box<CharacterData>),
-    CharacterDataItems(Box<CharacterDataItems>),
-    CharacterDataQuest(Box<CharacterDataQuest>),
-    JoinZone(JoinZoneResponse),
-    AttackEntity(AttackEntity),
-    DamageEntity(DamageEntity),
-    LocalChat(LocalChat),
-    ShoutChat(ShoutChat),
-    AnnounceChat(AnnounceChat),
-    MoveEntity(MoveEntity),
-    LevelUpEntity(ClientEntityId),
-    PickupItemDropResult(PickupItemDropResult),
-    RemoveEntities(RemoveEntities),
-    SpawnEntityCharacter(Box<SpawnEntityCharacter>),
-    SpawnEntityItemDrop(SpawnEntityItemDrop),
-    SpawnEntityMonster(SpawnEntityMonster),
-    SpawnEntityNpc(SpawnEntityNpc),
-    StopMoveEntity(StopMoveEntity),
-    Teleport(Teleport),
-    UpdateAbilityValue(UpdateAbilityValue),
-    UpdateBasicStat(UpdateBasicStat),
+    ConnectionRequestSuccess {
+        packet_sequence_id: u32,
+    },
+    ConnectionRequestError {
+        error: ConnectionRequestError,
+    },
+    LoginSuccess {
+        server_list: Vec<(u32, String)>,
+    },
+    LoginError {
+        error: LoginError,
+    },
+    ChannelList {
+        server_id: usize,
+        channels: Vec<(u8, String)>,
+    },
+    ChannelListError {
+        error: ChannelListError,
+    },
+    JoinServerSuccess {
+        login_token: u32,
+        packet_codec_seed: u32,
+        ip: String,
+        port: u16,
+    },
+    JoinServerError {
+        error: JoinServerError,
+    },
+    CharacterList {
+        character_list: Vec<CharacterListItem>,
+    },
+    CharacterListAppend {
+        character_list: Vec<CharacterListItem>,
+    },
+    CreateCharacterSuccess {
+        character_slot: usize,
+    },
+    CreateCharacterError {
+        error: CreateCharacterError,
+    },
+    DeleteCharacterStart {
+        name: String,
+        delete_time: CharacterDeleteTime,
+    },
+    DeleteCharacterCancel {
+        name: String,
+    },
+    DeleteCharacterError {
+        name: String,
+    },
+    SelectCharacterSuccess {
+        login_token: u32,
+        packet_codec_seed: u32,
+        ip: String,
+        port: u16,
+    },
+    SelectCharacterError,
+    CharacterData {
+        data: Box<CharacterData>,
+    },
+    CharacterDataItems {
+        data: Box<CharacterDataItems>,
+    },
+    CharacterDataQuest {
+        quest_state: Box<QuestState>,
+    },
+    JoinZone {
+        entity_id: ClientEntityId,
+        experience_points: ExperiencePoints,
+        team: Team,
+        health_points: HealthPoints,
+        mana_points: ManaPoints,
+        world_ticks: WorldTicks,
+        craft_rate: i32,
+        world_price_rate: i32,
+        item_price_rate: i32,
+        town_price_rate: i32,
+    },
+    AttackEntity {
+        entity_id: ClientEntityId,
+        target_entity_id: ClientEntityId,
+        distance: u16,
+        x: f32,
+        y: f32,
+        z: u16,
+    },
+    DamageEntity {
+        attacker_entity_id: ClientEntityId,
+        defender_entity_id: ClientEntityId,
+        damage: Damage,
+        is_killed: bool,
+        is_immediate: bool,
+        from_skill: Option<(SkillId, i32)>,
+    },
+    LocalChat {
+        entity_id: ClientEntityId,
+        text: String,
+    },
+    ShoutChat {
+        name: String,
+        text: String,
+    },
+    AnnounceChat {
+        name: Option<String>,
+        text: String,
+    },
+    MoveEntity {
+        entity_id: ClientEntityId,
+        target_entity_id: Option<ClientEntityId>,
+        distance: u16,
+        x: f32,
+        y: f32,
+        z: u16,
+        move_mode: Option<MoveMode>,
+    },
+    LevelUpEntity {
+        entity_id: ClientEntityId,
+    },
+    PickupDropItem {
+        drop_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+        item: Item,
+    },
+    PickupDropMoney {
+        drop_entity_id: ClientEntityId,
+        money: Money,
+    },
+    PickupDropError {
+        drop_entity_id: ClientEntityId,
+        error: PickupItemDropError,
+    },
+    RemoveEntities {
+        entity_ids: Vec<ClientEntityId>,
+    },
+    SpawnEntityCharacter {
+        data: Box<SpawnEntityCharacter>,
+    },
+    SpawnEntityItemDrop {
+        entity_id: ClientEntityId,
+        dropped_item: DroppedItem,
+        position: Vec3,
+        remaining_time: Duration,
+        owner_entity_id: Option<ClientEntityId>,
+    },
+    SpawnEntityMonster {
+        entity_id: ClientEntityId,
+        npc: Npc,
+        position: Vec3,
+        team: Team,
+        health: HealthPoints,
+        destination: Option<Vec3>,
+        command: CommandState,
+        target_entity_id: Option<ClientEntityId>,
+        move_mode: MoveMode,
+        status_effects: ActiveStatusEffects,
+    },
+    SpawnEntityNpc {
+        entity_id: ClientEntityId,
+        npc: Npc,
+        direction: f32,
+        position: Vec3,
+        team: Team,
+        health: HealthPoints,
+        destination: Option<Vec3>,
+        command: CommandState,
+        target_entity_id: Option<ClientEntityId>,
+        move_mode: MoveMode,
+        status_effects: ActiveStatusEffects,
+    },
+    StopMoveEntity {
+        entity_id: ClientEntityId,
+        x: f32,
+        y: f32,
+        z: u16,
+    },
+    Teleport {
+        entity_id: ClientEntityId,
+        zone_id: ZoneId,
+        x: f32,
+        y: f32,
+        run_mode: u8,
+        ride_mode: u8,
+    },
+    UpdateAbilityValueAdd {
+        ability_type: AbilityType,
+        value: i32,
+    },
+    UpdateAbilityValueSet {
+        ability_type: AbilityType,
+        value: i32,
+    },
+    UpdateBasicStat {
+        basic_stat_type: BasicStatType,
+        value: i32,
+    },
     UpdateAmmo {
         entity_id: ClientEntityId,
         ammo_index: AmmoIndex,
@@ -706,31 +509,91 @@ pub enum ServerMessage {
         items: Vec<(ItemSlot, Option<Item>)>,
         money: Option<Money>,
     },
-    UpdateLevel(UpdateLevel),
-    UpdateMoney(Money),
-    UpdateStatusEffects(UpdateStatusEffects),
-    UpdateSpeed(UpdateSpeed),
-    UpdateXpStamina(UpdateXpStamina),
+    UpdateLevel {
+        entity_id: ClientEntityId,
+        level: Level,
+        experience_points: ExperiencePoints,
+        stat_points: StatPoints,
+        skill_points: SkillPoints,
+    },
+    UpdateMoney {
+        money: Money,
+    },
+    UpdateStatusEffects {
+        entity_id: ClientEntityId,
+        status_effects: ActiveStatusEffects,
+        updated_values: Vec<i32>,
+    },
+    UpdateSpeed {
+        entity_id: ClientEntityId,
+        run_speed: i32,
+        passive_attack_speed: i32,
+    },
+    UpdateXpStamina {
+        xp: u64,
+        stamina: u32,
+        source_entity_id: Option<ClientEntityId>,
+    },
     UpdateItemLife {
         item_slot: ItemSlot,
         life: u16,
     },
-    RewardItems(Vec<(ItemSlot, Option<Item>)>),
-    RewardMoney(Money),
-    Whisper(Whisper),
+    RewardItems {
+        items: Vec<(ItemSlot, Option<Item>)>,
+    },
+    RewardMoney {
+        money: Money,
+    },
+    Whisper {
+        from: String,
+        text: String,
+    },
     LogoutSuccess,
     LogoutFailed {
         wait_duration: Duration,
     },
     ReturnToCharacterSelect,
-    QuestTriggerResult(QuestTriggerResult),
-    QuestDeleteResult(QuestDeleteResult),
-    LearnSkillResult(Result<LearnSkillSuccess, LearnSkillError>),
-    LevelUpSkillResult(LevelUpSkillResult),
-    RunNpcDeathTrigger(NpcId),
-    OpenPersonalStore(OpenPersonalStore),
-    ClosePersonalStore(ClientEntityId),
-    PersonalStoreItemList(PersonalStoreItemList),
+    QuestTriggerResult {
+        trigger_hash: QuestTriggerHash,
+        success: bool,
+    },
+    QuestDeleteResult {
+        success: bool,
+        slot: usize,
+        quest_id: usize,
+    },
+    LearnSkillSuccess {
+        skill_slot: SkillSlot,
+        skill_id: Option<SkillId>,
+        updated_skill_points: SkillPoints,
+    },
+    LearnSkillError {
+        error: LearnSkillError,
+    },
+    LevelUpSkillSuccess {
+        skill_slot: SkillSlot,
+        skill_id: SkillId,
+        skill_points: SkillPoints,
+    },
+    LevelUpSkillError {
+        error: LevelUpSkillError,
+        skill_points: SkillPoints,
+    },
+    RunNpcDeathTrigger {
+        npc_id: NpcId,
+    },
+    OpenPersonalStore {
+        entity_id: ClientEntityId,
+        skin: i32,
+        title: String,
+    },
+    ClosePersonalStore {
+        entity_id: ClientEntityId,
+    },
+    PersonalStoreItemList {
+        sell_items: Vec<(u8, Item, Money)>,
+        buy_items: Vec<(u8, Item, Money)>,
+    },
     PersonalStoreTransaction {
         status: PersonalStoreTransactionStatus,
         store_entity_id: ClientEntityId,
@@ -740,41 +603,136 @@ pub enum ServerMessage {
         money: Money,
         items: Vec<(ItemSlot, Option<Item>)>,
     },
-    UseItem(UseItem),
-    UseInventoryItem(UseInventoryItem),
-    CastSkillSelf(CastSkillSelf),
-    CastSkillTargetEntity(CastSkillTargetEntity),
-    CastSkillTargetPosition(CastSkillTargetPosition),
-    StartCastingSkill(ClientEntityId),
-    ApplySkillEffect(ApplySkillEffect),
-    FinishCastingSkill(ClientEntityId, SkillId),
-    CancelCastingSkill(ClientEntityId, CancelCastingSkillReason),
-    NpcStoreTransactionError(NpcStoreTransactionError),
-    MoveToggle(MoveToggle),
-    SitToggle(ClientEntityId),
-    UseEmote(UseEmote),
-    PartyCreate(ClientEntityId),
-    PartyInvite(ClientEntityId),
-    PartyAcceptCreate(ClientEntityId),
-    PartyAcceptInvite(ClientEntityId),
-    PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
-    PartyChangeOwner(ClientEntityId),
+    UseItem {
+        entity_id: ClientEntityId,
+        item: ItemReference,
+    },
+    UseInventoryItem {
+        entity_id: ClientEntityId,
+        item: ItemReference,
+        inventory_slot: ItemSlot,
+    },
+    CastSkillSelf {
+        entity_id: ClientEntityId,
+        skill_id: SkillId,
+        cast_motion_id: Option<MotionId>,
+    },
+    CastSkillTargetEntity {
+        entity_id: ClientEntityId,
+        skill_id: SkillId,
+        target_entity_id: ClientEntityId,
+        target_distance: f32,
+        target_position: Vec2,
+        cast_motion_id: Option<MotionId>,
+    },
+    CastSkillTargetPosition {
+        entity_id: ClientEntityId,
+        skill_id: SkillId,
+        target_position: Vec2,
+        cast_motion_id: Option<MotionId>,
+    },
+    StartCastingSkill {
+        entity_id: ClientEntityId,
+    },
+    ApplySkillEffect {
+        entity_id: ClientEntityId,
+        caster_entity_id: ClientEntityId,
+        caster_intelligence: i32,
+        skill_id: SkillId,
+        effect_success: [bool; 2],
+    },
+    FinishCastingSkill {
+        entity_id: ClientEntityId,
+        skill_id: SkillId,
+    },
+    CancelCastingSkill {
+        entity_id: ClientEntityId,
+        reason: CancelCastingSkillReason,
+    },
+    NpcStoreTransactionError {
+        error: NpcStoreTransactionError,
+    },
+    MoveToggle {
+        entity_id: ClientEntityId,
+        move_mode: MoveMode,
+        run_speed: Option<i32>,
+    },
+    SitToggle {
+        entity_id: ClientEntityId,
+    },
+    UseEmote {
+        entity_id: ClientEntityId,
+        motion_id: MotionId,
+        is_stop: bool,
+    },
+    PartyCreate {
+        entity_id: ClientEntityId,
+    },
+    PartyInvite {
+        entity_id: ClientEntityId,
+    },
+    PartyAcceptCreate {
+        entity_id: ClientEntityId,
+    },
+    PartyAcceptInvite {
+        entity_id: ClientEntityId,
+    },
+    PartyRejectInvite {
+        reason: PartyRejectInviteReason,
+        entity_id: ClientEntityId,
+    },
+    PartyChangeOwner {
+        entity_id: ClientEntityId,
+    },
     PartyDelete,
-    PartyUpdateRules(PartyItemSharing, PartyXpSharing),
-    PartyMemberList(PartyMemberList),
-    PartyMemberLeave(PartyMemberLeave),
-    PartyMemberDisconnect(CharacterUniqueId),
-    PartyMemberKicked(CharacterUniqueId),
-    PartyMemberUpdateInfo(PartyMemberInfoOnline),
+    PartyUpdateRules {
+        item_sharing: PartyItemSharing,
+        xp_sharing: PartyXpSharing,
+    },
+    PartyMemberList {
+        item_sharing: PartyItemSharing,
+        xp_sharing: PartyXpSharing,
+        owner_character_id: CharacterUniqueId,
+        members: Vec<PartyMemberInfo>,
+    },
+    PartyMemberLeave {
+        leaver_character_id: CharacterUniqueId,
+        owner_character_id: CharacterUniqueId,
+    },
+    PartyMemberDisconnect {
+        character_id: CharacterUniqueId,
+    },
+    PartyMemberKicked {
+        character_id: CharacterUniqueId,
+    },
+    PartyMemberUpdateInfo {
+        member_info: PartyMemberInfoOnline,
+    },
     PartyMemberRewardItem {
         client_entity_id: ClientEntityId,
         item: Item,
     },
-    ChangeNpcId(ClientEntityId, NpcId),
-    SetHotbarSlot(usize, Option<HotbarSlot>),
-    AdjustPosition(ClientEntityId, Vec3),
-    UpdateSkillList(Vec<UpdateSkillData>),
-    CraftInsertGem(Result<Vec<(ItemSlot, Option<Item>)>, CraftInsertGemError>),
+    ChangeNpcId {
+        entity_id: ClientEntityId,
+        npc_id: NpcId,
+    },
+    SetHotbarSlot {
+        slot_index: usize,
+        slot: Option<HotbarSlot>,
+    },
+    AdjustPosition {
+        entity_id: ClientEntityId,
+        position: Vec3,
+    },
+    UpdateSkillList {
+        skill_list: Vec<UpdateSkillData>,
+    },
+    CraftInsertGem {
+        update_items: Vec<(ItemSlot, Option<Item>)>,
+    },
+    CraftInsertGemError {
+        error: CraftInsertGemError,
+    },
     BankOpen,
     BankSetItems {
         items: Vec<(u8, Option<Item>)>,

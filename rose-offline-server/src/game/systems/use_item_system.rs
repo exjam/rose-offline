@@ -26,7 +26,7 @@ use crate::game::{
         UnionMembership,
     },
     events::UseItemEvent,
-    messages::server::{ServerMessage, UseInventoryItem, UseItem},
+    messages::server::ServerMessage,
     resources::{ClientEntityList, ServerMessages},
     GameData,
 };
@@ -334,10 +334,10 @@ fn use_inventory_item(
                     .server_messages
                     .send_entity_message(
                         use_item_user.client_entity,
-                        ServerMessage::UseItem(UseItem {
+                        ServerMessage::UseItem {
                             entity_id: use_item_user.client_entity.id,
                             item: item.get_item_reference(),
-                        }),
+                        },
                     );
             }
 
@@ -356,11 +356,11 @@ fn use_inventory_item(
                     // When there is still remaining quantity we send UseInventoryItem packet
                     game_client
                         .server_message_tx
-                        .send(ServerMessage::UseInventoryItem(UseInventoryItem {
+                        .send(ServerMessage::UseInventoryItem {
                             entity_id: use_item_user.client_entity.id,
                             item: item.get_item_reference(),
                             inventory_slot: item_slot,
-                        }))
+                        })
                         .ok();
                 }
             }
@@ -415,10 +415,10 @@ pub fn use_item_system(
                             .server_messages
                             .send_entity_message(
                                 use_item_user.client_entity,
-                                ServerMessage::UseItem(UseItem {
+                                ServerMessage::UseItem {
                                     entity_id: use_item_user.client_entity.id,
                                     item: item.get_item_reference(),
-                                }),
+                                },
                             );
                     }
                 }

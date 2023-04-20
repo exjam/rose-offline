@@ -14,117 +14,6 @@ use rose_data::{
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ConnectionRequest {
-    pub login_token: u32,
-    pub password: Password,
-}
-
-impl Default for ConnectionRequest {
-    fn default() -> Self {
-        Self {
-            login_token: 0,
-            password: Password::Plaintext(String::new()),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LoginRequest {
-    pub username: String,
-    pub password: Password,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GetChannelList {
-    pub server_id: usize,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct JoinServer {
-    pub server_id: usize,
-    pub channel_id: usize,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CreateCharacter {
-    pub gender: CharacterGender,
-    pub hair: i32,
-    pub face: i32,
-    pub name: String,
-    pub start_point: i32,
-
-    // irose
-    pub birth_stone: i32,
-
-    // narose667
-    pub hair_color: i32,
-    pub weapon_type: i32,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DeleteCharacter {
-    pub slot: u8,
-    pub name: String,
-    pub is_delete: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SelectCharacter {
-    pub slot: u8,
-    pub name: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GameConnectionRequest {
-    pub login_token: u32,
-    pub password: Password,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Move {
-    pub target_entity_id: Option<ClientEntityId>,
-    pub x: f32,
-    pub y: f32,
-    pub z: u16,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Attack {
-    pub target_entity_id: ClientEntityId,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SetHotbarSlot {
-    pub slot_index: usize,
-    pub slot: Option<HotbarSlot>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum LogoutRequest {
-    Logout,
-    ReturnToCharacterSelect,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub enum ReviveRequestType {
-    RevivePosition,
-    SavePosition,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct QuestDelete {
-    pub slot: usize,
-    pub quest_id: usize,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PersonalStoreBuyItem {
-    pub store_entity_id: ClientEntityId,
-    pub store_slot_index: usize,
-    pub buy_item: Item,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NpcStoreBuyItem {
     pub tab_index: usize,
     pub item_index: usize,
@@ -132,29 +21,70 @@ pub struct NpcStoreBuyItem {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NpcStoreTransaction {
-    pub npc_entity_id: ClientEntityId,
-    pub buy_items: Vec<NpcStoreBuyItem>,
-    pub sell_items: Vec<(ItemSlot, usize)>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ClientMessage {
-    ConnectionRequest(ConnectionRequest),
-    LoginRequest(LoginRequest),
-    GetChannelList(GetChannelList),
-    JoinServer(JoinServer),
+    ConnectionRequest {
+        login_token: u32,
+        password: Password,
+    },
+    LoginRequest {
+        username: String,
+        password: Password,
+    },
+    GetChannelList {
+        server_id: usize,
+    },
+    JoinServer {
+        server_id: usize,
+        channel_id: usize,
+    },
     GetCharacterList,
-    CreateCharacter(CreateCharacter),
-    DeleteCharacter(DeleteCharacter),
-    SelectCharacter(SelectCharacter),
-    GameConnectionRequest(GameConnectionRequest),
+    CreateCharacter {
+        gender: CharacterGender,
+        hair: i32,
+        face: i32,
+        name: String,
+        start_point: i32,
+
+        // irose
+        birth_stone: i32,
+
+        // narose667
+        hair_color: i32,
+        weapon_type: i32,
+    },
+    DeleteCharacter {
+        slot: u8,
+        name: String,
+        is_delete: bool,
+    },
+    SelectCharacter {
+        slot: u8,
+        name: String,
+    },
+    GameConnectionRequest {
+        login_token: u32,
+        password: Password,
+    },
     JoinZoneRequest,
-    Chat(String),
-    Move(Move),
-    MoveCollision(Vec3),
-    Attack(Attack),
-    SetHotbarSlot(SetHotbarSlot),
+    Chat {
+        text: String,
+    },
+    Move {
+        target_entity_id: Option<ClientEntityId>,
+        x: f32,
+        y: f32,
+        z: u16,
+    },
+    MoveCollision {
+        position: Vec3,
+    },
+    Attack {
+        target_entity_id: ClientEntityId,
+    },
+    SetHotbarSlot {
+        slot_index: usize,
+        slot: Option<HotbarSlot>,
+    },
     ChangeAmmo {
         ammo_index: AmmoIndex,
         item_slot: Option<ItemSlot>,
@@ -167,37 +97,99 @@ pub enum ClientMessage {
         vehicle_part_index: VehiclePartIndex,
         item_slot: Option<ItemSlot>,
     },
-    IncreaseBasicStat(BasicStatType),
-    PickupItemDrop(ClientEntityId),
-    LogoutRequest(LogoutRequest),
-    ReviveRequest(ReviveRequestType),
-    SetReviveZone,
-    QuestTrigger(QuestTriggerHash),
-    QuestDelete(QuestDelete),
-    PersonalStoreListItems(ClientEntityId),
-    PersonalStoreBuyItem(PersonalStoreBuyItem),
-    DropItem(ItemSlot, usize),
-    DropMoney(usize),
-    UseItem(ItemSlot, Option<ClientEntityId>),
-    LevelUpSkill(SkillSlot),
-    CastSkillSelf(SkillSlot),
-    CastSkillTargetEntity(SkillSlot, ClientEntityId),
-    CastSkillTargetPosition(SkillSlot, Vec2),
-    NpcStoreTransaction(NpcStoreTransaction),
+    IncreaseBasicStat {
+        basic_stat_type: BasicStatType,
+    },
+    PickupItemDrop {
+        target_entity_id: ClientEntityId,
+    },
+    Logout,
+    ReturnToCharacterSelect,
+    ReviveCurrentZone,
+    ReviveSaveZone,
+    SetReviveSaveZone,
+    QuestTrigger {
+        trigger: QuestTriggerHash,
+    },
+    QuestDelete {
+        slot: usize,
+        quest_id: usize,
+    },
+    PersonalStoreListItems {
+        store_entity_id: ClientEntityId,
+    },
+    PersonalStoreBuyItem {
+        store_entity_id: ClientEntityId,
+        store_slot_index: usize,
+        buy_item: Item,
+    },
+    DropItem {
+        item_slot: ItemSlot,
+        quantity: usize,
+    },
+    DropMoney {
+        quantity: usize,
+    },
+    UseItem {
+        item_slot: ItemSlot,
+        target_entity_id: Option<ClientEntityId>,
+    },
+    LevelUpSkill {
+        skill_slot: SkillSlot,
+    },
+    CastSkillSelf {
+        skill_slot: SkillSlot,
+    },
+    CastSkillTargetEntity {
+        skill_slot: SkillSlot,
+        target_entity_id: ClientEntityId,
+    },
+    CastSkillTargetPosition {
+        skill_slot: SkillSlot,
+        position: Vec2,
+    },
+    NpcStoreTransaction {
+        npc_entity_id: ClientEntityId,
+        buy_items: Vec<NpcStoreBuyItem>,
+        sell_items: Vec<(ItemSlot, usize)>,
+    },
     RunToggle,
     SitToggle,
     DriveToggle,
-    UseEmote(MotionId, bool),
-    WarpGateRequest(WarpGateId),
-    PartyCreate(ClientEntityId),
-    PartyInvite(ClientEntityId),
+    UseEmote {
+        motion_id: MotionId,
+        is_stop: bool,
+    },
+    WarpGateRequest {
+        warp_gate_id: WarpGateId,
+    },
+    PartyCreate {
+        invited_entity_id: ClientEntityId,
+    },
+    PartyInvite {
+        invited_entity_id: ClientEntityId,
+    },
     PartyLeave,
-    PartyChangeOwner(ClientEntityId),
-    PartyKick(CharacterUniqueId),
-    PartyAcceptCreateInvite(ClientEntityId),
-    PartyAcceptJoinInvite(ClientEntityId),
-    PartyRejectInvite(PartyRejectInviteReason, ClientEntityId),
-    PartyUpdateRules(PartyItemSharing, PartyXpSharing),
+    PartyChangeOwner {
+        new_owner_entity_id: ClientEntityId,
+    },
+    PartyKick {
+        character_id: CharacterUniqueId,
+    },
+    PartyAcceptCreateInvite {
+        owner_entity_id: ClientEntityId,
+    },
+    PartyAcceptJoinInvite {
+        owner_entity_id: ClientEntityId,
+    },
+    PartyRejectInvite {
+        reason: PartyRejectInviteReason,
+        owner_entity_id: ClientEntityId,
+    },
+    PartyUpdateRules {
+        item_sharing: PartyItemSharing,
+        xp_sharing: PartyXpSharing,
+    },
     CraftInsertGem {
         equipment_index: EquipmentIndex,
         item_slot: ItemSlot,

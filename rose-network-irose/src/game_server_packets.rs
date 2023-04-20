@@ -16,19 +16,19 @@ use rose_data_irose::{
 };
 use rose_game_common::{
     components::{
-        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, ClanLevel, ClanMark, ClanPoints,
-        ClanUniqueId, DroppedItem, Equipment, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot,
-        Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState,
-        SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, Team, UnionMembership,
+        ActiveQuest, BasicStatType, BasicStats, CharacterInfo, CharacterUniqueId, ClanLevel,
+        ClanMark, ClanPoints, ClanUniqueId, DroppedItem, Equipment, ExperiencePoints, HealthPoints,
+        Hotbar, HotbarSlot, Inventory, ItemSlot, Level, ManaPoints, Money, MoveMode, MoveSpeed,
+        Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints, Team,
+        UnionMembership,
     },
     data::Damage,
     messages::{
         server::{
             ActiveStatusEffects, CancelCastingSkillReason, CharacterClanMembership,
             ClanCreateError, ClanMemberInfo, CommandState, CraftInsertGemError, LearnSkillError,
-            LearnSkillSuccess, LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfoOnline,
-            PartyMemberLeave, PartyMemberList, PersonalStoreTransactionStatus,
-            PickupItemDropContent, PickupItemDropError,
+            LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfo, PartyMemberInfoOnline,
+            PersonalStoreTransactionStatus, PickupItemDropError,
         },
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
@@ -2216,9 +2216,20 @@ impl From<&PacketServerUpdateBasicStat> for Packet {
     }
 }
 
-pub struct PacketServerPickupItemDropResult {
-    pub item_entity_id: ClientEntityId,
-    pub result: Result<PickupItemDropContent, PickupItemDropError>,
+pub enum PacketServerPickupItemDropResult {
+    Item {
+        drop_entity_id: ClientEntityId,
+        item_slot: ItemSlot,
+        item: Item,
+    },
+    Money {
+        drop_entity_id: ClientEntityId,
+        money: Money,
+    },
+    Error {
+        drop_entity_id: ClientEntityId,
+        error: PickupItemDropError,
+    },
 }
 
 impl TryFrom<&Packet> for PacketServerPickupItemDropResult {
@@ -2230,28 +2241,39 @@ impl TryFrom<&Packet> for PacketServerPickupItemDropResult {
         }
 
         let mut reader = PacketReader::from(packet);
-        let item_entity_id = reader.read_entity_id()?;
-        let result = match reader.read_u8()? {
+        let drop_entity_id = reader.read_entity_id()?;
+        Ok(match reader.read_u8()? {
             0 => {
                 let item_slot = reader.read_item_slot_u16().ok();
                 match reader.read_item_or_money_full()? {
-                    (None, Some(money)) => Ok(PickupItemDropContent::Money(money)),
-                    (Some(item), None) => Ok(PickupItemDropContent::Item(
-                        item_slot.ok_or(PacketError::InvalidPacket)?,
+                    (None, Some(money)) => PacketServerPickupItemDropResult::Money {
+                        drop_entity_id,
+                        money,
+                    },
+                    (Some(item), None) => PacketServerPickupItemDropResult::Item {
+                        drop_entity_id,
+                        item_slot: item_slot.ok_or(PacketError::InvalidPacket)?,
                         item,
-                    )),
+                    },
                     _ => return Err(PacketError::InvalidPacket),
                 }
             }
-            1 => Err(PickupItemDropError::NotExist),
-            2 => Err(PickupItemDropError::NoPermission),
-            3 => Err(PickupItemDropError::InventoryFull),
-            _ => Err(PickupItemDropError::NotExist),
-        };
-
-        Ok(Self {
-            item_entity_id,
-            result,
+            1 => PacketServerPickupItemDropResult::Error {
+                drop_entity_id,
+                error: PickupItemDropError::NotExist,
+            },
+            2 => PacketServerPickupItemDropResult::Error {
+                drop_entity_id,
+                error: PickupItemDropError::NoPermission,
+            },
+            3 => PacketServerPickupItemDropResult::Error {
+                drop_entity_id,
+                error: PickupItemDropError::InventoryFull,
+            },
+            _ => PacketServerPickupItemDropResult::Error {
+                drop_entity_id,
+                error: PickupItemDropError::NotExist,
+            },
         })
     }
 }
@@ -2259,19 +2281,31 @@ impl TryFrom<&Packet> for PacketServerPickupItemDropResult {
 impl From<&PacketServerPickupItemDropResult> for Packet {
     fn from(packet: &PacketServerPickupItemDropResult) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PickupItemDropResult as u16);
-        writer.write_entity_id(packet.item_entity_id);
-        match &packet.result {
-            Ok(PickupItemDropContent::Item(slot, item)) => {
+        match *packet {
+            PacketServerPickupItemDropResult::Item {
+                drop_entity_id,
+                item_slot,
+                ref item,
+            } => {
+                writer.write_entity_id(drop_entity_id);
                 writer.write_u8(0); // OK
-                writer.write_item_slot_u16(*slot);
+                writer.write_item_slot_u16(item_slot);
                 writer.write_item_full(Some(item));
             }
-            Ok(PickupItemDropContent::Money(money)) => {
+            PacketServerPickupItemDropResult::Money {
+                drop_entity_id,
+                money,
+            } => {
+                writer.write_entity_id(drop_entity_id);
                 writer.write_u8(0); // OK
                 writer.write_u16(0); // Slot
-                writer.write_item_full_money(*money);
+                writer.write_item_full_money(money);
             }
-            Err(error) => {
+            PacketServerPickupItemDropResult::Error {
+                drop_entity_id,
+                error,
+            } => {
+                writer.write_entity_id(drop_entity_id);
                 match error {
                     PickupItemDropError::NotExist => writer.write_u8(1),
                     PickupItemDropError::NoPermission => writer.write_u8(2),
@@ -2430,8 +2464,15 @@ impl From<&PacketServerUpdateAbilityValue> for Packet {
     }
 }
 
-pub struct PacketServerLearnSkillResult {
-    pub result: Result<LearnSkillSuccess, LearnSkillError>,
+pub enum PacketServerLearnSkillResult {
+    Success {
+        skill_slot: SkillSlot,
+        skill_id: Option<SkillId>,
+        updated_skill_points: SkillPoints,
+    },
+    Error {
+        error: LearnSkillError,
+    },
 }
 
 impl TryFrom<&Packet> for PacketServerLearnSkillResult {
@@ -2443,46 +2484,58 @@ impl TryFrom<&Packet> for PacketServerLearnSkillResult {
         }
 
         let mut reader = PacketReader::from(packet);
-        let result = match reader.read_u8()? {
-            0 => Err(LearnSkillError::AlreadyLearnt),
+        Ok(match reader.read_u8()? {
+            0 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::AlreadyLearnt,
+            },
             1 => {
                 let skill_slot = reader.read_skill_slot_u8()?;
                 let skill_id = SkillId::new(reader.read_u16()?);
                 let updated_skill_points = SkillPoints::new(reader.read_u16()? as u32);
-                Ok(LearnSkillSuccess {
+                PacketServerLearnSkillResult::Success {
                     skill_slot,
                     skill_id,
                     updated_skill_points,
-                })
+                }
             }
-            2 => Err(LearnSkillError::JobRequirement),
-            3 => Err(LearnSkillError::SkillRequirement),
-            4 => Err(LearnSkillError::AbilityRequirement),
-            5 => Err(LearnSkillError::Full),
-            6 => Err(LearnSkillError::InvalidSkillId),
-            7 => Err(LearnSkillError::SkillPointRequirement),
+            2 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::JobRequirement,
+            },
+            3 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::SkillRequirement,
+            },
+            4 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::AbilityRequirement,
+            },
+            5 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::Full,
+            },
+            6 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::InvalidSkillId,
+            },
+            7 => PacketServerLearnSkillResult::Error {
+                error: LearnSkillError::SkillPointRequirement,
+            },
             _ => return Err(PacketError::InvalidPacket),
-        };
-
-        Ok(Self { result })
+        })
     }
 }
 
 impl From<&PacketServerLearnSkillResult> for Packet {
     fn from(packet: &PacketServerLearnSkillResult) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::LearnSkillResult as u16);
-        match packet.result {
-            Ok(LearnSkillSuccess {
+        match *packet {
+            PacketServerLearnSkillResult::Success {
                 skill_slot,
                 skill_id,
                 updated_skill_points,
-            }) => {
+            } => {
                 writer.write_u8(1); // Success
                 writer.write_skill_slot_u8(skill_slot);
                 writer.write_u16(skill_id.map_or(0, |skill_id| skill_id.get()));
                 writer.write_u16(updated_skill_points.points as u16);
             }
-            Err(error) => {
+            PacketServerLearnSkillResult::Error { error } => {
                 match error {
                     LearnSkillError::AlreadyLearnt => writer.write_u8(0),
                     LearnSkillError::JobRequirement => writer.write_u8(2),
@@ -2501,9 +2554,16 @@ impl From<&PacketServerLearnSkillResult> for Packet {
     }
 }
 
-pub struct PacketServerLevelUpSkillResult {
-    pub result: Result<(SkillSlot, SkillId), LevelUpSkillError>,
-    pub updated_skill_points: SkillPoints,
+pub enum PacketServerLevelUpSkillResult {
+    Success {
+        skill_slot: SkillSlot,
+        skill_id: SkillId,
+        skill_points: SkillPoints,
+    },
+    Error {
+        error: LevelUpSkillError,
+        skill_points: SkillPoints,
+    },
 }
 
 impl TryFrom<&Packet> for PacketServerLevelUpSkillResult {
@@ -2517,22 +2577,39 @@ impl TryFrom<&Packet> for PacketServerLevelUpSkillResult {
         let mut reader = PacketReader::from(packet);
         let skill_slot = reader.read_skill_slot_u8()?;
         let skill_id = SkillId::new(reader.read_u16()?);
-        let updated_skill_points = SkillPoints::new(reader.read_u16()? as u32);
+        let skill_points = SkillPoints::new(reader.read_u16()? as u32);
 
-        let result = match reader.read_u8()? {
-            0 => Ok((skill_slot, skill_id.ok_or(PacketError::InvalidPacket)?)),
-            1 => Err(LevelUpSkillError::Failed),
-            2 => Err(LevelUpSkillError::SkillPointRequirement),
-            3 => Err(LevelUpSkillError::AbilityRequirement),
-            4 => Err(LevelUpSkillError::JobRequirement),
-            5 => Err(LevelUpSkillError::SkillRequirement),
-            6 => Err(LevelUpSkillError::MoneyRequirement),
+        Ok(match reader.read_u8()? {
+            0 => Self::Success {
+                skill_slot,
+                skill_id: skill_id.ok_or(PacketError::InvalidPacket)?,
+                skill_points,
+            },
+            1 => Self::Error {
+                error: LevelUpSkillError::Failed,
+                skill_points,
+            },
+            2 => Self::Error {
+                error: LevelUpSkillError::SkillPointRequirement,
+                skill_points,
+            },
+            3 => Self::Error {
+                error: LevelUpSkillError::AbilityRequirement,
+                skill_points,
+            },
+            4 => Self::Error {
+                error: LevelUpSkillError::JobRequirement,
+                skill_points,
+            },
+            5 => Self::Error {
+                error: LevelUpSkillError::SkillRequirement,
+                skill_points,
+            },
+            6 => Self::Error {
+                error: LevelUpSkillError::MoneyRequirement,
+                skill_points,
+            },
             _ => return Err(PacketError::InvalidPacket),
-        };
-
-        Ok(Self {
-            result,
-            updated_skill_points,
         })
     }
 }
@@ -2540,13 +2617,21 @@ impl TryFrom<&Packet> for PacketServerLevelUpSkillResult {
 impl From<&PacketServerLevelUpSkillResult> for Packet {
     fn from(packet: &PacketServerLevelUpSkillResult) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::LevelUpSkillResult as u16);
-        match packet.result {
-            Ok((skill_slot, skill_id)) => {
+        match *packet {
+            PacketServerLevelUpSkillResult::Success {
+                skill_slot,
+                skill_id,
+                skill_points,
+            } => {
                 writer.write_u8(0); // Success
                 writer.write_skill_slot_u8(skill_slot);
                 writer.write_u16(skill_id.get());
+                writer.write_u16(skill_points.points as u16);
             }
-            Err(error) => {
+            PacketServerLevelUpSkillResult::Error {
+                error,
+                skill_points,
+            } => {
                 match error {
                     LevelUpSkillError::Failed => writer.write_u8(1),
                     LevelUpSkillError::SkillPointRequirement => writer.write_u8(2),
@@ -2557,9 +2642,9 @@ impl From<&PacketServerLevelUpSkillResult> for Packet {
                 }
                 writer.write_u8(0); // Slot
                 writer.write_u16(0); // Index
+                writer.write_u16(skill_points.points as u16);
             }
         }
-        writer.write_u16(packet.updated_skill_points.points as u16);
         writer.into()
     }
 }
@@ -3614,8 +3699,16 @@ impl From<&PacketServerPartyReply> for Packet {
 }
 
 pub enum PacketServerPartyMembers {
-    List(PartyMemberList),
-    Leave(PartyMemberLeave),
+    List {
+        item_sharing: PartyItemSharing,
+        xp_sharing: PartyXpSharing,
+        owner_character_id: CharacterUniqueId,
+        members: Vec<PartyMemberInfo>,
+    },
+    Leave {
+        leaver_character_id: CharacterUniqueId,
+        owner_character_id: CharacterUniqueId,
+    },
 }
 
 impl TryFrom<&Packet> for PacketServerPartyMembers {
@@ -3634,22 +3727,22 @@ impl TryFrom<&Packet> for PacketServerPartyMembers {
             let leaver_character_id = reader.read_u32()?;
             let owner_character_id = reader.read_u32()?;
 
-            Ok(PacketServerPartyMembers::Leave(PartyMemberLeave {
+            Ok(PacketServerPartyMembers::Leave {
                 leaver_character_id,
                 owner_character_id,
-            }))
+            })
         } else {
             let mut members = Vec::with_capacity(num_members as usize);
             for _ in 0..num_members {
                 members.push(reader.read_party_member_info()?);
             }
 
-            Ok(PacketServerPartyMembers::List(PartyMemberList {
+            Ok(PacketServerPartyMembers::List {
                 item_sharing,
                 xp_sharing,
                 owner_character_id: members[0].get_character_id(),
                 members,
-            }))
+            })
         }
     }
 }
@@ -3658,12 +3751,12 @@ impl From<&PacketServerPartyMembers> for Packet {
     fn from(packet: &PacketServerPartyMembers) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::PartyMembers as u16);
         match *packet {
-            PacketServerPartyMembers::List(PartyMemberList {
+            PacketServerPartyMembers::List {
                 item_sharing,
                 xp_sharing,
                 owner_character_id,
                 ref members,
-            }) => {
+            } => {
                 writer.write_party_rules(&item_sharing, &xp_sharing);
                 writer.write_u8(members.len() as u8);
 
@@ -3680,10 +3773,10 @@ impl From<&PacketServerPartyMembers> for Packet {
                     }
                 }
             }
-            PacketServerPartyMembers::Leave(PartyMemberLeave {
+            PacketServerPartyMembers::Leave {
                 owner_character_id,
                 leaver_character_id,
-            }) => {
+            } => {
                 writer.write_u8(0);
                 writer.write_u8(255); // -1
                 writer.write_u32(leaver_character_id);
@@ -3750,7 +3843,7 @@ impl From<&PacketServerPartyMemberRewardItem> for Packet {
 }
 
 pub struct PacketServerChangeNpcId {
-    pub client_entity_id: ClientEntityId,
+    pub entity_id: ClientEntityId,
     pub npc_id: NpcId,
 }
 
@@ -3763,20 +3856,17 @@ impl TryFrom<&Packet> for PacketServerChangeNpcId {
         }
 
         let mut reader = PacketReader::from(packet);
-        let client_entity_id = reader.read_entity_id()?;
+        let entity_id = reader.read_entity_id()?;
         let npc_id = NpcId::new(reader.read_u16()?).ok_or(PacketError::InvalidPacket)?;
 
-        Ok(Self {
-            client_entity_id,
-            npc_id,
-        })
+        Ok(Self { entity_id, npc_id })
     }
 }
 
 impl From<&PacketServerChangeNpcId> for Packet {
     fn from(packet: &PacketServerChangeNpcId) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::ChangeNpcId as u16);
-        writer.write_entity_id(packet.client_entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_u16(packet.npc_id.get());
         writer.into()
     }
@@ -3814,7 +3904,7 @@ impl From<&PacketServerPartyUpdateRules> for Packet {
 }
 
 pub struct PacketServerAdjustPosition {
-    pub client_entity_id: ClientEntityId,
+    pub entity_id: ClientEntityId,
     pub position: Vec3,
 }
 
@@ -3827,12 +3917,12 @@ impl TryFrom<&Packet> for PacketServerAdjustPosition {
         }
 
         let mut reader = PacketReader::from(packet);
-        let client_entity_id = reader.read_entity_id()?;
+        let entity_id = reader.read_entity_id()?;
         let x = reader.read_f32()?;
         let y = reader.read_f32()?;
         let z = reader.read_i16()? as f32;
         Ok(Self {
-            client_entity_id,
+            entity_id,
             position: Vec3::new(x, y, z),
         })
     }
@@ -3841,7 +3931,7 @@ impl TryFrom<&Packet> for PacketServerAdjustPosition {
 impl From<&PacketServerAdjustPosition> for Packet {
     fn from(packet: &PacketServerAdjustPosition) -> Self {
         let mut writer = PacketWriter::new(ServerPackets::AdjustPosition as u16);
-        writer.write_entity_id(packet.client_entity_id);
+        writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
         writer.write_i16(packet.position.z as i16);

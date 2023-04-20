@@ -25,9 +25,7 @@ use crate::game::{
         Position, SpawnOrigin, Stamina, StatusEffects, Team,
     },
     events::{DamageEvent, ItemLifeEvent, SkillEvent, SkillEventTarget},
-    messages::server::{
-        ApplySkillEffect, CancelCastingSkillReason, ServerMessage, UseInventoryItem,
-    },
+    messages::server::{CancelCastingSkillReason, ServerMessage},
     resources::{ClientEntityList, ServerMessages},
     GameData,
 };
@@ -343,13 +341,13 @@ fn apply_skill_status_effects_to_entity(
     if effect_success.iter().any(|x| *x) {
         skill_system_parameters.server_messages.send_entity_message(
             skill_target.client_entity,
-            ServerMessage::ApplySkillEffect(ApplySkillEffect {
+            ServerMessage::ApplySkillEffect {
                 entity_id: skill_target.client_entity.id,
                 caster_entity_id: skill_caster.client_entity.id,
                 caster_intelligence: skill_caster.ability_values.get_intelligence(),
                 skill_id: skill_data.id,
                 effect_success,
-            }),
+            },
         );
     }
 
@@ -794,11 +792,11 @@ pub fn skill_effect_system(
                                     // When there is still remaining quantity we send UseItem packet
                                     caster_game_client
                                         .server_message_tx
-                                        .send(ServerMessage::UseInventoryItem(UseInventoryItem {
+                                        .send(ServerMessage::UseInventoryItem {
                                             entity_id: skill_caster.client_entity.id,
                                             item: item.get_item_reference(),
                                             inventory_slot: item_slot,
-                                        }))
+                                        })
                                         .ok();
                                 }
                             }
@@ -807,7 +805,10 @@ pub fn skill_effect_system(
 
                     skill_system_parameters.server_messages.send_entity_message(
                         skill_caster.client_entity,
-                        ServerMessage::FinishCastingSkill(skill_caster.client_entity.id, skill_id),
+                        ServerMessage::FinishCastingSkill {
+                            entity_id: skill_caster.client_entity.id,
+                            skill_id,
+                        },
                     )
                 }
                 Err(error) => {
@@ -822,15 +823,15 @@ pub fn skill_effect_system(
 
                     skill_system_parameters.server_messages.send_entity_message(
                         skill_caster.client_entity,
-                        ServerMessage::CancelCastingSkill(
-                            skill_caster.client_entity.id,
-                            match error {
+                        ServerMessage::CancelCastingSkill {
+                            entity_id: skill_caster.client_entity.id,
+                            reason: match error {
                                 SkillCastError::NotEnoughUseAbility => {
                                     CancelCastingSkillReason::NeedAbility
                                 }
                                 _ => CancelCastingSkillReason::NeedTarget,
                             },
-                        ),
+                        },
                     )
                 }
             }

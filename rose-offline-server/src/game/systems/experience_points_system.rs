@@ -7,7 +7,7 @@ use crate::game::{
         StatusEffects, MAX_STAMINA,
     },
     events::{QuestTriggerEvent, RewardXpEvent},
-    messages::server::{ServerMessage, UpdateLevel, UpdateXpStamina},
+    messages::server::ServerMessage,
     resources::{ServerMessages, WorldRates},
     GameData,
 };
@@ -129,13 +129,13 @@ pub fn experience_points_system(
                 // Send level up packet
                 server_messages.send_entity_message(
                     client_entity,
-                    ServerMessage::UpdateLevel(UpdateLevel {
+                    ServerMessage::UpdateLevel {
                         entity_id: client_entity.id,
                         level: *level,
                         experience_points: experience_points.clone(),
                         stat_points: *stat_points,
                         skill_points: *skill_points,
-                    }),
+                    },
                 );
             } else if let Some(game_client) = game_client {
                 // If not level up, then just send normal set xp packet
@@ -146,11 +146,11 @@ pub fn experience_points_system(
 
                 game_client
                     .server_message_tx
-                    .send(ServerMessage::UpdateXpStamina(UpdateXpStamina {
+                    .send(ServerMessage::UpdateXpStamina {
                         xp: experience_points.xp,
                         stamina: stamina.stamina,
                         source_entity_id,
-                    }))
+                    })
                     .ok();
             }
         }

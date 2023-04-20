@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 const DELETE_CHARACTER_DURATION: Duration = Duration::from_secs(60 * 60);
 
-#[derive(Component, Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct CharacterDeleteTime {
     pub start_time: SystemTime,
 }

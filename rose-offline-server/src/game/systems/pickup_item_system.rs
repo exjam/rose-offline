@@ -6,7 +6,7 @@ use rose_data::{ItemClass, ItemType};
 use rose_game_common::{
     components::{DroppedItem, Inventory, ItemDrop, Money},
     messages::{
-        server::{PickupItemDropContent, PickupItemDropError, PickupItemDropResult, ServerMessage},
+        server::{PickupItemDropError, ServerMessage},
         PartyItemSharing,
     },
 };
@@ -107,9 +107,9 @@ pub fn pickup_item_system(
                                                 if let Some(game_client) = &game_client {
                                                     game_client
                                                         .server_message_tx
-                                                        .send(ServerMessage::RewardMoney(
-                                                            inventory.money,
-                                                        ))
+                                                        .send(ServerMessage::RewardMoney {
+                                                            money: inventory.money,
+                                                        })
                                                         .ok();
                                                 }
                                             }
@@ -180,7 +180,7 @@ pub fn pickup_item_system(
                         query_inventory.get_mut(pickup_entity)
                     {
                         let result = match inventory.try_add_item(item.clone()) {
-                            Ok((slot, item)) => Ok(PickupItemDropContent::Item(slot, item.clone())),
+                            Ok((slot, item)) => Ok((slot, item.clone())),
                             Err(item) => {
                                 pickup_item.item_drop.item = Some(DroppedItem::Item(item));
                                 Err(PickupItemDropError::InventoryFull)
@@ -188,13 +188,23 @@ pub fn pickup_item_system(
                         };
 
                         if let Some(game_client) = &game_client {
-                            game_client
-                                .server_message_tx
-                                .send(ServerMessage::PickupItemDropResult(PickupItemDropResult {
-                                    item_entity_id: pickup_item.client_entity.id,
-                                    result,
-                                }))
-                                .ok();
+                            match result {
+                                Ok((item_slot, item)) => game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::PickupDropItem {
+                                        drop_entity_id: pickup_item.client_entity.id,
+                                        item_slot,
+                                        item,
+                                    })
+                                    .ok(),
+                                Err(error) => game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::PickupDropError {
+                                        drop_entity_id: pickup_item.client_entity.id,
+                                        error,
+                                    })
+                                    .ok(),
+                            };
                         }
 
                         if let Ok(client_entity_id) = query_client_entity
@@ -236,12 +246,10 @@ pub fn pickup_item_system(
                             if let Some(game_client) = &game_client {
                                 game_client
                                     .server_message_tx
-                                    .send(ServerMessage::PickupItemDropResult(
-                                        PickupItemDropResult {
-                                            item_entity_id: pickup_item.client_entity.id,
-                                            result: Ok(PickupItemDropContent::Money(money)),
-                                        },
-                                    ))
+                                    .send(ServerMessage::PickupDropMoney {
+                                        drop_entity_id: pickup_item.client_entity.id,
+                                        money,
+                                    })
                                     .ok();
                             }
                         }
@@ -265,10 +273,10 @@ pub fn pickup_item_system(
         } else if let Ok(game_client) = query_game_client.get(pickup_item_event.pickup_entity) {
             game_client
                 .server_message_tx
-                .send(ServerMessage::PickupItemDropResult(PickupItemDropResult {
-                    item_entity_id: pickup_item.client_entity.id,
-                    result: Err(PickupItemDropError::NoPermission),
-                }))
+                .send(ServerMessage::PickupDropError {
+                    drop_entity_id: pickup_item.client_entity.id,
+                    error: PickupItemDropError::NoPermission,
+                })
                 .ok();
         }
     }

@@ -13,10 +13,7 @@ use rose_data::{EquipmentIndex, Item, ItemClass, ItemSlotBehaviour, ItemType};
 use rose_game_common::{
     components::Level,
     data::Password,
-    messages::server::{
-        CharacterData, CharacterDataItems, CharacterDataQuest, ConnectionResponse,
-        CraftInsertGemError,
-    },
+    messages::server::{CharacterData, CharacterDataItems, CraftInsertGemError},
 };
 
 use crate::game::{
@@ -40,14 +37,8 @@ use crate::game::{
         PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
     },
     messages::{
-        client::{
-            ClientMessage, LogoutRequest, NpcStoreTransaction, PersonalStoreBuyItem, QuestDelete,
-            ReviveRequestType, SetHotbarSlot,
-        },
-        server::{
-            self, ConnectionRequestError, JoinZoneResponse, QuestDeleteResult, ServerMessage,
-            UpdateBasicStat,
-        },
+        client::ClientMessage,
+        server::{ConnectionRequestError, ServerMessage},
     },
     resources::{ClientEntityList, GameData, LoginTokens, ServerMessages, WorldRates, WorldTime},
     storage::{account::AccountStorage, bank::BankStorage, character::CharacterStorage},
@@ -65,10 +56,10 @@ fn handle_game_connection_request(
     query_clans: &mut Query<(Entity, &mut Clan)>,
 ) -> Result<
     (
-        ConnectionResponse,
+        u32,
         Box<CharacterData>,
         Box<CharacterDataItems>,
-        Box<CharacterDataQuest>,
+        Box<QuestState>,
     ),
     ConnectionRequestError,
 > {
@@ -236,9 +227,7 @@ fn handle_game_connection_request(
     ));
 
     Ok((
-        ConnectionResponse {
-            packet_sequence_id: 123,
-        },
+        123,
         Box::new(CharacterData {
             character_info: character.info,
             position: position.position,
@@ -260,9 +249,7 @@ fn handle_game_connection_request(
             inventory: character.inventory,
             equipment: character.equipment,
         }),
-        Box::new(CharacterDataQuest {
-            quest_state: character.quest_state,
-        }),
+        Box::new(character.quest_state),
     ))
 }
 
@@ -277,45 +264,56 @@ pub fn game_server_authentication_system(
     query.for_each_mut(|(entity, mut game_client)| {
         if let Ok(message) = game_client.client_message_rx.try_recv() {
             match message {
-                ClientMessage::GameConnectionRequest(message) => {
+                ClientMessage::GameConnectionRequest {
+                    login_token,
+                    password,
+                } => {
                     match handle_game_connection_request(
                         &mut commands,
                         game_data.as_ref(),
                         login_tokens.as_mut(),
                         entity,
                         game_client.as_mut(),
-                        message.login_token,
-                        &message.password,
+                        login_token,
+                        &password,
                         &mut query_world_client,
                         &mut query_clans,
                     ) {
                         Ok((
-                            connection_response,
+                            packet_sequence_id,
                             character_data,
                             character_data_items,
                             character_data_quest,
                         )) => {
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::ConnectionResponse(Ok(connection_response)))
+                                .send(ServerMessage::ConnectionRequestSuccess {
+                                    packet_sequence_id,
+                                })
                                 .ok();
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::CharacterData(character_data))
+                                .send(ServerMessage::CharacterData {
+                                    data: character_data,
+                                })
                                 .ok();
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::CharacterDataItems(character_data_items))
+                                .send(ServerMessage::CharacterDataItems {
+                                    data: character_data_items,
+                                })
                                 .ok();
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::CharacterDataQuest(character_data_quest))
+                                .send(ServerMessage::CharacterDataQuest {
+                                    quest_state: character_data_quest,
+                                })
                                 .ok();
                         }
                         Err(error) => {
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::ConnectionResponse(Err(error)))
+                                .send(ServerMessage::ConnectionRequestError { error })
                                 .ok();
                         }
                     }
@@ -404,7 +402,7 @@ pub fn game_server_join_system(
 
                             game_client
                                 .server_message_tx
-                                .send(ServerMessage::JoinZone(JoinZoneResponse {
+                                .send(ServerMessage::JoinZone {
                                     entity_id,
                                     experience_points: experience_points.clone(),
                                     team: team.clone(),
@@ -415,7 +413,7 @@ pub fn game_server_join_system(
                                     world_price_rate: world_rates.world_price_rate,
                                     item_price_rate: world_rates.item_price_rate,
                                     town_price_rate: world_rates.town_price_rate,
-                                }))
+                                })
                                 .ok();
                         }
                     }
@@ -481,7 +479,7 @@ pub fn game_server_main_system(
 
         if let Ok(message) = game_client.game_client.client_message_rx.try_recv() {
             match message {
-                ClientMessage::Chat(text) => {
+                ClientMessage::Chat { text } => {
                     if text.chars().next().map_or(false, |c| c == '/') {
                         events
                             .chat_command_events
@@ -489,16 +487,21 @@ pub fn game_server_main_system(
                     } else {
                         server_messages.send_entity_message(
                             game_client.client_entity,
-                            ServerMessage::LocalChat(server::LocalChat {
+                            ServerMessage::LocalChat {
                                 entity_id: game_client.client_entity.id,
                                 text,
-                            }),
+                            },
                         );
                     }
                 }
-                ClientMessage::Move(message) => {
+                ClientMessage::Move {
+                    target_entity_id,
+                    x,
+                    y,
+                    z,
+                } => {
                     let mut move_target_entity = None;
-                    if let Some(target_entity_id) = message.target_entity_id {
+                    if let Some(target_entity_id) = target_entity_id {
                         if let Some((target_entity, _, _)) = client_entity_list
                             .get_zone(game_client.position.zone_id)
                             .and_then(|zone| zone.get_entity(target_entity_id))
@@ -507,24 +510,24 @@ pub fn game_server_main_system(
                         }
                     }
 
-                    let destination = Vec3::new(message.x, message.y, message.z as f32);
+                    let destination = Vec3::new(x, y, z as f32);
                     entity_commands.insert(NextCommand::with_move(
                         destination,
                         move_target_entity,
                         None,
                     ));
                 }
-                ClientMessage::Attack(message) => {
+                ClientMessage::Attack { target_entity_id } => {
                     if let Some((target_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
-                        .and_then(|zone| zone.get_entity(message.target_entity_id))
+                        .and_then(|zone| zone.get_entity(target_entity_id))
                     {
                         entity_commands.insert(NextCommand::with_attack(*target_entity));
                     } else {
                         entity_commands.insert(NextCommand::with_stop(true));
                     }
                 }
-                ClientMessage::SetHotbarSlot(SetHotbarSlot { slot_index, slot }) => {
+                ClientMessage::SetHotbarSlot { slot_index, slot } => {
                     if game_client
                         .hotbar
                         .set_slot(slot_index, slot.clone())
@@ -533,7 +536,7 @@ pub fn game_server_main_system(
                         game_client
                             .game_client
                             .server_message_tx
-                            .send(ServerMessage::SetHotbarSlot(slot_index, slot))
+                            .send(ServerMessage::SetHotbarSlot { slot_index, slot })
                             .ok();
                     }
                 }
@@ -571,7 +574,7 @@ pub fn game_server_main_system(
                         item_slot,
                     });
                 }
-                ClientMessage::IncreaseBasicStat(basic_stat_type) => {
+                ClientMessage::IncreaseBasicStat { basic_stat_type } => {
                     if let Some(cost) = game_data
                         .ability_value_calculator
                         .calculate_basic_stat_increase_cost(
@@ -599,15 +602,15 @@ pub fn game_server_main_system(
                             game_client
                                 .game_client
                                 .server_message_tx
-                                .send(ServerMessage::UpdateBasicStat(UpdateBasicStat {
+                                .send(ServerMessage::UpdateBasicStat {
                                     basic_stat_type,
                                     value: *value,
-                                }))
+                                })
                                 .ok();
                         }
                     }
                 }
-                ClientMessage::PickupItemDrop(target_entity_id) => {
+                ClientMessage::PickupItemDrop { target_entity_id } => {
                     if let Some((target_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(target_entity_id))
@@ -617,8 +620,8 @@ pub fn game_server_main_system(
                         entity_commands.insert(NextCommand::with_stop(true));
                     }
                 }
-                ClientMessage::LogoutRequest(request) => {
-                    if let LogoutRequest::ReturnToCharacterSelect = request {
+                ClientMessage::Logout => {
+                    if let ClientMessage::ReturnToCharacterSelect = message {
                         // Send ReturnToCharacterSelect via world_client
                         world_client_query.for_each(|world_client| {
                             if world_client.login_token == game_client.game_client.login_token {
@@ -645,10 +648,10 @@ pub fn game_server_main_system(
                         game_client.position,
                     );
                 }
-                ClientMessage::ReviveRequest(revive_request_type) => {
+                ClientMessage::ReviveCurrentZone | ClientMessage::ReviveSaveZone => {
                     if game_client.dead.is_some() {
-                        let new_position = match revive_request_type {
-                            ReviveRequestType::RevivePosition => {
+                        let new_position = match message {
+                            ClientMessage::ReviveCurrentZone => {
                                 let revive_position = if let Some(zone_data) =
                                     game_data.zones.get_zone(game_client.position.zone_id)
                                 {
@@ -665,10 +668,11 @@ pub fn game_server_main_system(
 
                                 Position::new(revive_position, game_client.position.zone_id)
                             }
-                            ReviveRequestType::SavePosition => Position::new(
+                            ClientMessage::ReviveSaveZone => Position::new(
                                 game_client.character_info.revive_position,
                                 game_client.character_info.revive_zone_id,
                             ),
+                            _ => unreachable!(),
                         };
 
                         entity_commands.remove::<Dead>();
@@ -693,7 +697,7 @@ pub fn game_server_main_system(
                         );
                     }
                 }
-                ClientMessage::SetReviveZone => {
+                ClientMessage::SetReviveSaveZone => {
                     if let Some(zone_data) = game_data.zones.get_zone(game_client.position.zone_id)
                     {
                         let revive_position = zone_data
@@ -703,7 +707,7 @@ pub fn game_server_main_system(
                         game_client.character_info.revive_position = revive_position;
                     }
                 }
-                ClientMessage::QuestDelete(QuestDelete { slot, quest_id }) => {
+                ClientMessage::QuestDelete { slot, quest_id } => {
                     if let Some(quest_slot) = game_client.quest_state.get_quest_slot_mut(slot) {
                         if let Some(quest) = quest_slot {
                             if quest.quest_id == quest_id {
@@ -711,23 +715,23 @@ pub fn game_server_main_system(
                                 game_client
                                     .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::QuestDeleteResult(QuestDeleteResult {
+                                    .send(ServerMessage::QuestDeleteResult {
                                         success: true,
                                         slot,
                                         quest_id,
-                                    }))
+                                    })
                                     .ok();
                             }
                         }
                     }
                 }
-                ClientMessage::QuestTrigger(trigger_hash) => {
+                ClientMessage::QuestTrigger { trigger } => {
                     events.quest_trigger_events.send(QuestTriggerEvent {
                         trigger_entity: game_client.entity,
-                        trigger_hash,
+                        trigger_hash: trigger,
                     });
                 }
-                ClientMessage::PersonalStoreListItems(store_entity_id) => {
+                ClientMessage::PersonalStoreListItems { store_entity_id } => {
                     if let Some((store_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(store_entity_id))
@@ -740,11 +744,11 @@ pub fn game_server_main_system(
                             }));
                     }
                 }
-                ClientMessage::PersonalStoreBuyItem(PersonalStoreBuyItem {
+                ClientMessage::PersonalStoreBuyItem {
                     store_entity_id,
                     store_slot_index,
                     buy_item,
-                }) => {
+                } => {
                     if let Some((store_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(store_entity_id))
@@ -759,7 +763,10 @@ pub fn game_server_main_system(
                             }));
                     }
                 }
-                ClientMessage::UseItem(item_slot, target_entity_id) => {
+                ClientMessage::UseItem {
+                    item_slot,
+                    target_entity_id,
+                } => {
                     let target_entity = target_entity_id
                         .and_then(|target_entity_id| {
                             client_entity_list
@@ -774,7 +781,7 @@ pub fn game_server_main_system(
                         target_entity,
                     ));
                 }
-                ClientMessage::LevelUpSkill(skill_slot) => {
+                ClientMessage::LevelUpSkill { skill_slot } => {
                     skill_list_try_level_up_skill(
                         &game_data,
                         &mut SkillListBundle {
@@ -798,13 +805,16 @@ pub fn game_server_main_system(
                     )
                     .ok();
                 }
-                ClientMessage::CastSkillSelf(skill_slot) => {
+                ClientMessage::CastSkillSelf { skill_slot } => {
                     if let Some(skill) = game_client.skill_list.get_skill(skill_slot) {
                         entity_commands
                             .insert(NextCommand::with_cast_skill_target_self(skill, None));
                     }
                 }
-                ClientMessage::CastSkillTargetEntity(skill_slot, target_entity_id) => {
+                ClientMessage::CastSkillTargetEntity {
+                    skill_slot,
+                    target_entity_id,
+                } => {
                     if let Some(skill) = game_client.skill_list.get_skill(skill_slot) {
                         if let Some((target_entity, _, _)) = client_entity_list
                             .get_zone(game_client.position.zone_id)
@@ -818,18 +828,21 @@ pub fn game_server_main_system(
                         }
                     }
                 }
-                ClientMessage::CastSkillTargetPosition(skill_slot, position) => {
+                ClientMessage::CastSkillTargetPosition {
+                    skill_slot,
+                    position,
+                } => {
                     if let Some(skill) = game_client.skill_list.get_skill(skill_slot) {
                         entity_commands.insert(NextCommand::with_cast_skill_target_position(
                             skill, position,
                         ));
                     }
                 }
-                ClientMessage::NpcStoreTransaction(NpcStoreTransaction {
+                ClientMessage::NpcStoreTransaction {
                     npc_entity_id,
                     buy_items,
                     sell_items,
-                }) => {
+                } => {
                     if let Some((npc_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(npc_entity_id))
@@ -866,11 +879,11 @@ pub fn game_server_main_system(
                     } {
                         server_messages.send_entity_message(
                             game_client.client_entity,
-                            ServerMessage::MoveToggle(server::MoveToggle {
+                            ServerMessage::MoveToggle {
                                 entity_id: game_client.client_entity.id,
                                 move_mode: *game_client.move_mode,
                                 run_speed: None,
-                            }),
+                            },
                         );
                     }
                 }
@@ -900,15 +913,15 @@ pub fn game_server_main_system(
                     } {
                         server_messages.send_entity_message(
                             game_client.client_entity,
-                            ServerMessage::MoveToggle(server::MoveToggle {
+                            ServerMessage::MoveToggle {
                                 entity_id: game_client.client_entity.id,
                                 move_mode: *game_client.move_mode,
                                 run_speed: None,
-                            }),
+                            },
                         );
                     }
                 }
-                ClientMessage::DropMoney(quantity) => {
+                ClientMessage::DropMoney { quantity } => {
                     let mut money = Money(quantity as i64);
                     if money > game_client.inventory.money {
                         money = game_client.inventory.money;
@@ -931,11 +944,16 @@ pub fn game_server_main_system(
                         game_client
                             .game_client
                             .server_message_tx
-                            .send(ServerMessage::UpdateMoney(game_client.inventory.money))
+                            .send(ServerMessage::UpdateMoney {
+                                money: game_client.inventory.money,
+                            })
                             .ok();
                     }
                 }
-                ClientMessage::DropItem(item_slot, quantity) => {
+                ClientMessage::DropItem {
+                    item_slot,
+                    quantity,
+                } => {
                     if let Some(inventory_slot) = game_client.inventory.get_item_slot_mut(item_slot)
                     {
                         let quantity = u32::min(
@@ -969,10 +987,10 @@ pub fn game_server_main_system(
                         }
                     }
                 }
-                ClientMessage::UseEmote(motion_id, is_stop) => {
+                ClientMessage::UseEmote { motion_id, is_stop } => {
                     entity_commands.insert(NextCommand::with_emote(motion_id, is_stop));
                 }
-                ClientMessage::WarpGateRequest(warp_gate_id) => {
+                ClientMessage::WarpGateRequest { warp_gate_id } => {
                     if let Some(warp_gate) = game_data.warp_gates.get_warp_gate(warp_gate_id) {
                         if let Some(zone) = game_data.zones.get_zone(warp_gate.target_zone) {
                             if let Some(event_position) =
@@ -992,8 +1010,8 @@ pub fn game_server_main_system(
                         }
                     }
                 }
-                ClientMessage::PartyCreate(invited_entity_id)
-                | ClientMessage::PartyInvite(invited_entity_id) => {
+                ClientMessage::PartyCreate { invited_entity_id }
+                | ClientMessage::PartyInvite { invited_entity_id } => {
                     if let Some(&(invited_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(invited_entity_id))
@@ -1011,7 +1029,9 @@ pub fn game_server_main_system(
                         leaver_entity: game_client.entity,
                     }));
                 }
-                ClientMessage::PartyChangeOwner(new_owner_entity_id) => {
+                ClientMessage::PartyChangeOwner {
+                    new_owner_entity_id,
+                } => {
                     if let Some(&(new_owner_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(new_owner_entity_id))
@@ -1024,14 +1044,14 @@ pub fn game_server_main_system(
                             }));
                     }
                 }
-                ClientMessage::PartyKick(character_id) => {
+                ClientMessage::PartyKick { character_id } => {
                     events.party_events.send(PartyEvent::Kick(PartyEventKick {
                         owner_entity: game_client.entity,
                         kick_character_id: character_id,
                     }));
                 }
-                ClientMessage::PartyAcceptCreateInvite(owner_entity_id)
-                | ClientMessage::PartyAcceptJoinInvite(owner_entity_id) => {
+                ClientMessage::PartyAcceptCreateInvite { owner_entity_id }
+                | ClientMessage::PartyAcceptJoinInvite { owner_entity_id } => {
                     if let Some(&(owner_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(owner_entity_id))
@@ -1044,7 +1064,10 @@ pub fn game_server_main_system(
                             }));
                     }
                 }
-                ClientMessage::PartyRejectInvite(reason, owner_entity_id) => {
+                ClientMessage::PartyRejectInvite {
+                    reason,
+                    owner_entity_id,
+                } => {
                     if let Some(&(owner_entity, _, _)) = client_entity_list
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(owner_entity_id))
@@ -1058,7 +1081,10 @@ pub fn game_server_main_system(
                         ));
                     }
                 }
-                ClientMessage::PartyUpdateRules(item_sharing, xp_sharing) => {
+                ClientMessage::PartyUpdateRules {
+                    item_sharing,
+                    xp_sharing,
+                } => {
                     events
                         .party_events
                         .send(PartyEvent::UpdateRules(PartyEventUpdateRules {
@@ -1067,14 +1093,11 @@ pub fn game_server_main_system(
                             xp_sharing,
                         }));
                 }
-                ClientMessage::MoveCollision(collision_position) => {
+                ClientMessage::MoveCollision { position } => {
                     // TODO: Sanity check position
                     entity_commands
-                        .insert(NextCommand::with_move(collision_position, None, None))
-                        .insert(Position::new(
-                            collision_position,
-                            game_client.position.zone_id,
-                        ));
+                        .insert(NextCommand::with_move(position, None, None))
+                        .insert(Position::new(position, game_client.position.zone_id));
                 }
                 ClientMessage::CraftInsertGem {
                     equipment_index,
@@ -1099,17 +1122,17 @@ pub fn game_server_main_system(
                                 game_client
                                     .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::CraftInsertGem(Err(
-                                        CraftInsertGemError::NoSocket,
-                                    )))
+                                    .send(ServerMessage::CraftInsertGemError {
+                                        error: CraftInsertGemError::NoSocket,
+                                    })
                                     .ok();
                             } else if equipment_item.gem > 300 {
                                 game_client
                                     .game_client
                                     .server_message_tx
-                                    .send(ServerMessage::CraftInsertGem(Err(
-                                        CraftInsertGemError::SocketFull,
-                                    )))
+                                    .send(ServerMessage::CraftInsertGemError {
+                                        error: CraftInsertGemError::SocketFull,
+                                    })
                                     .ok();
                             } else {
                                 let equipment_item = game_client
@@ -1129,20 +1152,25 @@ pub fn game_server_main_system(
                                     game_client
                                         .game_client
                                         .server_message_tx
-                                        .send(ServerMessage::CraftInsertGem(Ok(vec![
-                                            (
-                                                item_slot,
-                                                game_client.inventory.get_item(item_slot).cloned(),
-                                            ),
-                                            (
-                                                ItemSlot::Equipment(equipment_index),
-                                                game_client
-                                                    .equipment
-                                                    .get_equipment_item(equipment_index)
-                                                    .cloned()
-                                                    .map(Item::Equipment),
-                                            ),
-                                        ])))
+                                        .send(ServerMessage::CraftInsertGem {
+                                            update_items: vec![
+                                                (
+                                                    item_slot,
+                                                    game_client
+                                                        .inventory
+                                                        .get_item(item_slot)
+                                                        .cloned(),
+                                                ),
+                                                (
+                                                    ItemSlot::Equipment(equipment_index),
+                                                    game_client
+                                                        .equipment
+                                                        .get_equipment_item(equipment_index)
+                                                        .cloned()
+                                                        .map(Item::Equipment),
+                                                ),
+                                            ],
+                                        })
                                         .ok();
 
                                     server_messages.send_entity_message(

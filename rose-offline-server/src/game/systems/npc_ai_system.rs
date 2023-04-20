@@ -37,7 +37,7 @@ use crate::game::{
         PartyMember, PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team,
     },
     events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
-    messages::server::{AnnounceChat, LocalChat, ServerMessage, ShoutChat},
+    messages::server::ServerMessage,
     resources::{ClientEntityList, ServerMessages, WorldRates, WorldTime, ZoneList},
     GameData,
 };
@@ -1211,7 +1211,10 @@ fn ai_action_transform_npc(
 
         ai_system_parameters.server_messages.send_entity_message(
             ai_parameters.source.client_entity,
-            ServerMessage::ChangeNpcId(ai_parameters.source.client_entity.id, npc_id),
+            ServerMessage::ChangeNpcId {
+                entity_id: ai_parameters.source.client_entity.id,
+                npc_id,
+            },
         );
     }
 }
@@ -1362,19 +1365,19 @@ fn ai_action_message(
         match message_type {
             AipMessageType::Say => ai_system_parameters.server_messages.send_entity_message(
                 ai_parameters.source.client_entity,
-                ServerMessage::LocalChat(LocalChat {
+                ServerMessage::LocalChat {
                     entity_id: ai_parameters.source.client_entity.id,
                     text: message.to_string(),
-                }),
+                },
             ),
             AipMessageType::Shout => {
                 if let Some(npc_name) = npc_name {
                     ai_system_parameters.server_messages.send_entity_message(
                         ai_parameters.source.client_entity,
-                        ServerMessage::ShoutChat(ShoutChat {
+                        ServerMessage::ShoutChat {
                             name: npc_name,
                             text: message.to_string(),
-                        }),
+                        },
                     )
                 }
             }
@@ -1382,10 +1385,10 @@ fn ai_action_message(
                 if let Some(npc_name) = npc_name {
                     ai_system_parameters.server_messages.send_entity_message(
                         ai_parameters.source.client_entity,
-                        ServerMessage::AnnounceChat(AnnounceChat {
+                        ServerMessage::AnnounceChat {
                             name: Some(npc_name),
                             text: message.to_string(),
-                        }),
+                        },
                     )
                 }
             }
@@ -1931,9 +1934,9 @@ pub fn npc_ai_system(
                                             // Send to only client
                                             killer_game_client
                                                 .server_message_tx
-                                                .send(ServerMessage::RunNpcDeathTrigger(
-                                                    source.npc.id,
-                                                ))
+                                                .send(ServerMessage::RunNpcDeathTrigger {
+                                                    npc_id: source.npc.id,
+                                                })
                                                 .ok();
                                         }
                                     }

@@ -27,7 +27,9 @@ pub fn reward_item_system(
                     if let Some(game_client) = game_client {
                         game_client
                             .server_message_tx
-                            .send(ServerMessage::RewardItems(vec![(slot, Some(item.clone()))]))
+                            .send(ServerMessage::RewardItems {
+                                items: vec![(slot, Some(item.clone()))],
+                            })
                             .ok();
                     }
                 }

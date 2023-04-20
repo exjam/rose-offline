@@ -13,7 +13,7 @@ use crate::game::{
         MotionData, NpcAi,
     },
     events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged, ItemLifeEvent},
-    messages::server::{DamageEntity, ServerMessage},
+    messages::server::ServerMessage,
     resources::ServerMessages,
 };
 
@@ -94,14 +94,14 @@ pub fn damage_system(
                 if let Some(attacker_entity_id) = attacker_entity_id {
                     server_messages.send_entity_message(
                         client_entity,
-                        ServerMessage::DamageEntity(DamageEntity {
+                        ServerMessage::DamageEntity {
                             attacker_entity_id,
                             defender_entity_id: client_entity.id,
                             damage,
                             is_killed: health_points.hp == 0,
                             is_immediate: matches!(damage_event, DamageEvent::Immediate(_)),
                             from_skill,
-                        }),
+                        },
                     );
                 }
 
