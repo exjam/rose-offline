@@ -12,10 +12,7 @@ use crate::game::{
         AbilityValues, BotAi, BotMessage, CharacterInfo, CharacterUniqueId, ClientEntity,
         GameClient, HealthPoints, Party, PartyMember, PartyMembership, Stamina, StatusEffects,
     },
-    events::{
-        PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-        PartyEventUpdateRules, PartyMemberDisconnect, PartyMemberEvent, PartyMemberReconnect,
-    },
+    events::{PartyEvent, PartyMemberEvent},
     messages::server::{
         PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline, ServerMessage,
     },
@@ -757,12 +754,12 @@ pub fn party_member_event_system(
 ) {
     for event in party_member_events.iter() {
         match event {
-            PartyMemberEvent::Disconnect(PartyMemberDisconnect {
+            PartyMemberEvent::Disconnect {
                 party_entity,
                 disconnect_entity,
                 character_id,
                 name,
-            }) => {
+            } => {
                 handle_party_member_disconnect(
                     &mut commands,
                     &mut party_query,
@@ -775,12 +772,12 @@ pub fn party_member_event_system(
                 )
                 .ok();
             }
-            PartyMemberEvent::Reconnect(PartyMemberReconnect {
+            PartyMemberEvent::Reconnect {
                 party_entity,
                 reconnect_entity,
                 character_id,
                 name,
-            }) => {
+            } => {
                 handle_party_member_reconnect(
                     &party_query,
                     &party_member_info_query,
@@ -804,16 +801,16 @@ pub fn party_system(
 ) {
     for event in party_events.iter() {
         match *event {
-            PartyEvent::Invite(PartyEventInvite {
+            PartyEvent::Invite {
                 owner_entity,
                 invited_entity,
-            }) => {
+            } => {
                 handle_party_invite(&mut party_membership_query, owner_entity, invited_entity).ok();
             }
-            PartyEvent::AcceptInvite(PartyEventInvite {
+            PartyEvent::AcceptInvite {
                 owner_entity,
                 invited_entity,
-            }) => {
+            } => {
                 handle_party_accept_invite(
                     &mut commands,
                     &mut party_query,
@@ -824,13 +821,11 @@ pub fn party_system(
                 )
                 .ok();
             }
-            PartyEvent::RejectInvite(
+            PartyEvent::RejectInvite {
                 reason,
-                PartyEventInvite {
-                    owner_entity,
-                    invited_entity,
-                },
-            ) => {
+                owner_entity,
+                invited_entity,
+            } => {
                 handle_party_reject_invite(
                     &mut party_membership_query,
                     reason,
@@ -839,7 +834,7 @@ pub fn party_system(
                 )
                 .ok();
             }
-            PartyEvent::Leave(PartyEventLeave { leaver_entity }) => {
+            PartyEvent::Leave { leaver_entity } => {
                 handle_party_leave(
                     &mut commands,
                     &mut party_query,
@@ -849,10 +844,10 @@ pub fn party_system(
                 )
                 .ok();
             }
-            PartyEvent::Kick(PartyEventKick {
+            PartyEvent::Kick {
                 owner_entity,
                 kick_character_id,
-            }) => {
+            } => {
                 handle_party_kick(
                     &mut commands,
                     &mut party_query,
@@ -863,10 +858,10 @@ pub fn party_system(
                 )
                 .ok();
             }
-            PartyEvent::ChangeOwner(PartyEventChangeOwner {
+            PartyEvent::ChangeOwner {
                 owner_entity,
                 new_owner_entity,
-            }) => {
+            } => {
                 handle_party_change_owner(
                     &mut party_query,
                     &mut party_membership_query,
@@ -876,11 +871,11 @@ pub fn party_system(
                 )
                 .ok();
             }
-            PartyEvent::UpdateRules(PartyEventUpdateRules {
+            PartyEvent::UpdateRules {
                 owner_entity,
                 item_sharing,
                 xp_sharing,
-            }) => {
+            } => {
                 handle_party_update_rules(
                     &mut party_query,
                     &party_membership_query,

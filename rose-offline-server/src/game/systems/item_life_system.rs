@@ -15,7 +15,7 @@ pub fn item_life_system(
 ) {
     for event in item_life_events.iter() {
         match *event {
-            ItemLifeEvent::DecreaseWeaponLife(entity) => {
+            ItemLifeEvent::DecreaseWeaponLife { entity } => {
                 if let Ok((ability_values, mut equipment, game_client)) = query.get_mut(entity) {
                     if let Some(item_slot) = game_data
                         .ability_value_calculator
@@ -48,7 +48,7 @@ pub fn item_life_system(
                     }
                 }
             }
-            ItemLifeEvent::DecreaseArmourLife(entity, damage) => {
+            ItemLifeEvent::DecreaseArmourLife { entity, damage } => {
                 if let Ok((ability_values, mut equipment, game_client)) = query.get_mut(entity) {
                     if let Some(item_slot) = game_data
                         .ability_value_calculator
@@ -82,7 +82,7 @@ pub fn item_life_system(
                     }
                 }
             }
-            ItemLifeEvent::DecreaseVehicleEngineLife(entity) => {
+            ItemLifeEvent::DecreaseVehicleEngineLife { entity } => {
                 if let Ok((_, mut equipment, game_client)) = query.get_mut(entity) {
                     let equipment_slot = equipment.get_vehicle_slot_mut(VehiclePartIndex::Engine);
 

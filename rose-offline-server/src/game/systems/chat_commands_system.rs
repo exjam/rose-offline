@@ -27,7 +27,7 @@ use rose_game_common::{
 };
 
 use crate::game::{
-    bots::create_bot,
+    bots::{create_bot, BotSnowballAi},
     bundles::{
         ability_values_add_value, ability_values_set_value, client_entity_join_zone,
         client_entity_teleport_zone, CharacterBundle, ItemDropBundle, MonsterBundle,
@@ -557,20 +557,11 @@ fn handle_chat_command(
             );
 
             for entity in bot_entities.into_iter() {
-                let mut inventory = Inventory::new();
-                inventory
-                    .try_add_item(
-                        StackableItem::new(ItemReference::new(ItemType::Consumable, 326), 999)
-                            .unwrap()
-                            .into(),
-                    )
-                    .ok();
-
                 chat_command_params
                     .commands
                     .entity(entity)
-                    .insert(inventory)
-                    .insert(BotAi::new(BotAiState::SnowballFight));
+                    .remove::<BotAi>()
+                    .insert(BotSnowballAi::default());
             }
         }
         ("shop", arg_matches) => {
@@ -837,11 +828,11 @@ fn handle_chat_command(
                     if chat_command_user.entity != defender {
                         chat_command_params
                             .damage_events
-                            .send(DamageEvent::with_immediate(
-                                chat_command_user.entity,
+                            .send(DamageEvent::Immediate {
+                                attacker: chat_command_user.entity,
                                 defender,
                                 damage,
-                            ));
+                            });
                     }
                 }
             }

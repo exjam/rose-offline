@@ -1069,15 +1069,15 @@ fn ai_action_kill_self(
 ) {
     ai_system_parameters
         .damage_events
-        .send(DamageEvent::with_attack(
-            ai_parameters.source.entity,
-            ai_parameters.source.entity,
-            Damage {
+        .send(DamageEvent::Attack {
+            attacker: ai_parameters.source.entity,
+            defender: ai_parameters.source.entity,
+            damage: Damage {
                 amount: ai_parameters.source.health_points.hp as u32 + 1,
                 is_critical: false,
                 apply_hit_stun: false,
             },
-        ));
+        });
 }
 
 fn ai_action_nearby_allies_attack_target(

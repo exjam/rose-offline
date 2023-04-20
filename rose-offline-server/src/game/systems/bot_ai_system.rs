@@ -1,18 +1,21 @@
-use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res};
-use bevy::ecs::query::WorldQuery;
-use bevy::math::{Vec3, Vec3Swizzles};
-use bevy::time::Time;
-use rand::seq::SliceRandom;
-use rand::Rng;
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventWriter, Query, Res},
+        query::WorldQuery,
+    },
+    math::{Vec3, Vec3Swizzles},
+    time::Time,
+};
 
-use crate::game::components::{BotMessage, Party, PartyMembership};
-use crate::game::events::{PartyEvent, PartyEventInvite};
+use rand::{seq::SliceRandom, Rng};
+
 use crate::game::{
     components::{
-        BotAi, BotAiState, Command, CommandData, DroppedItem, Inventory, InventoryPageType,
-        ItemDrop, ItemSlot, NextCommand, Npc, Owner, Position, Team, BOT_IDLE_CHECK_DURATION,
+        BotAi, BotAiState, BotMessage, Command, CommandData, DroppedItem, Inventory,
+        InventoryPageType, ItemDrop, NextCommand, Npc, Owner, Party, PartyMembership, Position,
+        Team, BOT_IDLE_CHECK_DURATION,
     },
-    events::UseItemEvent,
+    events::PartyEvent,
     resources::ClientEntityList,
     GameData,
 };
@@ -55,7 +58,6 @@ pub fn bot_ai_system(
     client_entity_list: Res<ClientEntityList>,
     game_data: Res<GameData>,
     time: Res<Time>,
-    mut use_item_events: EventWriter<UseItemEvent>,
     mut party_events: EventWriter<PartyEvent>,
 ) {
     let mut rng = rand::thread_rng();
@@ -64,10 +66,10 @@ pub fn bot_ai_system(
         for message in bot.ai.messages.iter() {
             let BotMessage::PartyInvite(owner_entity) = *message;
             if bot.party_membership.is_none() {
-                party_events.send(PartyEvent::AcceptInvite(PartyEventInvite {
+                party_events.send(PartyEvent::AcceptInvite {
                     owner_entity,
                     invited_entity: bot.entity,
-                }));
+                });
             }
         }
         bot.ai.messages.clear();
@@ -81,43 +83,6 @@ pub fn bot_ai_system(
                 bot.ai.time_since_last_idle_check -= BOT_IDLE_CHECK_DURATION;
 
                 match bot.ai.state {
-                    BotAiState::SnowballFight => {
-                        if let Some(zone_entities) =
-                            client_entity_list.get_zone(bot.position.zone_id)
-                        {
-                            let item_slot = ItemSlot::Inventory(InventoryPageType::Consumables, 0);
-                            if bot.inventory.get_item(item_slot).is_some() {
-                                let mut nearby_targets = Vec::new();
-
-                                for (nearby_entity, _) in zone_entities
-                                    .iter_entities_within_distance(
-                                        bot.position.position.xy(),
-                                        BOT_SEARCH_ENTITY_DISTANCE,
-                                    )
-                                {
-                                    if let Ok(nearby) = team_query.get(nearby_entity) {
-                                        if nearby.team.id == bot.team.id {
-                                            nearby_targets.push(nearby_entity);
-                                        }
-                                    }
-                                }
-
-                                if let Some(target_entity) =
-                                    nearby_targets.choose(&mut rng).copied()
-                                {
-                                    use_item_events.send(UseItemEvent::from_inventory(
-                                        bot.entity,
-                                        item_slot,
-                                        Some(target_entity),
-                                    ));
-
-                                    // Speed up the snowball fight!
-                                    bot.ai.time_since_last_idle_check +=
-                                        (BOT_IDLE_CHECK_DURATION * 3) / 4;
-                                }
-                            }
-                        }
-                    }
                     BotAiState::Farm => {
                         if let Some(zone_entities) =
                             client_entity_list.get_zone(bot.position.zone_id)

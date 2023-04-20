@@ -3,7 +3,7 @@ use bevy::prelude::Entity;
 use rose_game_common::data::Damage;
 
 pub enum ItemLifeEvent {
-    DecreaseWeaponLife(Entity),
-    DecreaseArmourLife(Entity, Damage),
-    DecreaseVehicleEngineLife(Entity),
+    DecreaseWeaponLife { entity: Entity },
+    DecreaseArmourLife { entity: Entity, damage: Damage },
+    DecreaseVehicleEngineLife { entity: Entity },
 }

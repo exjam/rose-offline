@@ -130,15 +130,15 @@ pub fn status_effect_system(
                                     health_points.hp -= data.apply_per_second_value;
                                 } else {
                                     // Apply as damage so the entity dies
-                                    damage_events.send(DamageEvent::with_attack(
-                                        entity,
-                                        entity,
-                                        Damage {
+                                    damage_events.send(DamageEvent::Attack {
+                                        attacker: entity,
+                                        defender: entity,
+                                        damage: Damage {
                                             amount: data.apply_per_second_value as u32,
                                             is_critical: false,
                                             apply_hit_stun: false,
                                         },
-                                    ));
+                                    });
                                 }
                             }
                         }

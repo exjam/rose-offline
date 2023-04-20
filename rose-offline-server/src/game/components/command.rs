@@ -123,6 +123,10 @@ impl Command {
         matches!(self.command, CommandData::Die(_))
     }
 
+    pub fn is_stop(&self) -> bool {
+        matches!(self.command, CommandData::Stop(_))
+    }
+
     pub fn is_sit(&self) -> bool {
         matches!(
             self.command,

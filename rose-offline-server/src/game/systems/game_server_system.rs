@@ -11,7 +11,6 @@ use log::warn;
 
 use rose_data::{EquipmentIndex, Item, ItemClass, ItemSlotBehaviour, ItemType};
 use rose_game_common::{
-    components::Level,
     data::Password,
     messages::server::{CharacterData, CharacterDataItems, CraftInsertGemError},
 };
@@ -26,15 +25,13 @@ use crate::game::{
         ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType, ClientEntityVisibility,
         Command, CommandData, CommandSit, Dead, DrivingTime, DroppedItem, Equipment,
         EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-        ItemSlot, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party,
+        ItemSlot, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party,
         PartyMember, PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList,
         SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
     },
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, EquipmentEvent, ItemLifeEvent, NpcStoreEvent,
-        PartyEvent, PartyEventChangeOwner, PartyEventInvite, PartyEventKick, PartyEventLeave,
-        PartyEventUpdateRules, PartyMemberEvent, PartyMemberReconnect, PersonalStoreEvent,
-        PersonalStoreEventBuyItem, PersonalStoreEventListItems, QuestTriggerEvent, UseItemEvent,
+        PartyEvent, PartyMemberEvent, PersonalStoreEvent, QuestTriggerEvent, UseItemEvent,
     },
     messages::{
         client::ClientMessage,
@@ -380,14 +377,12 @@ pub fn game_server_join_system(
                                         {
                                             *party_member = PartyMember::Online(entity);
                                             party_membership = PartyMembership::new(party_entity);
-                                            party_member_events.send(PartyMemberEvent::Reconnect(
-                                                PartyMemberReconnect {
-                                                    party_entity,
-                                                    reconnect_entity: entity,
-                                                    character_id: character_info.unique_id,
-                                                    name: character_info.name.clone(),
-                                                },
-                                            ));
+                                            party_member_events.send(PartyMemberEvent::Reconnect {
+                                                party_entity,
+                                                reconnect_entity: entity,
+                                                character_id: character_info.unique_id,
+                                                name: character_info.name.clone(),
+                                            });
                                             break;
                                         }
                                     }
@@ -620,7 +615,7 @@ pub fn game_server_main_system(
                         entity_commands.insert(NextCommand::with_stop(true));
                     }
                 }
-                ClientMessage::Logout => {
+                ClientMessage::Logout | ClientMessage::ReturnToCharacterSelect => {
                     if let ClientMessage::ReturnToCharacterSelect = message {
                         // Send ReturnToCharacterSelect via world_client
                         world_client_query.for_each(|world_client| {
@@ -738,10 +733,10 @@ pub fn game_server_main_system(
                     {
                         events
                             .personal_store_events
-                            .send(PersonalStoreEvent::ListItems(PersonalStoreEventListItems {
+                            .send(PersonalStoreEvent::ListItems {
                                 store_entity: *store_entity,
                                 list_entity: game_client.entity,
-                            }));
+                            });
                     }
                 }
                 ClientMessage::PersonalStoreBuyItem {
@@ -755,12 +750,12 @@ pub fn game_server_main_system(
                     {
                         events
                             .personal_store_events
-                            .send(PersonalStoreEvent::BuyItem(PersonalStoreEventBuyItem {
+                            .send(PersonalStoreEvent::BuyItem {
                                 store_entity: *store_entity,
                                 buyer_entity: game_client.entity,
                                 store_slot_index,
                                 buy_item,
-                            }));
+                            });
                     }
                 }
                 ClientMessage::UseItem {
@@ -893,9 +888,11 @@ pub fn game_server_main_system(
                             // TODO: Check if we have a valid cart equipped....
 
                             // Starting driving decreases vehicle engine life
-                            events
-                                .item_life_events
-                                .send(ItemLifeEvent::DecreaseVehicleEngineLife(game_client.entity));
+                            events.item_life_events.send(
+                                ItemLifeEvent::DecreaseVehicleEngineLife {
+                                    entity: game_client.entity,
+                                },
+                            );
 
                             // Start driving
                             *game_client.move_mode = MoveMode::Drive;
@@ -1016,18 +1013,16 @@ pub fn game_server_main_system(
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(invited_entity_id))
                     {
-                        events
-                            .party_events
-                            .send(PartyEvent::Invite(PartyEventInvite {
-                                owner_entity: game_client.entity,
-                                invited_entity,
-                            }));
+                        events.party_events.send(PartyEvent::Invite {
+                            owner_entity: game_client.entity,
+                            invited_entity,
+                        });
                     }
                 }
                 ClientMessage::PartyLeave => {
-                    events.party_events.send(PartyEvent::Leave(PartyEventLeave {
+                    events.party_events.send(PartyEvent::Leave {
                         leaver_entity: game_client.entity,
-                    }));
+                    });
                 }
                 ClientMessage::PartyChangeOwner {
                     new_owner_entity_id,
@@ -1036,19 +1031,17 @@ pub fn game_server_main_system(
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(new_owner_entity_id))
                     {
-                        events
-                            .party_events
-                            .send(PartyEvent::ChangeOwner(PartyEventChangeOwner {
-                                owner_entity: game_client.entity,
-                                new_owner_entity,
-                            }));
+                        events.party_events.send(PartyEvent::ChangeOwner {
+                            owner_entity: game_client.entity,
+                            new_owner_entity,
+                        });
                     }
                 }
                 ClientMessage::PartyKick { character_id } => {
-                    events.party_events.send(PartyEvent::Kick(PartyEventKick {
+                    events.party_events.send(PartyEvent::Kick {
                         owner_entity: game_client.entity,
                         kick_character_id: character_id,
-                    }));
+                    });
                 }
                 ClientMessage::PartyAcceptCreateInvite { owner_entity_id }
                 | ClientMessage::PartyAcceptJoinInvite { owner_entity_id } => {
@@ -1056,12 +1049,10 @@ pub fn game_server_main_system(
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(owner_entity_id))
                     {
-                        events
-                            .party_events
-                            .send(PartyEvent::AcceptInvite(PartyEventInvite {
-                                owner_entity,
-                                invited_entity: game_client.entity,
-                            }));
+                        events.party_events.send(PartyEvent::AcceptInvite {
+                            owner_entity,
+                            invited_entity: game_client.entity,
+                        });
                     }
                 }
                 ClientMessage::PartyRejectInvite {
@@ -1072,26 +1063,22 @@ pub fn game_server_main_system(
                         .get_zone(game_client.position.zone_id)
                         .and_then(|zone| zone.get_entity(owner_entity_id))
                     {
-                        events.party_events.send(PartyEvent::RejectInvite(
+                        events.party_events.send(PartyEvent::RejectInvite {
                             reason,
-                            PartyEventInvite {
-                                owner_entity,
-                                invited_entity: game_client.entity,
-                            },
-                        ));
+                            owner_entity,
+                            invited_entity: game_client.entity,
+                        });
                     }
                 }
                 ClientMessage::PartyUpdateRules {
                     item_sharing,
                     xp_sharing,
                 } => {
-                    events
-                        .party_events
-                        .send(PartyEvent::UpdateRules(PartyEventUpdateRules {
-                            owner_entity: game_client.entity,
-                            item_sharing,
-                            xp_sharing,
-                        }));
+                    events.party_events.send(PartyEvent::UpdateRules {
+                        owner_entity: game_client.entity,
+                        item_sharing,
+                        xp_sharing,
+                    });
                 }
                 ClientMessage::MoveCollision { position } => {
                     // TODO: Sanity check position

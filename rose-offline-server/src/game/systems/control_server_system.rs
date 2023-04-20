@@ -75,7 +75,10 @@ pub fn control_server_system(
                     }
 
                     // Let the save system handle despawning the entity
-                    save_events.send(SaveEvent::with_character(entity, true));
+                    save_events.send(SaveEvent::Character {
+                        entity,
+                        remove_after_save: true,
+                    });
                     commands.entity(entity).remove::<GameClient>();
                 }
             },

@@ -669,12 +669,13 @@ pub fn command_system(
                                 if matches!(move_mode, MoveMode::Drive) {
                                     // Decrease vehicle engine item life on attack
                                     item_life_event
-                                        .send(ItemLifeEvent::DecreaseVehicleEngineLife(entity));
+                                        .send(ItemLifeEvent::DecreaseVehicleEngineLife { entity });
                                 }
 
                                 // Decrease weapon item life on attack
                                 if character_info.is_some() {
-                                    item_life_event.send(ItemLifeEvent::DecreaseWeaponLife(entity));
+                                    item_life_event
+                                        .send(ItemLifeEvent::DecreaseWeaponLife { entity });
                                 }
 
                                 // In range, set current command to attack
@@ -687,15 +688,15 @@ pub fn command_system(
                                 entity_commands.insert(Target::new(target_entity));
 
                                 // Send damage event to damage system
-                                damage_events.send(DamageEvent::with_attack(
-                                    entity,
-                                    target_entity,
-                                    game_data.ability_value_calculator.calculate_damage(
+                                damage_events.send(DamageEvent::Attack {
+                                    attacker: entity,
+                                    defender: target_entity,
+                                    damage: game_data.ability_value_calculator.calculate_damage(
                                         ability_values,
                                         target.ability_values,
                                         hit_count as i32,
                                     ),
-                                ));
+                                });
                             }
                         } else {
                             // Not in range, set current command to move

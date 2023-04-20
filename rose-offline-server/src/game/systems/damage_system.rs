@@ -12,7 +12,7 @@ use crate::game::{
         ClientEntity, ClientEntityType, Command, DamageSource, DamageSources, Dead, HealthPoints,
         MotionData, NpcAi,
     },
-    events::{DamageEvent, DamageEventAttack, DamageEventSkill, DamageEventTagged, ItemLifeEvent},
+    events::{DamageEvent, ItemLifeEvent},
     messages::server::ServerMessage,
     resources::ServerMessages,
 };
@@ -34,32 +34,32 @@ pub fn damage_system(
 ) {
     for damage_event in damage_events.iter() {
         let (attacker_entity, defender_entity, damage, from_skill) = match *damage_event {
-            DamageEvent::Attack(DamageEventAttack {
+            DamageEvent::Attack {
                 attacker: attacker_entity,
                 defender: defender_entity,
                 damage,
-            }) => (attacker_entity, defender_entity, damage, None),
-            DamageEvent::Immediate(DamageEventAttack {
+            } => (attacker_entity, defender_entity, damage, None),
+            DamageEvent::Immediate {
                 attacker: attacker_entity,
                 defender: defender_entity,
                 damage,
-            }) => (attacker_entity, defender_entity, damage, None),
-            DamageEvent::Skill(DamageEventSkill {
+            } => (attacker_entity, defender_entity, damage, None),
+            DamageEvent::Skill {
                 attacker: attacker_entity,
                 defender: defender_entity,
                 damage,
                 skill_id,
                 attacker_intelligence,
-            }) => (
+            } => (
                 attacker_entity,
                 defender_entity,
                 damage,
                 Some((skill_id, attacker_intelligence)),
             ),
-            DamageEvent::Tagged(DamageEventTagged {
+            DamageEvent::Tagged {
                 attacker: attacker_entity,
                 defender: defender_entity,
-            }) => (
+            } => (
                 attacker_entity,
                 defender_entity,
                 Damage {
@@ -90,7 +90,7 @@ pub fn damage_system(
 
             health_points.hp = i32::max(health_points.hp - damage.amount as i32, 0);
 
-            if !matches!(damage_event, DamageEvent::Tagged(_)) {
+            if !matches!(damage_event, DamageEvent::Tagged { .. }) {
                 if let Some(attacker_entity_id) = attacker_entity_id {
                     server_messages.send_entity_message(
                         client_entity,
@@ -99,15 +99,17 @@ pub fn damage_system(
                             defender_entity_id: client_entity.id,
                             damage,
                             is_killed: health_points.hp == 0,
-                            is_immediate: matches!(damage_event, DamageEvent::Immediate(_)),
+                            is_immediate: matches!(damage_event, DamageEvent::Immediate { .. }),
                             from_skill,
                         },
                     );
                 }
 
                 if matches!(client_entity.entity_type, ClientEntityType::Character) {
-                    item_life_events
-                        .send(ItemLifeEvent::DecreaseArmourLife(defender_entity, damage));
+                    item_life_events.send(ItemLifeEvent::DecreaseArmourLife {
+                        entity: defender_entity,
+                        damage,
+                    });
                 }
             }
 

@@ -13,7 +13,7 @@ use crate::game::{
         PartyMembership, Position, QuestState, SkillList, SkillPoints, Stamina, StatPoints,
         UnionMembership,
     },
-    events::{ClanEvent, PartyMemberDisconnect, PartyMemberEvent, SaveEvent, SaveEventCharacter},
+    events::{ClanEvent, PartyMemberEvent, SaveEvent},
     resources::ClientEntityList,
     storage::{bank::BankStorage, character::CharacterStorage},
 };
@@ -54,10 +54,10 @@ pub fn save_system(
 ) {
     for pending_save in save_events.iter() {
         match *pending_save {
-            SaveEvent::Character(SaveEventCharacter {
+            SaveEvent::Character {
                 entity,
                 remove_after_save,
-            }) => {
+            } => {
                 if let Ok(character) = query.get(entity) {
                     let storage = CharacterStorage {
                         info: character.character_info.clone(),
@@ -110,14 +110,12 @@ pub fn save_system(
                         }
 
                         if let Some(party_entity) = character.party_membership.party() {
-                            party_member_events.send(PartyMemberEvent::Disconnect(
-                                PartyMemberDisconnect {
-                                    party_entity,
-                                    disconnect_entity: entity,
-                                    character_id: character.character_info.unique_id,
-                                    name: character.character_info.name.clone(),
-                                },
-                            ));
+                            party_member_events.send(PartyMemberEvent::Disconnect {
+                                party_entity,
+                                disconnect_entity: entity,
+                                character_id: character.character_info.unique_id,
+                                name: character.character_info.name.clone(),
+                            });
                         }
 
                         if let Some(&clan_entity) = character.clan_membership.as_ref() {

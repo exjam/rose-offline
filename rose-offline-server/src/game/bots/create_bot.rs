@@ -469,7 +469,7 @@ fn choose_equipment_items(
         // Fallback to Wooden Sword if not appropriate weapon was found
         game_data
             .items
-            .get_base_item(ItemReference::new(ItemType::Weapon, 1))
+            .get_base_item(ItemReference::weapon(1))
             .and_then(EquipmentItem::from_item_data)
     });
 
@@ -490,15 +490,15 @@ fn choose_equipment_items(
 
     // Claw Arrow
     equipment.equipped_ammo[AmmoIndex::Arrow] =
-        StackableItem::new(ItemReference::new(ItemType::Material, 304), 999);
+        StackableItem::new(ItemReference::material(304), 999);
 
     // Lead Bullet
     equipment.equipped_ammo[AmmoIndex::Bullet] =
-        StackableItem::new(ItemReference::new(ItemType::Material, 323), 999);
+        StackableItem::new(ItemReference::material(323), 999);
 
     // Lead Cannon
     equipment.equipped_ammo[AmmoIndex::Throw] =
-        StackableItem::new(ItemReference::new(ItemType::Material, 342), 999);
+        StackableItem::new(ItemReference::material(342), 999);
 }
 
 pub fn create_bot(game_data: &GameData, name: String, level: u32) -> CharacterStorage {

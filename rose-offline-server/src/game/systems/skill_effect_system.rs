@@ -186,10 +186,10 @@ fn apply_skill_status_effects_to_entity(
     if skill_data.harm != 0 {
         skill_system_parameters
             .damage_events
-            .send(DamageEvent::with_tagged(
-                skill_caster.entity,
-                skill_target.entity,
-            ));
+            .send(DamageEvent::Tagged {
+                attacker: skill_caster.entity,
+                defender: skill_target.entity,
+            });
     }
 
     let mut effect_success = [false, false];
@@ -440,13 +440,13 @@ fn apply_skill_damage_to_entity(
 
     skill_system_parameters
         .damage_events
-        .send(DamageEvent::with_skill(
-            skill_caster.entity,
-            skill_target.entity,
+        .send(DamageEvent::Skill {
+            attacker: skill_caster.entity,
+            defender: skill_target.entity,
             damage,
-            skill_data.id,
-            skill_caster.ability_values.get_intelligence(),
-        ));
+            skill_id: skill_data.id,
+            attacker_intelligence: skill_caster.ability_values.get_intelligence(),
+        });
 
     Ok(damage)
 }
@@ -516,7 +516,9 @@ fn apply_skill_damage(
     if result.is_ok() && skill_data.damage_type != 3 {
         skill_system_parameters
             .item_life_events
-            .send(ItemLifeEvent::DecreaseWeaponLife(skill_caster.entity));
+            .send(ItemLifeEvent::DecreaseWeaponLife {
+                entity: skill_caster.entity,
+            });
     }
 
     result

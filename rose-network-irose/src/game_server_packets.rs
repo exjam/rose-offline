@@ -1921,7 +1921,7 @@ impl TryFrom<&Packet> for PacketServerUpdateAmmo {
             decode_ammo_index(ammo_part.item_type() as usize).ok_or(PacketError::InvalidPacket)?;
 
         let item = StackableItem::new(
-            ItemReference::new(ItemType::Material, ammo_part.item_number() as usize),
+            ItemReference::material(ammo_part.item_number() as usize),
             999,
         );
 
@@ -2928,7 +2928,7 @@ impl TryFrom<&Packet> for PacketServerUseItem {
 
         let mut reader = PacketReader::from(packet);
         let entity_id = reader.read_entity_id()?;
-        let item = ItemReference::new(ItemType::Consumable, reader.read_u16()? as usize);
+        let item = ItemReference::consumable(reader.read_u16()? as usize);
         let inventory_slot = reader.read_item_slot_u8().ok();
 
         Ok(Self {

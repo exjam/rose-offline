@@ -14,7 +14,7 @@ use rose_game_common::{
 
 use crate::game::{
     components::{ClientEntity, GameClient, Inventory, PersonalStore},
-    events::{PersonalStoreEvent, PersonalStoreEventBuyItem, PersonalStoreEventListItems},
+    events::PersonalStoreEvent,
     messages::server::ServerMessage,
 };
 
@@ -136,22 +136,22 @@ pub fn personal_store_system(
 ) {
     for event in personal_store_events.iter() {
         match *event {
-            PersonalStoreEvent::ListItems(PersonalStoreEventListItems {
+            PersonalStoreEvent::ListItems {
                 store_entity,
                 list_entity,
-            }) => {
+            } => {
                 if let Ok([seller, buyer]) = entity_query.get_many([store_entity, list_entity]) {
                     if let Ok(store) = store_query.get(store_entity) {
                         personal_store_list_items(store, &seller, &buyer);
                     }
                 }
             }
-            PersonalStoreEvent::BuyItem(PersonalStoreEventBuyItem {
+            PersonalStoreEvent::BuyItem {
                 store_entity,
                 buyer_entity,
                 store_slot_index,
                 ref buy_item,
-            }) => {
+            } => {
                 if let Ok([mut seller, mut buyer]) =
                     entity_query.get_many_mut([store_entity, buyer_entity])
                 {

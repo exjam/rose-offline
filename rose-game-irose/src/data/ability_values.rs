@@ -844,7 +844,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 let item = item.as_equipment().unwrap();
                 let gem_base_price = if item.is_appraised {
                     item_database
-                        .get_base_item(ItemReference::new(ItemType::Gem, item.gem as usize))
+                        .get_base_item(ItemReference::gem(item.gem as usize))
                         .map(|gem_item_data| gem_item_data.base_price)
                         .unwrap_or(0)
                 } else {

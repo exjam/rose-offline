@@ -15,9 +15,107 @@ pub struct ItemReference {
 }
 
 impl ItemReference {
-    pub fn new(item_type: ItemType, item_number: usize) -> Self {
+    pub const fn new(item_type: ItemType, item_number: usize) -> Self {
         Self {
             item_type,
+            item_number,
+        }
+    }
+
+    pub const fn face(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Face,
+            item_number,
+        }
+    }
+
+    pub const fn head(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Head,
+            item_number,
+        }
+    }
+
+    pub const fn body(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Body,
+            item_number,
+        }
+    }
+
+    pub const fn hands(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Hands,
+            item_number,
+        }
+    }
+
+    pub const fn feet(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Feet,
+            item_number,
+        }
+    }
+
+    pub const fn back(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Back,
+            item_number,
+        }
+    }
+
+    pub const fn jewellery(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Jewellery,
+            item_number,
+        }
+    }
+
+    pub const fn weapon(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Weapon,
+            item_number,
+        }
+    }
+
+    pub const fn sub_weapon(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::SubWeapon,
+            item_number,
+        }
+    }
+
+    pub const fn consumable(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Consumable,
+            item_number,
+        }
+    }
+
+    pub const fn gem(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Gem,
+            item_number,
+        }
+    }
+
+    pub const fn material(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Material,
+            item_number,
+        }
+    }
+
+    pub const fn quest(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Quest,
+            item_number,
+        }
+    }
+
+    pub const fn vehicle(item_number: usize) -> Self {
+        Self {
+            item_type: ItemType::Vehicle,
             item_number,
         }
     }
@@ -661,99 +759,61 @@ impl ItemDatabase {
         match item_type {
             ItemType::Face => {
                 Box::new(self.face.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Face, id))
+                    item_data.as_ref().map(|_| ItemReference::face(id))
                 }))
             }
             ItemType::Head => {
                 Box::new(self.head.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Head, id))
+                    item_data.as_ref().map(|_| ItemReference::head(id))
                 }))
             }
             ItemType::Body => {
                 Box::new(self.body.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Body, id))
+                    item_data.as_ref().map(|_| ItemReference::body(id))
                 }))
             }
             ItemType::Hands => {
                 Box::new(self.hands.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Hands, id))
+                    item_data.as_ref().map(|_| ItemReference::hands(id))
                 }))
             }
             ItemType::Feet => {
                 Box::new(self.feet.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Feet, id))
+                    item_data.as_ref().map(|_| ItemReference::feet(id))
                 }))
             }
             ItemType::Back => {
                 Box::new(self.back.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Back, id))
+                    item_data.as_ref().map(|_| ItemReference::back(id))
                 }))
             }
             ItemType::Jewellery => Box::new(self.jewellery.iter().enumerate().filter_map(
-                |(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Jewellery, id))
-                },
+                |(id, item_data)| item_data.as_ref().map(|_| ItemReference::jewellery(id)),
             )),
             ItemType::Weapon => Box::new(self.weapon.iter().enumerate().filter_map(
-                |(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Weapon, id))
-                },
+                |(id, item_data)| item_data.as_ref().map(|_| ItemReference::weapon(id)),
             )),
             ItemType::SubWeapon => Box::new(self.subweapon.iter().enumerate().filter_map(
-                |(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::SubWeapon, id))
-                },
+                |(id, item_data)| item_data.as_ref().map(|_| ItemReference::sub_weapon(id)),
             )),
             ItemType::Consumable => Box::new(self.consumable.iter().enumerate().filter_map(
-                |(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Consumable, id))
-                },
+                |(id, item_data)| item_data.as_ref().map(|_| ItemReference::consumable(id)),
             )),
-            ItemType::Gem => Box::new(self.gem.iter().enumerate().filter_map(|(id, item_data)| {
-                item_data
-                    .as_ref()
-                    .map(|_| ItemReference::new(ItemType::Gem, id))
-            })),
+            ItemType::Gem => {
+                Box::new(self.gem.iter().enumerate().filter_map(|(id, item_data)| {
+                    item_data.as_ref().map(|_| ItemReference::gem(id))
+                }))
+            }
             ItemType::Material => Box::new(self.material.iter().enumerate().filter_map(
-                |(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Material, id))
-                },
+                |(id, item_data)| item_data.as_ref().map(|_| ItemReference::material(id)),
             )),
             ItemType::Quest => {
                 Box::new(self.quest.iter().enumerate().filter_map(|(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Quest, id))
+                    item_data.as_ref().map(|_| ItemReference::quest(id))
                 }))
             }
             ItemType::Vehicle => Box::new(self.vehicle.iter().enumerate().filter_map(
-                |(id, item_data)| {
-                    item_data
-                        .as_ref()
-                        .map(|_| ItemReference::new(ItemType::Vehicle, id))
-                },
+                |(id, item_data)| item_data.as_ref().map(|_| ItemReference::vehicle(id)),
             )),
         }
     }

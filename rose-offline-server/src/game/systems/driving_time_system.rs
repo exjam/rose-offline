@@ -21,7 +21,7 @@ pub fn driving_time_system(
         if driving_time.time > ENGINE_USE_INTERVAL {
             driving_time.time -= ENGINE_USE_INTERVAL;
 
-            item_life_events.send(ItemLifeEvent::DecreaseVehicleEngineLife(entity));
+            item_life_events.send(ItemLifeEvent::DecreaseVehicleEngineLife { entity });
         }
     }
 }

@@ -4,64 +4,50 @@ use rose_game_common::messages::{PartyItemSharing, PartyRejectInviteReason, Part
 use crate::game::components::CharacterUniqueId;
 
 #[derive(Clone)]
-pub struct PartyMemberReconnect {
-    pub party_entity: Entity,
-    pub reconnect_entity: Entity,
-    pub character_id: CharacterUniqueId,
-    pub name: String,
-}
-
-#[derive(Clone)]
-pub struct PartyMemberDisconnect {
-    pub party_entity: Entity,
-    pub disconnect_entity: Entity,
-    pub character_id: CharacterUniqueId,
-    pub name: String,
-}
-
-#[derive(Clone)]
-pub struct PartyEventInvite {
-    pub owner_entity: Entity,
-    pub invited_entity: Entity,
-}
-
-#[derive(Clone)]
-pub struct PartyEventLeave {
-    pub leaver_entity: Entity,
-}
-
-#[derive(Clone)]
-pub struct PartyEventChangeOwner {
-    pub owner_entity: Entity,
-    pub new_owner_entity: Entity,
-}
-
-#[derive(Clone)]
-pub struct PartyEventKick {
-    pub owner_entity: Entity,
-    pub kick_character_id: CharacterUniqueId,
-}
-
-#[derive(Clone)]
-pub struct PartyEventUpdateRules {
-    pub owner_entity: Entity,
-    pub item_sharing: PartyItemSharing,
-    pub xp_sharing: PartyXpSharing,
-}
-
-#[derive(Clone)]
 pub enum PartyMemberEvent {
-    Reconnect(PartyMemberReconnect),
-    Disconnect(PartyMemberDisconnect),
+    Reconnect {
+        party_entity: Entity,
+        reconnect_entity: Entity,
+        character_id: CharacterUniqueId,
+        name: String,
+    },
+    Disconnect {
+        party_entity: Entity,
+        disconnect_entity: Entity,
+        character_id: CharacterUniqueId,
+        name: String,
+    },
 }
 
 #[derive(Clone)]
 pub enum PartyEvent {
-    Invite(PartyEventInvite),
-    AcceptInvite(PartyEventInvite),
-    RejectInvite(PartyRejectInviteReason, PartyEventInvite),
-    ChangeOwner(PartyEventChangeOwner),
-    Leave(PartyEventLeave),
-    Kick(PartyEventKick),
-    UpdateRules(PartyEventUpdateRules),
+    Invite {
+        owner_entity: Entity,
+        invited_entity: Entity,
+    },
+    AcceptInvite {
+        owner_entity: Entity,
+        invited_entity: Entity,
+    },
+    RejectInvite {
+        reason: PartyRejectInviteReason,
+        owner_entity: Entity,
+        invited_entity: Entity,
+    },
+    ChangeOwner {
+        owner_entity: Entity,
+        new_owner_entity: Entity,
+    },
+    Leave {
+        leaver_entity: Entity,
+    },
+    Kick {
+        owner_entity: Entity,
+        kick_character_id: CharacterUniqueId,
+    },
+    UpdateRules {
+        owner_entity: Entity,
+        item_sharing: PartyItemSharing,
+        xp_sharing: PartyXpSharing,
+    },
 }

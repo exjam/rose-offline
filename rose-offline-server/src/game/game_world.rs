@@ -10,6 +10,7 @@ use crossbeam_channel::Receiver;
 use std::time::Duration;
 
 use crate::game::{
+    bots::bot_snowball_ai_system,
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, EquipmentEvent, ItemLifeEvent,
         NpcStoreEvent, PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent,
@@ -127,7 +128,14 @@ impl GameWorld {
             )
                 .in_base_set(GameStages::Input),
         )
-        .add_systems((passive_recovery_system, driving_time_system).in_base_set(GameStages::Input));
+        .add_systems(
+            (
+                bot_snowball_ai_system,
+                passive_recovery_system,
+                driving_time_system,
+            )
+                .in_base_set(GameStages::Input),
+        );
 
         app.add_systems(
             (
