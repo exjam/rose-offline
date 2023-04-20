@@ -57,6 +57,7 @@ pub struct CharacterBundle {
     pub basic_stats: BasicStats,
     pub bank: Bank,
     pub command: Command,
+    pub damage_sources: DamageSources,
     pub equipment: Equipment,
     pub experience_points: ExperiencePoints,
     pub health_points: HealthPoints,

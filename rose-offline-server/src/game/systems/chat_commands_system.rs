@@ -27,18 +27,18 @@ use rose_game_common::{
 };
 
 use crate::game::{
-    bots::{create_bot, BotSnowballAi},
+    bots::{bot_snowball_fight, bot_thinker, create_bot},
     bundles::{
         ability_values_add_value, ability_values_set_value, client_entity_join_zone,
         client_entity_teleport_zone, CharacterBundle, ItemDropBundle, MonsterBundle,
     },
     components::{
-        AbilityValues, BasicStats, BotAi, BotAiState, CharacterInfo, ClanMembership, ClientEntity,
-        ClientEntitySector, ClientEntityType, Command, EquipmentItemDatabase, GameClient,
-        HealthPoints, Inventory, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed,
-        NextCommand, PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList,
-        SkillPoints, SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team,
-        UnionMembership, PERSONAL_STORE_ITEM_SLOTS,
+        AbilityValues, BasicStats, CharacterInfo, ClanMembership, ClientEntity, ClientEntitySector,
+        ClientEntityType, Command, DamageSources, EquipmentItemDatabase, GameClient, HealthPoints,
+        Inventory, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand,
+        PartyMembership, PassiveRecoveryTime, PersonalStore, Position, SkillList, SkillPoints,
+        SpawnOrigin, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+        PERSONAL_STORE_ITEM_SLOTS,
     },
     events::{ChatCommandEvent, ClanEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::ServerMessage,
@@ -327,12 +327,13 @@ fn create_bot_entity(
     let entity = chat_command_params
         .commands
         .spawn((
-            BotAi::new(BotAiState::Farm),
+            bot_thinker(),
             CharacterBundle {
                 ability_values,
                 basic_stats: bot_data.basic_stats,
                 bank: Default::default(),
                 command: Command::default(),
+                damage_sources: DamageSources::new(5),
                 equipment: bot_data.equipment,
                 experience_points: bot_data.experience_points,
                 health_points: bot_data.health_points,
@@ -540,6 +541,7 @@ fn handle_chat_command(
         }
         ("bot", arg_matches) => {
             let num_bots = arg_matches.value_of("n").unwrap().parse::<usize>()?;
+
             create_random_bot_entities(
                 chat_command_params,
                 num_bots,
@@ -552,7 +554,7 @@ fn handle_chat_command(
             let bot_entities = create_random_bot_entities(
                 chat_command_params,
                 num_bots,
-                15.0,
+                30.0,
                 chat_command_user.position.clone(),
             );
 
@@ -560,8 +562,7 @@ fn handle_chat_command(
                 chat_command_params
                     .commands
                     .entity(entity)
-                    .remove::<BotAi>()
-                    .insert(BotSnowballAi::default());
+                    .insert(bot_snowball_fight());
             }
         }
         ("shop", arg_matches) => {

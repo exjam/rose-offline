@@ -10,7 +10,7 @@ use crossbeam_channel::Receiver;
 use std::time::Duration;
 
 use crate::game::{
-    bots::bot_snowball_ai_system,
+    bots::BotPlugin,
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, EquipmentEvent, ItemLifeEvent,
         NpcStoreEvent, PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent,
@@ -23,16 +23,16 @@ use crate::game::{
     },
     systems::{
         ability_values_changed_system, ability_values_update_character_system,
-        ability_values_update_npc_system, bank_system, bot_ai_system, chat_commands_system,
-        clan_system, client_entity_visibility_system, command_system, control_server_system,
-        damage_system, driving_time_system, equipment_event_system, experience_points_system,
-        expire_time_system, game_server_authentication_system, game_server_join_system,
-        game_server_main_system, item_life_system, login_server_authentication_system,
-        login_server_system, monster_spawn_system, npc_ai_system, npc_store_system,
-        party_member_event_system, party_member_update_info_system, party_system,
-        party_update_average_level_system, passive_recovery_system, personal_store_system,
-        pickup_item_system, quest_system, reward_item_system, save_system, server_messages_system,
-        skill_effect_system, startup_clans_system, startup_zones_system, status_effect_system,
+        ability_values_update_npc_system, bank_system, chat_commands_system, clan_system,
+        client_entity_visibility_system, command_system, control_server_system, damage_system,
+        driving_time_system, equipment_event_system, experience_points_system, expire_time_system,
+        game_server_authentication_system, game_server_join_system, game_server_main_system,
+        item_life_system, login_server_authentication_system, login_server_system,
+        monster_spawn_system, npc_ai_system, npc_store_system, party_member_event_system,
+        party_member_update_info_system, party_system, party_update_average_level_system,
+        passive_recovery_system, personal_store_system, pickup_item_system, quest_system,
+        reward_item_system, save_system, server_messages_system, skill_effect_system,
+        startup_clans_system, startup_zones_system, status_effect_system,
         update_character_motion_data_system, update_npc_motion_data_system, update_position_system,
         use_item_system, weight_system, world_server_authentication_system, world_server_system,
         world_time_system,
@@ -58,6 +58,7 @@ impl GameWorld {
     pub fn run(&mut self, game_config: GameConfig, game_data: GameData) {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
+        app.add_plugin(BotPlugin);
 
         app.insert_resource(BotList::new());
         app.insert_resource(ClientEntityList::new(&game_data.zones));
@@ -121,21 +122,13 @@ impl GameWorld {
                 game_server_main_system,
                 chat_commands_system,
                 monster_spawn_system,
-                bot_ai_system,
                 npc_ai_system,
                 expire_time_system,
                 status_effect_system,
             )
                 .in_base_set(GameStages::Input),
         )
-        .add_systems(
-            (
-                bot_snowball_ai_system,
-                passive_recovery_system,
-                driving_time_system,
-            )
-                .in_base_set(GameStages::Input),
-        );
+        .add_systems((passive_recovery_system, driving_time_system).in_base_set(GameStages::Input));
 
         app.add_systems(
             (

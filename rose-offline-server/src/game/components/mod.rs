@@ -1,6 +1,5 @@
 mod account;
 mod bank;
-mod bot_ai;
 mod character_list;
 mod clan;
 mod client_entity;
@@ -45,7 +44,6 @@ pub use rose_game_common::components::{
 
 pub use account::Account;
 pub use bank::Bank;
-pub use bot_ai::{BotAi, BotAiState, BotMessage, BOT_IDLE_CHECK_DURATION};
 pub use character_list::CharacterList;
 pub use clan::{Clan, ClanMember, ClanMembership};
 pub use client_entity::{ClientEntity, ClientEntityId, ClientEntityType};

@@ -138,7 +138,7 @@ pub fn damage_system(
                         let default_oldest = damage_sources.damage_sources.len() - 1;
                         damage_sources
                             .damage_sources
-                            .remove(oldest_index.unwrap_or(default_oldest));
+                            .swap_remove(oldest_index.unwrap_or(default_oldest));
                     }
 
                     damage_sources.damage_sources.push(DamageSource {

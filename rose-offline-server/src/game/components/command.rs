@@ -124,6 +124,14 @@ impl Command {
         matches!(self.command, CommandData::Sit | CommandData::Sitting)
     }
 
+    pub fn is_attack_target(&self, target_entity: Entity) -> bool {
+        let CommandData::Attack { target } = self.command else {
+            return false;
+        };
+
+        target == target_entity
+    }
+
     pub fn can_equip_items(&self) -> bool {
         matches!(
             self.command,

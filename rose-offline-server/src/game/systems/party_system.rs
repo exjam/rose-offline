@@ -9,8 +9,8 @@ use rose_game_common::{
 
 use crate::game::{
     components::{
-        AbilityValues, BotAi, BotMessage, CharacterInfo, CharacterUniqueId, ClientEntity,
-        GameClient, HealthPoints, Party, PartyMember, PartyMembership, Stamina, StatusEffects,
+        AbilityValues, CharacterInfo, CharacterUniqueId, ClientEntity, GameClient, HealthPoints,
+        Party, PartyMember, PartyMembership, Stamina, StatusEffects,
     },
     events::{PartyEvent, PartyMemberEvent},
     messages::server::{
@@ -25,7 +25,6 @@ pub struct PartyMembershipQuery<'w> {
     character_info: &'w CharacterInfo,
     party_membership: &'w mut PartyMembership,
     game_client: Option<&'w GameClient>,
-    bot_ai: Option<&'w mut BotAi>,
 }
 
 #[derive(WorldQuery)]
@@ -125,12 +124,6 @@ fn handle_party_invite(
         };
 
         invited_game_client.server_message_tx.send(message).ok();
-    }
-
-    if let Some(mut invited_bot_ai) = invited.bot_ai {
-        invited_bot_ai
-            .messages
-            .push(BotMessage::PartyInvite(owner_entity));
     }
 
     Ok(())
