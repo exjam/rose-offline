@@ -383,20 +383,8 @@ impl Inventory {
     }
 
     pub fn find_item(&self, item_reference: ItemReference) -> Option<ItemSlot> {
-        for page in [
-            &self.equipment,
-            &self.consumables,
-            &self.materials,
-            &self.vehicles,
-        ]
-        .iter()
-        {
-            if let Some(slot) = page.find_item(item_reference) {
-                return Some(slot);
-            }
-        }
-
-        None
+        self.get_page(item_reference.item_type.into())
+            .find_item(item_reference)
     }
 
     pub fn has_empty_slot(&self, page_type: InventoryPageType) -> bool {
