@@ -127,6 +127,10 @@ impl Command {
         matches!(self.command, CommandData::Stop(_))
     }
 
+    pub fn is_stop_for(&self, duration: Duration) -> bool {
+        self.is_stop() && self.duration > duration
+    }
+
     pub fn is_sit(&self) -> bool {
         matches!(
             self.command,
