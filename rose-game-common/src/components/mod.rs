@@ -3,7 +3,6 @@ mod basic_stats;
 mod character_delete_time;
 mod character_info;
 mod clan;
-mod destination;
 mod equipment;
 mod experience_points;
 mod health_points;
@@ -21,7 +20,6 @@ mod skill_points;
 mod stamina;
 mod stat_points;
 mod status_effects;
-mod target;
 mod team;
 mod union_membership;
 
@@ -30,7 +28,6 @@ pub use basic_stats::{BasicStatType, BasicStats};
 pub use character_delete_time::CharacterDeleteTime;
 pub use character_info::{CharacterGender, CharacterInfo, CharacterUniqueId};
 pub use clan::{ClanLevel, ClanMark, ClanPoints, ClanUniqueId};
-pub use destination::Destination;
 pub use equipment::{Equipment, EquipmentItemDatabase, EquipmentItemReference};
 pub use experience_points::ExperiencePoints;
 pub use health_points::HealthPoints;
@@ -53,6 +50,5 @@ pub use stat_points::StatPoints;
 pub use status_effects::{
     ActiveStatusEffect, ActiveStatusEffectRegen, StatusEffects, StatusEffectsRegen,
 };
-pub use target::Target;
 pub use team::Team;
 pub use union_membership::UnionMembership;

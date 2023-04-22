@@ -3,10 +3,7 @@ use bevy::math::{Vec2, Vec3};
 
 use rose_data::{Item, MotionId, SkillId};
 
-use crate::game::components::{
-    CommandAttack, CommandCastSkill, CommandCastSkillTarget, CommandData, CommandEmote,
-    CommandMove, CommandPickupItemDrop, CommandSit, CommandStop, ItemSlot, MoveMode,
-};
+use crate::game::components::{CommandCastSkillTarget, CommandData, ItemSlot, MoveMode};
 
 #[derive(Component, Default)]
 pub struct NextCommand {
@@ -28,62 +25,60 @@ impl NextCommand {
         move_mode: Option<MoveMode>,
     ) -> Self {
         Self {
-            command: Some(CommandData::Move(CommandMove {
+            command: Some(CommandData::Move {
                 destination,
                 target,
                 move_mode,
-            })),
+            }),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_attack(target: Entity) -> Self {
         Self {
-            command: Some(CommandData::Attack(CommandAttack { target })),
+            command: Some(CommandData::Attack { target }),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_emote(motion_id: MotionId, is_stop: bool) -> Self {
         Self {
-            command: Some(CommandData::Emote(CommandEmote { motion_id, is_stop })),
+            command: Some(CommandData::Emote { motion_id, is_stop }),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_pickup_item_drop(target: Entity) -> Self {
         Self {
-            command: Some(CommandData::PickupItemDrop(CommandPickupItemDrop {
-                target,
-            })),
+            command: Some(CommandData::PickupItemDrop { target }),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_sitting() -> Self {
         Self {
-            command: Some(CommandData::Sit(CommandSit::Sitting)),
+            command: Some(CommandData::Sitting),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_sit() -> Self {
         Self {
-            command: Some(CommandData::Sit(CommandSit::Sit)),
+            command: Some(CommandData::Sit),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_standing() -> Self {
         Self {
-            command: Some(CommandData::Sit(CommandSit::Standing)),
+            command: Some(CommandData::Standing),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_stop(send_message: bool) -> Self {
         Self {
-            command: Some(CommandData::Stop(CommandStop { send_message })),
+            command: Some(CommandData::Stop { send_message }),
             has_sent_server_message: false,
         }
     }
@@ -100,13 +95,13 @@ impl NextCommand {
         use_item: Option<(ItemSlot, Item)>,
     ) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill {
+            command: Some(CommandData::CastSkill {
                 skill_id,
                 skill_target: None,
                 use_item,
                 cast_motion_id: None,
                 action_motion_id: None,
-            })),
+            }),
             has_sent_server_message: false,
         }
     }
@@ -117,26 +112,26 @@ impl NextCommand {
         use_item: Option<(ItemSlot, Item)>,
     ) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill {
+            command: Some(CommandData::CastSkill {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                 use_item,
                 cast_motion_id: None,
                 action_motion_id: None,
-            })),
+            }),
             has_sent_server_message: false,
         }
     }
 
     pub fn with_cast_skill_target_position(skill_id: SkillId, position: Vec2) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill {
+            command: Some(CommandData::CastSkill {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Position(position)),
                 use_item: None,
                 cast_motion_id: None,
                 action_motion_id: None,
-            })),
+            }),
             has_sent_server_message: false,
         }
     }
@@ -148,13 +143,13 @@ impl NextCommand {
         action_motion_id: MotionId,
     ) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill {
+            command: Some(CommandData::CastSkill {
                 skill_id,
                 skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                 use_item: None,
                 cast_motion_id: Some(cast_motion_id),
                 action_motion_id: Some(action_motion_id),
-            })),
+            }),
             has_sent_server_message: false,
         }
     }
@@ -165,13 +160,13 @@ impl NextCommand {
         action_motion_id: MotionId,
     ) -> Self {
         Self {
-            command: Some(CommandData::CastSkill(CommandCastSkill {
+            command: Some(CommandData::CastSkill {
                 skill_id,
                 skill_target: None,
                 use_item: None,
                 cast_motion_id: Some(cast_motion_id),
                 action_motion_id: Some(action_motion_id),
-            })),
+            }),
             has_sent_server_message: false,
         }
     }

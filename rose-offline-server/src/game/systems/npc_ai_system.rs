@@ -32,9 +32,9 @@ use crate::game::{
     bundles::{client_entity_leave_zone, ItemDropBundle, MonsterBundle},
     components::{
         AbilityValues, Clan, ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType,
-        Command, CommandData, CommandDie, DamageSources, DroppedItem, GameClient, HealthPoints,
-        Level, MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Party,
-        PartyMember, PartyMembership, Position, SpawnOrigin, StatusEffects, Target, Team,
+        Command, CommandData, DamageSources, DroppedItem, GameClient, HealthPoints, Level,
+        MonsterSpawnPoint, MoveMode, NextCommand, Npc, NpcAi, ObjectVariables, Owner, Party,
+        PartyMember, PartyMembership, Position, SpawnOrigin, StatusEffects, Team,
     },
     events::{DamageEvent, QuestTriggerEvent, RewardItemEvent, RewardXpEvent},
     messages::server::ServerMessage,
@@ -61,7 +61,6 @@ pub struct NpcQuery<'w> {
     status_effects: &'w StatusEffects,
     owner: Option<&'w Owner>,
     spawn_origin: Option<&'w SpawnOrigin>,
-    target: Option<&'w Target>,
     damage_sources: Option<&'w DamageSources>,
 }
 
@@ -90,13 +89,13 @@ pub struct KillerQuery<'w> {
 #[derive(WorldQuery)]
 pub struct TargetQuery<'w> {
     entity: Entity,
+    command: &'w Command,
     position: &'w Position,
     level: &'w Level,
     team: &'w Team,
     ability_values: &'w AbilityValues,
     health_points: &'w HealthPoints,
     status_effects: &'w StatusEffects,
-    target: Option<&'w Target>,
     npc: Option<&'w Npc>,
     clan_membership: Option<&'w ClanMembership>,
 }
@@ -108,7 +107,7 @@ pub struct AiSystemParameters<'w, 's> {
     server_messages: ResMut<'w, ServerMessages>,
     target_query: Query<'w, 's, TargetQuery<'static>>,
     object_variable_query: Query<'w, 's, &'static mut ObjectVariables>,
-    owner_query: Query<'w, 's, (&'static Position, Option<&'static Target>)>,
+    owner_query: Query<'w, 's, (&'static Position, &'static Command)>,
     clan_query: Query<'w, 's, &'static Clan>,
     damage_events: EventWriter<'w, DamageEvent>,
     quest_trigger_events: EventWriter<'w, QuestTriggerEvent>,
@@ -265,8 +264,9 @@ fn ai_condition_distance(
             .map(|(position, _)| position.position.xy()),
         AipDistanceOrigin::Target => ai_parameters
             .source
-            .target
-            .and_then(|target| ai_system_parameters.owner_query.get(target.entity).ok())
+            .command
+            .target_entity()
+            .and_then(|target_entity| ai_system_parameters.owner_query.get(target_entity).ok())
             .map(|(position, _)| position.position.xy()),
     }
     .map(|compare_position| {
@@ -315,8 +315,8 @@ fn ai_condition_has_no_owner(
 
 fn ai_condition_is_attacker_current_target(ai_parameters: &mut AiParameters) -> bool {
     if let Some(attacker) = ai_parameters.attacker {
-        if let Some(target) = ai_parameters.source.target {
-            return attacker.entity == target.entity;
+        if let Some(target_entity) = ai_parameters.source.command.target_entity() {
+            return attacker.entity == target_entity;
         }
     }
 
@@ -329,7 +329,7 @@ fn ai_condition_no_target_and_compare_attacker_ability_value(
     ability: AipAbilityType,
     value: i32,
 ) -> bool {
-    if ai_parameters.source.target.is_some() {
+    if ai_parameters.source.command.target_entity().is_some() {
         return false;
     }
 
@@ -518,8 +518,9 @@ fn ai_condition_has_status_effect(
         AipHaveStatusTarget::This => Some(ai_parameters.source.status_effects),
         _ => ai_parameters
             .source
-            .target
-            .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+            .command
+            .target_entity()
+            .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
             .map(|target| target.status_effects),
     };
 
@@ -576,8 +577,9 @@ fn ai_condition_target_ability_value(
 ) -> bool {
     if let Some(target) = ai_parameters
         .source
-        .target
-        .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+        .command
+        .target_entity()
+        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
     {
         let ability_value = get_aip_ability_value(
             target.ability_values,
@@ -606,8 +608,9 @@ fn ai_condition_attacker_and_target_ability_value(
 
     let target_ability_value = ai_parameters
         .source
-        .target
-        .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+        .command
+        .target_entity()
+        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
         .map(|target| {
             get_aip_ability_value(
                 target.ability_values,
@@ -633,7 +636,7 @@ fn ai_condition_owner_has_target(
         .source
         .owner
         .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
-        .map_or(false, |(_, target)| target.is_some())
+        .map_or(false, |(_, command)| command.target_entity().is_some())
 }
 
 fn ai_condition_is_attacker_clan_master(
@@ -662,8 +665,9 @@ fn ai_condition_is_target_clan_master(
 ) -> bool {
     if let Some(target) = ai_parameters
         .source
-        .target
-        .and_then(|target| ai_system_parameters.target_query.get(target.entity).ok())
+        .command
+        .target_entity()
+        .and_then(|target_entity| ai_system_parameters.target_query.get(target_entity).ok())
     {
         if let Some(clan_entity) = target
             .clan_membership
@@ -866,8 +870,8 @@ fn ai_action_move_away_from_target(
         AipMoveMode::Walk => MoveMode::Walk,
     };
 
-    if let Some(target) = ai_parameters.source.target {
-        if let Ok(target) = ai_system_parameters.target_query.get(target.entity) {
+    if let Some(target_entity) = ai_parameters.source.command.target_entity() {
+        if let Ok(target) = ai_system_parameters.target_query.get(target_entity) {
             let source_position = ai_parameters.source.position.position;
             let direction_away_from_target =
                 (source_position.xy() - target.position.position.xy()).normalize();
@@ -954,7 +958,7 @@ fn ai_action_attack_owner_target(
         .source
         .owner
         .and_then(|owner| ai_system_parameters.owner_query.get(owner.entity).ok())
-        .and_then(|(_, target)| target.map(|target| target.entity))
+        .and_then(|(_, command)| command.target_entity())
     {
         if let Ok(target) = ai_system_parameters.target_query.get(owner_target_entity) {
             if target.team.id != Team::DEFAULT_NPC_TEAM_ID
@@ -1087,11 +1091,9 @@ fn ai_action_nearby_allies_attack_target(
     nearby_ally_type: AipNearbyAlly,
     limit: Option<usize>,
 ) {
-    let target = ai_parameters.source.target;
-    if target.is_none() {
+    let Some(target_entity) = ai_parameters.source.command.target_entity() else {
         return;
-    }
-    let target = target.unwrap();
+    };
 
     let zone_entities = ai_system_parameters
         .client_entity_list
@@ -1112,7 +1114,7 @@ fn ai_action_nearby_allies_attack_target(
         }
 
         if let Ok(nearby_ally) = ai_system_parameters.target_query.get(nearby_entity) {
-            if nearby_ally.target.is_some()
+            if nearby_ally.command.target_entity().is_some()
                 || nearby_ally.team.id != ai_parameters.source.team.id
                 || nearby_ally.npc.is_none()
                 || nearby_ally.health_points.hp <= 0
@@ -1133,7 +1135,7 @@ fn ai_action_nearby_allies_attack_target(
             ai_system_parameters
                 .commands
                 .entity(nearby_entity)
-                .insert(NextCommand::with_attack(target.entity));
+                .insert(NextCommand::with_attack(target_entity));
 
             num_attackers += 1;
         }
@@ -1155,19 +1157,24 @@ fn ai_action_spawn_npc(
     origin: AipSpawnNpcOrigin,
     is_owner: bool,
 ) {
-    let spawn_position = match origin {
-        AipSpawnNpcOrigin::CurrentPosition => Some(ai_parameters.source.position.position),
-        AipSpawnNpcOrigin::AttackerPosition => ai_parameters
-            .attacker
-            .map(|attacker| attacker.position.position),
-        AipSpawnNpcOrigin::TargetPosition => ai_parameters.source.target.and_then(|target| {
-            ai_system_parameters
-                .target_query
-                .get(target.entity)
-                .map(|target| target.position.position)
-                .ok()
-        }),
-    };
+    let spawn_position =
+        match origin {
+            AipSpawnNpcOrigin::CurrentPosition => Some(ai_parameters.source.position.position),
+            AipSpawnNpcOrigin::AttackerPosition => ai_parameters
+                .attacker
+                .map(|attacker| attacker.position.position),
+            AipSpawnNpcOrigin::TargetPosition => ai_parameters
+                .source
+                .command
+                .target_entity()
+                .and_then(|target_entity| {
+                    ai_system_parameters
+                        .target_query
+                        .get(target_entity)
+                        .map(|target| target.position.position)
+                        .ok()
+                }),
+        };
 
     let npc_id = NpcId::new(npc_id as u16);
     if npc_id.is_none() {
@@ -1241,7 +1248,7 @@ fn ai_action_use_skill(
 ) {
     let target_entity = match target {
         AipSkillTarget::FindChar => ai_parameters.find_char.map(|(entity, _)| entity),
-        AipSkillTarget::Target => ai_parameters.source.target.map(|target| target.entity),
+        AipSkillTarget::Target => ai_parameters.source.command.target_entity(),
         AipSkillTarget::This => Some(ai_parameters.source.entity),
         AipSkillTarget::NearChar => ai_parameters.near_char.map(|(entity, _)| entity),
     };
@@ -1663,7 +1670,7 @@ pub fn npc_ai_system(
             if let Some(trigger_on_damaged) = ai_program.trigger_on_damaged.as_ref() {
                 let mut rng = rand::thread_rng();
                 for &(attacker_entity, damage) in source.ai.pending_damage.iter() {
-                    if source.command.get_target().is_some()
+                    if source.command.target_entity().is_some()
                         && ai_program.damage_trigger_new_target_chance < rng.gen_range(0..100)
                     {
                         continue;
@@ -1686,7 +1693,7 @@ pub fn npc_ai_system(
         source.ai.pending_damage.clear();
 
         match source.command.command {
-            CommandData::Stop(_) => {
+            CommandData::Stop { .. } => {
                 if let Some(ai_program) =
                     ai_system_resources.game_data.ai.get_ai(source.ai.ai_index)
                 {
@@ -1708,10 +1715,10 @@ pub fn npc_ai_system(
                     }
                 }
             }
-            CommandData::Die(CommandDie {
+            CommandData::Die {
                 killer: killer_entity,
                 damage: killer_damage,
-            }) => {
+            } => {
                 if !source.ai.has_run_dead_ai {
                     source.ai.has_run_dead_ai = true;
 

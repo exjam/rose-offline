@@ -1,8 +1,13 @@
-use bevy::ecs::prelude::{Commands, Entity, EventWriter, Query, Res, ResMut};
-use bevy::ecs::query::WorldQuery;
-use bevy::math::{Vec3, Vec3Swizzles};
-use bevy::time::Time;
 use std::time::Duration;
+
+use bevy::{
+    ecs::{
+        prelude::{Commands, Entity, EventWriter, Query, Res, ResMut},
+        query::WorldQuery,
+    },
+    math::{Vec3, Vec3Swizzles},
+    time::Time,
+};
 
 use rose_data::{
     AmmoIndex, EquipmentIndex, Item, ItemClass, SkillActionMode, StackableSlotBehaviour,
@@ -10,16 +15,14 @@ use rose_data::{
 };
 use rose_game_common::components::{CharacterGender, CharacterInfo};
 
-use crate::game::events::ItemLifeEvent;
 use crate::game::{
     components::{
-        AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command, CommandAttack,
-        CommandCastSkill, CommandCastSkillTarget, CommandData, CommandEmote, CommandMove,
-        CommandPickupItemDrop, CommandSit, CommandStop, Destination, Equipment, GameClient,
-        HealthPoints, ItemDrop, ItemSlot, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, Owner,
-        PartyOwner, PersonalStore, Position, Target,
+        AbilityValues, ClientEntity, ClientEntitySector, ClientEntityType, Command,
+        CommandCastSkillTarget, CommandData, Equipment, GameClient, HealthPoints, ItemDrop,
+        ItemSlot, MotionData, MoveMode, MoveSpeed, NextCommand, Npc, Owner, PartyOwner,
+        PersonalStore, Position,
     },
-    events::{DamageEvent, PickupItemEvent, SkillEvent, SkillEventTarget},
+    events::{DamageEvent, ItemLifeEvent, PickupItemEvent, SkillEvent, SkillEventTarget},
     messages::server::ServerMessage,
     resources::{GameData, ServerMessages},
 };
@@ -63,19 +66,11 @@ pub struct CommandSkillTargetQuery<'w> {
 }
 
 fn command_stop(
-    commands: &mut Commands,
     command: &mut Command,
-    entity: Entity,
     client_entity: &ClientEntity,
     position: &Position,
     server_messages: Option<&mut ServerMessages>,
 ) {
-    // Remove all components associated with other actions
-    commands
-        .entity(entity)
-        .remove::<Destination>()
-        .remove::<Target>();
-
     if let Some(server_messages) = server_messages {
         server_messages.send_entity_message(
             client_entity,
@@ -187,19 +182,19 @@ pub fn command_system(
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 // Send any server message required for update client next command
                 match next_command.command.as_mut().unwrap() {
-                    CommandData::Die(_) => {
+                    CommandData::Die { .. } => {
                         panic!("Next command should never be set to die, set current command")
                     }
-                    CommandData::Sit(_) => {}
-                    CommandData::Stop(_) => {}
+                    CommandData::Sit | CommandData::Sitting | CommandData::Standing => {}
+                    CommandData::Stop { .. } => {}
                     CommandData::PersonalStore => {}
-                    CommandData::PickupItemDrop(_) => {}
-                    CommandData::Emote(_) => {}
-                    CommandData::Move(CommandMove {
+                    CommandData::PickupItemDrop { .. } => {}
+                    CommandData::Emote { .. } => {}
+                    CommandData::Move {
                         destination,
                         target,
                         move_mode: command_move_mode,
-                    }) => {
+                    } => {
                         let mut target_entity_id = None;
                         if let Some(target_entity) = *target {
                             if let Some(target) = query_move_target
@@ -228,9 +223,9 @@ pub fn command_system(
                             },
                         );
                     }
-                    &mut CommandData::Attack(CommandAttack {
+                    &mut CommandData::Attack {
                         target: target_entity,
-                    }) => {
+                    } => {
                         if let Some(target) = query_attack_target
                             .get(target_entity)
                             .ok()
@@ -256,12 +251,12 @@ pub fn command_system(
                             *next_command = NextCommand::with_stop(true);
                         }
                     }
-                    &mut CommandData::CastSkill(CommandCastSkill {
+                    &mut CommandData::CastSkill {
                         skill_id,
                         skill_target: None,
                         cast_motion_id,
                         ..
-                    }) => {
+                    } => {
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::CastSkillSelf {
@@ -271,12 +266,12 @@ pub fn command_system(
                             },
                         );
                     }
-                    &mut CommandData::CastSkill(CommandCastSkill {
+                    &mut CommandData::CastSkill {
                         skill_id,
                         skill_target: Some(CommandCastSkillTarget::Entity(target_entity)),
                         cast_motion_id,
                         ..
-                    }) => {
+                    } => {
                         if let Some(target) = query_skill_target
                             .get(target_entity)
                             .ok()
@@ -302,12 +297,12 @@ pub fn command_system(
                             *next_command = NextCommand::with_stop(true);
                         }
                     }
-                    CommandData::CastSkill(CommandCastSkill {
+                    CommandData::CastSkill {
                         skill_id,
                         skill_target: Some(CommandCastSkillTarget::Position(target_position)),
                         cast_motion_id,
                         ..
-                    }) => {
+                    } => {
                         server_messages.send_entity_message(
                             client_entity,
                             ServerMessage::CastSkillTargetPosition {
@@ -326,14 +321,14 @@ pub fn command_system(
             command.duration += time.delta();
 
             let required_duration = match &mut command.command {
-                CommandData::Attack(_) => {
+                CommandData::Attack { .. } => {
                     let attack_speed =
                         i32::max(ability_values.get_attack_speed(), 30) as f32 / 100.0;
                     command
                         .required_duration
                         .map(|duration| duration.div_f32(attack_speed))
                 }
-                CommandData::Emote(_) => {
+                CommandData::Emote { .. } => {
                     // Any command can interrupt an emote
                     if next_command.command.is_some() {
                         None
@@ -355,15 +350,11 @@ pub fn command_system(
             }
 
             match command.command {
-                CommandData::Die(_) => {
+                CommandData::Die { .. } => {
                     // We can't perform NextCommand if we are dead!
-                    commands
-                        .entity(entity)
-                        .remove::<Target>()
-                        .remove::<Destination>();
                     return;
                 }
-                CommandData::Sit(CommandSit::Sitting) => {
+                CommandData::Sitting => {
                     // When sitting animation is complete transition to Sit
                     *command = Command::with_sit();
                 }
@@ -382,7 +373,7 @@ pub fn command_system(
                 return;
             }
 
-            if matches!(command.command, CommandData::Sit(CommandSit::Sit)) {
+            if matches!(command.command, CommandData::Sit) {
                 // If current command is sit, we must stand before performing NextCommand
                 let duration = motion_data
                     .get_sit_standing()
@@ -420,11 +411,9 @@ pub fn command_system(
                 .unwrap_or(0);
 
             match next_command.command.as_mut().unwrap() {
-                &mut CommandData::Stop(CommandStop { send_message }) => {
+                &mut CommandData::Stop { send_message } => {
                     command_stop(
-                        &mut commands,
                         &mut command,
-                        entity,
                         client_entity,
                         position,
                         if send_message {
@@ -435,11 +424,11 @@ pub fn command_system(
                     );
                     *next_command = NextCommand::default();
                 }
-                CommandData::Move(CommandMove {
+                CommandData::Move {
                     destination,
                     target,
                     move_mode: command_move_mode,
-                }) => {
+                } => {
                     let mut entity_commands = commands.entity(entity);
 
                     if let Some(target_entity) = *target {
@@ -477,7 +466,6 @@ pub fn command_system(
                             }
                         } else {
                             *target = None;
-                            entity_commands.remove::<Target>();
                         }
                     }
 
@@ -494,19 +482,13 @@ pub fn command_system(
                     let distance = position.position.xy().distance(destination.xy());
                     if distance < 0.1 {
                         *command = Command::with_stop();
-                        entity_commands.remove::<Target>().remove::<Destination>();
                     } else {
                         *command = Command::with_move(*destination, *target, *command_move_mode);
-                        entity_commands.insert(Destination::new(*destination));
-
-                        if let Some(target_entity) = *target {
-                            entity_commands.insert(Target::new(target_entity));
-                        }
                     }
                 }
-                &mut CommandData::PickupItemDrop(CommandPickupItemDrop {
+                &mut CommandData::PickupItemDrop {
                     target: target_entity,
-                }) => {
+                } => {
                     if query_pickup_item
                         .get_mut(target_entity)
                         .ok()
@@ -527,21 +509,16 @@ pub fn command_system(
                         *command = Command::with_stop();
                     }
 
-                    commands
-                        .entity(entity)
-                        .remove::<Destination>()
-                        .remove::<Target>();
                     *next_command = NextCommand::default();
                 }
-                &mut CommandData::Attack(CommandAttack {
+                &mut CommandData::Attack {
                     target: target_entity,
-                }) => {
+                } => {
                     if let Some(target) = query_attack_target
                         .get(target_entity)
                         .ok()
                         .filter(|target| is_valid_attack_target(target, position))
                     {
-                        let mut entity_commands = commands.entity(entity);
                         let distance = position
                             .position
                             .xy()
@@ -657,9 +634,7 @@ pub fn command_system(
                             if cancel_attack {
                                 // Attack requirements not met, cancel attack
                                 command_stop(
-                                    &mut commands,
                                     &mut command,
-                                    entity,
                                     client_entity,
                                     position,
                                     Some(&mut server_messages),
@@ -681,12 +656,6 @@ pub fn command_system(
                                 // In range, set current command to attack
                                 *command = Command::with_attack(target_entity, attack_duration);
 
-                                // Remove our destination component, as we have reached it!
-                                entity_commands.remove::<Destination>();
-
-                                // Update target
-                                entity_commands.insert(Target::new(target_entity));
-
                                 // Send damage event to damage system
                                 damage_events.send(DamageEvent::Attack {
                                     attacker: entity,
@@ -705,18 +674,10 @@ pub fn command_system(
                                 Some(target_entity),
                                 Some(MoveMode::Run),
                             );
-
-                            // Set destination to move towards
-                            entity_commands.insert(Destination::new(target.position.position));
-
-                            // Update target
-                            entity_commands.insert(Target::new(target_entity));
                         }
                     } else {
                         command_stop(
-                            &mut commands,
                             &mut command,
-                            entity,
                             client_entity,
                             position,
                             Some(&mut server_messages),
@@ -724,15 +685,14 @@ pub fn command_system(
                         *next_command = NextCommand::default();
                     }
                 }
-                &mut CommandData::CastSkill(CommandCastSkill {
+                &mut CommandData::CastSkill {
                     skill_id,
                     skill_target,
                     ref use_item,
                     cast_motion_id,
                     action_motion_id,
-                }) => {
+                } => {
                     if let Some(skill_data) = game_data.skills.get_skill(skill_id) {
-                        let mut entity_commands = commands.entity(entity);
                         let (target_position, target_entity) = match skill_target {
                             Some(CommandCastSkillTarget::Entity(target_entity)) => {
                                 if let Some(target) = query_skill_target
@@ -832,25 +792,27 @@ pub fn command_system(
                                     *next_command =
                                         target_entity.map_or_else(NextCommand::default, |target| {
                                             NextCommand::with_command_skip_server_message(
-                                                CommandData::Attack(CommandAttack { target }),
+                                                CommandData::Attack { target },
                                             )
                                         })
                                 }
                                 SkillActionMode::Restore => match command.command {
-                                    CommandData::Stop(_)
-                                    | CommandData::Move(_)
-                                    | CommandData::Attack(_) => {
+                                    CommandData::Stop { .. }
+                                    | CommandData::Move { .. }
+                                    | CommandData::Attack { .. } => {
                                         *next_command =
                                             NextCommand::with_command_skip_server_message(
                                                 command.command.clone(),
                                             )
                                     }
-                                    CommandData::Die(_)
-                                    | CommandData::Emote(_)
-                                    | CommandData::PickupItemDrop(_)
+                                    CommandData::Die { .. }
+                                    | CommandData::Emote { .. }
+                                    | CommandData::PickupItemDrop { .. }
                                     | CommandData::PersonalStore
-                                    | CommandData::Sit(_)
-                                    | CommandData::CastSkill(_) => {
+                                    | CommandData::Sit
+                                    | CommandData::Sitting
+                                    | CommandData::Standing
+                                    | CommandData::CastSkill { .. } => {
                                         *next_command = NextCommand::default()
                                     }
                                 },
@@ -863,9 +825,6 @@ pub fn command_system(
                                 casting_duration,
                                 action_duration,
                             );
-
-                            // Remove our destination component, as we have reached it!
-                            entity_commands.remove::<Destination>();
                         } else {
                             // TODO: By changing command to move here we affect SkillActionMode::Restore
 
@@ -876,16 +835,6 @@ pub fn command_system(
                                 target_entity,
                                 Some(MoveMode::Run),
                             );
-
-                            // Set destination to move towards
-                            entity_commands.insert(Destination::new(target_position));
-                        }
-
-                        // Update target
-                        if let Some(target_entity) = target_entity {
-                            entity_commands.insert(Target::new(target_entity));
-                        } else {
-                            entity_commands.remove::<Target>();
                         }
                     }
                 }
@@ -903,7 +852,7 @@ pub fn command_system(
                     *command = Command::with_personal_store();
                     *next_command = NextCommand::default();
                 }
-                CommandData::Sit(CommandSit::Sitting) => {
+                CommandData::Sitting => {
                     let duration = motion_data
                         .get_sit_sitting()
                         .map(|motion_data| motion_data.duration)
@@ -919,15 +868,15 @@ pub fn command_system(
                         },
                     );
                 }
-                CommandData::Sit(CommandSit::Standing) => {
+                CommandData::Standing => {
                     // The transition from Sit to Standing happens above
                     *next_command = NextCommand::default();
                 }
-                CommandData::Sit(CommandSit::Sit) => {
+                CommandData::Sit => {
                     // The transition from Sitting to Sit happens above
                     *next_command = NextCommand::default();
                 }
-                &mut CommandData::Emote(CommandEmote { motion_id, is_stop }) => {
+                &mut CommandData::Emote { motion_id, is_stop } => {
                     let motion_data = if let Some(npc) = npc {
                         game_data.npcs.get_npc_motion(npc.id, motion_id)
                     } else {
@@ -955,7 +904,7 @@ pub fn command_system(
                     *command = Command::with_emote(motion_id, is_stop, duration);
                     *next_command = NextCommand::default();
                 }
-                CommandData::Die(_) => {}
+                CommandData::Die { .. } => {}
             }
         },
     );

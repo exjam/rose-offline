@@ -1,10 +1,11 @@
+use std::convert::{TryFrom, TryInto};
+
 use bevy::math::{Vec2, Vec3};
 use modular_bitfield::{
     bitfield,
     prelude::{B14, B2},
 };
 use num_derive::FromPrimitive;
-use std::convert::{TryFrom, TryInto};
 
 use rose_data::{AmmoIndex, EquipmentIndex, Item, MotionId, SkillId, VehiclePartIndex, WarpGateId};
 use rose_data_irose::{decode_ammo_index, encode_ammo_index};

@@ -116,17 +116,28 @@ pub enum PickupItemDropError {
 pub type ActiveStatusEffects = EnumMap<StatusEffectType, Option<ActiveStatusEffect>>;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub enum CommandState {
+pub enum SpawnCommandState {
     Stop,
     Emote,
-    Move,
-    Attack,
+    Move {
+        target_position: Vec3,
+        target_entity_id: Option<ClientEntityId>,
+    },
+    Attack {
+        target_entity_id: ClientEntityId,
+        target_position: Vec3,
+    },
     Die,
-    PickupItemDrop,
+    PickupItemDrop {
+        target_entity_id: ClientEntityId,
+        target_position: Vec3,
+    },
     CastSkillSelf,
     CastSkillTargetEntity,
     CastSkillTargetPosition,
-    RunAway,
+    RunAway {
+        target_position: Vec3,
+    },
     Sit,
     PersonalStore,
 }
@@ -143,8 +154,7 @@ pub struct CharacterClanMembership {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpawnEntityCharacter {
     pub character_info: CharacterInfo,
-    pub command: CommandState,
-    pub destination: Option<Vec3>,
+    pub spawn_command_state: SpawnCommandState,
     pub entity_id: ClientEntityId,
     pub equipment: Equipment,
     pub health: HealthPoints,
@@ -154,7 +164,6 @@ pub struct SpawnEntityCharacter {
     pub passive_attack_speed: i32,
     pub position: Vec3,
     pub status_effects: ActiveStatusEffects,
-    pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
     pub personal_store_info: Option<(i32, String)>,
     pub clan_membership: Option<CharacterClanMembership>,
@@ -445,9 +454,7 @@ pub enum ServerMessage {
         position: Vec3,
         team: Team,
         health: HealthPoints,
-        destination: Option<Vec3>,
-        command: CommandState,
-        target_entity_id: Option<ClientEntityId>,
+        spawn_command_state: SpawnCommandState,
         move_mode: MoveMode,
         status_effects: ActiveStatusEffects,
     },
@@ -458,9 +465,7 @@ pub enum ServerMessage {
         position: Vec3,
         team: Team,
         health: HealthPoints,
-        destination: Option<Vec3>,
-        command: CommandState,
-        target_entity_id: Option<ClientEntityId>,
+        spawn_command_state: SpawnCommandState,
         move_mode: MoveMode,
         status_effects: ActiveStatusEffects,
     },

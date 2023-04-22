@@ -1,3 +1,4 @@
+use bevy::prelude::Vec3;
 use modular_bitfield::prelude::*;
 use std::{convert::TryInto, num::NonZeroU16};
 
@@ -17,8 +18,8 @@ use rose_game_common::{
     data::Damage,
     messages::{
         server::{
-            ActiveStatusEffects, CommandState, PartyMemberInfo, PartyMemberInfoOffline,
-            PartyMemberInfoOnline,
+            ActiveStatusEffects, PartyMemberInfo, PartyMemberInfoOffline, PartyMemberInfoOnline,
+            SpawnCommandState,
         },
         ClientEntityId, PartyItemSharing, PartyXpSharing,
     },
@@ -953,49 +954,128 @@ impl PacketWriteEntityId for PacketWriter {
     }
 }
 
-pub trait PacketReadCommandState {
-    fn read_command_state(&mut self) -> Result<CommandState, PacketError>;
+pub trait PacketReadSpawnCommandState {
+    fn read_spawn_command_state(&mut self) -> Result<SpawnCommandState, PacketError>;
 }
 
-impl<'a> PacketReadCommandState for PacketReader<'a> {
-    fn read_command_state(&mut self) -> Result<CommandState, PacketError> {
-        match self.read_u16()? {
-            0 => Ok(CommandState::Stop),
-            1 => Ok(CommandState::Move),
-            2 => Ok(CommandState::Attack),
-            3 => Ok(CommandState::Die),
-            4 => Ok(CommandState::PickupItemDrop),
-            6 => Ok(CommandState::CastSkillSelf),
-            7 => Ok(CommandState::CastSkillTargetEntity),
-            8 => Ok(CommandState::CastSkillTargetPosition),
-            9 => Ok(CommandState::RunAway),
-            10 => Ok(CommandState::Sit),
-            11 => Ok(CommandState::PersonalStore),
+impl<'a> PacketReadSpawnCommandState for PacketReader<'a> {
+    fn read_spawn_command_state(&mut self) -> Result<SpawnCommandState, PacketError> {
+        let destination_x = self.read_f32()?;
+        let destination_y = self.read_f32()?;
+        let command_id = self.read_u16()?;
+        let target_entity_id = self.read_option_entity_id()?;
+
+        match command_id {
+            0 => Ok(SpawnCommandState::Stop),
+            1 => Ok(SpawnCommandState::Move {
+                target_position: Vec3::new(destination_x, destination_y, 0.0),
+                target_entity_id,
+            }),
+            2 => Ok(SpawnCommandState::Attack {
+                target_position: Vec3::new(destination_x, destination_y, 0.0),
+                target_entity_id: target_entity_id.ok_or(PacketError::InvalidPacket)?,
+            }),
+            3 => Ok(SpawnCommandState::Die),
+            4 => Ok(SpawnCommandState::PickupItemDrop {
+                target_position: Vec3::new(destination_x, destination_y, 0.0),
+                target_entity_id: target_entity_id.ok_or(PacketError::InvalidPacket)?,
+            }),
+            6 => Ok(SpawnCommandState::CastSkillSelf),
+            7 => Ok(SpawnCommandState::CastSkillTargetEntity),
+            8 => Ok(SpawnCommandState::CastSkillTargetPosition),
+            9 => Ok(SpawnCommandState::RunAway {
+                target_position: Vec3::new(destination_x, destination_y, 0.0),
+            }),
+            10 => Ok(SpawnCommandState::Sit),
+            11 => Ok(SpawnCommandState::PersonalStore),
             _ => Err(PacketError::InvalidPacket),
         }
     }
 }
 
-pub trait PacketWriteCommandState {
-    fn write_command_state(&mut self, command: &CommandState);
+pub trait PacketWriteSpawnCommandState {
+    fn write_spawn_command_state(&mut self, command: &SpawnCommandState);
 }
 
-impl PacketWriteCommandState for PacketWriter {
-    fn write_command_state(&mut self, command: &CommandState) {
-        let command_id = match command {
-            CommandState::Stop | CommandState::Emote => 0,
-            CommandState::Move => 1,
-            CommandState::Attack => 2,
-            CommandState::Die => 3,
-            CommandState::PickupItemDrop => 4,
-            CommandState::CastSkillSelf => 6,
-            CommandState::CastSkillTargetEntity => 7,
-            CommandState::CastSkillTargetPosition => 8,
-            CommandState::RunAway => 9,
-            CommandState::Sit => 10,
-            CommandState::PersonalStore => 11,
+impl PacketWriteSpawnCommandState for PacketWriter {
+    fn write_spawn_command_state(&mut self, command: &SpawnCommandState) {
+        match *command {
+            SpawnCommandState::Stop | SpawnCommandState::Emote => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(0);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::Move {
+                target_position,
+                target_entity_id,
+            } => {
+                self.write_f32(target_position.x);
+                self.write_f32(target_position.y);
+                self.write_u16(1);
+                self.write_option_entity_id(target_entity_id);
+            }
+            SpawnCommandState::Attack {
+                target_entity_id,
+                target_position,
+            } => {
+                self.write_f32(target_position.x);
+                self.write_f32(target_position.y);
+                self.write_u16(2);
+                self.write_entity_id(target_entity_id);
+            }
+            SpawnCommandState::Die => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(3);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::PickupItemDrop {
+                target_entity_id,
+                target_position,
+            } => {
+                self.write_f32(target_position.x);
+                self.write_f32(target_position.y);
+                self.write_u16(4);
+                self.write_entity_id(target_entity_id);
+            }
+            SpawnCommandState::CastSkillSelf => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(6);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::CastSkillTargetEntity => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(7);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::CastSkillTargetPosition => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(8);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::RunAway { target_position } => {
+                self.write_f32(target_position.x);
+                self.write_f32(target_position.y);
+                self.write_u16(9);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::Sit => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(10);
+                self.write_option_entity_id(None);
+            }
+            SpawnCommandState::PersonalStore => {
+                self.write_f32(0.0);
+                self.write_f32(0.0);
+                self.write_u16(11);
+                self.write_option_entity_id(None);
+            }
         };
-        self.write_u16(command_id);
     }
 }
 

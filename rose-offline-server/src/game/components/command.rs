@@ -9,34 +9,6 @@ use rose_game_common::{
     data::Damage,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandMove {
-    pub destination: Vec3,
-    pub target: Option<Entity>,
-    pub move_mode: Option<MoveMode>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandStop {
-    pub send_message: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandDie {
-    pub killer: Option<Entity>,
-    pub damage: Option<Damage>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandAttack {
-    pub target: Entity,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandPickupItemDrop {
-    pub target: Entity,
-}
-
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum CommandCastSkillTarget {
     Entity(Entity),
@@ -44,43 +16,56 @@ pub enum CommandCastSkillTarget {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandCastSkill {
-    pub skill_id: SkillId,
-    pub skill_target: Option<CommandCastSkillTarget>,
-    pub use_item: Option<(ItemSlot, Item)>,
-    pub cast_motion_id: Option<MotionId>,
-    pub action_motion_id: Option<MotionId>,
-}
-
-#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
-pub enum CommandSit {
-    Sitting,
-    Sit,
-    Standing,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct CommandEmote {
-    pub motion_id: MotionId,
-    pub is_stop: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum CommandData {
-    Die(CommandDie),
-    Stop(CommandStop),
-    Move(CommandMove),
-    Attack(CommandAttack),
-    PickupItemDrop(CommandPickupItemDrop),
+    Die {
+        /// The entity which killed us
+        killer: Option<Entity>,
+
+        /// The damage which killed us
+        damage: Option<Damage>,
+    },
+    Stop {
+        /// Whether to send a network message when this command starts.
+        send_message: bool,
+    },
+    Move {
+        destination: Vec3,
+        target: Option<Entity>,
+        move_mode: Option<MoveMode>,
+    },
+    Attack {
+        target: Entity,
+    },
+    PickupItemDrop {
+        target: Entity,
+    },
     PersonalStore,
-    CastSkill(CommandCastSkill),
-    Sit(CommandSit),
-    Emote(CommandEmote),
+    CastSkill {
+        skill_id: SkillId,
+        skill_target: Option<CommandCastSkillTarget>,
+        use_item: Option<(ItemSlot, Item)>,
+        cast_motion_id: Option<MotionId>,
+        action_motion_id: Option<MotionId>,
+    },
+
+    /// Transition to Sit
+    Sitting,
+
+    /// Sitting
+    Sit,
+
+    /// Transition away from Sit
+    Standing,
+
+    Emote {
+        motion_id: MotionId,
+        is_stop: bool,
+    },
 }
 
 impl CommandData {
     pub fn is_manual_complete(&self) -> bool {
-        matches!(*self, CommandData::Sit(_) | CommandData::PersonalStore)
+        matches!(*self, CommandData::Sit | CommandData::PersonalStore)
     }
 }
 
@@ -111,20 +96,24 @@ impl Command {
         }
     }
 
-    pub fn get_target(&self) -> Option<Entity> {
+    pub fn target_entity(&self) -> Option<Entity> {
         match self.command {
-            CommandData::Attack(CommandAttack { target, .. }) => Some(target),
-            CommandData::Move(CommandMove { target, .. }) => target,
+            CommandData::Attack { target, .. } => Some(target),
+            CommandData::Move { target, .. } => target,
+            CommandData::CastSkill {
+                skill_target: Some(CommandCastSkillTarget::Entity(entity)),
+                ..
+            } => Some(entity),
             _ => None,
         }
     }
 
     pub fn is_dead(&self) -> bool {
-        matches!(self.command, CommandData::Die(_))
+        matches!(self.command, CommandData::Die { .. })
     }
 
     pub fn is_stop(&self) -> bool {
-        matches!(self.command, CommandData::Stop(_))
+        matches!(self.command, CommandData::Stop { .. })
     }
 
     pub fn is_stop_for(&self, duration: Duration) -> bool {
@@ -132,19 +121,18 @@ impl Command {
     }
 
     pub fn is_sit(&self) -> bool {
-        matches!(
-            self.command,
-            CommandData::Sit(CommandSit::Sit) | CommandData::Sit(CommandSit::Sitting)
-        )
+        matches!(self.command, CommandData::Sit | CommandData::Sitting)
     }
 
     pub fn can_equip_items(&self) -> bool {
         matches!(
             self.command,
-            CommandData::Stop(_)
-                | CommandData::Move(_)
-                | CommandData::Sit(_)
-                | CommandData::PickupItemDrop(_)
+            CommandData::Stop { .. }
+                | CommandData::Move { .. }
+                | CommandData::Sit
+                | CommandData::Sitting
+                | CommandData::Standing { .. }
+                | CommandData::PickupItemDrop { .. }
         )
     }
 
@@ -157,7 +145,7 @@ impl Command {
         damage: Option<Damage>,
         duration: Option<Duration>,
     ) -> Self {
-        Self::new(CommandData::Die(CommandDie { killer, damage }), duration)
+        Self::new(CommandData::Die { killer, damage }, duration)
     }
 
     pub fn with_move(
@@ -166,53 +154,44 @@ impl Command {
         move_mode: Option<MoveMode>,
     ) -> Self {
         Self::new(
-            CommandData::Move(CommandMove {
+            CommandData::Move {
                 destination,
                 target,
                 move_mode,
-            }),
+            },
             None,
         )
     }
 
     pub fn with_attack(target: Entity, duration: Duration) -> Self {
-        Self::new(
-            CommandData::Attack(CommandAttack { target }),
-            Some(duration),
-        )
+        Self::new(CommandData::Attack { target }, Some(duration))
     }
 
     pub fn with_pickup_item_drop(target: Entity, duration: Duration) -> Self {
-        Self::new(
-            CommandData::PickupItemDrop(CommandPickupItemDrop { target }),
-            Some(duration),
-        )
+        Self::new(CommandData::PickupItemDrop { target }, Some(duration))
     }
 
     pub fn with_sit() -> Self {
-        Self::new(CommandData::Sit(CommandSit::Sit), None)
+        Self::new(CommandData::Sit, None)
     }
 
     pub fn with_sitting(duration: Duration) -> Self {
-        Self::new(CommandData::Sit(CommandSit::Sitting), Some(duration))
+        Self::new(CommandData::Sitting, Some(duration))
     }
 
     pub fn with_standing(duration: Duration) -> Self {
-        Self::new(CommandData::Sit(CommandSit::Standing), Some(duration))
+        Self::new(CommandData::Standing, Some(duration))
     }
 
     pub fn with_emote(motion_id: MotionId, is_stop: bool, duration: Duration) -> Self {
-        Self::new(
-            CommandData::Emote(CommandEmote { motion_id, is_stop }),
-            Some(duration),
-        )
+        Self::new(CommandData::Emote { motion_id, is_stop }, Some(duration))
     }
 
     pub fn with_stop() -> Self {
         Self::new(
-            CommandData::Stop(CommandStop {
+            CommandData::Stop {
                 send_message: false,
-            }),
+            },
             None,
         )
     }
@@ -231,40 +210,14 @@ impl Command {
         action_duration: Duration,
     ) -> Self {
         Self::new(
-            CommandData::CastSkill(CommandCastSkill {
+            CommandData::CastSkill {
                 skill_id,
                 skill_target,
                 use_item: None,
                 cast_motion_id: None,
                 action_motion_id: None,
-            }),
+            },
             Some(casting_duration + action_duration),
         )
-    }
-}
-
-impl From<&Command> for rose_game_common::messages::server::CommandState {
-    fn from(command: &Command) -> Self {
-        match command.command {
-            CommandData::Die(_) => Self::Die,
-            CommandData::Stop(_) => Self::Stop,
-            CommandData::Move(_) => Self::Move,
-            CommandData::Attack(_) => Self::Attack,
-            CommandData::PickupItemDrop(_) => Self::PickupItemDrop,
-            CommandData::PersonalStore => Self::PersonalStore,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: None, ..
-            }) => Self::CastSkillSelf,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: Some(CommandCastSkillTarget::Entity(_)),
-                ..
-            }) => Self::CastSkillTargetEntity,
-            CommandData::CastSkill(CommandCastSkill {
-                skill_target: Some(CommandCastSkillTarget::Position(_)),
-                ..
-            }) => Self::CastSkillTargetPosition,
-            CommandData::Sit(_) => Self::Sit,
-            CommandData::Emote(_) => Self::Emote,
-        }
     }
 }

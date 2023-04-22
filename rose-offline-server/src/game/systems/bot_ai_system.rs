@@ -75,7 +75,7 @@ pub fn bot_ai_system(
         bot.ai.messages.clear();
 
         match bot.command.command {
-            CommandData::Stop(_) => {
+            CommandData::Stop { .. } => {
                 bot.ai.time_since_last_idle_check += time.delta();
                 if bot.ai.time_since_last_idle_check < BOT_IDLE_CHECK_DURATION {
                     continue;
@@ -211,7 +211,7 @@ pub fn bot_ai_system(
                     }
                 }
             }
-            CommandData::Die(_) => {
+            CommandData::Die { .. } => {
                 // TODO: Handle death by respawning, or disappearing?
             }
             _ => {}

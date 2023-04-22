@@ -23,11 +23,11 @@ use crate::game::{
     components::{
         AbilityValues, Account, Bank, BasicStatType, BasicStats, CharacterInfo, Clan, ClanMember,
         ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType, ClientEntityVisibility,
-        Command, CommandData, CommandSit, Dead, DrivingTime, DroppedItem, Equipment,
-        EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
-        ItemSlot, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party,
-        PartyMember, PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList,
-        SkillPoints, StatPoints, StatusEffects, StatusEffectsRegen, Team, WorldClient,
+        Command, CommandData, Dead, DrivingTime, DroppedItem, Equipment, EquipmentItemDatabase,
+        ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory, ItemSlot, Level, ManaPoints,
+        Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party, PartyMember, PartyMembership,
+        PassiveRecoveryTime, Position, QuestState, SkillList, SkillPoints, StatPoints,
+        StatusEffects, StatusEffectsRegen, Team, WorldClient,
     },
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, EquipmentEvent, ItemLifeEvent, NpcStoreEvent,
@@ -851,10 +851,7 @@ pub fn game_server_main_system(
                     }
                 }
                 ClientMessage::SitToggle => {
-                    if matches!(
-                        game_client.command.command,
-                        CommandData::Sit(CommandSit::Sit)
-                    ) {
+                    if matches!(game_client.command.command, CommandData::Sit) {
                         entity_commands.insert(NextCommand::with_standing());
                     } else {
                         entity_commands.insert(NextCommand::with_sitting());

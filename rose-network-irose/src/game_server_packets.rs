@@ -1,9 +1,10 @@
+use std::{num::NonZeroUsize, time::Duration};
+
 use bevy::math::{Vec2, Vec3};
 use bitvec::array::BitArray;
 use modular_bitfield::prelude::*;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use std::{num::NonZeroUsize, time::Duration};
 
 use rose_data::{
     AbilityType, AmmoIndex, ClanMemberPosition, EquipmentIndex, EquipmentItem, Item, ItemReference,
@@ -26,9 +27,9 @@ use rose_game_common::{
     messages::{
         server::{
             ActiveStatusEffects, CancelCastingSkillReason, CharacterClanMembership,
-            ClanCreateError, ClanMemberInfo, CommandState, CraftInsertGemError, LearnSkillError,
+            ClanCreateError, ClanMemberInfo, CraftInsertGemError, LearnSkillError,
             LevelUpSkillError, NpcStoreTransactionError, PartyMemberInfo, PartyMemberInfoOnline,
-            PersonalStoreTransactionStatus, PickupItemDropError,
+            PersonalStoreTransactionStatus, PickupItemDropError, SpawnCommandState,
         },
         ClientEntityId, PartyItemSharing, PartyRejectInviteReason, PartyXpSharing,
     },
@@ -37,14 +38,15 @@ use rose_network_common::{Packet, PacketError, PacketReader, PacketWriter};
 
 use crate::common_packets::{
     PacketEquipmentAmmoPart, PacketReadCharacterGender, PacketReadClanMark,
-    PacketReadClanMemberPosition, PacketReadCommandState, PacketReadDamage, PacketReadEntityId,
-    PacketReadEquipmentIndex, PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems,
-    PacketReadMoveMode, PacketReadPartyMemberInfo, PacketReadPartyRules, PacketReadSkillSlot,
-    PacketReadStatusEffects, PacketReadVehiclePartIndex, PacketWriteCharacterGender,
-    PacketWriteClanMark, PacketWriteClanMemberPosition, PacketWriteCommandState, PacketWriteDamage,
-    PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot, PacketWriteItemSlot,
-    PacketWriteItems, PacketWriteMoveMode, PacketWritePartyMemberInfo, PacketWritePartyRules,
-    PacketWriteSkillSlot, PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
+    PacketReadClanMemberPosition, PacketReadDamage, PacketReadEntityId, PacketReadEquipmentIndex,
+    PacketReadHotbarSlot, PacketReadItemSlot, PacketReadItems, PacketReadMoveMode,
+    PacketReadPartyMemberInfo, PacketReadPartyRules, PacketReadSkillSlot,
+    PacketReadSpawnCommandState, PacketReadStatusEffects, PacketReadVehiclePartIndex,
+    PacketWriteCharacterGender, PacketWriteClanMark, PacketWriteClanMemberPosition,
+    PacketWriteDamage, PacketWriteEntityId, PacketWriteEquipmentIndex, PacketWriteHotbarSlot,
+    PacketWriteItemSlot, PacketWriteItems, PacketWriteMoveMode, PacketWritePartyMemberInfo,
+    PacketWritePartyRules, PacketWriteSkillSlot, PacketWriteSpawnCommandState,
+    PacketWriteStatusEffects, PacketWriteVehiclePartIndex,
 };
 
 #[derive(FromPrimitive)]
@@ -1336,9 +1338,7 @@ pub struct PacketServerSpawnEntityNpc {
     pub direction: f32,
     pub position: Vec3,
     pub team: Team,
-    pub destination: Option<Vec3>,
-    pub command: CommandState,
-    pub target_entity_id: Option<ClientEntityId>,
+    pub spawn_command_state: SpawnCommandState,
     pub health: HealthPoints,
     pub move_mode: MoveMode,
     pub status_effects: ActiveStatusEffects,
@@ -1357,15 +1357,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityNpc {
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
         let position = Vec3::new(position_x, position_y, 0.0);
-        let destination_x = reader.read_f32()?;
-        let destination_y = reader.read_f32()?;
-        let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Vec3::new(destination_x, destination_y, 0.0))
-        } else {
-            None
-        };
-        let command = reader.read_command_state()?;
-        let target_entity_id = reader.read_option_entity_id()?;
+        let command = reader.read_spawn_command_state()?;
         let move_mode = reader.read_move_mode_u8()?;
         let health = HealthPoints::new(reader.read_i32()?);
         let team = Team::new(reader.read_u32()?);
@@ -1382,9 +1374,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityNpc {
             direction,
             position,
             team,
-            destination,
-            command,
-            target_entity_id,
+            spawn_command_state: command,
             health,
             move_mode,
             status_effects,
@@ -1398,15 +1388,7 @@ impl From<&PacketServerSpawnEntityNpc> for Packet {
         writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
-        if let Some(destination) = packet.destination.as_ref() {
-            writer.write_f32(destination.x);
-            writer.write_f32(destination.y);
-        } else {
-            writer.write_f32(0.0);
-            writer.write_f32(0.0);
-        }
-        writer.write_command_state(&packet.command);
-        writer.write_option_entity_id(packet.target_entity_id);
+        writer.write_spawn_command_state(&packet.spawn_command_state);
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
@@ -1424,11 +1406,9 @@ pub struct PacketServerSpawnEntityMonster {
     pub entity_id: ClientEntityId,
     pub npc: Npc,
     pub position: Vec3,
-    pub destination: Option<Vec3>,
     pub team: Team,
     pub health: HealthPoints,
-    pub command: CommandState,
-    pub target_entity_id: Option<ClientEntityId>,
+    pub spawn_command_state: SpawnCommandState,
     pub move_mode: MoveMode,
     pub status_effects: ActiveStatusEffects,
 }
@@ -1446,15 +1426,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityMonster {
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
         let position = Vec3::new(position_x, position_y, 0.0);
-        let destination_x = reader.read_f32()?;
-        let destination_y = reader.read_f32()?;
-        let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Vec3::new(destination_x, destination_y, 0.0))
-        } else {
-            None
-        };
-        let command = reader.read_command_state()?;
-        let target_entity_id = reader.read_option_entity_id()?;
+        let command = reader.read_spawn_command_state()?;
         let move_mode = reader.read_move_mode_u8()?;
         let health = HealthPoints::new(reader.read_i32()?);
         let team = Team::new(reader.read_u32()?);
@@ -1468,9 +1440,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityMonster {
             npc: Npc::new(npc_id, quest_index),
             position,
             team,
-            destination,
-            command,
-            target_entity_id,
+            spawn_command_state: command,
             health,
             move_mode,
             status_effects,
@@ -1484,15 +1454,7 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
         writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
-        if let Some(destination) = packet.destination.as_ref() {
-            writer.write_f32(destination.x);
-            writer.write_f32(destination.y);
-        } else {
-            writer.write_f32(0.0);
-            writer.write_f32(0.0);
-        }
-        writer.write_command_state(&packet.command);
-        writer.write_option_entity_id(packet.target_entity_id);
+        writer.write_spawn_command_state(&packet.spawn_command_state);
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);
@@ -1506,8 +1468,7 @@ impl From<&PacketServerSpawnEntityMonster> for Packet {
 
 pub struct PacketServerSpawnEntityCharacter {
     pub character_info: CharacterInfo,
-    pub command: CommandState,
-    pub destination: Option<Vec3>,
+    pub spawn_command_state: SpawnCommandState,
     pub entity_id: ClientEntityId,
     pub equipment: Equipment,
     pub health: HealthPoints,
@@ -1517,7 +1478,6 @@ pub struct PacketServerSpawnEntityCharacter {
     pub passive_attack_speed: i32,
     pub position: Vec3,
     pub status_effects: ActiveStatusEffects,
-    pub target_entity_id: Option<ClientEntityId>,
     pub team: Team,
     pub personal_store_info: Option<(i32, String)>,
     pub clan_membership: Option<CharacterClanMembership>,
@@ -1535,15 +1495,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
         let entity_id = reader.read_entity_id()?;
         let position_x = reader.read_f32()?;
         let position_y = reader.read_f32()?;
-        let destination_x = reader.read_f32()?;
-        let destination_y = reader.read_f32()?;
-        let destination = if destination_x != 0.0 && destination_y != 0.0 {
-            Some(Vec3::new(destination_x, destination_y, 0.0))
-        } else {
-            None
-        };
-        let command = reader.read_command_state()?;
-        let target_entity_id = reader.read_option_entity_id()?;
+        let command = reader.read_spawn_command_state()?;
         let move_mode = reader.read_move_mode_u8()?;
         let health = HealthPoints::new(reader.read_i32()?);
         let team = Team::new(reader.read_u32()?);
@@ -1608,9 +1560,7 @@ impl TryFrom<&Packet> for PacketServerSpawnEntityCharacter {
             entity_id,
             position: Vec3::new(position_x, position_y, position_z),
             team,
-            destination,
-            command,
-            target_entity_id,
+            spawn_command_state: command,
             health,
             move_mode,
             status_effects,
@@ -1646,15 +1596,7 @@ impl From<&PacketServerSpawnEntityCharacter> for Packet {
         writer.write_entity_id(packet.entity_id);
         writer.write_f32(packet.position.x);
         writer.write_f32(packet.position.y);
-        if let Some(destination) = packet.destination.as_ref() {
-            writer.write_f32(destination.x);
-            writer.write_f32(destination.y);
-        } else {
-            writer.write_f32(0.0);
-            writer.write_f32(0.0);
-        }
-        writer.write_command_state(&packet.command);
-        writer.write_option_entity_id(packet.target_entity_id);
+        writer.write_spawn_command_state(&packet.spawn_command_state);
         writer.write_move_mode_u8(packet.move_mode);
         writer.write_i32(packet.health.hp);
         writer.write_u32(packet.team.id);

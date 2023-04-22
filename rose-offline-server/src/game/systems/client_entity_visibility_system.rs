@@ -5,18 +5,19 @@ use bevy::{
     },
     time::Time,
 };
+
 use rose_data::ClanMemberPosition;
 use rose_game_common::messages::server::CharacterClanMembership;
 
 use crate::game::{
     components::{
         AbilityValues, CharacterInfo, Clan, ClanMembership, ClientEntity, ClientEntityId,
-        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command, Destination,
-        EntityExpireTime, Equipment, GameClient, HealthPoints, ItemDrop, Level, MoveMode,
-        MoveSpeed, Npc, NpcStandingDirection, Owner, PersonalStore, Position, StatusEffects,
-        Target, Team,
+        ClientEntitySector, ClientEntityType, ClientEntityVisibility, Command,
+        CommandCastSkillTarget, CommandData, EntityExpireTime, Equipment, GameClient, HealthPoints,
+        ItemDrop, Level, MoveMode, MoveSpeed, Npc, NpcStandingDirection, Owner, PersonalStore,
+        Position, StatusEffects, Team,
     },
-    messages::server::{ServerMessage, SpawnEntityCharacter},
+    messages::server::{ServerMessage, SpawnCommandState, SpawnEntityCharacter},
     resources::ClientEntityList,
 };
 
@@ -31,7 +32,6 @@ pub struct GameClientQuery<'w> {
 }
 
 #[derive(WorldQuery)]
-#[world_query(mutable)]
 pub struct CharacterQuery<'w> {
     ability_values: &'w AbilityValues,
     character_info: &'w CharacterInfo,
@@ -45,14 +45,11 @@ pub struct CharacterQuery<'w> {
     position: &'w Position,
     status_effects: &'w StatusEffects,
     team: &'w Team,
-    destination: Option<&'w Destination>,
-    target: Option<&'w Target>,
     personal_store: Option<&'w PersonalStore>,
     clan_membership: &'w ClanMembership,
 }
 
 #[derive(WorldQuery)]
-#[world_query(mutable)]
 pub struct ItemDropQuery<'w> {
     item_drop: &'w ItemDrop,
     position: &'w Position,
@@ -61,7 +58,6 @@ pub struct ItemDropQuery<'w> {
 }
 
 #[derive(WorldQuery)]
-#[world_query(mutable)]
 pub struct MonsterQuery<'w> {
     npc: &'w Npc,
     position: &'w Position,
@@ -70,12 +66,9 @@ pub struct MonsterQuery<'w> {
     command: &'w Command,
     move_mode: &'w MoveMode,
     status_effects: &'w StatusEffects,
-    destination: Option<&'w Destination>,
-    target: Option<&'w Target>,
 }
 
 #[derive(WorldQuery)]
-#[world_query(mutable)]
 pub struct NpcQuery<'w> {
     npc: &'w Npc,
     direction: &'w NpcStandingDirection,
@@ -85,8 +78,76 @@ pub struct NpcQuery<'w> {
     command: &'w Command,
     move_mode: &'w MoveMode,
     status_effects: &'w StatusEffects,
-    destination: Option<&'w Destination>,
-    target: Option<&'w Target>,
+}
+
+#[derive(WorldQuery)]
+pub struct TargetQuery<'w> {
+    client_entity: &'w ClientEntity,
+    position: &'w Position,
+}
+
+fn spawn_command_state(command: &Command, query_target: &Query<TargetQuery>) -> SpawnCommandState {
+    match command.command {
+        CommandData::Die { .. } => SpawnCommandState::Die,
+        CommandData::Stop { .. } | CommandData::Standing => SpawnCommandState::Stop,
+        CommandData::Move {
+            destination,
+            target: target_entity,
+            ..
+        } => {
+            if let Some(target) =
+                target_entity.and_then(|target_entity| query_target.get(target_entity).ok())
+            {
+                SpawnCommandState::Move {
+                    target_position: target.position.position,
+                    target_entity_id: Some(target.client_entity.id),
+                }
+            } else {
+                SpawnCommandState::Move {
+                    target_position: destination,
+                    target_entity_id: None,
+                }
+            }
+        }
+        CommandData::Attack {
+            target: target_entity,
+        } => {
+            if let Ok(target) = query_target.get(target_entity) {
+                SpawnCommandState::Attack {
+                    target_entity_id: target.client_entity.id,
+                    target_position: target.position.position,
+                }
+            } else {
+                SpawnCommandState::Stop
+            }
+        }
+        CommandData::PickupItemDrop {
+            target: target_entity,
+        } => {
+            if let Ok(target) = query_target.get(target_entity) {
+                SpawnCommandState::PickupItemDrop {
+                    target_entity_id: target.client_entity.id,
+                    target_position: target.position.position,
+                }
+            } else {
+                SpawnCommandState::Stop
+            }
+        }
+        CommandData::PersonalStore => SpawnCommandState::PersonalStore,
+        CommandData::CastSkill {
+            skill_target: None, ..
+        } => SpawnCommandState::CastSkillSelf,
+        CommandData::CastSkill {
+            skill_target: Some(CommandCastSkillTarget::Entity(_)),
+            ..
+        } => SpawnCommandState::CastSkillTargetEntity,
+        CommandData::CastSkill {
+            skill_target: Some(CommandCastSkillTarget::Position(_)),
+            ..
+        } => SpawnCommandState::CastSkillTargetPosition,
+        CommandData::Sit | CommandData::Sitting => SpawnCommandState::Sit,
+        CommandData::Emote { .. } => SpawnCommandState::Emote,
+    }
 }
 
 pub fn client_entity_visibility_system(
@@ -97,6 +158,7 @@ pub fn client_entity_visibility_system(
     monsters_query: Query<MonsterQuery>,
     npcs_query: Query<NpcQuery>,
     clan_query: Query<&Clan>,
+    query_target: Query<TargetQuery>,
     mut client_entity_list: ResMut<ClientEntityList>,
     time: Res<Time>,
 ) {
@@ -125,11 +187,6 @@ pub fn client_entity_visibility_system(
                     match spawn_client_entity.entity_type {
                         ClientEntityType::Character => {
                             if let Ok(character) = characters_query.get(*spawn_entity) {
-                                let target_entity_id = character
-                                    .target
-                                    .and_then(|target| entity_id_query.get(target.entity).ok())
-                                    .map(|target_client_entity| target_client_entity.id);
-
                                 game_client
                                     .game_client
                                     .server_message_tx
@@ -138,7 +195,6 @@ pub fn client_entity_visibility_system(
                                             entity_id: spawn_client_entity.id,
                                             character_info: character.character_info.clone(),
                                             position: character.position.position,
-                                            destination: character.destination.map(|x| x.position),
                                             health: *character.health_points,
                                             team: character.team.clone(),
                                             equipment: character.equipment.clone(),
@@ -149,8 +205,10 @@ pub fn client_entity_visibility_system(
                                                 .ability_values
                                                 .passive_attack_speed,
                                             status_effects: character.status_effects.active.clone(),
-                                            command: character.command.into(),
-                                            target_entity_id,
+                                            spawn_command_state: spawn_command_state(
+                                                character.command,
+                                                &query_target,
+                                            ),
                                             personal_store_info: character.personal_store.map(
                                                 |personal_store| {
                                                     (
@@ -209,11 +267,6 @@ pub fn client_entity_visibility_system(
                         }
                         ClientEntityType::Monster => {
                             if let Ok(monster) = monsters_query.get(*spawn_entity) {
-                                let target_entity_id = monster
-                                    .target
-                                    .and_then(|target| entity_id_query.get(target.entity).ok())
-                                    .map(|target_client_entity| target_client_entity.id);
-
                                 game_client
                                     .game_client
                                     .server_message_tx
@@ -223,9 +276,10 @@ pub fn client_entity_visibility_system(
                                         position: monster.position.position,
                                         team: monster.team.clone(),
                                         health: *monster.health,
-                                        destination: monster.destination.map(|x| x.position),
-                                        command: monster.command.into(),
-                                        target_entity_id,
+                                        spawn_command_state: spawn_command_state(
+                                            monster.command,
+                                            &query_target,
+                                        ),
                                         move_mode: *monster.move_mode,
                                         status_effects: monster.status_effects.active.clone(),
                                     })
@@ -234,11 +288,6 @@ pub fn client_entity_visibility_system(
                         }
                         ClientEntityType::Npc => {
                             if let Ok(npc) = npcs_query.get(*spawn_entity) {
-                                let target_entity_id = npc
-                                    .target
-                                    .and_then(|target| entity_id_query.get(target.entity).ok())
-                                    .map(|target_client_entity| target_client_entity.id);
-
                                 game_client
                                     .game_client
                                     .server_message_tx
@@ -249,9 +298,10 @@ pub fn client_entity_visibility_system(
                                         position: npc.position.position,
                                         team: npc.team.clone(),
                                         health: *npc.health,
-                                        destination: npc.destination.map(|x| x.position),
-                                        command: npc.command.into(),
-                                        target_entity_id,
+                                        spawn_command_state: spawn_command_state(
+                                            npc.command,
+                                            &query_target,
+                                        ),
                                         move_mode: *npc.move_mode,
                                         status_effects: npc.status_effects.active.clone(),
                                     })

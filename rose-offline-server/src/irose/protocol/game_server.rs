@@ -676,8 +676,7 @@ impl GameServer {
                     .connection
                     .write_packet(Packet::from(&PacketServerSpawnEntityCharacter {
                         character_info: data.character_info,
-                        command: data.command,
-                        destination: data.destination,
+                        spawn_command_state: data.spawn_command_state,
                         entity_id: data.entity_id,
                         equipment: data.equipment,
                         health: data.health,
@@ -687,7 +686,6 @@ impl GameServer {
                         status_effects: data.status_effects,
                         move_mode: data.move_mode,
                         move_speed: data.move_speed,
-                        target_entity_id: data.target_entity_id,
                         team: data.team,
                         personal_store_info: data.personal_store_info,
                         clan_membership: data.clan_membership,
@@ -719,9 +717,7 @@ impl GameServer {
                 position,
                 team,
                 health,
-                destination,
-                command,
-                target_entity_id,
+                spawn_command_state: command,
                 move_mode,
                 status_effects,
             } => {
@@ -734,9 +730,7 @@ impl GameServer {
                         position,
                         team,
                         health,
-                        destination,
-                        command,
-                        target_entity_id,
+                        spawn_command_state: command,
                         move_mode,
                         status_effects,
                     }))
@@ -748,9 +742,7 @@ impl GameServer {
                 position,
                 team,
                 health,
-                destination,
-                command,
-                target_entity_id,
+                spawn_command_state: command,
                 move_mode,
                 status_effects,
             } => {
@@ -762,9 +754,7 @@ impl GameServer {
                         position,
                         team,
                         health,
-                        destination,
-                        command,
-                        target_entity_id,
+                        spawn_command_state: command,
                         move_mode,
                         status_effects,
                     }))
