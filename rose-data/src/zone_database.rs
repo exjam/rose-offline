@@ -1,10 +1,13 @@
-use bevy::math::{Vec2, Vec3, Vec3Swizzles};
+use bevy::{
+    math::{Vec2, Vec3, Vec3Swizzles},
+    reflect::{FromReflect, Reflect},
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, num::NonZeroU16, str::FromStr, sync::Arc};
 
 use crate::{NpcConversationId, NpcId, SkyboxId, StringDatabase};
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Reflect, FromReflect)]
 pub struct ZoneId(pub NonZeroU16);
 
 id_wrapper_impl!(ZoneId, NonZeroU16, u16);

@@ -1,5 +1,8 @@
-use bevy::ecs::prelude::Component;
-use bevy::math::Vec3;
+use bevy::{
+    ecs::prelude::Component,
+    math::Vec3,
+    reflect::{FromReflect, Reflect},
+};
 use enum_map::Enum;
 use serde::{Deserialize, Serialize};
 
@@ -7,13 +10,13 @@ use rose_data::ZoneId;
 
 pub type CharacterUniqueId = u32;
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, Enum, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Enum, PartialEq, Eq, Reflect, FromReflect)]
 pub enum CharacterGender {
     Male,
     Female,
 }
 
-#[derive(Component, Clone, Debug, Deserialize, Serialize)]
+#[derive(Component, Clone, Debug, Deserialize, Serialize, Reflect, FromReflect)]
 pub struct CharacterInfo {
     pub name: String,
     pub gender: CharacterGender,

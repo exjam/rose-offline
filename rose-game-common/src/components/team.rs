@@ -1,7 +1,10 @@
-use bevy::ecs::prelude::Component;
+use bevy::{
+    ecs::prelude::Component,
+    reflect::{FromReflect, Reflect},
+};
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Clone, Debug, Serialize, Deserialize)]
+#[derive(Component, Clone, Debug, Serialize, Deserialize, Reflect, FromReflect)]
 pub struct Team {
     pub id: u32,
 }
