@@ -179,6 +179,11 @@ pub fn command_system(
             npc,
             personal_store,
         )| {
+            if command.is_dead() {
+                // Ignore all requested commands whilst dead.
+                next_command.command = None;
+            }
+
             if !next_command.has_sent_server_message && next_command.command.is_some() {
                 // Send any server message required for update client next command
                 match next_command.command.as_mut().unwrap() {
