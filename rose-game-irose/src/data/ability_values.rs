@@ -137,22 +137,28 @@ impl AbilityValueCalculator for AbilityValuesData {
         let basic_stats = BasicStats {
             strength: (basic_stats.strength
                 + passive_ability_values.value.strength
-                + passive_ability_values.rate.strength),
+                + passive_ability_values.rate.strength
+                + equipment_ability_values.strength),
             dexterity: (basic_stats.dexterity
                 + passive_ability_values.value.dexterity
-                + passive_ability_values.rate.dexterity),
+                + passive_ability_values.rate.dexterity
+                + equipment_ability_values.dexterity),
             intelligence: (basic_stats.intelligence
                 + passive_ability_values.value.intelligence
-                + passive_ability_values.rate.intelligence),
+                + passive_ability_values.rate.intelligence
+                + equipment_ability_values.intelligence),
             concentration: (basic_stats.concentration
                 + passive_ability_values.value.concentration
-                + passive_ability_values.rate.concentration),
+                + passive_ability_values.rate.concentration
+                + equipment_ability_values.concentration),
             charm: (basic_stats.charm
                 + passive_ability_values.value.charm
-                + passive_ability_values.rate.charm),
+                + passive_ability_values.rate.charm
+                + equipment_ability_values.charm),
             sense: (basic_stats.sense
                 + passive_ability_values.value.sense
-                + passive_ability_values.rate.sense),
+                + passive_ability_values.rate.sense
+                + equipment_ability_values.sense),
         };
 
         /*
