@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use enum_map::Enum;
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc, time::Duration};
+use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 
 use crate::{
     AbilityType, EffectFileId, EffectId, JobClassId, SkillId, SoundId, StatusEffectId,
@@ -308,7 +308,7 @@ pub struct BaseItemData {
     pub craft_material: u32,
     pub craft_difficulty: u32,
     pub equip_job_class_requirement: Option<JobClassId>,
-    pub equip_union_requirement: ArrayVec<u32, 2>,
+    pub equip_union_requirement: ArrayVec<NonZeroUsize, 2>,
     pub equip_ability_requirement: ArrayVec<(AbilityType, u32), 2>,
     pub add_ability_union_requirement: ArrayVec<u32, 2>,
     pub add_ability: ArrayVec<(AbilityType, i32), 2>,
@@ -435,8 +435,7 @@ pub struct VehicleItemData {
     pub attack_speed: i32,
     pub base_motion_index: u32,
     pub base_avatar_motion_index: u32,
-    pub ability_requirement: Option<(AbilityType, i32)>,
-    pub skill_requirement: Option<(SkillId, i32)>,
+    pub equip_skill_requirement: Option<(SkillId, i32)>,
     pub ride_effect_file_id: Option<EffectFileId>,
     pub ride_sound_id: Option<SoundId>,
     pub dismount_effect_file_id: Option<EffectFileId>,

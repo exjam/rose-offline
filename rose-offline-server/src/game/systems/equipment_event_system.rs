@@ -4,12 +4,18 @@ use bevy::{
 };
 
 use rose_data::{
-    EquipmentIndex, Item, ItemType, StackError, StackableSlotBehaviour, VehiclePartIndex,
+    BaseItemData, EquipmentIndex, Item, ItemType, JobId, StackError, StackableSlotBehaviour,
+    VehiclePartIndex,
 };
 use rose_game_common::messages::server::ServerMessage;
 
 use crate::game::{
-    components::{ClientEntity, Command, Equipment, GameClient, Inventory, ItemSlot},
+    bundles::ability_values_get_value,
+    components::{
+        AbilityValues, CharacterInfo, ClientEntity, Command, Equipment, ExperiencePoints,
+        GameClient, HealthPoints, Inventory, ItemSlot, Level, ManaPoints, MoveSpeed, SkillPoints,
+        Stamina, StatPoints, Team, UnionMembership,
+    },
     events::EquipmentEvent,
     resources::ServerMessages,
     GameData,
@@ -19,11 +25,26 @@ use crate::game::{
 #[world_query(mutable)]
 pub struct EquipmentEventEntity<'w> {
     entity: Entity,
-    command: &'w Command,
+
+    ability_values: &'w AbilityValues,
+    character_info: &'w CharacterInfo,
     client_entity: &'w ClientEntity,
+    command: &'w Command,
+    experience_points: &'w ExperiencePoints,
+    health_points: &'w HealthPoints,
+    level: &'w Level,
+    mana_points: &'w ManaPoints,
+    move_speed: &'w MoveSpeed,
+    skill_points: &'w SkillPoints,
+    stamina: &'w Stamina,
+    stat_points: &'w StatPoints,
+    team: &'w Team,
+    union_membership: &'w UnionMembership,
+
+    game_client: Option<&'w GameClient>,
+
     inventory: &'w mut Inventory,
     equipment: &'w mut Equipment,
-    game_client: Option<&'w GameClient>,
 }
 
 pub fn equipment_event_system(
@@ -47,14 +68,7 @@ pub fn equipment_event_system(
                 }
 
                 let updated_inventory_items = if let Some(item_slot) = item_slot {
-                    equip_from_inventory(
-                        &game_data,
-                        &mut entity.equipment,
-                        &mut entity.inventory,
-                        equipment_index,
-                        item_slot,
-                    )
-                    .ok()
+                    equip_from_inventory(&game_data, &mut entity, equipment_index, item_slot).ok()
                 } else {
                     unequip_to_inventory(
                         &mut entity.equipment,
@@ -210,8 +224,7 @@ pub fn equipment_event_system(
                 let updated_inventory_items = if let Some(item_slot) = item_slot {
                     equip_vehicle_from_inventory(
                         &game_data,
-                        &mut entity.equipment,
-                        &mut entity.inventory,
+                        &mut entity,
                         vehicle_part_index,
                         item_slot,
                     )
@@ -258,21 +271,22 @@ enum EquipItemError {
     InvalidEquipmentIndex,
     InvalidItem,
     InvalidItemData,
+    FailedRequirements,
     CannotUnequipOffhand,
     InventoryFull,
 }
 
 fn equip_from_inventory(
     game_data: &GameData,
-    equipment: &mut Equipment,
-    inventory: &mut Inventory,
+    entity: &mut EquipmentEventEntityItem,
     equipment_index: EquipmentIndex,
     item_slot: ItemSlot,
 ) -> Result<Vec<(ItemSlot, Option<Item>)>, EquipItemError> {
     // TODO: Cannot change equipment whilst casting spell
     // TODO: Cannot change equipment whilst stunned
 
-    let equipment_item = inventory
+    let equipment_item = entity
+        .inventory
         .get_equipment_item(item_slot)
         .ok_or(EquipItemError::InvalidItem)?;
 
@@ -304,17 +318,24 @@ fn equip_from_inventory(
         return Err(EquipItemError::InvalidEquipmentIndex);
     }
 
-    // TODO: Check equipment ability requirements
+    if !check_equipment_job_class(game_data, item_data, entity)
+        || !check_equipment_union_membership(item_data, entity)
+        || !check_equipment_ability_requirement(item_data, entity)
+    {
+        return Err(EquipItemError::FailedRequirements);
+    }
 
     let mut updated_inventory_items = Vec::new();
 
     // If we are equipping a two handed weapon, we must unequip offhand first
     if item_data.class.is_two_handed_weapon() {
-        let equipment_slot = equipment.get_equipment_slot_mut(EquipmentIndex::SubWeapon);
+        let equipment_slot = entity
+            .equipment
+            .get_equipment_slot_mut(EquipmentIndex::SubWeapon);
         if equipment_slot.is_some() {
             let item = equipment_slot.take();
             if let Some(item) = item {
-                match inventory.try_add_equipment_item(item) {
+                match entity.inventory.try_add_equipment_item(item) {
                     Ok((inventory_slot, item)) => {
                         updated_inventory_items
                             .push((ItemSlot::Equipment(EquipmentIndex::SubWeapon), None));
@@ -331,8 +352,8 @@ fn equip_from_inventory(
     }
 
     // Equip item from inventory
-    let inventory_slot = inventory.get_item_slot_mut(item_slot).unwrap();
-    let equipment_slot = equipment.get_equipment_slot_mut(equipment_index);
+    let inventory_slot = entity.inventory.get_item_slot_mut(item_slot).unwrap();
+    let equipment_slot = entity.equipment.get_equipment_slot_mut(equipment_index);
     let equipment_item = match inventory_slot.take() {
         Some(Item::Equipment(equipment_item)) => equipment_item,
         _ => unreachable!(),
@@ -351,15 +372,16 @@ fn equip_from_inventory(
 
 fn equip_vehicle_from_inventory(
     game_data: &GameData,
-    equipment: &mut Equipment,
-    inventory: &mut Inventory,
+    entity: &mut EquipmentEventEntityItem,
     vehicle_part_index: VehiclePartIndex,
     item_slot: ItemSlot,
 ) -> Result<Vec<(ItemSlot, Option<Item>)>, EquipItemError> {
     // TODO: Cannot change equipment whilst casting spell
     // TODO: Cannot change equipment whilst stunned
+    // TODO: Do not allow mixing of cart / castle gear parts
 
-    let equipment_item = inventory
+    let equipment_item = entity
+        .inventory
         .get_equipment_item(item_slot)
         .ok_or(EquipItemError::InvalidItem)?;
 
@@ -376,13 +398,17 @@ fn equip_vehicle_from_inventory(
         return Err(EquipItemError::ItemBroken);
     }
 
-    // TODO: Check equipment ability requirements
+    if !check_equipment_job_class(game_data, &item_data.item_data, entity)
+        || !check_equipment_ability_requirement(&item_data.item_data, entity)
+    {
+        return Err(EquipItemError::FailedRequirements);
+    }
 
     let mut updated_inventory_items = Vec::new();
 
     // Equip item from inventory
-    let inventory_slot = inventory.get_item_slot_mut(item_slot).unwrap();
-    let vehicle_slot = equipment.get_vehicle_slot_mut(vehicle_part_index);
+    let inventory_slot = entity.inventory.get_item_slot_mut(item_slot).unwrap();
+    let vehicle_slot = entity.equipment.get_vehicle_slot_mut(vehicle_part_index);
     let equipment_item = match inventory_slot.take() {
         Some(Item::Equipment(equipment_item)) => equipment_item,
         _ => unreachable!(),
@@ -444,4 +470,75 @@ fn unequip_vehicle_to_inventory(
             Err(UnequipError::InventoryFull)
         }
     }
+}
+
+fn check_equipment_job_class(
+    game_data: &GameData,
+    item_data: &BaseItemData,
+    entity: &EquipmentEventEntityItem,
+) -> bool {
+    let Some(equip_job_class_requirement) = item_data.equip_job_class_requirement else {
+        return true;
+    };
+
+    let Some(job_class) = game_data.job_class.get(equip_job_class_requirement) else {
+        return true;
+    };
+
+    if job_class.jobs.is_empty() {
+        return true;
+    }
+
+    job_class
+        .jobs
+        .contains(&JobId::new(entity.character_info.job))
+}
+
+fn check_equipment_union_membership(
+    item_data: &BaseItemData,
+    entity: &EquipmentEventEntityItem,
+) -> bool {
+    if item_data.equip_union_requirement.is_empty() {
+        return true;
+    }
+
+    item_data
+        .equip_union_requirement
+        .iter()
+        .any(|union| entity.union_membership.current_union == Some(*union))
+}
+
+fn check_equipment_ability_requirement(
+    item_data: &BaseItemData,
+    entity: &EquipmentEventEntityItem,
+) -> bool {
+    if item_data.equip_ability_requirement.is_empty() {
+        return true;
+    }
+
+    for &(ability_type, require_value) in item_data.equip_ability_requirement.iter() {
+        let value = ability_values_get_value(
+            ability_type,
+            Some(entity.ability_values),
+            Some(entity.level),
+            Some(entity.move_speed),
+            Some(entity.team),
+            Some(entity.character_info),
+            Some(entity.experience_points),
+            Some(&entity.inventory),
+            Some(entity.skill_points),
+            Some(entity.stamina),
+            Some(entity.stat_points),
+            Some(entity.union_membership),
+            Some(entity.health_points),
+            Some(entity.mana_points),
+        )
+        .unwrap_or(0);
+
+        if value < require_value as i32 {
+            return false;
+        }
+    }
+
+    true
 }

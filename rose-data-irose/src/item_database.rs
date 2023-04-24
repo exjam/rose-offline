@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use std::{sync::Arc, time::Duration};
+use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 
 use rose_data::{
     AbilityType, BackItemData, BaseItemData, BodyItemData, ConsumableItemData, EffectFileId,
@@ -37,13 +37,15 @@ impl StbItem {
     stb_column! { 15, get_craft_difficulty, u32 }
     stb_column! { 16, get_equip_job_class_requirement, JobClassId }
 
-    pub fn get_equip_union_requirement(&self, id: usize) -> ArrayVec<u32, 2> {
+    pub fn get_equip_union_requirement(&self, id: usize) -> ArrayVec<NonZeroUsize, 2> {
         let mut requirements = ArrayVec::new();
         for i in 0..2 {
-            if let Some(union) = self.0.try_get_int(id, 17 + i) {
-                if union != 0 {
-                    requirements.push(union as u32);
-                }
+            if let Some(union) = self
+                .0
+                .try_get_int(id, 17 + i)
+                .and_then(|x| NonZeroUsize::new(x as usize))
+            {
+                requirements.push(union);
             }
         }
         requirements
@@ -202,7 +204,7 @@ impl StbItem {
     stb_column! { 19, get_vehicle_skill_id_requirement, SkillId }
     stb_column! { 20, get_vehicle_skill_level_requirement, i32 }
 
-    pub fn get_vehicle_ability_requirement(&self, id: usize) -> Option<(AbilityType, i32)> {
+    pub fn get_vehicle_ability_requirement(&self, id: usize) -> Option<(AbilityType, u32)> {
         let ability_type: Option<AbilityType> = self
             .0
             .try_get_int(id, 21)
@@ -210,7 +212,7 @@ impl StbItem {
         let ability_value = self.0.try_get_int(id, 22);
 
         ability_type.and_then(|ability_type| {
-            ability_value.map(|ability_value| (ability_type, ability_value))
+            ability_value.map(|ability_value| (ability_type, ability_value as u32))
         })
     }
 
@@ -473,7 +475,15 @@ fn load_vehicle_item(
     string_database: &StringDatabase,
     id: usize,
 ) -> Option<VehicleItemData> {
-    let base_item_data = load_base_item(data, string_database, ItemType::Vehicle, id, true)?;
+    let mut base_item_data = load_base_item(data, string_database, ItemType::Vehicle, id, true)?;
+
+    base_item_data.equip_ability_requirement.clear();
+    if let Some(requirement) = data.get_vehicle_ability_requirement(id) {
+        base_item_data.equip_ability_requirement.push(requirement);
+    }
+
+    base_item_data.equip_job_class_requirement = data.get_vehicle_job_class_requirement(id);
+
     Some(VehicleItemData {
         item_data: base_item_data,
         vehicle_part: data.get_vehicle_part_index(id)?.try_into().ok()?,
@@ -487,8 +497,7 @@ fn load_vehicle_item(
         base_avatar_motion_index: data.get_vehicle_base_avatar_motion_index(id).unwrap_or(0),
         vehicle_type: data.get_vehicle_type(id)?.try_into().ok()?,
         version: data.get_vehicle_version(id).unwrap_or(0),
-        ability_requirement: data.get_vehicle_ability_requirement(id),
-        skill_requirement: data.get_vehicle_skill_requirement(id),
+        equip_skill_requirement: data.get_vehicle_skill_requirement(id),
         ride_effect_file_id: data.get_vehicle_ride_effect_file_id(id),
         ride_sound_id: data.get_vehicle_ride_sound_id(id),
         dismount_effect_file_id: data.get_vehicle_dismount_effect_file_id(id),
