@@ -1,6 +1,7 @@
 mod bot_attack_nearby;
 mod bot_attack_target;
 mod bot_attack_threat;
+mod bot_find_monster_spawn;
 mod bot_join_zone;
 mod bot_pickup_item;
 mod bot_revive;
@@ -32,6 +33,7 @@ use bot_attack_target::{
 use bot_attack_threat::{
     action_attack_threat, score_threat_is_not_target, AttackThreat, ThreatIsNotTarget,
 };
+use bot_find_monster_spawn::{action_find_monster_spawn, FindMonsterSpawns};
 use bot_join_zone::{action_join_zone, score_is_teleporting, IsTeleporting, JoinZone};
 use bot_pickup_item::{
     action_pickup_nearest_item_drop, score_find_nearby_item_drop_system, FindNearbyItemDrop,
@@ -63,6 +65,7 @@ impl Plugin for BotPlugin {
                     action_revive_current_zone,
                     action_join_zone,
                     action_sit_recover_hp,
+                    action_find_monster_spawn,
                 )
                     .in_set(BigBrainSet::Actions),
             )
@@ -97,6 +100,7 @@ pub fn bot_thinker() -> ThinkerBuilder {
         .when(FindNearbyItemDrop { score: 0.5 }, PickupNearestItemDrop)
         .when(ShouldSitRecoverHp { score: 0.4 }, SitRecoverHp)
         .when(FindNearbyTarget { score: 0.2 }, AttackRandomNearbyTarget)
+        .otherwise(FindMonsterSpawns)
 }
 
 pub fn bot_snowball_fight() -> ThinkerBuilder {

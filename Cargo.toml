@@ -23,7 +23,7 @@ anyhow = "1.0"
 arrayvec = "0.7"
 async-trait = "0.1"
 bevy = { version = "0.10.0", default-features = false }
-big-brain = { version = "0.17", features = ["trace"] }
+big-brain = { version = "0.17", features = [] }
 bitflags = "1.2"
 bitvec = { version = "1.0", features = ["serde"] }
 bytes = "1.1"
