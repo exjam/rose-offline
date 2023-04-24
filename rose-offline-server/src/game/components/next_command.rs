@@ -62,13 +62,6 @@ impl NextCommand {
         }
     }
 
-    pub fn with_sit() -> Self {
-        Self {
-            command: Some(CommandData::Sit),
-            has_sent_server_message: false,
-        }
-    }
-
     pub fn with_standing() -> Self {
         Self {
             command: Some(CommandData::Standing),

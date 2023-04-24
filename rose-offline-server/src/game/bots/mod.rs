@@ -4,6 +4,7 @@ mod bot_attack_threat;
 mod bot_join_zone;
 mod bot_pickup_item;
 mod bot_revive;
+mod bot_sit_recover_hp;
 mod bot_snowball_fight;
 
 mod create_bot;
@@ -37,6 +38,9 @@ use bot_pickup_item::{
     PickupNearestItemDrop,
 };
 use bot_revive::{action_revive_current_zone, score_is_dead, IsDead, ReviveCurrentZone};
+use bot_sit_recover_hp::{
+    action_sit_recover_hp, score_should_sit_recover_hp, ShouldSitRecoverHp, SitRecoverHp,
+};
 use bot_snowball_fight::{action_snowball_fight, SnowballFight};
 
 #[derive(Component)]
@@ -58,6 +62,7 @@ impl Plugin for BotPlugin {
                     action_attack_target,
                     action_revive_current_zone,
                     action_join_zone,
+                    action_sit_recover_hp,
                 )
                     .in_set(BigBrainSet::Actions),
             )
@@ -69,6 +74,7 @@ impl Plugin for BotPlugin {
                     score_should_attack_target,
                     score_is_dead,
                     score_is_teleporting,
+                    score_should_sit_recover_hp,
                 )
                     .in_set(BigBrainSet::Scorers),
             );
@@ -78,6 +84,9 @@ impl Plugin for BotPlugin {
 pub fn bot_thinker() -> ThinkerBuilder {
     Thinker::build()
         .picker(Highest)
+        .when(IsDead { score: 1.0 }, ReviveCurrentZone)
+        .when(IsTeleporting { score: 1.0 }, JoinZone)
+        .when(ThreatIsNotTarget { score: 1.0 }, AttackThreat)
         .when(
             ShouldAttackTarget {
                 min_score: 0.6,
@@ -85,11 +94,9 @@ pub fn bot_thinker() -> ThinkerBuilder {
             },
             ActionAttackTarget,
         )
-        .when(ThreatIsNotTarget { score: 1.0 }, AttackThreat)
         .when(FindNearbyItemDrop { score: 0.5 }, PickupNearestItemDrop)
-        .when(FindNearbyTarget { score: 0.4 }, AttackRandomNearbyTarget)
-        .when(IsDead { score: 1.0 }, ReviveCurrentZone)
-        .when(IsTeleporting { score: 1.0 }, JoinZone)
+        .when(ShouldSitRecoverHp { score: 0.4 }, SitRecoverHp)
+        .when(FindNearbyTarget { score: 0.2 }, AttackRandomNearbyTarget)
 }
 
 pub fn bot_snowball_fight() -> ThinkerBuilder {
