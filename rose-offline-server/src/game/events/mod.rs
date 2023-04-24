@@ -13,6 +13,7 @@ mod reward_item_event;
 mod reward_xp_event;
 mod save_event;
 mod skill_event;
+mod use_ammo_event;
 mod use_item_event;
 
 pub use bank_event::BankEvent;
@@ -30,4 +31,5 @@ pub use reward_item_event::RewardItemEvent;
 pub use reward_xp_event::RewardXpEvent;
 pub use save_event::SaveEvent;
 pub use skill_event::{SkillEvent, SkillEventTarget};
+pub use use_ammo_event::UseAmmoEvent;
 pub use use_item_event::UseItemEvent;

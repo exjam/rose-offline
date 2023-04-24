@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     app::ScheduleRunnerSettings,
     prelude::{
@@ -7,14 +9,14 @@ use bevy::{
     MinimalPlugins,
 };
 use crossbeam_channel::Receiver;
-use std::time::Duration;
 
 use crate::game::{
     bots::BotPlugin,
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, EquipmentEvent, ItemLifeEvent,
         NpcStoreEvent, PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent,
-        QuestTriggerEvent, RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseItemEvent,
+        QuestTriggerEvent, RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseAmmoEvent,
+        UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
@@ -34,8 +36,8 @@ use crate::game::{
         reward_item_system, save_system, server_messages_system, skill_effect_system,
         startup_clans_system, startup_zones_system, status_effect_system,
         update_character_motion_data_system, update_npc_motion_data_system, update_position_system,
-        use_item_system, weight_system, world_server_authentication_system, world_server_system,
-        world_time_system,
+        use_ammo_system, use_item_system, weight_system, world_server_authentication_system,
+        world_server_system, world_time_system,
     },
 };
 
@@ -88,6 +90,7 @@ impl GameWorld {
             .add_event::<RewardXpEvent>()
             .add_event::<SaveEvent>()
             .add_event::<SkillEvent>()
+            .add_event::<UseAmmoEvent>()
             .add_event::<UseItemEvent>();
 
         /*
@@ -136,6 +139,7 @@ impl GameWorld {
                 update_npc_motion_data_system.before(command_system),
                 update_position_system.before(command_system),
                 command_system,
+                use_ammo_system.after(command_system),
                 pickup_item_system.after(command_system),
                 party_member_event_system,
                 party_system.after(party_member_event_system),

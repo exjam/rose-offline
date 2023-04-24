@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use bevy::{
     ecs::{
         prelude::{Commands, Entity, EventReader, EventWriter, Local, Query, Res, ResMut},
@@ -9,20 +11,19 @@ use bevy::{
 };
 use log::warn;
 use rand::Rng;
-use std::marker::PhantomData;
 
 use rose_data::{
-    AbilityType, SkillData, SkillTargetFilter, SkillType, StatusEffectClearedByType,
+    AbilityType, SkillCooldown, SkillData, SkillTargetFilter, SkillType, StatusEffectClearedByType,
     StatusEffectType,
 };
-use rose_game_common::data::Damage;
+use rose_game_common::{components::Money, data::Damage};
 
 use crate::game::{
-    bundles::{ability_values_add_value, ability_values_get_value, MonsterBundle},
+    bundles::{ability_values_get_value, MonsterBundle, GLOBAL_SKILL_COOLDOWN},
     components::{
-        AbilityValues, ClanMembership, ClientEntity, ClientEntityType, Dead, ExperiencePoints,
-        GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveSpeed, PartyMembership,
-        Position, SpawnOrigin, Stamina, StatusEffects, Team,
+        AbilityValues, ClanMembership, ClientEntity, ClientEntityType, Cooldowns, Dead,
+        ExperiencePoints, GameClient, HealthPoints, Inventory, Level, ManaPoints, MoveMode,
+        MoveSpeed, PartyMembership, Position, SpawnOrigin, Stamina, StatusEffects, Team,
     },
     events::{DamageEvent, ItemLifeEvent, SkillEvent, SkillEventTarget},
     messages::server::{CancelCastingSkillReason, ServerMessage},
@@ -60,43 +61,51 @@ pub struct SkillSystemResources<'w, 's> {
 #[world_query(mutable)]
 pub struct SkillCasterQuery<'w> {
     entity: Entity,
-    client_entity: &'w ClientEntity,
-    position: &'w Position,
+
     ability_values: &'w AbilityValues,
-    experience_points: Option<&'w mut ExperiencePoints>,
+    client_entity: &'w ClientEntity,
     level: &'w Level,
+    move_mode: &'w MoveMode,
+    position: &'w Position,
     team: &'w Team,
-    game_client: Option<&'w GameClient>,
-    inventory: Option<&'w mut Inventory>,
-    party_membership: Option<&'w PartyMembership>,
+
     clan_membership: Option<&'w ClanMembership>,
+    game_client: Option<&'w GameClient>,
+    party_membership: Option<&'w PartyMembership>,
+
+    experience_points: Option<&'w mut ExperiencePoints>,
+    cooldowns: Option<&'w mut Cooldowns>,
+    inventory: Option<&'w mut Inventory>,
 }
 
 #[derive(WorldQuery)]
 #[world_query(mutable)]
 pub struct SkillTargetQuery<'w> {
     entity: Entity,
-    client_entity: &'w ClientEntity,
-    position: &'w Position,
+
     ability_values: &'w AbilityValues,
-    status_effects: &'w mut StatusEffects,
-    team: &'w Team,
-    health_points: &'w mut HealthPoints,
-    mana_points: Option<&'w mut ManaPoints>,
+    client_entity: &'w ClientEntity,
     level: &'w Level,
     move_speed: &'w MoveSpeed,
-    stamina: Option<&'w mut Stamina>,
+    position: &'w Position,
+    team: &'w Team,
+
+    clan_membership: Option<&'w ClanMembership>,
     dead: Option<&'w Dead>,
     party_membership: Option<&'w PartyMembership>,
-    clan_membership: Option<&'w ClanMembership>,
+
+    health_points: &'w mut HealthPoints,
+    mana_points: Option<&'w mut ManaPoints>,
+    stamina: Option<&'w mut Stamina>,
+    status_effects: &'w mut StatusEffects,
 }
 
 fn check_skill_target_filter(
     skill_caster: &SkillCasterQueryItem,
-    skill_target: &mut SkillTargetQueryItem,
+    skill_target: &SkillTargetQueryItem,
     skill_data: &SkillData,
 ) -> bool {
-    let target_is_alive = skill_target.health_points.hp > 0 && skill_target.dead.is_none();
+    let target_is_alive = skill_target.health_points.hp > 0;
 
     match skill_data.target_filter {
         SkillTargetFilter::OnlySelf => {
@@ -524,6 +533,98 @@ fn apply_skill_damage(
     result
 }
 
+fn subtract_skill_use_cost(
+    skill_system_resources: &SkillSystemResources,
+    skill_caster_query: &mut Query<SkillCasterQuery>,
+    skill_target_query: &mut Query<SkillTargetQuery>,
+    skill_system_parameters: &mut SkillSystemParameters,
+    skill_event: &SkillEvent,
+) {
+    // Immediately subtract skill use cost, we do not need to check requirements here
+    // as that has already happened in command_system when starting casting skill
+    let Some(skill_data) = skill_system_resources.game_data.skills.get_skill(skill_event.skill_id) else {
+            return;
+        };
+
+    let Ok(mut skill_caster1) = skill_caster_query.get_mut(skill_event.caster_entity) else {
+        return;
+    };
+
+    let Ok(mut skill_caster2) = skill_target_query.get_mut(skill_event.caster_entity) else {
+        return;
+    };
+
+    if let Some(mut cooldowns) = skill_caster1.cooldowns {
+        let now = skill_system_resources.time.last_update().unwrap();
+        cooldowns.skill_global = Some(now + GLOBAL_SKILL_COOLDOWN);
+
+        match skill_data.cooldown {
+            SkillCooldown::Skill { duration } => {
+                cooldowns.skill.insert(skill_data.id, now + duration);
+            }
+            SkillCooldown::Group { group, duration } => {
+                if let Some(group_cooldown) = cooldowns.skill_group.get_mut(group.get()) {
+                    *group_cooldown = Some(now + duration);
+                }
+            }
+        }
+    }
+
+    for &(use_ability_type, mut use_ability_value) in skill_data.use_ability.iter() {
+        if use_ability_type == AbilityType::Mana {
+            let use_mana_rate = (100 - skill_caster2.ability_values.get_save_mana()) as f32 / 100.0;
+            use_ability_value = (use_ability_value as f32 * use_mana_rate) as i32;
+        }
+
+        match use_ability_type {
+            AbilityType::Stamina => {
+                if let Some(stamina) = skill_caster2.stamina.as_mut() {
+                    stamina.stamina = stamina.stamina.saturating_sub(use_ability_value as u32);
+                }
+            }
+            AbilityType::Health => {
+                if skill_caster2.health_points.hp <= use_ability_value {
+                    skill_caster2.health_points.hp = 1;
+                } else {
+                    skill_caster2.health_points.hp -= use_ability_value;
+                }
+            }
+            AbilityType::Mana => {
+                if let Some(mana_points) = skill_caster2.mana_points.as_mut() {
+                    if mana_points.mp <= use_ability_value {
+                        mana_points.mp = 1;
+                    } else {
+                        mana_points.mp -= use_ability_value;
+                    }
+                }
+            }
+            AbilityType::Experience => {
+                if let Some(experience_points) = skill_caster1.experience_points.as_mut() {
+                    if experience_points.xp <= use_ability_value as u64 {
+                        experience_points.xp = 0;
+                    } else {
+                        experience_points.xp -= use_ability_value as u64;
+                    }
+                }
+            }
+            AbilityType::Money => {
+                if let Some(inventory) = skill_caster1.inventory.as_mut() {
+                    inventory.money = inventory.money - Money(use_ability_value as i64);
+                }
+            }
+            AbilityType::Fuel => {
+                skill_system_parameters.item_life_events.send(
+                    ItemLifeEvent::DecreaseVehicleEngineLife {
+                        entity: skill_event.caster_entity,
+                        amount: Some(use_ability_value.clamp(0, u16::MAX as i32) as u16),
+                    },
+                );
+            }
+            _ => {}
+        }
+    }
+}
+
 pub fn skill_effect_system(
     mut commands: Commands,
     mut skill_system_parameters: SkillSystemParameters,
@@ -534,8 +635,17 @@ pub fn skill_effect_system(
     mut skill_events: EventReader<SkillEvent>,
     mut pending_skill_events: Local<Vec<SkillEvent>>,
 ) {
-    // Read events into pending_skill_events for executing at specific time
     for skill_event in skill_events.iter() {
+        // Subtract the skill use cost (e.g. mana points)
+        subtract_skill_use_cost(
+            &skill_system_resources,
+            &mut skill_caster_query,
+            &mut skill_target_query,
+            &mut skill_system_parameters,
+            skill_event,
+        );
+
+        // Add to pending_skill_events to execute at specific time
         pending_skill_events.push(skill_event.clone());
     }
 
@@ -555,132 +665,44 @@ pub fn skill_effect_system(
             ..
         } = pending_skill_events.remove(i);
 
-        let skill_data = skill_system_resources.game_data.skills.get_skill(skill_id);
-        if skill_data.is_none() {
+        let Some(skill_data) = skill_system_resources.game_data.skills.get_skill(skill_id) else {
             continue;
+        };
+
+        let Ok(mut skill_caster) = skill_caster_query.get_mut(caster_entity) else {
+            continue;
+        };
+
+        let mut consumed_item = None;
+        let mut result = Ok(());
+
+        // If the skill is to use an item, try take it from inventory now
+        if let Some((item_slot, item)) = use_item {
+            if let Some(caster_inventory) = skill_caster.inventory.as_mut() {
+                if let Some(inventory_item) = caster_inventory.get_item(item_slot) {
+                    if item.is_same_item(inventory_item) {
+                        if let Some(item) = caster_inventory.try_take_quantity(item_slot, 1) {
+                            consumed_item = Some((item_slot, item));
+                        }
+                    }
+                }
+            }
+
+            if consumed_item.is_none() {
+                // Failed to take item from inventory, cancel the skill
+                result = Err(SkillCastError::NotEnoughUseAbility);
+            }
         }
-        let skill_data = skill_data.unwrap();
 
-        if let Ok(mut skill_caster) = skill_caster_query.get_mut(caster_entity) {
-            let mut consumed_item = None;
-            let mut result = Ok(());
-
-            // If the skill is to use an item, try take it from inventory now
-            if let Some((item_slot, item)) = use_item {
-                if let Some(caster_inventory) = skill_caster.inventory.as_mut() {
-                    if let Some(inventory_item) = caster_inventory.get_item(item_slot) {
-                        if item.is_same_item(inventory_item) {
-                            if let Some(item) = caster_inventory.try_take_quantity(item_slot, 1) {
-                                consumed_item = Some((item_slot, item));
-                            }
-                        }
-                    }
-                }
-
-                if consumed_item.is_none() {
-                    // Failed to take item from inventory, cancel the skill
-                    result = Err(SkillCastError::NotEnoughUseAbility);
-                }
-            }
-
-            // Check and subtract skill usage requirements
-            if matches!(skill_data.skill_type, SkillType::SummonPet) {
-                let summon_point_requirement = skill_data
-                    .summon_npc_id
-                    .and_then(|npc_id| skill_system_resources.game_data.npcs.get_npc(npc_id))
-                    .map_or(0, |npc_data| npc_data.summon_point_requirement);
-                if summon_point_requirement > 0 {
-                    // TODO: Check summon_point_requirement and update summon points
-                }
-            }
-
-            for &(use_ability_type, mut use_ability_value) in skill_data.use_ability.iter() {
-                if use_ability_type == AbilityType::Mana {
-                    let use_mana_rate =
-                        (100 - skill_caster.ability_values.get_save_mana()) as f32 / 100.0;
-                    use_ability_value = (use_ability_value as f32 * use_mana_rate) as i32;
-                }
-
-                // We use the skill_target_query to access the other required components
-                let mut skill_caster2 = skill_target_query.get_mut(caster_entity).unwrap();
-                let ability_value = ability_values_get_value(
-                    use_ability_type,
-                    Some(skill_caster.ability_values),
-                    Some(skill_caster.level),
-                    None,
-                    None,
-                    None,
-                    skill_caster.experience_points.as_deref(),
-                    skill_caster.inventory.as_deref(),
-                    None,
-                    skill_caster2.stamina.as_deref(),
-                    None,
-                    None,
-                    Some(skill_caster2.health_points.as_ref()),
-                    skill_caster2.mana_points.as_deref(),
-                    // TODO: Fuel
-                );
-
-                if let Some(ability_value) = ability_value {
-                    if ability_value < use_ability_value {
-                        // Not enough use ability, cancel the skill
-                        result = Err(SkillCastError::NotEnoughUseAbility);
-                    } else {
-                        ability_values_add_value(
-                            use_ability_type,
-                            -use_ability_value,
-                            Some(skill_caster.ability_values),
-                            None,
-                            skill_caster.experience_points.as_mut(),
-                            Some(&mut skill_caster2.health_points),
-                            skill_caster.inventory.as_mut(), // For money
-                            skill_caster2.mana_points.as_mut(),
-                            None,
-                            skill_caster2.stamina.as_mut(),
-                            None,
-                            None,
-                            None,
-                            // TODO: Fuel
-                        );
-                    }
-                }
-            }
-
-            if result.is_ok() {
-                result = match skill_data.skill_type {
-                    SkillType::Immediate
-                    | SkillType::EnforceWeapon
-                    | SkillType::EnforceBullet
-                    | SkillType::FireBullet
-                    | SkillType::AreaTarget
-                    | SkillType::SelfDamage => {
-                        match apply_skill_damage(
-                            &mut skill_system_parameters,
-                            &skill_system_resources,
-                            &client_entity_list,
-                            &skill_caster,
-                            &skill_target,
-                            skill_data,
-                            &mut skill_target_query,
-                        ) {
-                            Ok(_) => apply_skill_status_effects(
-                                &mut skill_system_parameters,
-                                &skill_system_resources,
-                                &client_entity_list,
-                                &skill_caster,
-                                &skill_target,
-                                skill_data,
-                                &mut skill_target_query,
-                            ),
-                            Err(err) => Err(err),
-                        }
-                    }
-                    SkillType::SelfBoundDuration
-                    | SkillType::SelfStateDuration
-                    | SkillType::TargetBoundDuration
-                    | SkillType::TargetStateDuration
-                    | SkillType::SelfBound
-                    | SkillType::TargetBound => apply_skill_status_effects(
+        if result.is_ok() {
+            result = match skill_data.skill_type {
+                SkillType::Immediate
+                | SkillType::EnforceWeapon
+                | SkillType::EnforceBullet
+                | SkillType::FireBullet
+                | SkillType::AreaTarget
+                | SkillType::SelfDamage => {
+                    match apply_skill_damage(
                         &mut skill_system_parameters,
                         &skill_system_resources,
                         &client_entity_list,
@@ -688,154 +710,185 @@ pub fn skill_effect_system(
                         &skill_target,
                         skill_data,
                         &mut skill_target_query,
-                    ),
-                    SkillType::SelfAndTarget => {
-                        // Only applies status effect if damage > 0
-                        if let SkillEventTarget::Entity(target_entity) = skill_target {
-                            if let Ok(mut skill_target_data) =
-                                skill_target_query.get_mut(target_entity)
-                            {
-                                match apply_skill_damage_to_entity(
+                    ) {
+                        Ok(_) => apply_skill_status_effects(
+                            &mut skill_system_parameters,
+                            &skill_system_resources,
+                            &client_entity_list,
+                            &skill_caster,
+                            &skill_target,
+                            skill_data,
+                            &mut skill_target_query,
+                        ),
+                        Err(err) => Err(err),
+                    }
+                }
+                SkillType::SelfBoundDuration
+                | SkillType::SelfStateDuration
+                | SkillType::TargetBoundDuration
+                | SkillType::TargetStateDuration
+                | SkillType::SelfBound
+                | SkillType::TargetBound => apply_skill_status_effects(
+                    &mut skill_system_parameters,
+                    &skill_system_resources,
+                    &client_entity_list,
+                    &skill_caster,
+                    &skill_target,
+                    skill_data,
+                    &mut skill_target_query,
+                ),
+                SkillType::SelfAndTarget => {
+                    // Only applies status effect if damage > 0
+                    if let SkillEventTarget::Entity(target_entity) = skill_target {
+                        if let Ok(mut skill_target_data) = skill_target_query.get_mut(target_entity)
+                        {
+                            match apply_skill_damage_to_entity(
+                                &mut skill_system_parameters,
+                                &skill_system_resources,
+                                &skill_caster,
+                                &mut skill_target_data,
+                                skill_data,
+                            ) {
+                                Ok(damage) if damage.amount > 0 => apply_skill_status_effects(
                                     &mut skill_system_parameters,
                                     &skill_system_resources,
+                                    &client_entity_list,
                                     &skill_caster,
-                                    &mut skill_target_data,
+                                    &skill_target,
                                     skill_data,
-                                ) {
-                                    Ok(damage) if damage.amount > 0 => apply_skill_status_effects(
-                                        &mut skill_system_parameters,
-                                        &skill_system_resources,
-                                        &client_entity_list,
-                                        &skill_caster,
-                                        &skill_target,
-                                        skill_data,
-                                        &mut skill_target_query,
-                                    ),
-                                    Ok(_) => Ok(()),
-                                    Err(err) => Err(err),
-                                }
-                            } else {
-                                Err(SkillCastError::InvalidTarget)
+                                    &mut skill_target_query,
+                                ),
+                                Ok(_) => Ok(()),
+                                Err(err) => Err(err),
                             }
                         } else {
                             Err(SkillCastError::InvalidTarget)
                         }
+                    } else {
+                        Err(SkillCastError::InvalidTarget)
                     }
-                    SkillType::SummonPet => {
-                        if let Some(npc_id) = skill_data.summon_npc_id {
-                            if let Some(entity) = MonsterBundle::spawn(
-                                &mut commands,
-                                &mut client_entity_list,
-                                &skill_system_resources.game_data,
-                                npc_id,
-                                skill_caster.position.zone_id,
-                                SpawnOrigin::Summoned(
-                                    skill_caster.entity,
-                                    skill_caster.position.position,
-                                ),
-                                150,
-                                skill_caster.team.clone(),
-                                Some((skill_caster.entity, skill_caster.level)),
-                                Some(skill_data.level as i32),
-                            ) {
-                                // Apply status effect to decrease summon's life over time
-                                if let Some(status_effect_data) = skill_system_resources
-                                    .game_data
-                                    .status_effects
-                                    .get_decrease_summon_life_status_effect()
-                                {
-                                    let mut status_effects = StatusEffects::new();
-                                    status_effects.apply_summon_decrease_life_status_effect(
-                                        status_effect_data,
-                                    );
-                                    commands.entity(entity).insert(status_effects);
-                                }
-
-                                // TODO: Increase summon count point thing
-                                Ok(())
-                            } else {
-                                Err(SkillCastError::InvalidSkill)
+                }
+                SkillType::SummonPet => {
+                    if let Some(npc_id) = skill_data.summon_npc_id {
+                        if let Some(entity) = MonsterBundle::spawn(
+                            &mut commands,
+                            &mut client_entity_list,
+                            &skill_system_resources.game_data,
+                            npc_id,
+                            skill_caster.position.zone_id,
+                            SpawnOrigin::Summoned(
+                                skill_caster.entity,
+                                skill_caster.position.position,
+                            ),
+                            150,
+                            skill_caster.team.clone(),
+                            Some((skill_caster.entity, skill_caster.level)),
+                            Some(skill_data.level as i32),
+                        ) {
+                            // Apply status effect to decrease summon's life over time
+                            if let Some(status_effect_data) = skill_system_resources
+                                .game_data
+                                .status_effects
+                                .get_decrease_summon_life_status_effect()
+                            {
+                                let mut status_effects = StatusEffects::new();
+                                status_effects
+                                    .apply_summon_decrease_life_status_effect(status_effect_data);
+                                commands.entity(entity).insert(status_effects);
                             }
+
+                            let summon_point_requirement = skill_system_resources
+                                .game_data
+                                .npcs
+                                .get_npc(npc_id)
+                                .map_or(0, |npc_data| npc_data.summon_point_requirement);
+                            if summon_point_requirement > 0 {
+                                // TODO: Update summon points
+                            }
+
+                            Ok(())
                         } else {
                             Err(SkillCastError::InvalidSkill)
                         }
+                    } else {
+                        Err(SkillCastError::InvalidSkill)
                     }
-                    SkillType::BasicAction
-                    | SkillType::CreateWindow
-                    | SkillType::Passive
-                    | SkillType::Emote
-                    | SkillType::Warp => Ok(()),
-                    SkillType::Resurrection => {
-                        warn!("Unimplemented skill type used {:?}", skill_data);
-                        Ok(())
-                    }
-                };
-            }
+                }
+                SkillType::BasicAction
+                | SkillType::CreateWindow
+                | SkillType::Passive
+                | SkillType::Emote
+                | SkillType::Warp => Ok(()),
+                SkillType::Resurrection => {
+                    warn!("Unimplemented skill type used {:?}", skill_data);
+                    Ok(())
+                }
+            };
+        }
 
-            match result {
-                Ok(_) => {
-                    // Send message notifying client of consumption of item
-                    if let Some((item_slot, _)) = consumed_item {
-                        if let (Some(caster_inventory), Some(caster_game_client)) =
-                            (skill_caster.inventory, skill_caster.game_client)
-                        {
-                            match caster_inventory.get_item(item_slot) {
-                                None => {
-                                    // When the item has been fully consumed we send UpdateInventory packet
-                                    caster_game_client
-                                        .server_message_tx
-                                        .send(ServerMessage::UpdateInventory {
-                                            items: vec![(item_slot, None)],
-                                            money: None,
-                                        })
-                                        .ok();
-                                }
-                                Some(item) => {
-                                    // When there is still remaining quantity we send UseItem packet
-                                    caster_game_client
-                                        .server_message_tx
-                                        .send(ServerMessage::UseInventoryItem {
-                                            entity_id: skill_caster.client_entity.id,
-                                            item: item.get_item_reference(),
-                                            inventory_slot: item_slot,
-                                        })
-                                        .ok();
-                                }
+        match result {
+            Ok(_) => {
+                // Send message notifying client of consumption of item
+                if let Some((item_slot, _)) = consumed_item {
+                    if let (Some(caster_inventory), Some(caster_game_client)) =
+                        (skill_caster.inventory, skill_caster.game_client)
+                    {
+                        match caster_inventory.get_item(item_slot) {
+                            None => {
+                                // When the item has been fully consumed we send UpdateInventory packet
+                                caster_game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::UpdateInventory {
+                                        items: vec![(item_slot, None)],
+                                        money: None,
+                                    })
+                                    .ok();
+                            }
+                            Some(item) => {
+                                // When there is still remaining quantity we send UseItem packet
+                                caster_game_client
+                                    .server_message_tx
+                                    .send(ServerMessage::UseInventoryItem {
+                                        entity_id: skill_caster.client_entity.id,
+                                        item: item.get_item_reference(),
+                                        inventory_slot: item_slot,
+                                    })
+                                    .ok();
                             }
                         }
                     }
-
-                    skill_system_parameters.server_messages.send_entity_message(
-                        skill_caster.client_entity,
-                        ServerMessage::FinishCastingSkill {
-                            entity_id: skill_caster.client_entity.id,
-                            skill_id,
-                        },
-                    )
                 }
-                Err(error) => {
-                    // Return unused item to inventory
-                    if let Some((item_slot, item)) = consumed_item {
-                        skill_caster
-                            .inventory
-                            .unwrap()
-                            .try_stack_with_item(item_slot, item)
-                            .expect("Unexpected error returning unconsumed item to inventory");
-                    }
 
-                    skill_system_parameters.server_messages.send_entity_message(
-                        skill_caster.client_entity,
-                        ServerMessage::CancelCastingSkill {
-                            entity_id: skill_caster.client_entity.id,
-                            reason: match error {
-                                SkillCastError::NotEnoughUseAbility => {
-                                    CancelCastingSkillReason::NeedAbility
-                                }
-                                _ => CancelCastingSkillReason::NeedTarget,
-                            },
-                        },
-                    )
+                skill_system_parameters.server_messages.send_entity_message(
+                    skill_caster.client_entity,
+                    ServerMessage::FinishCastingSkill {
+                        entity_id: skill_caster.client_entity.id,
+                        skill_id,
+                    },
+                )
+            }
+            Err(error) => {
+                // Return unused item to inventory
+                if let Some((item_slot, item)) = consumed_item {
+                    skill_caster
+                        .inventory
+                        .unwrap()
+                        .try_stack_with_item(item_slot, item)
+                        .expect("Unexpected error returning unconsumed item to inventory");
                 }
+
+                skill_system_parameters.server_messages.send_entity_message(
+                    skill_caster.client_entity,
+                    ServerMessage::CancelCastingSkill {
+                        entity_id: skill_caster.client_entity.id,
+                        reason: match error {
+                            SkillCastError::NotEnoughUseAbility => {
+                                CancelCastingSkillReason::NeedAbility
+                            }
+                            _ => CancelCastingSkillReason::NeedTarget,
+                        },
+                    },
+                )
             }
         }
     }

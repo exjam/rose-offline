@@ -27,4 +27,20 @@ impl ClientEntity {
             entity_type,
         }
     }
+
+    pub fn is_character(&self) -> bool {
+        matches!(self.entity_type, ClientEntityType::Character)
+    }
+
+    pub fn is_monster(&self) -> bool {
+        matches!(self.entity_type, ClientEntityType::Monster)
+    }
+
+    pub fn is_npc(&self) -> bool {
+        matches!(self.entity_type, ClientEntityType::Npc)
+    }
+
+    pub fn is_item_drop(&self) -> bool {
+        matches!(self.entity_type, ClientEntityType::ItemDrop)
+    }
 }

@@ -23,7 +23,7 @@ use crate::game::{
     components::{
         AbilityValues, Account, Bank, BasicStatType, BasicStats, CharacterInfo, Clan, ClanMember,
         ClanMembership, ClientEntity, ClientEntitySector, ClientEntityType, ClientEntityVisibility,
-        Command, CommandData, DamageSources, Dead, DrivingTime, DroppedItem, Equipment,
+        Command, CommandData, Cooldowns, DamageSources, Dead, DrivingTime, DroppedItem, Equipment,
         EquipmentItemDatabase, ExperiencePoints, GameClient, HealthPoints, Hotbar, Inventory,
         ItemSlot, Level, ManaPoints, Money, MotionData, MoveMode, MoveSpeed, NextCommand, Party,
         PartyMember, PartyMembership, PassiveRecoveryTime, Position, QuestState, SkillList,
@@ -195,6 +195,7 @@ fn handle_game_connection_request(
             basic_stats: character.basic_stats.clone(),
             bank,
             command: Command::default(),
+            cooldowns: Cooldowns::default(),
             damage_sources: DamageSources::new(1),
             equipment: character.equipment.clone(),
             experience_points: character.experience_points.clone(),
@@ -889,6 +890,7 @@ pub fn game_server_main_system(
                             events.item_life_events.send(
                                 ItemLifeEvent::DecreaseVehicleEngineLife {
                                     entity: game_client.entity,
+                                    amount: None,
                                 },
                             );
 

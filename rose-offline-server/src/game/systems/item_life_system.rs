@@ -82,7 +82,7 @@ pub fn item_life_system(
                     }
                 }
             }
-            ItemLifeEvent::DecreaseVehicleEngineLife { entity } => {
+            ItemLifeEvent::DecreaseVehicleEngineLife { entity, amount } => {
                 if let Ok((_, mut equipment, game_client)) = query.get_mut(entity) {
                     let equipment_slot = equipment.get_vehicle_slot_mut(VehiclePartIndex::Engine);
 
@@ -92,9 +92,9 @@ pub fn item_life_system(
                             .get_vehicle_item(engine_item.item.item_number)
                         {
                             if engine_item.life > 0 {
-                                engine_item.life = engine_item
-                                    .life
-                                    .saturating_sub(item_data.fuel_use_rate as u16);
+                                engine_item.life = engine_item.life.saturating_sub(
+                                    amount.unwrap_or(item_data.fuel_use_rate as u16),
+                                );
 
                                 if let Some(game_client) = game_client {
                                     game_client

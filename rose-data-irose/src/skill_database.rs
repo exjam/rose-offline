@@ -8,9 +8,8 @@ use std::{
 
 use rose_data::{
     AbilityType, EffectFileId, EffectId, ItemClass, JobClassId, MotionId, NpcId, SkillActionMode,
-    SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillCooldownGroup, SkillData,
-    SkillDatabase, SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId,
-    StringDatabase, ZoneId,
+    SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillData, SkillDatabase, SkillId,
+    SkillPageType, SkillTargetFilter, SoundId, StatusEffectId, StringDatabase, ZoneId,
 };
 use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
@@ -189,8 +188,8 @@ impl StbSkill {
         let duration =
             Duration::from_millis(self.get_cooldown_time_5ms(id).unwrap_or(0) as u64 * 200);
         match self.get_cooldown_group(id) {
-            Some(group) => SkillCooldown::Group(SkillCooldownGroup(group), duration),
-            None => SkillCooldown::Skill(duration),
+            Some(group) => SkillCooldown::Group { group, duration },
+            None => SkillCooldown::Skill { duration },
         }
     }
 }
