@@ -676,14 +676,14 @@ pub fn command_system(
                                             ammo_item.quantity >= hit_count as u32
                                         })
                                     {
-                                        // Not enough ammo, cancel attack
-                                        cancel_attack = true;
-                                    } else {
                                         use_ammo_event.send(UseAmmoEvent {
                                             entity: command_entity.entity,
                                             ammo_index,
                                             quantity: hit_count,
                                         });
+                                    } else {
+                                        // Not enough ammo, cancel attack
+                                        cancel_attack = true;
                                     }
                                 }
                             }
