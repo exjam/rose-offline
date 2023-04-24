@@ -7,6 +7,7 @@ mod bot_pickup_item;
 mod bot_revive;
 mod bot_sit_recover_hp;
 mod bot_snowball_fight;
+mod bot_use_attack_skill;
 
 mod create_bot;
 
@@ -44,6 +45,9 @@ use bot_sit_recover_hp::{
     action_sit_recover_hp, score_should_sit_recover_hp, ShouldSitRecoverHp, SitRecoverHp,
 };
 use bot_snowball_fight::{action_snowball_fight, SnowballFight};
+use bot_use_attack_skill::{
+    action_use_attack_skill, score_should_use_attack_skill, ShouldUseAttackSkill, UseAttackSkill,
+};
 
 #[derive(Component)]
 pub struct BotCombatTarget {
@@ -66,6 +70,7 @@ impl Plugin for BotPlugin {
                     action_join_zone,
                     action_sit_recover_hp,
                     action_find_monster_spawn,
+                    action_use_attack_skill,
                 )
                     .in_set(BigBrainSet::Actions),
             )
@@ -78,6 +83,7 @@ impl Plugin for BotPlugin {
                     score_is_dead,
                     score_is_teleporting,
                     score_should_sit_recover_hp,
+                    score_should_use_attack_skill,
                 )
                     .in_set(BigBrainSet::Scorers),
             );
@@ -90,6 +96,7 @@ pub fn bot_thinker() -> ThinkerBuilder {
         .when(IsDead { score: 1.0 }, ReviveCurrentZone)
         .when(IsTeleporting { score: 1.0 }, JoinZone)
         .when(ThreatIsNotTarget { score: 1.0 }, AttackThreat)
+        .when(ShouldUseAttackSkill { score: 0.9 }, UseAttackSkill)
         .when(
             ShouldAttackTarget {
                 min_score: 0.6,
