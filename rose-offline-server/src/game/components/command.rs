@@ -65,7 +65,10 @@ pub enum CommandData {
 
 impl CommandData {
     pub fn is_manual_complete(&self) -> bool {
-        matches!(*self, CommandData::Sit | CommandData::PersonalStore)
+        matches!(
+            *self,
+            CommandData::Sit | CommandData::PersonalStore | CommandData::Stop { .. }
+        )
     }
 }
 
