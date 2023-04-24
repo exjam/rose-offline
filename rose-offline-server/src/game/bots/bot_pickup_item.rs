@@ -1,6 +1,6 @@
 use bevy::{
     math::Vec3Swizzles,
-    prelude::{Commands, Component, Entity, Query, Res, With},
+    prelude::{Commands, Component, Entity, Query, Res, With, Without},
 };
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
@@ -12,7 +12,7 @@ use rose_game_common::components::{Inventory, InventoryPageType};
 
 use crate::game::{
     bots::IDLE_DURATION,
-    components::{ClientEntityType, Command, NextCommand, Owner, Position},
+    components::{ClientEntity, ClientEntityType, Command, Dead, NextCommand, Owner, Position},
     resources::ClientEntityList,
 };
 
@@ -33,7 +33,7 @@ pub struct PickupItemDrop {
 
 pub fn score_find_nearby_item_drop_system(
     mut query: Query<(&FindNearbyItemDrop, &Actor, &mut Score)>,
-    query_entity: Query<(&Command, &Inventory, &Position)>,
+    query_entity: Query<(&Command, &Inventory, &Position), (With<ClientEntity>, Without<Dead>)>,
     query_owner: Query<&Owner>,
     client_entity_list: Res<ClientEntityList>,
 ) {

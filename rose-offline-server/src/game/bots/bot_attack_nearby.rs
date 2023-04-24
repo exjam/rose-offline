@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use bevy::{
     math::Vec3Swizzles,
-    prelude::{Commands, Component, Entity, Query, Res, With},
+    prelude::{Commands, Component, Entity, Query, Res, With, Without},
 };
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
@@ -12,7 +12,9 @@ use rand::seq::SliceRandom;
 
 use crate::game::{
     bots::IDLE_DURATION,
-    components::{ClientEntityType, Command, HealthPoints, NextCommand, Position, Team},
+    components::{
+        ClientEntity, ClientEntityType, Command, Dead, HealthPoints, NextCommand, Position, Team,
+    },
     resources::ClientEntityList,
 };
 
@@ -30,7 +32,10 @@ pub struct AttackRandomNearbyTarget;
 
 pub fn score_find_nearby_target(
     mut query: Query<(&FindNearbyTarget, &Actor, &mut Score)>,
-    query_entity: Query<(&Command, &Position, &Team, Option<&BotCombatTarget>)>,
+    query_entity: Query<
+        (&Command, &Position, &Team, Option<&BotCombatTarget>),
+        (With<ClientEntity>, Without<Dead>),
+    >,
     query_target: Query<(&Team, &HealthPoints)>,
     client_entity_list: Res<ClientEntityList>,
 ) {

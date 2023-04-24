@@ -15,8 +15,8 @@ use crate::game::{
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, DamageEvent, EquipmentEvent, ItemLifeEvent,
         NpcStoreEvent, PartyEvent, PartyMemberEvent, PersonalStoreEvent, PickupItemEvent,
-        QuestTriggerEvent, RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent, UseAmmoEvent,
-        UseItemEvent,
+        QuestTriggerEvent, ReviveEvent, RewardItemEvent, RewardXpEvent, SaveEvent, SkillEvent,
+        UseAmmoEvent, UseItemEvent,
     },
     messages::control::ControlMessage,
     resources::{
@@ -33,8 +33,8 @@ use crate::game::{
         monster_spawn_system, npc_ai_system, npc_store_system, party_member_event_system,
         party_member_update_info_system, party_system, party_update_average_level_system,
         passive_recovery_system, personal_store_system, pickup_item_system, quest_system,
-        reward_item_system, save_system, server_messages_system, skill_effect_system,
-        startup_clans_system, startup_zones_system, status_effect_system,
+        revive_event_system, reward_item_system, save_system, server_messages_system,
+        skill_effect_system, startup_clans_system, startup_zones_system, status_effect_system,
         update_character_motion_data_system, update_npc_motion_data_system, update_position_system,
         use_ammo_system, use_item_system, weight_system, world_server_authentication_system,
         world_server_system, world_time_system,
@@ -86,6 +86,7 @@ impl GameWorld {
             .add_event::<PersonalStoreEvent>()
             .add_event::<PickupItemEvent>()
             .add_event::<QuestTriggerEvent>()
+            .add_event::<ReviveEvent>()
             .add_event::<RewardItemEvent>()
             .add_event::<RewardXpEvent>()
             .add_event::<SaveEvent>()
@@ -123,6 +124,7 @@ impl GameWorld {
                 game_server_authentication_system,
                 game_server_join_system,
                 game_server_main_system,
+                revive_event_system.after(game_server_main_system),
                 chat_commands_system,
                 monster_spawn_system,
                 npc_ai_system,

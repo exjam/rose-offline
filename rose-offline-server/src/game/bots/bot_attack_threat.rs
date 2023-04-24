@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use bevy::prelude::{Commands, Component, Entity, Query, With};
+use bevy::prelude::{Commands, Component, Entity, Query, With, Without};
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
     scorers::Score,
@@ -9,7 +9,7 @@ use big_brain::{
 
 use crate::game::{
     bots::BotCombatTarget,
-    components::{Command, DamageSources, HealthPoints, NextCommand, Team},
+    components::{ClientEntity, Command, DamageSources, Dead, HealthPoints, NextCommand, Team},
 };
 
 const RECENT_ATTACK_TIME: Duration = Duration::from_secs(5);
@@ -43,7 +43,10 @@ fn find_highest_damage_source(damage_sources: &DamageSources) -> Option<Entity> 
 
 pub fn score_threat_is_not_target(
     mut query: Query<(&ThreatIsNotTarget, &Actor, &mut Score)>,
-    query_entity: Query<(Option<&BotCombatTarget>, &Command, &DamageSources, &Team)>,
+    query_entity: Query<
+        (Option<&BotCombatTarget>, &Command, &DamageSources, &Team),
+        (With<ClientEntity>, Without<Dead>),
+    >,
     query_target: Query<(&Team, &HealthPoints)>,
 ) {
     let now = Instant::now();

@@ -112,6 +112,10 @@ impl Command {
         matches!(self.command, CommandData::Die { .. })
     }
 
+    pub fn is_dead_for(&self, duration: Duration) -> bool {
+        matches!(self.command, CommandData::Die { .. }) && self.duration > duration
+    }
+
     pub fn is_stop(&self) -> bool {
         matches!(self.command, CommandData::Stop { .. })
     }

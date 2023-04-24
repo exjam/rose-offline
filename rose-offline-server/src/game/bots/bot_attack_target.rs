@@ -1,4 +1,4 @@
-use bevy::prelude::{Commands, Component, Query, With};
+use bevy::prelude::{Commands, Component, Query, With, Without};
 
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
@@ -10,7 +10,7 @@ use rose_game_common::components::AbilityValues;
 
 use crate::game::{
     bots::{BotCombatTarget, IDLE_DURATION},
-    components::{Command, HealthPoints, NextCommand},
+    components::{ClientEntity, Command, Dead, HealthPoints, NextCommand},
 };
 
 #[derive(Clone, Component, Debug, ScorerBuilder)]
@@ -25,7 +25,7 @@ pub struct ActionAttackTarget;
 pub fn score_should_attack_target(
     mut commands: Commands,
     mut query: Query<(&Actor, &mut Score, &ShouldAttackTarget)>,
-    query_entity: Query<(&Command, &BotCombatTarget)>,
+    query_entity: Query<(&Command, &BotCombatTarget), (With<ClientEntity>, Without<Dead>)>,
     query_target: Query<(&AbilityValues, &HealthPoints)>,
 ) {
     for (&Actor(entity), mut score, should_attack_target) in query.iter_mut() {

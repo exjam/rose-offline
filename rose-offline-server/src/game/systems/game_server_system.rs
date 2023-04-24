@@ -31,7 +31,8 @@ use crate::game::{
     },
     events::{
         BankEvent, ChatCommandEvent, ClanEvent, EquipmentEvent, ItemLifeEvent, NpcStoreEvent,
-        PartyEvent, PartyMemberEvent, PersonalStoreEvent, QuestTriggerEvent, UseItemEvent,
+        PartyEvent, PartyMemberEvent, PersonalStoreEvent, QuestTriggerEvent, ReviveEvent,
+        RevivePosition, UseItemEvent,
     },
     messages::{
         client::ClientMessage,
@@ -458,6 +459,7 @@ pub struct GameEvents<'w> {
     party_events: EventWriter<'w, PartyEvent>,
     personal_store_events: EventWriter<'w, PersonalStoreEvent>,
     quest_trigger_events: EventWriter<'w, QuestTriggerEvent>,
+    revive_events: EventWriter<'w, ReviveEvent>,
     use_item_events: EventWriter<'w, UseItemEvent>,
 }
 
@@ -645,53 +647,20 @@ pub fn game_server_main_system(
                         game_client.position,
                     );
                 }
-                ClientMessage::ReviveCurrentZone | ClientMessage::ReviveSaveZone => {
+                ClientMessage::ReviveCurrentZone => {
                     if game_client.dead.is_some() {
-                        let new_position = match message {
-                            ClientMessage::ReviveCurrentZone => {
-                                let revive_position = if let Some(zone_data) =
-                                    game_data.zones.get_zone(game_client.position.zone_id)
-                                {
-                                    if let Some(revive_position) = zone_data
-                                        .get_closest_revive_position(game_client.position.position)
-                                    {
-                                        revive_position
-                                    } else {
-                                        zone_data.start_position
-                                    }
-                                } else {
-                                    game_client.position.position
-                                };
-
-                                Position::new(revive_position, game_client.position.zone_id)
-                            }
-                            ClientMessage::ReviveSaveZone => Position::new(
-                                game_client.character_info.revive_position,
-                                game_client.character_info.revive_zone_id,
-                            ),
-                            _ => unreachable!(),
-                        };
-
-                        entity_commands.remove::<Dead>();
-                        entity_commands.insert((
-                            HealthPoints::new(
-                                (3 * game_client.ability_values.get_max_health()) / 10,
-                            ),
-                            ManaPoints::new((3 * game_client.ability_values.get_max_mana()) / 10),
-                            Command::with_stop(),
-                            NextCommand::default(),
-                        ));
-
-                        client_entity_teleport_zone(
-                            &mut commands,
-                            &mut client_entity_list,
-                            game_client.entity,
-                            game_client.client_entity,
-                            game_client.client_entity_sector,
-                            game_client.position,
-                            new_position,
-                            Some(game_client.game_client),
-                        );
+                        events.revive_events.send(ReviveEvent {
+                            entity: game_client.entity,
+                            position: RevivePosition::CurrentZone,
+                        });
+                    }
+                }
+                ClientMessage::ReviveSaveZone => {
+                    if game_client.dead.is_some() {
+                        events.revive_events.send(ReviveEvent {
+                            entity: game_client.entity,
+                            position: RevivePosition::SaveZone,
+                        });
                     }
                 }
                 ClientMessage::SetReviveSaveZone => {

@@ -29,8 +29,8 @@ use rose_game_common::{
 use crate::game::{
     bots::{bot_snowball_fight, bot_thinker, create_bot},
     bundles::{
-        ability_values_add_value, ability_values_set_value, client_entity_join_zone,
-        client_entity_teleport_zone, CharacterBundle, ItemDropBundle, MonsterBundle,
+        ability_values_add_value, ability_values_set_value, client_entity_teleport_zone,
+        CharacterBundle, ItemDropBundle, MonsterBundle,
     },
     components::{
         AbilityValues, BasicStats, CharacterInfo, ClanMembership, ClientEntity, ClientEntitySector,
@@ -320,7 +320,7 @@ fn create_bot_entity(
         bot_data.info.gender,
     );
 
-    bot_data.position = position.clone();
+    bot_data.position = position;
     bot_data.health_points.hp = ability_values.get_max_health();
     bot_data.mana_points.mp = ability_values.get_max_mana();
 
@@ -363,15 +363,6 @@ fn create_bot_entity(
             },
         ))
         .id();
-
-    client_entity_join_zone(
-        &mut chat_command_params.commands,
-        &mut chat_command_params.client_entity_list,
-        entity,
-        ClientEntityType::Character,
-        &position,
-    )
-    .ok();
 
     Some(entity)
 }

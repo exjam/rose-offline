@@ -1,7 +1,9 @@
 mod bot_attack_nearby;
 mod bot_attack_target;
 mod bot_attack_threat;
+mod bot_join_zone;
 mod bot_pickup_item;
+mod bot_revive;
 mod bot_snowball_fight;
 
 mod create_bot;
@@ -29,10 +31,12 @@ use bot_attack_target::{
 use bot_attack_threat::{
     action_attack_threat, score_threat_is_not_target, AttackThreat, ThreatIsNotTarget,
 };
+use bot_join_zone::{action_join_zone, score_is_teleporting, IsTeleporting, JoinZone};
 use bot_pickup_item::{
     action_pickup_nearest_item_drop, score_find_nearby_item_drop_system, FindNearbyItemDrop,
     PickupNearestItemDrop,
 };
+use bot_revive::{action_revive_current_zone, score_is_dead, IsDead, ReviveCurrentZone};
 use bot_snowball_fight::{action_snowball_fight, SnowballFight};
 
 #[derive(Component)]
@@ -52,6 +56,8 @@ impl Plugin for BotPlugin {
                     action_pickup_nearest_item_drop,
                     action_snowball_fight,
                     action_attack_target,
+                    action_revive_current_zone,
+                    action_join_zone,
                 )
                     .in_set(BigBrainSet::Actions),
             )
@@ -61,6 +67,8 @@ impl Plugin for BotPlugin {
                     score_threat_is_not_target,
                     score_find_nearby_item_drop_system,
                     score_should_attack_target,
+                    score_is_dead,
+                    score_is_teleporting,
                 )
                     .in_set(BigBrainSet::Scorers),
             );
@@ -80,6 +88,8 @@ pub fn bot_thinker() -> ThinkerBuilder {
         .when(ThreatIsNotTarget { score: 1.0 }, AttackThreat)
         .when(FindNearbyItemDrop { score: 0.5 }, PickupNearestItemDrop)
         .when(FindNearbyTarget { score: 0.4 }, AttackRandomNearbyTarget)
+        .when(IsDead { score: 1.0 }, ReviveCurrentZone)
+        .when(IsTeleporting { score: 1.0 }, JoinZone)
 }
 
 pub fn bot_snowball_fight() -> ThinkerBuilder {
