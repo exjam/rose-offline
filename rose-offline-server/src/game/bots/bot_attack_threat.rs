@@ -100,7 +100,9 @@ pub fn score_threat_is_not_target(
             continue;
         }
 
-        if let Ok((target_team, target_health_points)) = query_target.get(entity) {
+        if let Ok((target_team, target_health_points)) =
+            query_target.get(highest_damage_source_entity)
+        {
             // Check the target is still valid before starting switch
             if target_team.id != team.id && target_health_points.hp > 0 {
                 score.set(scorer.score);
@@ -142,11 +144,15 @@ pub fn action_attack_threat(
                 }
 
                 if let Some((_, highest_damage_source_entity)) = highest_damage_source {
-                    if let Ok((target_team, target_health_points)) = query_target.get(entity) {
+                    if let Ok((target_team, target_health_points)) =
+                        query_target.get(highest_damage_source_entity)
+                    {
                         if target_team.id != team.id && target_health_points.hp > 0 {
                             commands
                                 .entity(entity)
-                                .insert(BotCombatTarget { entity })
+                                .insert(BotCombatTarget {
+                                    entity: highest_damage_source_entity,
+                                })
                                 .insert(NextCommand::with_attack(highest_damage_source_entity));
 
                             *state = ActionState::Success;
