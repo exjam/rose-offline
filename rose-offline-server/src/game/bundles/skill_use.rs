@@ -65,20 +65,20 @@ fn check_skill_cooldown(
     }
 
     match &skill_data.cooldown {
-        SkillCooldown::Skill { duration } => {
-            if let Some(skill_last_used) = cooldowns.skill.get(&skill_data.id) {
-                if now - *skill_last_used < *duration {
+        SkillCooldown::Skill { .. } => {
+            if let Some(cooldown_finished) = cooldowns.skill.get(&skill_data.id) {
+                if now < *cooldown_finished {
                     return false;
                 }
             }
         }
-        SkillCooldown::Group { group, duration } => {
-            if let Some(group_last_used) = cooldowns
+        SkillCooldown::Group { group, .. } => {
+            if let Some(cooldown_finished) = cooldowns
                 .skill_group
                 .get(group.get())
                 .and_then(|x| x.as_ref())
             {
-                if now - *group_last_used < *duration {
+                if now < *cooldown_finished {
                     return false;
                 }
             }
