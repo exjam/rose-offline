@@ -22,12 +22,16 @@ use rose_data::{
     StackableItem, ZoneId,
 };
 use rose_game_common::{
-    components::{ClanLevel, ClanPoints, DroppedItem, ExperiencePoints},
+    components::{BasicStatType, ClanLevel, ClanPoints, DroppedItem, ExperiencePoints, SkillSlot},
     data::Damage,
 };
 
 use crate::game::{
-    bots::{bot_snowball_fight, bot_thinker, create_bot},
+    bots::{
+        bot_build_artisan, bot_build_bourgeois, bot_build_champion, bot_build_cleric,
+        bot_build_knight, bot_build_mage, bot_build_raider, bot_build_scout,
+        bot_create_random_build, bot_create_with_build, bot_snowball_fight, bot_thinker,
+    },
     bundles::{
         ability_values_add_value, ability_values_set_value, client_entity_teleport_zone,
         CharacterBundle, ItemDropBundle, MonsterBundle,
@@ -68,7 +72,7 @@ pub struct ChatCommandUserQuery<'w> {
     client_entity: &'w ClientEntity,
     client_entity_sector: &'w ClientEntitySector,
     game_client: &'w GameClient,
-    level: &'w Level,
+    level: &'w mut Level,
     position: &'w Position,
     basic_stats: &'w mut BasicStats,
     character_info: &'w mut CharacterInfo,
@@ -129,6 +133,11 @@ lazy_static! {
             )
             .subcommand(clap::Command::new("level").arg(Arg::new("level").required(true)))
             .subcommand(clap::Command::new("bot").arg(Arg::new("n").required(true)))
+            .subcommand(
+                clap::Command::new("build")
+                    .arg(Arg::new("name").required(true))
+                    .arg(Arg::new("level").required(false)),
+            )
             .subcommand(clap::Command::new("snowball_fight").arg(Arg::new("n").required(true)))
             .subcommand(clap::Command::new("shop").arg(Arg::new("item_type").required(true)))
             .subcommand(
@@ -287,7 +296,8 @@ fn create_bot_entity(
     position: Position,
     level: u32,
 ) -> Option<Entity> {
-    let mut bot_data = create_bot(&chat_command_params.game_data, name, level);
+    let (bot_build, mut bot_data) =
+        bot_create_random_build(&chat_command_params.game_data, name, level);
 
     let status_effects = StatusEffects::new();
     let status_effects_regen = StatusEffectsRegen::new();
@@ -327,6 +337,7 @@ fn create_bot_entity(
     let entity = chat_command_params
         .commands
         .spawn((
+            bot_build,
             bot_thinker(),
             CharacterBundle {
                 ability_values,
@@ -540,6 +551,131 @@ fn handle_chat_command(
                 15.0,
                 chat_command_user.position.clone(),
             );
+        }
+        ("build", arg_matches) => {
+            let name = arg_matches.value_of("name").unwrap();
+            let bot_build = match name {
+                "knight" => bot_build_knight(),
+                "champion" => bot_build_champion(),
+                "cleric" => bot_build_cleric(),
+                "mage" => bot_build_mage(),
+                "scout" => bot_build_scout(),
+                "raider" => bot_build_raider(),
+                "artisan" => bot_build_artisan(),
+                "bourgeois" => bot_build_bourgeois(),
+                _ => {
+                    return Err(ChatCommandError::WithMessage(format!(
+                        "Invalid build {}",
+                        name
+                    )));
+                }
+            };
+            let level = arg_matches
+                .value_of("level")
+                .and_then(|str| str.parse::<u32>().ok())
+                .unwrap_or(chat_command_user.level.level);
+
+            let bot_data = bot_create_with_build(
+                &chat_command_params.game_data,
+                name.into(),
+                level,
+                &bot_build,
+            );
+
+            chat_command_user.character_info.job = bot_data.info.job;
+            chat_command_user
+                .game_client
+                .server_message_tx
+                .send(ServerMessage::UpdateAbilityValueSet {
+                    ability_type: AbilityType::Job,
+                    value: chat_command_user.character_info.job as i32,
+                })
+                .ok();
+
+            *chat_command_user.basic_stats = bot_data.basic_stats;
+            for basic_stat_type in [
+                BasicStatType::Strength,
+                BasicStatType::Dexterity,
+                BasicStatType::Intelligence,
+                BasicStatType::Concentration,
+                BasicStatType::Charm,
+                BasicStatType::Sense,
+            ] {
+                chat_command_user
+                    .game_client
+                    .server_message_tx
+                    .send(ServerMessage::UpdateBasicStat {
+                        basic_stat_type,
+                        value: chat_command_user.basic_stats.get(basic_stat_type),
+                    })
+                    .ok();
+            }
+
+            chat_command_user.level.level = level;
+            *chat_command_user.stat_points = bot_data.stat_points;
+            *chat_command_user.skill_points = bot_data.skill_points;
+            *chat_command_user.experience_points = bot_data.experience_points;
+            chat_command_user
+                .game_client
+                .server_message_tx
+                .send(ServerMessage::UpdateLevel {
+                    entity_id: chat_command_user.client_entity.id,
+                    level: *chat_command_user.level,
+                    experience_points: *chat_command_user.experience_points,
+                    stat_points: *chat_command_user.stat_points,
+                    skill_points: *chat_command_user.skill_points,
+                })
+                .ok();
+
+            *chat_command_user.skill_list = bot_data.skill_list;
+            for skill_page in chat_command_user.skill_list.pages.iter() {
+                for (page_index, skill_slot) in skill_page.skills.iter().enumerate() {
+                    chat_command_user
+                        .game_client
+                        .server_message_tx
+                        .send(ServerMessage::LearnSkillSuccess {
+                            skill_slot: SkillSlot(skill_page.page_type, page_index),
+                            skill_id: *skill_slot,
+                            updated_skill_points: *chat_command_user.skill_points,
+                        })
+                        .ok();
+                }
+            }
+
+            let ability_values = chat_command_params
+                .game_data
+                .ability_value_calculator
+                .calculate(
+                    &chat_command_user.character_info,
+                    &chat_command_user.level,
+                    &bot_data.equipment,
+                    &chat_command_user.basic_stats,
+                    &chat_command_user.skill_list,
+                    &StatusEffects::default(),
+                );
+
+            chat_command_user.health_points.hp = ability_values.get_max_health();
+            chat_command_user
+                .game_client
+                .server_message_tx
+                .send(ServerMessage::UpdateAbilityValueSet {
+                    ability_type: AbilityType::Health,
+                    value: chat_command_user.health_points.hp,
+                })
+                .ok();
+
+            chat_command_user.mana_points.mp = ability_values.get_max_mana();
+            chat_command_user
+                .game_client
+                .server_message_tx
+                .send(ServerMessage::UpdateAbilityValueSet {
+                    ability_type: AbilityType::Mana,
+                    value: chat_command_user.mana_points.mp,
+                })
+                .ok();
+
+            // TODO: Equipment ?
+            // TODO: Remove unlearned skills from hotbar ?
         }
         ("snowball_fight", arg_matches) => {
             let num_bots = arg_matches.value_of("n").unwrap().parse::<usize>()?;

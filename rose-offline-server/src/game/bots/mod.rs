@@ -10,6 +10,7 @@ mod bot_send_party_invite;
 mod bot_sit_recover_hp;
 mod bot_snowball_fight;
 mod bot_use_attack_skill;
+mod bot_use_buff_skill;
 
 mod create_bot;
 
@@ -93,6 +94,7 @@ impl Plugin for BotPlugin {
                     action_sit_recover_hp,
                     action_snowball_fight,
                     action_use_attack_skill,
+                    action_use_buff_skill,
                 )
                     .in_set(BigBrainSet::Actions),
             )
@@ -107,6 +109,7 @@ impl Plugin for BotPlugin {
                     score_should_attack_target,
                     score_should_sit_recover_hp,
                     score_should_use_attack_skill,
+                    score_should_use_buff_skill,
                     score_threat_is_not_target,
                 )
                     .in_set(BigBrainSet::Scorers),
@@ -135,6 +138,7 @@ pub fn bot_thinker() -> ThinkerBuilder {
         )
         .when(FindNearbyItemDrop { score: 0.5 }, PickupNearestItemDrop)
         .when(ShouldSitRecoverHp { score: 0.4 }, SitRecoverHp)
+        .when(ShouldUseBuffSkill { score: 0.3 }, UseBuffSkill)
         .when(FindNearbyTarget { score: 0.2 }, AttackRandomNearbyTarget)
         .otherwise(FindMonsterSpawns)
 }

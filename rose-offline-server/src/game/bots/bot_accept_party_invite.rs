@@ -12,8 +12,6 @@ use crate::game::{components::PartyMembership, events::PartyEvent};
 
 use super::BotQueryFilterAlive;
 
-const PARTY_SEARCH_DISTANCE: f32 = 2000.0f32;
-
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct HasPartyInvite {
     pub score: f32,

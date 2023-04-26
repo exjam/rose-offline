@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{
     prelude::{Commands, Component, Query, Res, With},
     time::Time,
@@ -18,8 +16,6 @@ use crate::game::{
 };
 
 use super::{BotCombatTarget, BotQueryFilterAlive};
-
-const DEAD_DURATION: Duration = Duration::from_secs(10);
 
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct ShouldUseAttackSkill {

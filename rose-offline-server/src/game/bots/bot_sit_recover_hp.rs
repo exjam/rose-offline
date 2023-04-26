@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::{Commands, Component, Query, With};
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
@@ -10,8 +8,6 @@ use big_brain::{
 use crate::game::components::{AbilityValues, Command, HealthPoints, NextCommand};
 
 use super::BotQueryFilterAlive;
-
-const DEAD_DURATION: Duration = Duration::from_secs(10);
 
 #[derive(Clone, Component, Debug, ScorerBuilder)]
 pub struct ShouldSitRecoverHp {
