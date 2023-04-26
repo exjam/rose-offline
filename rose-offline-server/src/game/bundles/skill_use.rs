@@ -108,11 +108,10 @@ fn check_skill_target_filter(
     skill_data: &SkillData,
 ) -> bool {
     let target_is_alive = skill_target.health_points.hp > 0;
+    let target_is_caster = skill_caster.entity == skill_target.entity;
 
     match skill_data.target_filter {
-        SkillTargetFilter::OnlySelf => {
-            target_is_alive && skill_caster.entity == skill_target.entity
-        }
+        SkillTargetFilter::OnlySelf => target_is_alive && target_is_caster,
         SkillTargetFilter::Group => {
             let caster_party = skill_caster
                 .party_membership
@@ -120,16 +119,18 @@ fn check_skill_target_filter(
             let target_party = skill_target
                 .party_membership
                 .and_then(|party_membership| party_membership.party);
-            target_is_alive && caster_party.is_some() && caster_party == target_party
+            target_is_alive
+                && (target_is_caster || (caster_party.is_some() && caster_party == target_party))
         }
         SkillTargetFilter::Guild => {
-            let caster_party = skill_caster
+            let caster_clan = skill_caster
                 .clan_membership
                 .and_then(|clan_membership| clan_membership.clan());
-            let target_party = skill_target
+            let target_clan = skill_target
                 .clan_membership
                 .and_then(|clan_membership| clan_membership.clan());
-            target_is_alive && caster_party.is_some() && caster_party == target_party
+            target_is_alive
+                && (target_is_caster || (caster_clan.is_some() && caster_clan == target_clan))
         }
         SkillTargetFilter::Allied => {
             target_is_alive && skill_caster.team.id == skill_target.team.id
@@ -141,7 +142,11 @@ fn check_skill_target_filter(
                     ClientEntityType::Monster
                 )
         }
-        SkillTargetFilter::Enemy => target_is_alive && skill_caster.team.id != skill_target.team.id,
+        SkillTargetFilter::Enemy => {
+            target_is_alive
+                && skill_target.team.id != Team::DEFAULT_NPC_TEAM_ID
+                && skill_caster.team.id != skill_target.team.id
+        }
         SkillTargetFilter::EnemyCharacter => {
             target_is_alive
                 && skill_caster.team.id != skill_target.team.id
@@ -166,6 +171,7 @@ fn check_skill_target_filter(
         }
         SkillTargetFilter::DeadAlliedCharacter => {
             !target_is_alive
+                && !target_is_caster
                 && skill_caster.team.id == skill_target.team.id
                 && matches!(
                     skill_target.client_entity.entity_type,
