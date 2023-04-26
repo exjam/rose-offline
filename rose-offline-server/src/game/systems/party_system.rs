@@ -95,6 +95,8 @@ fn delete_party(
 
 enum PartyInviteError {
     AlreadyHasParty,
+    AlreadyInvited,
+    NotInvited,
     NoPermission,
     PartyFull,
     InvalidEntity,
@@ -105,15 +107,30 @@ fn handle_party_invite(
     owner_entity: Entity,
     invited_entity: Entity,
 ) -> Result<(), PartyInviteError> {
-    let [owner, invited] = party_membership_query
+    let [owner, mut invited] = party_membership_query
         .get_many_mut([owner_entity, invited_entity])
         .map_err(|_| PartyInviteError::InvalidEntity)?;
-    if invited.party_membership.is_some() {
+    if invited.party_membership.party.is_some() {
         return Err(PartyInviteError::AlreadyHasParty);
     }
 
+    if invited
+        .party_membership
+        .pending_invites
+        .contains(&owner_entity)
+    {
+        return Err(PartyInviteError::AlreadyInvited);
+    }
+
+    if invited.party_membership.pending_invites.is_full() {
+        // Max pending party invites, remove oldest
+        invited.party_membership.pending_invites.remove(0);
+    }
+
+    invited.party_membership.pending_invites.push(owner_entity);
+
     if let Some(invited_game_client) = invited.game_client {
-        let message = if owner.party_membership.is_none() {
+        let message = if owner.party_membership.party.is_none() {
             ServerMessage::PartyCreate {
                 entity_id: owner.client_entity.id,
             }
@@ -187,12 +204,21 @@ fn handle_party_accept_invite(
         .map_err(|_| PartyInviteError::InvalidEntity)?;
 
     // First ensure invited entity is not already in a party
-    if invited.party_membership.is_some() {
+    if invited.party_membership.party.is_some() {
         return Err(PartyInviteError::AlreadyHasParty);
     }
 
-    let is_create_party = owner.party_membership.is_none();
-    let (item_sharing, xp_sharing, party_members) = match owner.party_membership.party() {
+    // Ensure we actually received an invite and are not trying to hack our way into a party
+    let Some(invite_index) = invited.party_membership.pending_invites.iter().position(|x| *x == owner_entity) else {
+        return Err(PartyInviteError::NotInvited);
+    };
+    invited
+        .party_membership
+        .pending_invites
+        .remove(invite_index);
+
+    let is_create_party = owner.party_membership.party.is_none();
+    let (item_sharing, xp_sharing, party_members) = match owner.party_membership.party {
         None => {
             // Create a new party
             let party = Party::new(
@@ -214,9 +240,12 @@ fn handle_party_accept_invite(
         }
         Some(party_entity) => {
             // Add to current party
-            let mut party = party_query
-                .get_mut(party_entity)
-                .expect("PartyMembership pointing to invalid party entity");
+            let Ok(mut party) = party_query
+                .get_mut(party_entity) else {
+                    // This must mean two party creation invites were accepted the same frame,
+                    // we are just gonna have to drop this invite and let the players sort it out
+                    return Err(PartyInviteError::InvalidEntity);
+                };
 
             if owner_entity != party.owner {
                 return Err(PartyInviteError::NoPermission);
@@ -290,9 +319,17 @@ fn handle_party_reject_invite(
     owner_entity: Entity,
     invited_entity: Entity,
 ) -> Result<(), PartyInviteError> {
-    let [owner, invited] = party_membership_query
+    let [owner, mut invited] = party_membership_query
         .get_many_mut([owner_entity, invited_entity])
         .map_err(|_| PartyInviteError::InvalidEntity)?;
+
+    let Some(invite_index) = invited.party_membership.pending_invites.iter().position(|x| *x == owner_entity) else {
+        return Err(PartyInviteError::NotInvited);
+    };
+    invited
+        .party_membership
+        .pending_invites
+        .remove(invite_index);
 
     if let Some(owner_game_client) = owner.game_client {
         owner_game_client
@@ -323,7 +360,7 @@ fn handle_party_leave(
         .get_mut(leaver_entity)
         .map_err(|_| PartyLeaveError::InvalidEntity)?;
 
-    let party_entity = if let Some(party_entity) = leaver.party_membership.party() {
+    let party_entity = if let Some(party_entity) = leaver.party_membership.party {
         party_entity
     } else {
         return Err(PartyLeaveError::NotInParty);
@@ -408,7 +445,7 @@ fn handle_party_kick(
     let owner = party_membership_query
         .get_mut(owner_entity)
         .map_err(|_| PartyKickError::InvalidEntity)?;
-    let party_entity = match owner.party_membership.party() {
+    let party_entity = match owner.party_membership.party {
         None => return Err(PartyKickError::NotInParty),
         Some(party_entity) => party_entity,
     };
@@ -512,11 +549,11 @@ fn handle_party_change_owner(
         .map_err(|_| PartyChangeOwnerError::InvalidEntity)?;
 
     // Ensure owner and new owner are in the same party
-    let party_entity = match owner.party_membership.party() {
+    let party_entity = match owner.party_membership.party {
         None => return Err(PartyChangeOwnerError::NotInParty),
         Some(party_entity) => party_entity,
     };
-    let new_owner_party_entity = match new_owner.party_membership.party() {
+    let new_owner_party_entity = match new_owner.party_membership.party {
         None => return Err(PartyChangeOwnerError::InvalidNewOwnerEntity),
         Some(new_owner_party_entity) => new_owner_party_entity,
     };
@@ -564,7 +601,7 @@ fn handle_party_update_rules(
         .get(owner_entity)
         .map_err(|_| PartyUpdateRulesError::InvalidEntity)?;
 
-    let party_entity = match party_membership.party_membership.party() {
+    let party_entity = match party_membership.party_membership.party {
         None => return Err(PartyUpdateRulesError::NotInParty),
         Some(party_entity) => party_entity,
     };
@@ -896,7 +933,7 @@ pub fn party_member_update_info_system(
     >,
 ) {
     for (member_entity, party_membership) in party_member_info_changed_query.iter() {
-        if let Some(party_entity) = party_membership.party() {
+        if let Some(party_entity) = party_membership.party {
             if let Ok(party) = party_query.get(party_entity) {
                 if let Some(member_info) =
                     get_online_party_member_info(&party_member_info_query, member_entity)

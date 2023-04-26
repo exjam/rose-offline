@@ -64,7 +64,7 @@ pub fn pickup_item_system(
         let pickup_party = query_party_membership
             .get(pickup_item_event.pickup_entity)
             .ok()
-            .and_then(|party_membership| party_membership.party());
+            .and_then(|party_membership| party_membership.party);
         let mut pickup_entity = None;
 
         // Can we pickup the item on behalf of our party?
@@ -214,7 +214,7 @@ pub fn pickup_item_system(
                             if let Some(party) = query_party_membership
                                 .get(pickup_entity)
                                 .ok()
-                                .and_then(|party_membership| party_membership.party())
+                                .and_then(|party_membership| party_membership.party)
                                 .and_then(|party_entity| query_party.get(party_entity).ok())
                             {
                                 for party_member in party.members.iter() {

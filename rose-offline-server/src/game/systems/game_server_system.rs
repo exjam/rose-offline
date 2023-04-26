@@ -199,7 +199,7 @@ fn handle_game_connection_request(
             cooldowns: Cooldowns::default(),
             damage_sources: DamageSources::new(1),
             equipment: character.equipment.clone(),
-            experience_points: character.experience_points.clone(),
+            experience_points: character.experience_points,
             health_points,
             hotbar: character.hotbar.clone(),
             info: character.info.clone(),
@@ -402,7 +402,7 @@ pub fn game_server_join_system(
                                 .server_message_tx
                                 .send(ServerMessage::JoinZone {
                                     entity_id,
-                                    experience_points: experience_points.clone(),
+                                    experience_points: *experience_points,
                                     team: team.clone(),
                                     health_points: *health_points,
                                     mana_points: *mana_points,

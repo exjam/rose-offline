@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use bevy::{
     math::Vec3Swizzles,
-    prelude::{Component, Entity, EventWriter, Query, Res, With, Without},
+    prelude::{Component, Entity, EventWriter, Query, Res},
     time::Time,
 };
 use big_brain::{
@@ -15,10 +15,12 @@ use rose_data::{ItemReference, StackableItem};
 use rose_game_common::components::Inventory;
 
 use crate::game::{
-    components::{ClientEntity, ClientEntityType, Command, Dead, Position},
+    components::{ClientEntityType, Command, Position},
     events::{RewardItemEvent, UseItemEvent},
     resources::ClientEntityList,
 };
+
+use super::BotQueryFilterAlive;
 
 const SNOWBALL_THROW_SEARCH_DISTANCE: f32 = 1000.0f32;
 const SNOWBALL_THROW_INTERVAL: Duration = Duration::from_secs(1);
@@ -31,7 +33,7 @@ pub struct SnowballFight {
 
 pub fn action_snowball_fight(
     mut query: Query<(&Actor, &mut ActionState, &mut SnowballFight)>,
-    query_entity: Query<(&Command, &Inventory, &Position), (With<ClientEntity>, Without<Dead>)>,
+    query_entity: Query<(&Command, &Inventory, &Position), BotQueryFilterAlive>,
     client_entity_list: Res<ClientEntityList>,
     time: Res<Time>,
     mut use_item_events: EventWriter<UseItemEvent>,

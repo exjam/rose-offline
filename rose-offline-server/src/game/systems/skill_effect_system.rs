@@ -114,10 +114,10 @@ fn check_skill_target_filter(
         SkillTargetFilter::Group => {
             let caster_party = skill_caster
                 .party_membership
-                .and_then(|party_membership| party_membership.party());
+                .and_then(|party_membership| party_membership.party);
             let target_party = skill_target
                 .party_membership
-                .and_then(|party_membership| party_membership.party());
+                .and_then(|party_membership| party_membership.party);
             target_is_alive && caster_party.is_some() && caster_party == target_party
         }
         SkillTargetFilter::Guild => {

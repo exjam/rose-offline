@@ -17,7 +17,7 @@ use crate::game::{
     GameData,
 };
 
-use super::BotCombatTarget;
+use super::{BotCombatTarget, BotQueryFilterAlive};
 
 const DEAD_DURATION: Duration = Duration::from_secs(10);
 
@@ -31,12 +31,15 @@ pub struct UseAttackSkill;
 
 pub fn score_should_use_attack_skill(
     mut query: Query<(&ShouldUseAttackSkill, &Actor, &mut Score)>,
-    query_entity: Query<(
-        &BotCombatTarget,
-        &SkillList,
-        SkillCasterBundle,
-        Option<&UseAttackSkill>,
-    )>,
+    query_entity: Query<
+        (
+            &BotCombatTarget,
+            &SkillList,
+            SkillCasterBundle,
+            Option<&UseAttackSkill>,
+        ),
+        BotQueryFilterAlive,
+    >,
     query_target: Query<SkillTargetBundle>,
     game_data: Res<GameData>,
     time: Res<Time>,
@@ -84,11 +87,11 @@ pub fn score_should_use_attack_skill(
 
         for skill_id in active_skill_page.skills.iter().filter_map(|x| x.as_ref()) {
             if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
-                if skill_can_use(now, &game_data, &skill_caster, skill_data) {
-                    if skill_can_target_entity(&skill_caster, &skill_target, skill_data) {
-                        score.set(scorer.score);
-                        break;
-                    }
+                if skill_can_use(now, &game_data, &skill_caster, skill_data)
+                    && skill_can_target_entity(&skill_caster, &skill_target, skill_data)
+                {
+                    score.set(scorer.score);
+                    break;
                 }
             }
         }
@@ -126,20 +129,22 @@ pub fn action_use_attack_skill(
                     continue;
                 };
 
+                *state = ActionState::Failure;
+
                 for skill_id in active_skill_page.skills.iter().filter_map(|x| x.as_ref()) {
                     if let Some(skill_data) = game_data.skills.get_skill(*skill_id) {
-                        if skill_can_use(now, &game_data, &skill_caster, skill_data) {
-                            if skill_can_target_entity(&skill_caster, &skill_target, skill_data) {
-                                commands.entity(entity).insert(
-                                    NextCommand::with_cast_skill_target_entity(
-                                        *skill_id,
-                                        bot_combat_target.entity,
-                                        None,
-                                    ),
-                                );
-                                *state = ActionState::Executing;
-                                break;
-                            }
+                        if skill_can_use(now, &game_data, &skill_caster, skill_data)
+                            && skill_can_target_entity(&skill_caster, &skill_target, skill_data)
+                        {
+                            commands.entity(entity).insert(
+                                NextCommand::with_cast_skill_target_entity(
+                                    *skill_id,
+                                    bot_combat_target.entity,
+                                    None,
+                                ),
+                            );
+                            *state = ActionState::Executing;
+                            break;
                         }
                     }
                 }

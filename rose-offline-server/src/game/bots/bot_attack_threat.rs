@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use bevy::prelude::{Commands, Component, Entity, Query, With, Without};
+use bevy::prelude::{Commands, Component, Entity, Query, With};
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
     scorers::Score,
@@ -9,8 +9,10 @@ use big_brain::{
 
 use crate::game::{
     bots::BotCombatTarget,
-    components::{ClientEntity, Command, DamageSources, Dead, HealthPoints, NextCommand, Team},
+    components::{Command, DamageSources, HealthPoints, NextCommand, Team},
 };
+
+use super::BotQueryFilterAlive;
 
 const RECENT_ATTACK_TIME: Duration = Duration::from_secs(5);
 
@@ -45,7 +47,7 @@ pub fn score_threat_is_not_target(
     mut query: Query<(&ThreatIsNotTarget, &Actor, &mut Score)>,
     query_entity: Query<
         (Option<&BotCombatTarget>, &Command, &DamageSources, &Team),
-        (With<ClientEntity>, Without<Dead>),
+        BotQueryFilterAlive,
     >,
     query_target: Query<(&Team, &HealthPoints)>,
 ) {

@@ -132,7 +132,7 @@ pub fn experience_points_system(
                     ServerMessage::UpdateLevel {
                         entity_id: client_entity.id,
                         level: *level,
-                        experience_points: experience_points.clone(),
+                        experience_points: *experience_points,
                         stat_points: *stat_points,
                         skill_points: *skill_points,
                     },

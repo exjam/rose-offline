@@ -65,7 +65,7 @@ pub fn save_system(
                         inventory: character.inventory.clone(),
                         equipment: character.equipment.clone(),
                         level: *character.level,
-                        experience_points: character.experience_points.clone(),
+                        experience_points: *character.experience_points,
                         position: character.position.clone(),
                         skill_list: character.skill_list.clone(),
                         hotbar: character.hotbar.clone(),
@@ -109,7 +109,7 @@ pub fn save_system(
                             );
                         }
 
-                        if let Some(party_entity) = character.party_membership.party() {
+                        if let Some(party_entity) = character.party_membership.party {
                             party_member_events.send(PartyMemberEvent::Disconnect {
                                 party_entity,
                                 disconnect_entity: entity,

@@ -4,7 +4,7 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Clone, Debug, Deserialize, Serialize, Reflect, FromReflect)]
+#[derive(Component, Copy, Clone, Debug, Deserialize, Serialize, Reflect, FromReflect)]
 pub struct ExperiencePoints {
     pub xp: u64,
 }

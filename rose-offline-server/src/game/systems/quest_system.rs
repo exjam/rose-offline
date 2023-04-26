@@ -585,7 +585,7 @@ fn quest_condition_check_party(
     if let Some(party_entity) = quest_parameters
         .source
         .party_membership
-        .and_then(|party_membership| party_membership.party())
+        .and_then(|party_membership| party_membership.party)
     {
         if let Ok(party) = quest_system_parameters.party_query.get(party_entity) {
             if is_leader && party.owner != quest_parameters.source.entity {
@@ -607,7 +607,7 @@ fn quest_condition_check_party_member_count(
     if let Some(party_entity) = quest_parameters
         .source
         .party_membership
-        .and_then(|party_membership| party_membership.party())
+        .and_then(|party_membership| party_membership.party)
     {
         if let Ok(party) = quest_system_parameters.party_query.get(party_entity) {
             return range.contains(&party.members.len());

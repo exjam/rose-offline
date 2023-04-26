@@ -1,15 +1,15 @@
 use std::time::Duration;
 
-use bevy::prelude::{Commands, Component, Query, With, Without};
+use bevy::prelude::{Commands, Component, Query, With};
 use big_brain::{
     prelude::{ActionBuilder, ActionState, ScorerBuilder},
     scorers::Score,
     thinker::Actor,
 };
 
-use crate::game::components::{
-    AbilityValues, ClientEntity, Command, Dead, HealthPoints, NextCommand,
-};
+use crate::game::components::{AbilityValues, Command, HealthPoints, NextCommand};
+
+use super::BotQueryFilterAlive;
 
 const DEAD_DURATION: Duration = Duration::from_secs(10);
 
@@ -23,10 +23,7 @@ pub struct SitRecoverHp;
 
 pub fn score_should_sit_recover_hp(
     mut query: Query<(&ShouldSitRecoverHp, &Actor, &mut Score)>,
-    query_entity: Query<
-        (&Command, &AbilityValues, &HealthPoints),
-        (With<ClientEntity>, Without<Dead>),
-    >,
+    query_entity: Query<(&Command, &AbilityValues, &HealthPoints), BotQueryFilterAlive>,
 ) {
     for (scorer, &Actor(entity), mut score) in query.iter_mut() {
         score.set(0.0);

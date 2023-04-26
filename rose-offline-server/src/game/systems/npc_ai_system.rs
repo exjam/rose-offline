@@ -1807,7 +1807,7 @@ pub fn npc_ai_system(
 
                                 if let Some(party_entity) = attacker
                                     .party_membership
-                                    .and_then(|party_membership| party_membership.party())
+                                    .and_then(|party_membership| party_membership.party)
                                 {
                                     // Accumulate party XP for later distribution
                                     if let Some((_, party_total_xp, _)) = pending_party_xp
@@ -1969,7 +1969,7 @@ pub fn npc_ai_system(
                                             source.position,
                                             Some(killer_entity),
                                             killer.party_membership.and_then(|party_membership| {
-                                                party_membership.party()
+                                                party_membership.party
                                             }),
                                             &ai_system_resources.time,
                                         );

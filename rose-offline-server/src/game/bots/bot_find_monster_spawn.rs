@@ -1,20 +1,21 @@
 use bevy::{
     math::Vec3Swizzles,
-    prelude::{Commands, Component, Query, Res, With, Without},
+    prelude::{Commands, Component, Query, Res, Vec3, With},
 };
 use big_brain::{
     prelude::{ActionBuilder, ActionState},
     thinker::Actor,
 };
 
+use rand::{seq::SliceRandom, Rng};
 use rose_game_common::components::Level;
 
 use crate::game::{
-    components::{ClientEntity, Command, Dead, NextCommand, Position},
+    components::{Command, NextCommand, Position},
     GameData,
 };
 
-use super::IDLE_DURATION;
+use super::{BotQueryFilterAlive, IDLE_DURATION};
 
 #[derive(Debug, Default, Clone, Component, ActionBuilder)]
 pub struct FindMonsterSpawns;
@@ -22,9 +23,11 @@ pub struct FindMonsterSpawns;
 pub fn action_find_monster_spawn(
     mut commands: Commands,
     mut query: Query<(&Actor, &mut ActionState), With<FindMonsterSpawns>>,
-    query_entity: Query<(&Command, &Level, &Position), (With<ClientEntity>, Without<Dead>)>,
+    query_entity: Query<(&Command, &Level, &Position), BotQueryFilterAlive>,
     game_data: Res<GameData>,
 ) {
+    let mut rng = rand::thread_rng();
+
     for (&Actor(entity), mut state) in query.iter_mut() {
         let Ok((command, level, position)) = query_entity.get(entity) else {
             continue;
@@ -64,28 +67,38 @@ pub fn action_find_monster_spawn(
                     potential_spawns.push((distance, level_difference, i));
                 }
 
-                // Sort by distance
-                potential_spawns.sort_by(|lhs, rhs| lhs.0.partial_cmp(&rhs.0).unwrap());
-
-                // Take the first 5 closest spawns
-                potential_spawns.truncate(5);
-
-                // Choose one with smallest level difference
-                potential_spawns.sort_by(|lhs, rhs| lhs.1.cmp(&rhs.1));
-
-                if let Some((_, _, index)) = potential_spawns.first() {
-                    if let Some(spawn_point) = zone_data.monster_spawns.get(*index) {
-                        commands.entity(entity).insert(NextCommand::with_move(
-                            spawn_point.position,
-                            None,
-                            None,
-                        ));
-                        *state = ActionState::Success;
-                        continue;
-                    }
+                if potential_spawns.is_empty() {
+                    *state = ActionState::Failure;
+                    continue;
                 }
 
-                *state = ActionState::Failure;
+                // Take the 10 spawns with smallest level delta to our character
+                potential_spawns.sort_by(|lhs, rhs| lhs.1.cmp(&rhs.1));
+                potential_spawns.truncate(10);
+
+                // Then take the 5 closest
+                potential_spawns.sort_by(|lhs, rhs| lhs.0.partial_cmp(&rhs.0).unwrap());
+                potential_spawns.truncate(5);
+
+                // Choose one randomly
+                let Some(spawn_point) = potential_spawns.choose(&mut rng).and_then(|(_, _, index)| zone_data.monster_spawns.get(*index)) else {
+                    *state = ActionState::Failure;
+                    continue;
+                };
+
+                // Move near the center of spawn
+                let range = (spawn_point.range * 100).max(500) as f32;
+                commands.entity(entity).insert(NextCommand::with_move(
+                    spawn_point.position
+                        + Vec3::new(
+                            rng.gen_range(-range..range),
+                            rng.gen_range(-range..range),
+                            0.0,
+                        ),
+                    None,
+                    None,
+                ));
+                *state = ActionState::Executing;
             }
             ActionState::Executing => {
                 if command.is_stop_for(IDLE_DURATION) {

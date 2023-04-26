@@ -1,3 +1,4 @@
+use bevy::prelude::Component;
 use rand::seq::SliceRandom;
 
 use rose_data::{
@@ -18,6 +19,7 @@ const BOT_GENDERS: &[CharacterGender] = &[CharacterGender::Male, CharacterGender
 const BOT_FACES: &[u8] = &[1, 8, 15, 22, 29, 36, 43];
 const BOT_HAIRS: &[u8] = &[0, 5, 10, 15, 20];
 
+#[derive(Component)]
 pub struct BotBuild {
     pub job_id: JobId,
     pub basic_stat_ratios: Vec<(BasicStatType, f32)>,
@@ -501,9 +503,12 @@ fn choose_equipment_items(
         StackableItem::new(ItemReference::material(342), 999);
 }
 
-pub fn create_bot(game_data: &GameData, name: String, level: u32) -> CharacterStorage {
+pub fn bot_create_random_build(
+    game_data: &GameData,
+    name: String,
+    level: u32,
+) -> (BotBuild, CharacterStorage) {
     let mut rng = rand::thread_rng();
-
     let bot_build = [
         bot_build_knight,
         bot_build_champion,
@@ -517,6 +522,17 @@ pub fn create_bot(game_data: &GameData, name: String, level: u32) -> CharacterSt
     .choose(&mut rng)
     .unwrap()();
 
+    let bot_data = bot_create_with_build(game_data, name, level, &bot_build);
+    (bot_build, bot_data)
+}
+
+pub fn bot_create_with_build(
+    game_data: &GameData,
+    name: String,
+    level: u32,
+    bot_build: &BotBuild,
+) -> CharacterStorage {
+    let mut rng = rand::thread_rng();
     let mut bot_data = game_data
         .character_creator
         .create(
@@ -538,7 +554,7 @@ pub fn create_bot(game_data: &GameData, name: String, level: u32) -> CharacterSt
 
     spend_stat_points(
         game_data,
-        &bot_build,
+        bot_build,
         &mut bot_data.stat_points,
         &mut bot_data.basic_stats,
     );
@@ -552,8 +568,8 @@ pub fn create_bot(game_data: &GameData, name: String, level: u32) -> CharacterSt
         &StatusEffects::new(),
     );
 
-    spend_skill_points(game_data, &bot_build, &mut bot_data, &mut ability_values);
-    choose_equipment_items(game_data, &bot_build, &mut bot_data);
+    spend_skill_points(game_data, bot_build, &mut bot_data, &mut ability_values);
+    choose_equipment_items(game_data, bot_build, &mut bot_data);
 
     bot_data
 }
