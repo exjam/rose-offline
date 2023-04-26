@@ -9,7 +9,9 @@ use bevy::{
     time::Time,
 };
 
-use rose_data::{AmmoIndex, EquipmentIndex, ItemClass, SkillActionMode, SkillId, VehiclePartIndex};
+use rose_data::{
+    AmmoIndex, EquipmentIndex, ItemClass, SkillActionMode, SkillId, SkillType, VehiclePartIndex,
+};
 use rose_game_common::components::{CharacterGender, CharacterInfo};
 
 use crate::game::{
@@ -185,7 +187,15 @@ fn can_cast_skill(
             }
         }
         None => {
-            if !skill_can_target_self(&skill_caster, skill_data) {
+            if !matches!(
+                skill_data.skill_type,
+                SkillType::SelfBoundDuration
+                    | SkillType::SelfBound
+                    | SkillType::SelfStateDuration
+                    | SkillType::SummonPet
+                    | SkillType::SelfDamage
+            ) && !skill_can_target_self(&skill_caster, skill_data)
+            {
                 return false;
             }
         }
