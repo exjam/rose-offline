@@ -43,7 +43,7 @@ macro_rules! implement_protocol_server {
                         packet = client.connection.read_packet() => {
                             match packet {
                                 Ok(packet) => {
-                                    match self.handle_packet(client, &packet).await {
+                                    match self.handle_packet(client, &packet) {
                                         Ok(_) => {},
                                         Err(error) => {
                                             log::warn!("RECV [{:03X}] {:02x?}", packet.command, &packet.data[..]);

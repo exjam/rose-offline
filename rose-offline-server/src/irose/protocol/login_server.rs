@@ -24,7 +24,7 @@ impl LoginServer {
         Self {}
     }
 
-    async fn handle_packet(
+    fn handle_packet(
         &mut self,
         client: &mut Client<'_>,
         packet: &Packet,
