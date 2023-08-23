@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::prelude::Component,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{ecs::prelude::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize)]
@@ -14,7 +11,7 @@ pub enum BasicStatType {
     Sense,
 }
 
-#[derive(Component, Clone, Debug, Deserialize, Serialize, Reflect, FromReflect)]
+#[derive(Component, Clone, Debug, Deserialize, Serialize, Reflect)]
 pub struct BasicStats {
     pub strength: i32,
     pub dexterity: i32,

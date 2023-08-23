@@ -326,7 +326,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                 &vehicle_ability_values,
                 &passive_ability_values,
             ),
-            max_damage_sources: 1,
+            max_damage_sources: 0,
             drop_rate: calculate_drop_rate(&equipment_ability_values, &passive_ability_values),
             save_mana: calculate_save_mana(&equipment_ability_values, &passive_ability_values),
             max_weight: calculate_max_weight(

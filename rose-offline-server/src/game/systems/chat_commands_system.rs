@@ -345,7 +345,7 @@ fn create_bot_entity(
                 bank: Default::default(),
                 cooldowns: Cooldowns::default(),
                 command: Command::default(),
-                damage_sources: DamageSources::new(5),
+                damage_sources: DamageSources::default_character(),
                 equipment: bot_data.equipment,
                 experience_points: bot_data.experience_points,
                 health_points: bot_data.health_points,

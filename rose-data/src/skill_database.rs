@@ -1,5 +1,5 @@
 use arrayvec::ArrayVec;
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use std::{
     num::{NonZeroU16, NonZeroUsize},
@@ -13,7 +13,7 @@ use crate::{
     SoundId, StatusEffectId, StringDatabase, ZoneId,
 };
 
-#[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Reflect, FromReflect)]
+#[derive(Copy, Clone, Debug, Deserialize, Serialize, Hash, PartialEq, Eq, Reflect)]
 pub struct SkillId(NonZeroU16);
 
 id_wrapper_impl!(SkillId, NonZeroU16, u16);

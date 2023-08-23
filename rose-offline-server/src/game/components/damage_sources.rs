@@ -9,7 +9,7 @@ pub struct DamageSource {
     pub last_damage_time: Instant,
 }
 
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct DamageSources {
     pub max_damage_sources: usize,
     pub damage_sources: Vec<DamageSource>,
@@ -21,5 +21,9 @@ impl DamageSources {
             max_damage_sources,
             damage_sources: Vec::with_capacity(max_damage_sources),
         }
+    }
+
+    pub fn default_character() -> Self {
+        DamageSources::new(5)
     }
 }

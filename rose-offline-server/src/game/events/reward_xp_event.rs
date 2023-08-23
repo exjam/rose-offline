@@ -1,5 +1,6 @@
-use bevy::ecs::prelude::Entity;
+use bevy::{ecs::prelude::Entity, prelude::Event};
 
+#[derive(Event)]
 pub struct RewardXpEvent {
     pub entity: Entity,
     pub xp: u64,

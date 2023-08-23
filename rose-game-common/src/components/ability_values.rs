@@ -1,25 +1,22 @@
-use bevy::{
-    ecs::prelude::Component,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{ecs::prelude::Component, reflect::Reflect};
 
 use rose_data::StatusEffectType;
 
 use crate::components::{MoveMode, StatusEffects};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect, FromReflect)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect)]
 pub enum DamageCategory {
     Character,
     Npc,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect, FromReflect)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Reflect)]
 pub enum DamageType {
     Physical,
     Magic,
 }
 
-#[derive(Clone, Debug, Reflect, FromReflect)]
+#[derive(Clone, Debug, Reflect)]
 pub struct AbilityValuesAdjust {
     pub additional_damage_multiplier: f32,
     pub attack_speed: i32,
@@ -99,7 +96,7 @@ impl From<&StatusEffects> for AbilityValuesAdjust {
     }
 }
 
-#[derive(Component, Clone, Debug, Reflect, FromReflect)]
+#[derive(Component, Clone, Debug, Reflect)]
 pub struct AbilityValues {
     pub is_driving: bool,
     pub damage_category: DamageCategory,

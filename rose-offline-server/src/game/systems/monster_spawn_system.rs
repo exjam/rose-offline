@@ -25,7 +25,7 @@ pub fn monster_spawn_system(
                 return;
             }
 
-            let mut spawn_point = &mut *spawn_point;
+            let spawn_point = &mut *spawn_point;
             spawn_point.time_since_last_check += time.delta();
             if spawn_point.time_since_last_check < spawn_point.interval {
                 return;

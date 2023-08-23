@@ -1,10 +1,10 @@
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr, time::Duration};
 
 use rose_file_readers::VfsPathBuf;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect, FromReflect)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect)]
 pub struct MotionId(u16);
 
 id_wrapper_impl!(MotionId, u16);

@@ -1,10 +1,10 @@
 use std::time::Duration;
 
 use bevy::{
-    app::ScheduleRunnerSettings,
+    app::ScheduleRunnerPlugin,
     prelude::{
-        apply_system_buffers, App, CoreSet, IntoSystemAppConfigs, IntoSystemConfig,
-        IntoSystemConfigs, IntoSystemSetConfigs, SystemSet,
+        apply_deferred, App, IntoSystemConfigs, Last, PluginGroup, PostUpdate, PreUpdate, Startup,
+        Update,
     },
     MinimalPlugins,
 };
@@ -41,13 +41,6 @@ use crate::game::{
     },
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, SystemSet)]
-#[system_set(base)]
-enum GameStages {
-    Input,
-    InputFlush,
-}
-
 pub struct GameWorld {
     control_rx: Receiver<ControlMessage>,
 }
@@ -59,8 +52,10 @@ impl GameWorld {
 
     pub fn run(&mut self, game_config: GameConfig, game_data: GameData) {
         let mut app = App::new();
-        app.add_plugins(MinimalPlugins);
-        app.add_plugin(BotPlugin);
+        app.add_plugins(MinimalPlugins.set(ScheduleRunnerPlugin::run_loop(
+            Duration::from_secs_f64(1.0 / 60.0),
+        )));
+        app.add_plugins(BotPlugin);
 
         app.insert_resource(BotList::new());
         app.insert_resource(ClientEntityList::new(&game_data.zones));
@@ -103,55 +98,55 @@ impl GameWorld {
         - CoreSet::PostUpdate
         - CoreSet::Last
         */
-        app.add_system(apply_system_buffers.in_base_set(GameStages::InputFlush));
-        app.configure_sets(
-            (GameStages::Input, GameStages::InputFlush)
-                .chain()
-                .after(CoreSet::FirstFlush)
-                .before(CoreSet::PreUpdate),
+        app.add_systems(Startup, (startup_clans_system, startup_zones_system));
+
+        app.add_systems(
+            PreUpdate,
+            (
+                (
+                    world_time_system,
+                    control_server_system,
+                    login_server_authentication_system,
+                    login_server_system,
+                    world_server_authentication_system,
+                    world_server_system,
+                    game_server_authentication_system,
+                    game_server_join_system,
+                    (game_server_main_system, revive_event_system).chain(),
+                    chat_commands_system,
+                    monster_spawn_system,
+                    npc_ai_system,
+                    expire_time_system,
+                    status_effect_system,
+                    passive_recovery_system,
+                    driving_time_system,
+                ),
+                apply_deferred,
+                (
+                    (
+                        (
+                            update_character_motion_data_system,
+                            update_npc_motion_data_system,
+                            update_position_system,
+                        ),
+                        command_system,
+                        (use_ammo_system, pickup_item_system),
+                    )
+                        .chain(),
+                    (
+                        party_member_event_system,
+                        party_system,
+                        party_member_update_info_system,
+                    )
+                        .chain(),
+                    clan_system,
+                ),
+            )
+                .chain(),
         );
 
-        app.add_systems((startup_clans_system, startup_zones_system).on_startup());
-
         app.add_systems(
-            (
-                world_time_system,
-                control_server_system,
-                login_server_authentication_system,
-                login_server_system,
-                world_server_authentication_system,
-                world_server_system,
-                game_server_authentication_system,
-                game_server_join_system,
-                game_server_main_system,
-                revive_event_system.after(game_server_main_system),
-                chat_commands_system,
-                monster_spawn_system,
-                npc_ai_system,
-                expire_time_system,
-                status_effect_system,
-            )
-                .in_base_set(GameStages::Input),
-        )
-        .add_systems((passive_recovery_system, driving_time_system).in_base_set(GameStages::Input));
-
-        app.add_systems(
-            (
-                update_character_motion_data_system.before(command_system),
-                update_npc_motion_data_system.before(command_system),
-                update_position_system.before(command_system),
-                command_system,
-                use_ammo_system.after(command_system),
-                pickup_item_system.after(command_system),
-                party_member_event_system,
-                party_system.after(party_member_event_system),
-                party_member_update_info_system.after(party_system),
-                clan_system,
-            )
-                .in_base_set(CoreSet::PreUpdate),
-        );
-
-        app.add_systems(
+            Update,
             (
                 bank_system,
                 personal_store_system,
@@ -163,34 +158,29 @@ impl GameWorld {
                 skill_effect_system.before(item_life_system),
                 item_life_system,
                 equipment_event_system.after(item_life_system),
-            )
-                .in_base_set(CoreSet::Update),
+            ),
         );
 
         app.add_systems(
+            PostUpdate,
             (
                 weight_system,
                 experience_points_system,
                 party_update_average_level_system.after(experience_points_system),
                 client_entity_visibility_system,
-            )
-                .in_base_set(CoreSet::PostUpdate),
+            ),
         );
 
         app.add_systems(
+            Last,
             (
                 ability_values_update_character_system.before(ability_values_changed_system),
                 ability_values_update_npc_system.before(ability_values_changed_system),
                 ability_values_changed_system,
                 server_messages_system,
                 save_system,
-            )
-                .in_base_set(CoreSet::Last),
+            ),
         );
-
-        app.insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
-            1.0 / 30.0,
-        )));
 
         app.run();
     }

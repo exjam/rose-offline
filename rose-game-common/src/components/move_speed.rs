@@ -1,10 +1,7 @@
-use bevy::{
-    ecs::prelude::Component,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{ecs::prelude::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Copy, Clone, Debug, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Component, Copy, Clone, Debug, Serialize, Deserialize, Reflect)]
 pub struct MoveSpeed {
     pub speed: f32,
 }

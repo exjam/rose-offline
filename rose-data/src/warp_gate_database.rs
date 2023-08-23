@@ -3,12 +3,12 @@ use std::{
     str::FromStr,
 };
 
-use bevy::reflect::{FromReflect, Reflect};
+use bevy::reflect::Reflect;
 use serde::{Deserialize, Serialize};
 
 use crate::ZoneId;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect, FromReflect)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize, Reflect)]
 pub struct WarpGateId(u16);
 
 id_wrapper_impl!(WarpGateId, u16);

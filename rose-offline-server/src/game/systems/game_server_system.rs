@@ -197,7 +197,7 @@ fn handle_game_connection_request(
             bank,
             command: Command::default(),
             cooldowns: Cooldowns::default(),
-            damage_sources: DamageSources::new(1),
+            damage_sources: DamageSources::default_character(),
             equipment: character.equipment.clone(),
             experience_points: character.experience_points,
             health_points,

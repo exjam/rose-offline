@@ -3,6 +3,7 @@ use anyhow::anyhow;
 use thiserror::Error;
 
 bitflags::bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     #[repr(transparent)]
     pub struct ZmsFormatFlags: u32 {
         const POSITION = (1 << 1);

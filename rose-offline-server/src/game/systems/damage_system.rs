@@ -114,7 +114,7 @@ pub fn damage_system(
             }
 
             if let Some(mut damage_sources) = damage_sources {
-                if let Some(mut source) = damage_sources
+                if let Some(source) = damage_sources
                     .damage_sources
                     .iter_mut()
                     .find(|source| source.entity == attacker_entity)
@@ -133,6 +133,10 @@ pub fn damage_system(
                                 oldest_time = damage_source.last_damage_time;
                                 oldest_index = Some(i);
                             }
+                        }
+
+                        if damage_sources.damage_sources.is_empty() {
+                            println!("how cunt, how?");
                         }
 
                         let default_oldest = damage_sources.damage_sources.len() - 1;

@@ -1727,7 +1727,7 @@ pub fn npc_ai_system(
                         source.spawn_origin
                     {
                         if let Ok(mut spawn_point) = spawn_point_query.get_mut(spawn_point_entity) {
-                            let mut spawn_point = &mut *spawn_point;
+                            let spawn_point = &mut *spawn_point;
                             spawn_point.num_alive_monsters =
                                 spawn_point.num_alive_monsters.saturating_sub(1);
                         }

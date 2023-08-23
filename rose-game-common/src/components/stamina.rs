@@ -1,12 +1,9 @@
-use bevy::{
-    ecs::prelude::Component,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{ecs::prelude::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 pub const MAX_STAMINA: u32 = 5000;
 
-#[derive(Component, Copy, Clone, Debug, Deserialize, Serialize, Reflect, FromReflect)]
+#[derive(Component, Copy, Clone, Debug, Deserialize, Serialize, Reflect)]
 pub struct Stamina {
     pub stamina: u32,
 }

@@ -84,7 +84,7 @@ pub fn revive_event_system(
             MoveMode::Run,
             Command::with_stop(),
             NextCommand::default(),
-            DamageSources::default(),
+            DamageSources::default_character(),
             PassiveRecoveryTime::default(),
         ));
 

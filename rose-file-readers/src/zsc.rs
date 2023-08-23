@@ -47,6 +47,7 @@ pub enum ZscCollisionShape {
 }
 
 bitflags::bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     #[repr(transparent)]
     pub struct ZscCollisionFlags: u32 {
         const NOT_MOVEABLE = (1 << 3);

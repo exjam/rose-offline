@@ -55,7 +55,7 @@ use bot_use_buff_skill::{
     action_use_buff_skill, score_should_use_buff_skill, ShouldUseBuffSkill, UseBuffSkill,
 };
 
-use bevy::prelude::{Component, Entity, IntoSystemConfigs, Plugin, With, Without};
+use bevy::prelude::{Component, Entity, IntoSystemConfigs, Plugin, PreUpdate, With, Without};
 use big_brain::{
     prelude::Highest,
     thinker::{Thinker, ThinkerBuilder},
@@ -79,8 +79,9 @@ pub struct BotPlugin;
 
 impl Plugin for BotPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugin(BigBrainPlugin)
-            .add_systems(
+        app.add_plugins(BigBrainPlugin::new(PreUpdate)).add_systems(
+            PreUpdate,
+            (
                 (
                     action_accept_party_invite,
                     action_attack_random_nearby_target,
@@ -97,8 +98,6 @@ impl Plugin for BotPlugin {
                     action_use_buff_skill,
                 )
                     .in_set(BigBrainSet::Actions),
-            )
-            .add_systems(
                 (
                     score_can_party_invite_nearby_bot,
                     score_find_nearby_item_drop_system,
@@ -113,7 +112,8 @@ impl Plugin for BotPlugin {
                     score_threat_is_not_target,
                 )
                     .in_set(BigBrainSet::Scorers),
-            );
+            ),
+        );
     }
 }
 

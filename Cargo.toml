@@ -22,16 +22,16 @@ aes = "0.8.1"
 anyhow = "1.0"
 arrayvec = "0.7"
 async-trait = "0.1"
-bevy = { version = "0.10.0", default-features = false }
-big-brain = { version = "0.17", features = [] }
-bitflags = "1.2"
+bevy = { version = "0.11.2", default-features = false }
+big-brain = { version = "0.18", features = [] }
+bitflags = "2.3"
 bitvec = { version = "1.0", features = ["serde"] }
 bytes = "1.1"
 chrono = "0.4"
 clap = "3.2"
 crossbeam-channel = "0.5"
 ctr = "0.9.1"
-directories = "4.0"
+directories = "5.0.1"
 encoding_rs = "0.8"
 enum-map = { version = "2.0", features = ["serde"] }
 flate2 = "1.0"
@@ -41,7 +41,7 @@ log = "0.4"
 md5 = "0.7"
 memmap = "0.7"
 modular-bitfield = "0.11"
-num-derive = "0.3"
+num-derive = "0.4"
 num-traits = "0.2"
 rand = "0.8"
 schemars = "0.8"
@@ -57,7 +57,7 @@ thiserror = "1.0"
 tokio = { version = "1.17", default-features = false, features = ["rt", "rt-multi-thread", "net", "sync", "macros", "io-util"] }
 
 [patch.crates-io]
-bevy = { git = "https://github.com/exjam/bevy", rev = "4a309dafa9c912d36ecbcbd29253b9876b67c7e1" }
+bevy = { git = "https://github.com/exjam/bevy", rev = "04945fbacb297d3720049b7c89e3cb8eb19049c2" }
 
 [profile.dev.package."*"]
 opt-level = 3

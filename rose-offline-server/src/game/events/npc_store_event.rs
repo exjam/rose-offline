@@ -1,7 +1,8 @@
-use bevy::ecs::prelude::Entity;
+use bevy::{ecs::prelude::Entity, prelude::Event};
 
 use crate::game::{components::ItemSlot, messages::client::NpcStoreBuyItem};
 
+#[derive(Event)]
 pub struct NpcStoreEvent {
     pub store_entity: Entity,
     pub transaction_entity: Entity,

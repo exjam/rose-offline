@@ -1,10 +1,11 @@
-use bevy::prelude::Entity;
+use bevy::prelude::{Entity, Event};
 
 use rose_data::SkillId;
 use rose_game_common::components::{ClanLevel, ClanMark, ClanPoints, Money};
 
 use crate::game::components::Level;
 
+#[derive(Event)]
 pub enum ClanEvent {
     Create {
         creator: Entity,

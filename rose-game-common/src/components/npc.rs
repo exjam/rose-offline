@@ -1,12 +1,9 @@
-use bevy::{
-    ecs::prelude::Component,
-    reflect::{FromReflect, Reflect},
-};
+use bevy::{ecs::prelude::Component, reflect::Reflect};
 use serde::{Deserialize, Serialize};
 
 use rose_data::NpcId;
 
-#[derive(Component, Clone, Debug, Serialize, Deserialize, Reflect, FromReflect)]
+#[derive(Component, Clone, Debug, Serialize, Deserialize, Reflect)]
 pub struct Npc {
     pub id: NpcId,
     pub quest_index: u16,

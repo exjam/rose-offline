@@ -1,4 +1,5 @@
 bitflags::bitflags! {
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
     #[repr(transparent)]
     pub struct AnimationEventFlags : u32 {
         const NONE                              = 0;

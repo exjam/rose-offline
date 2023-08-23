@@ -1,9 +1,9 @@
-use bevy::prelude::Entity;
+use bevy::prelude::{Entity, Event};
 
 use rose_data::{AmmoIndex, EquipmentIndex, VehiclePartIndex};
 use rose_game_common::components::ItemSlot;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Event, Copy, Clone, Debug)]
 pub enum EquipmentEvent {
     ChangeEquipment {
         entity: Entity,
