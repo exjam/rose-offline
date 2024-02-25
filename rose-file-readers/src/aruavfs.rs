@@ -13,6 +13,7 @@ pub enum AruaVfsError {
     DecryptionFailed,
 }
 
+/// VFS format used by AruaROSE, format is identical to TitanVFS but with added file encryption.
 #[derive(Debug)]
 pub struct AruaVfsIndex {
     pub version: u32,

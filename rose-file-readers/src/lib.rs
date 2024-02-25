@@ -32,6 +32,7 @@ mod eft;
 mod him;
 mod id;
 mod ifo;
+mod irosephvfs;
 mod lit;
 mod ltb;
 mod ptl;
@@ -61,6 +62,7 @@ pub use ifo::{
     IfoEffectObject, IfoEventObject, IfoFile, IfoMonsterSpawn, IfoMonsterSpawnPoint, IfoNpc,
     IfoObject, IfoReadOptions, IfoSoundObject,
 };
+pub use irosephvfs::IrosePhVfsIndex;
 pub use lit::{LitFile, LitObject, LitObjectPart};
 pub use ltb::LtbFile;
 pub use ptl::{PtlFile, PtlKeyframe, PtlKeyframeData, PtlSequence, PtlUpdateCoords};
