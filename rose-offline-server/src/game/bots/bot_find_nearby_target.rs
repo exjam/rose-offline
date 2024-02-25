@@ -49,10 +49,9 @@ pub fn score_find_nearby_target(
             continue;
         };
 
-        let Some(zone_entities) =
-            client_entity_list.get_zone(bot.position.zone_id) else {
-                continue;
-            };
+        let Some(zone_entities) = client_entity_list.get_zone(bot.position.zone_id) else {
+            continue;
+        };
 
         if zone_entities
             .iter_entity_type_within_distance(
@@ -91,11 +90,10 @@ pub fn action_attack_random_nearby_target(
                     continue;
                 };
 
-                let Some(zone_entities) =
-                    client_entity_list.get_zone(bot.position.zone_id) else {
-                        *state = ActionState::Failure;
-                        continue;
-                    };
+                let Some(zone_entities) = client_entity_list.get_zone(bot.position.zone_id) else {
+                    *state = ActionState::Failure;
+                    continue;
+                };
 
                 // Find the 10 nearest living enemies
                 let mut nearest_targets: ArrayVec<(f32, Entity), 10> = ArrayVec::new();

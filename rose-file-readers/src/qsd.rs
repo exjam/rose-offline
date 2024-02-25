@@ -581,7 +581,6 @@ impl QsdFile {
 
             for _ in 0..trigger_count {
                 let (trigger_name, rewards, conditions, check_next) = read_trigger(&mut reader)?;
-                let rewards = rewards;
 
                 {
                     triggers.insert(
@@ -691,7 +690,6 @@ pub mod editor_friendly {
                 for _ in 0..trigger_count {
                     let (trigger_name, rewards, conditions, check_next) =
                         crate::qsd::read_trigger(&mut reader)?;
-                    let rewards = rewards;
 
                     triggers.push(QsdTrigger {
                         name: trigger_name.to_string(),

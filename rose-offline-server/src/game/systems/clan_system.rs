@@ -43,7 +43,11 @@ pub struct MemberQuery<'w> {
 
 fn send_update_clan_info(clan: &Clan, query_member: &Query<MemberQuery>) {
     for clan_member in clan.members.iter() {
-        let &ClanMember::Online { entity: clan_member_entity, .. } = clan_member else {
+        let &ClanMember::Online {
+            entity: clan_member_entity,
+            ..
+        } = clan_member
+        else {
             continue;
         };
 
@@ -125,7 +129,12 @@ pub fn clan_system(
 
                 let Ok(money) = creator.inventory.try_take_money(Money(1000000)) else {
                     if let Some(game_client) = creator.game_client {
-                        game_client.server_message_tx.send(ServerMessage::ClanCreateError{ error: ClanCreateError::UnmetCondition }).ok();
+                        game_client
+                            .server_message_tx
+                            .send(ServerMessage::ClanCreateError {
+                                error: ClanCreateError::UnmetCondition,
+                            })
+                            .ok();
                     }
                     continue;
                 };
@@ -198,7 +207,14 @@ pub fn clan_system(
             } => {
                 if let Ok(mut clan) = query_clans.get_mut(clan_entity) {
                     if let Some(clan_member) = clan.find_online_member_mut(disconnect_entity) {
-                        let &mut ClanMember::Online { position, contribution, .. } = clan_member else { unreachable!() };
+                        let &mut ClanMember::Online {
+                            position,
+                            contribution,
+                            ..
+                        } = clan_member
+                        else {
+                            unreachable!()
+                        };
                         *clan_member = ClanMember::Offline {
                             name: name.clone(),
                             position,
@@ -209,7 +225,11 @@ pub fn clan_system(
 
                         // Send message to other clan members that we have disconnected
                         for clan_member in clan.members.iter() {
-                            let &ClanMember::Online { entity: clan_member_entity, .. } = clan_member else {
+                            let &ClanMember::Online {
+                                entity: clan_member_entity,
+                                ..
+                            } = clan_member
+                            else {
                                 continue;
                             };
 
@@ -361,11 +381,21 @@ pub fn clan_system(
     }
 
     for connected_member in query_member_connected.iter() {
-        let Some(clan) = connected_member.clan_membership.and_then(|clan_entity| query_clans.get(clan_entity).ok()) else {
+        let Some(clan) = connected_member
+            .clan_membership
+            .and_then(|clan_entity| query_clans.get(clan_entity).ok())
+        else {
             continue;
         };
 
-        let Some(&ClanMember::Online { position: connected_member_position, contribution: connected_member_contribution, .. }) = clan.find_online_member(connected_member.entity) else { continue; };
+        let Some(&ClanMember::Online {
+            position: connected_member_position,
+            contribution: connected_member_contribution,
+            ..
+        }) = clan.find_online_member(connected_member.entity)
+        else {
+            continue;
+        };
 
         if let Some(game_client) = connected_member.game_client.as_ref() {
             game_client
@@ -387,7 +417,11 @@ pub fn clan_system(
 
         // Send message to other clan members that we have connected
         for clan_member in clan.members.iter() {
-            let &ClanMember::Online { entity: clan_member_entity, .. } = clan_member else {
+            let &ClanMember::Online {
+                entity: clan_member_entity,
+                ..
+            } = clan_member
+            else {
                 continue;
             };
 

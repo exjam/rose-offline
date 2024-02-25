@@ -64,10 +64,9 @@ pub fn score_can_party_invite_nearby_bot(
             }
         }
 
-        let Some(zone_entities) =
-            client_entity_list.get_zone(bot.position.zone_id) else {
-                continue;
-            };
+        let Some(zone_entities) = client_entity_list.get_zone(bot.position.zone_id) else {
+            continue;
+        };
 
         // Are there any nearby bots which do not have a party
         if zone_entities
@@ -107,11 +106,10 @@ pub fn action_party_invite_nearby_bot(
                 *state = ActionState::Executing;
             }
             ActionState::Executing => {
-                let Some(zone_entities) =
-                    client_entity_list.get_zone(bot.position.zone_id) else {
-                        *state = ActionState::Failure;
-                        continue;
-                    };
+                let Some(zone_entities) = client_entity_list.get_zone(bot.position.zone_id) else {
+                    *state = ActionState::Failure;
+                    continue;
+                };
 
                 *state = ActionState::Failure;
 

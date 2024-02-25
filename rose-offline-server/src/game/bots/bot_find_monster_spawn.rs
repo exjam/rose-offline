@@ -81,7 +81,10 @@ pub fn action_find_monster_spawn(
                 potential_spawns.truncate(5);
 
                 // Choose one randomly
-                let Some(spawn_point) = potential_spawns.choose(&mut rng).and_then(|(_, _, index)| zone_data.monster_spawns.get(*index)) else {
+                let Some(spawn_point) = potential_spawns
+                    .choose(&mut rng)
+                    .and_then(|(_, _, index)| zone_data.monster_spawns.get(*index))
+                else {
                     *state = ActionState::Failure;
                     continue;
                 };

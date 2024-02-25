@@ -56,7 +56,8 @@ pub fn score_threat_is_not_target(
     for (scorer, &Actor(entity), mut score) in query.iter_mut() {
         score.set(0.0);
 
-        let Ok((bot_combat_target, command, damage_sources, team)) = query_entity.get(entity) else {
+        let Ok((bot_combat_target, command, damage_sources, team)) = query_entity.get(entity)
+        else {
             continue;
         };
 

@@ -23,10 +23,7 @@ pub fn update_position_system(
 ) {
     query.for_each_mut(
         |(entity, client_entity, client_entity_sector, move_speed, mut position, command)| {
-            let CommandData::Move {
-                destination,
-                ..
-            } = command.command else {
+            let CommandData::Move { destination, .. } = command.command else {
                 return;
             };
 

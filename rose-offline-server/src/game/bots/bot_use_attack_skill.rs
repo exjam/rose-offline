@@ -48,7 +48,9 @@ pub fn score_should_use_attack_skill(
     for (scorer, &Actor(entity), mut score) in query.iter_mut() {
         score.set(0.0);
 
-        let Ok((bot_combat_target, skill_list, skill_caster, is_using_skill)) = query_entity.get(entity) else {
+        let Ok((bot_combat_target, skill_list, skill_caster, is_using_skill)) =
+            query_entity.get(entity)
+        else {
             continue;
         };
 
@@ -57,7 +59,7 @@ pub fn score_should_use_attack_skill(
             continue;
         }
 
-        let Ok(skill_target) =query_target.get(bot_combat_target.entity) else {
+        let Ok(skill_target) = query_target.get(bot_combat_target.entity) else {
             continue;
         };
 
@@ -110,7 +112,8 @@ pub fn action_use_attack_skill(
     for (&Actor(entity), mut state) in query.iter_mut() {
         match *state {
             ActionState::Requested => {
-                let Ok((bot_combat_target, skill_list, skill_caster)) = query_entity.get(entity) else {
+                let Ok((bot_combat_target, skill_list, skill_caster)) = query_entity.get(entity)
+                else {
                     *state = ActionState::Failure;
                     continue;
                 };

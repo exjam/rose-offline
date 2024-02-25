@@ -42,7 +42,9 @@ pub fn score_should_attack_target(
             continue;
         }
 
-        let Ok((target_ability_values, target_health_points)) = query_target.get(bot_combat_target.entity) else {
+        let Ok((target_ability_values, target_health_points)) =
+            query_target.get(bot_combat_target.entity)
+        else {
             commands.entity(entity).remove::<BotCombatTarget>(); // Target no longer exists
             continue;
         };

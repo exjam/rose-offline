@@ -49,11 +49,10 @@ pub fn action_snowball_fight(
 
         match *state {
             ActionState::Requested => {
-                let Some(zone_entities) =
-                    client_entity_list.get_zone(position.zone_id) else {
-                        *state = ActionState::Failure;
-                        continue;
-                    };
+                let Some(zone_entities) = client_entity_list.get_zone(position.zone_id) else {
+                    *state = ActionState::Failure;
+                    continue;
+                };
 
                 if command.is_dead() {
                     // Cannot throw snowballs whilst dead
@@ -64,8 +63,7 @@ pub fn action_snowball_fight(
                 let Some(item_slot) = inventory.find_item(SNOWBALL_ITEM_REFERENCE) else {
                     // We do not have a snowball in our inventory, try reward a stack and then set the
                     // state to Success so we go on to wait before next execution.
-                    reward_item_events
-                    .send(RewardItemEvent::new(
+                    reward_item_events.send(RewardItemEvent::new(
                         entity,
                         StackableItem::new(SNOWBALL_ITEM_REFERENCE, 999)
                             .unwrap()

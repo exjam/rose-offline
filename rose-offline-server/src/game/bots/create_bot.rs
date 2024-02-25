@@ -283,7 +283,10 @@ pub fn spend_stat_points(
         let Some((_, basic_stat_type)) = largest_delta_ratio else {
             break;
         };
-        let Some(increase_cost) = game_data.ability_value_calculator.calculate_basic_stat_increase_cost(basic_stats, basic_stat_type) else {
+        let Some(increase_cost) = game_data
+            .ability_value_calculator
+            .calculate_basic_stat_increase_cost(basic_stats, basic_stat_type)
+        else {
             // TODO: Handle max stat
             break;
         };
@@ -341,7 +344,10 @@ pub fn spend_skill_points(
 
         // Find the first skill that we can level up
         for base_skill_id in bot_build.skills.iter() {
-            let Some((skill_slot, _, _)) = skill_list_bundle.skill_list.find_skill_level(&game_data.skills, *base_skill_id) else {
+            let Some((skill_slot, _, _)) = skill_list_bundle
+                .skill_list
+                .find_skill_level(&game_data.skills, *base_skill_id)
+            else {
                 continue; // Not learnt yet
             };
 

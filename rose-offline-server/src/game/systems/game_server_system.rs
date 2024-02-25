@@ -122,7 +122,12 @@ fn handle_game_connection_request(
     let mut clan_membership = ClanMembership(None);
     for (clan_entity, mut clan) in query_clans.iter_mut() {
         if let Some(clan_member) = clan.find_offline_member_mut(&character.info.name) {
-            let &mut ClanMember::Offline { position, contribution, .. } = clan_member else {
+            let &mut ClanMember::Offline {
+                position,
+                contribution,
+                ..
+            } = clan_member
+            else {
                 unreachable!();
             };
 

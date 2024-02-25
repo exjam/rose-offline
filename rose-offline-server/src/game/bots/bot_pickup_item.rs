@@ -60,10 +60,9 @@ pub fn score_find_nearby_item_drop_system(
             continue;
         }
 
-        let Some(zone_entities) =
-            client_entity_list.get_zone(position.zone_id) else {
-                continue;
-            };
+        let Some(zone_entities) = client_entity_list.get_zone(position.zone_id) else {
+            continue;
+        };
 
         // Find any item drop nearby which we own, or has no owner
         for (nearby_entity, _) in zone_entities.iter_entity_type_within_distance(
@@ -96,10 +95,9 @@ pub fn action_pickup_nearest_item_drop(
 
         match *state {
             ActionState::Requested => {
-                let Some(zone_entities) =
-                    client_entity_list.get_zone(position.zone_id) else {
-                        continue;
-                    };
+                let Some(zone_entities) = client_entity_list.get_zone(position.zone_id) else {
+                    continue;
+                };
 
                 let mut nearest_item_drop = None;
                 for (nearby_entity, nearby_position) in zone_entities

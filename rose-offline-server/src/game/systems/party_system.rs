@@ -209,7 +209,12 @@ fn handle_party_accept_invite(
     }
 
     // Ensure we actually received an invite and are not trying to hack our way into a party
-    let Some(invite_index) = invited.party_membership.pending_invites.iter().position(|x| *x == owner_entity) else {
+    let Some(invite_index) = invited
+        .party_membership
+        .pending_invites
+        .iter()
+        .position(|x| *x == owner_entity)
+    else {
         return Err(PartyInviteError::NotInvited);
     };
     invited
@@ -240,12 +245,11 @@ fn handle_party_accept_invite(
         }
         Some(party_entity) => {
             // Add to current party
-            let Ok(mut party) = party_query
-                .get_mut(party_entity) else {
-                    // This must mean two party creation invites were accepted the same frame,
-                    // we are just gonna have to drop this invite and let the players sort it out
-                    return Err(PartyInviteError::InvalidEntity);
-                };
+            let Ok(mut party) = party_query.get_mut(party_entity) else {
+                // This must mean two party creation invites were accepted the same frame,
+                // we are just gonna have to drop this invite and let the players sort it out
+                return Err(PartyInviteError::InvalidEntity);
+            };
 
             if owner_entity != party.owner {
                 return Err(PartyInviteError::NoPermission);
@@ -323,7 +327,12 @@ fn handle_party_reject_invite(
         .get_many_mut([owner_entity, invited_entity])
         .map_err(|_| PartyInviteError::InvalidEntity)?;
 
-    let Some(invite_index) = invited.party_membership.pending_invites.iter().position(|x| *x == owner_entity) else {
+    let Some(invite_index) = invited
+        .party_membership
+        .pending_invites
+        .iter()
+        .position(|x| *x == owner_entity)
+    else {
         return Err(PartyInviteError::NotInvited);
     };
     invited

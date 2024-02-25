@@ -83,8 +83,7 @@ fn check_skill_skill_requirements(
 
 fn check_skill_ability_requirements(skill_data: &SkillData, skill_user: &SkillListBundle) -> bool {
     for &(ability_type, value) in skill_data.required_ability.iter() {
-        let Some(current_value) =
-        ability_values_get_value(
+        let Some(current_value) = ability_values_get_value(
             ability_type,
             Some(skill_user.ability_values),
             Some(skill_user.level),

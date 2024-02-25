@@ -549,9 +549,13 @@ fn subtract_skill_use_cost(
 ) {
     // Immediately subtract skill use cost, we do not need to check requirements here
     // as that has already happened in command_system when starting casting skill
-    let Some(skill_data) = skill_system_resources.game_data.skills.get_skill(skill_event.skill_id) else {
-            return;
-        };
+    let Some(skill_data) = skill_system_resources
+        .game_data
+        .skills
+        .get_skill(skill_event.skill_id)
+    else {
+        return;
+    };
 
     let Ok(mut skill_caster1) = skill_caster_query.get_mut(skill_event.caster_entity) else {
         return;

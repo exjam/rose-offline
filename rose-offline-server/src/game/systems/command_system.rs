@@ -600,7 +600,10 @@ pub fn command_system(
                 let Some(target) = query_attack_target
                     .get(target_entity)
                     .ok()
-                    .filter(|target| is_valid_attack_target(target, command_entity.position, command_entity.team))  else {
+                    .filter(|target| {
+                        is_valid_attack_target(target, command_entity.position, command_entity.team)
+                    })
+                else {
                     // Cannot attack target, cancel command.
                     command_stop(
                         &mut command_entity.command,
