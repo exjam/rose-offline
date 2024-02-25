@@ -198,7 +198,6 @@ impl VirtualFilesystemDevice for IrosePhVfsIndex {
             }
         }
 
-        println!("failed to find hash {}", path_hash);
         Err(VfsError::FileNotFound(vfs_path.path().into()).into())
     }
 
