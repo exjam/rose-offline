@@ -1,3 +1,5 @@
+use anyhow::anyhow;
+
 use crate::{reader::RoseFileReader, RoseFile};
 
 #[derive(Debug)]
@@ -25,11 +27,24 @@ impl RoseFile for LitFile {
 
     fn read(mut reader: RoseFileReader, _: &Self::ReadOptions) -> Result<Self, anyhow::Error> {
         let object_count = reader.read_u32()? as usize;
+        if object_count > 10000 {
+            return Err(anyhow!(
+                "Corrupt .LIT file, invalid object_count {}",
+                object_count
+            ));
+        }
+
         let mut objects = Vec::with_capacity(object_count);
         for _ in 0..object_count {
             let part_count = reader.read_u32()? as usize;
-            let object_id = reader.read_u32()?;
+            if part_count > 10000 {
+                return Err(anyhow!(
+                    "Corrupt .LIT file, invalid part_count {}",
+                    part_count
+                ));
+            }
 
+            let object_id = reader.read_u32()?;
             let mut parts = Vec::with_capacity(part_count);
             for _ in 0..part_count {
                 let name_len = reader.read_u8()?;

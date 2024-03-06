@@ -1,0 +1,11 @@
+[package]
+name = "rose-vfs-dump"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+
+[dependencies]
+rose-file-readers = { path = "../../rose-file-readers" }
+clap = { workspace = true }
+serde = { workspace = true }
+log = { workspace = true }

@@ -27,7 +27,7 @@ impl<'a> From<&'a VfsFile<'a>> for RoseFileReader<'a> {
     }
 }
 
-#[derive(Default, Debug, Hash, Clone)]
+#[derive(Default, Debug, Hash, Clone, PartialEq, Eq)]
 pub struct VfsPathBuf {
     path: PathBuf,
 }
@@ -45,6 +45,14 @@ impl VfsPathBuf {
     }
 }
 
+impl<'a> From<&VfsPath<'a>> for VfsPathBuf {
+    fn from(path: &VfsPath<'a>) -> Self {
+        VfsPathBuf {
+            path: path.path.to_path_buf(),
+        }
+    }
+}
+
 #[derive(Debug, Hash, Clone)]
 pub struct VfsPath<'a> {
     path: Cow<'a, Path>,
@@ -58,6 +66,7 @@ impl<'a> VfsPath<'a> {
 
     pub fn normalise_path(path: &str) -> PathBuf {
         path.replace('\\', "/")
+            .replace("//", "/")
             .to_uppercase()
             .trim_start()
             .trim_end()

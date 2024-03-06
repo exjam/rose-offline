@@ -109,7 +109,7 @@ impl From<&str> for FileNameHash {
                 .chars()
                 .map(|c| Wrapping(c.to_ascii_uppercase() as u32))
             {
-                seed1 = Wrapping(HASH_TABLE[ch.0 as usize]) ^ (seed1 + seed2);
+                seed1 = Wrapping(HASH_TABLE[(ch.0 & 0xff) as usize]) ^ (seed1 + seed2);
                 seed2 = ch + seed1 + seed2 + (seed2 << 5) + Wrapping(3);
             }
 

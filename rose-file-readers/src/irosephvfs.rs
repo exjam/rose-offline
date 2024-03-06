@@ -85,7 +85,7 @@ impl From<&str> for FileNameHash {
             {
                 seed1 += seed2;
                 seed2 *= Wrapping(0x21);
-                seed1 ^= HASH_TABLE[ch.0 as usize];
+                seed1 ^= HASH_TABLE[(ch.0 & 0xFF) as usize];
                 seed2 = seed2 + seed1 + ch + Wrapping(3);
             }
 
