@@ -63,8 +63,8 @@ pub trait CharacterCreator {
 }
 
 impl CharacterStorage {
-    pub fn try_create(&self) -> Result<(), anyhow::Error> {
-        self.save_character_impl(false)
+    pub fn try_create(&self, character_name: &str) -> Result<(), anyhow::Error> {
+        self.save_character_impl(character_name, false)
     }
 
     pub fn try_load(name: &str) -> Result<Self, anyhow::Error> {
@@ -81,11 +81,11 @@ impl CharacterStorage {
     }
 
     pub fn save(&self) -> Result<(), anyhow::Error> {
-        self.save_character_impl(true)
+        self.save_character_impl(&self.info.name, true)
     }
 
-    fn save_character_impl(&self, allow_overwrite: bool) -> Result<(), anyhow::Error> {
-        let path = get_character_path(&self.info.name);
+    fn save_character_impl(&self, character_name: &str, allow_overwrite: bool) -> Result<(), anyhow::Error> {
+        let path = get_character_path(character_name);
         let storage_dir = path.parent().unwrap();
 
         std::fs::create_dir_all(storage_dir).with_context(|| {
@@ -95,22 +95,25 @@ impl CharacterStorage {
             )
         })?;
 
-        let json = serde_json::to_string_pretty(self).with_context(|| {
+        let json = serde_json::to_string_pretty(&self).with_context(|| {
             format!(
                 "Failed to serialise CharacterStorage whilst saving character {}",
-                &self.info.name
+                character_name
             )
         })?;
-        let mut file = tempfile::NamedTempFile::new().with_context(|| {
-            format!(
-                "Failed to create temporary file whilst saving character {}",
-                &self.info.name
-            )
-        })?;
+
+        let mut file = tempfile::Builder::new()
+            .tempfile_in(storage_dir)
+            .with_context(|| {
+                format!(
+                    "Failed to create temporary file whilst saving character {}",
+                    character_name
+                )
+            })?;
         file.write_all(json.as_bytes()).with_context(|| {
             format!(
                 "Failed to write data to temporary file whilst saving character {}",
-                &self.info.name
+                character_name
             )
         })?;
 
@@ -124,7 +127,7 @@ impl CharacterStorage {
         } else {
             file.persist_noclobber(&path).with_context(|| {
                 format!(
-                    "Failed to persist_noclobber temporary character file to path {}",
+                    "Failed to persist_noclobber character file to path {}",
                     path.to_string_lossy()
                 )
             })?;

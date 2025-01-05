@@ -110,18 +110,20 @@ impl ClanStorage {
             )
         })?;
 
-        let json = serde_json::to_string_pretty(self).with_context(|| {
+        let json = serde_json::to_string_pretty(&self).with_context(|| {
             format!(
                 "Failed to serialise ClanStorage whilst saving clan {}",
                 &self.name
             )
         })?;
-        let mut file = tempfile::NamedTempFile::new().with_context(|| {
-            format!(
-                "Failed to create temporary file whilst saving clan {}",
-                &self.name
-            )
-        })?;
+        let mut file = tempfile::Builder::new()
+            .tempfile_in(storage_dir)
+            .with_context(|| {
+                format!(
+                    "Failed to create temporary file whilst saving clan {}",
+                    &self.name
+                )
+            })?;
         file.write_all(json.as_bytes()).with_context(|| {
             format!(
                 "Failed to write data to temporary file whilst saving clan {}",
