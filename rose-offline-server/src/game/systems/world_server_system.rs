@@ -191,7 +191,7 @@ pub fn world_server_system(
                             hair as u8,
                         ) {
                             Ok(character) => {
-                                if let Err(error) = character.try_create() {
+                                if let Err(error) = character.try_create(&name) {
                                     log::error!(
                                         "Failed to create character {} with error {:?}",
                                         &name,

@@ -68,12 +68,14 @@ impl BankStorage {
             )
         })?;
 
-        let mut file = tempfile::NamedTempFile::new().with_context(|| {
-            format!(
-                "Failed to create temporary file whilst saving bank for account {}",
-                account_name
-            )
-        })?;
+        let mut file = tempfile::Builder::new()
+            .tempfile_in(storage_dir)
+            .with_context(|| {
+                format!(
+                    "Failed to create temporary file whilst saving bank for account {}",
+                    account_name
+                )
+            })?;
         file.write_all(json.as_bytes()).with_context(|| {
             format!(
                 "Failed to write data to temporary file whilst saving bank for account {}",
