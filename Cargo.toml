@@ -23,7 +23,7 @@ aes = "0.8.1"
 anyhow = "1.0"
 arrayvec = "0.7"
 async-trait = "0.1"
-bevy = { version = "0.11.2", default-features = false }
+bevy = { version = "0.11.3", default-features = false }
 big-brain = { version = "0.18", features = [] }
 bitflags = "2.3"
 bitvec = { version = "1.0", features = ["serde"] }
@@ -58,7 +58,7 @@ thiserror = "1.0"
 tokio = { version = "1.17", default-features = false, features = ["rt", "rt-multi-thread", "net", "sync", "macros", "io-util"] }
 
 [patch.crates-io]
-bevy = { git = "https://github.com/exjam/bevy", rev = "04945fbacb297d3720049b7c89e3cb8eb19049c2" }
+bevy = { git = "https://github.com/exjam/bevy", rev = "b3b09ca110d42b406e7453ccda8394bc1b03440c" }
 
 [profile.dev.package."*"]
 opt-level = 3
