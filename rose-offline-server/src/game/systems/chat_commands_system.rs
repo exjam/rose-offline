@@ -46,7 +46,7 @@ use crate::game::{
     },
     events::{ChatCommandEvent, ClanEvent, DamageEvent, RewardItemEvent, RewardXpEvent},
     messages::server::ServerMessage,
-    resources::{BotList, BotListEntry, ClientEntityList, ServerMessages},
+    resources::{BotList, BotListEntry, ClientEntityList, ServerMessages, WorldRates},
     GameData,
 };
 
@@ -62,6 +62,7 @@ pub struct ChatCommandParams<'w, 's> {
     reward_item_events: EventWriter<'w, RewardItemEvent>,
     server_messages: ResMut<'w, ServerMessages>,
     time: Res<'w, Time>,
+    world_rates: ResMut<'w, WorldRates>,
 }
 
 #[derive(WorldQuery)]
@@ -213,6 +214,25 @@ lazy_static! {
                             )
                             .arg(Arg::new("value").required(true)),
                     ),
+            )
+            .subcommand(
+                clap::Command::new("rate")
+                    .arg(
+                        Arg::new("type")
+                            .possible_values([
+                                "xp",
+                                "drop",
+                                "money",
+                                "reward",
+                                "stamina",
+                                "craft",
+                                "world_price",
+                                "item_price",
+                                "town_price",
+                            ])
+                            .required(true),
+                    )
+                    .arg(Arg::new("value").required(true)),
             )
     };
 }
@@ -1160,6 +1180,32 @@ fn handle_chat_command(
                     }
                 }
             }
+        }
+        ("rate", arg_matches) => {
+            let rate_type = arg_matches.value_of("type").unwrap();
+            let value = arg_matches.value_of("value").unwrap().parse::<i32>()?;
+            
+            match rate_type {
+                "xp" => chat_command_params.world_rates.xp_rate = value,
+                "drop" => chat_command_params.world_rates.drop_rate = value,
+                "money" => chat_command_params.world_rates.drop_money_rate = value,
+                "reward" => chat_command_params.world_rates.reward_rate = value,
+                "stamina" => chat_command_params.world_rates.stamina_rate = value,
+                "craft" => chat_command_params.world_rates.craft_rate = value,
+                "world_price" => chat_command_params.world_rates.world_price_rate = value,
+                "item_price" => chat_command_params.world_rates.item_price_rate = value,
+                "town_price" => chat_command_params.world_rates.town_price_rate = value,
+                _ => return Err(ChatCommandError::InvalidArguments),
+            }
+
+            chat_command_user
+                .game_client
+                .server_message_tx
+                .send(ServerMessage::Whisper {
+                    from: String::from("SERVER"),
+                    text: format!("Updated {} rate to {}", rate_type, value),
+                })
+                .ok();
         }
         _ => return Err(ChatCommandError::InvalidCommand),
     }
