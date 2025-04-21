@@ -84,7 +84,11 @@ impl CharacterStorage {
         self.save_character_impl(&self.info.name, true)
     }
 
-    fn save_character_impl(&self, character_name: &str, allow_overwrite: bool) -> Result<(), anyhow::Error> {
+    fn save_character_impl(
+        &self,
+        character_name: &str,
+        allow_overwrite: bool,
+    ) -> Result<(), anyhow::Error> {
         let path = get_character_path(character_name);
         let storage_dir = path.parent().unwrap();
 

@@ -102,6 +102,11 @@ lazy_static! {
                     .arg(Arg::new("type").required(false)),
             )
             .subcommand(
+                clap::Command::new("search")
+                    .arg(Arg::new("type").required(true))
+                    .arg(Arg::new("query")),
+            )
+            .subcommand(
                 clap::Command::new("drop")
                     .arg(Arg::new("type").required(true))
                     .arg(Arg::new("id").required(true))
@@ -714,17 +719,14 @@ fn handle_chat_command(
             }
         }
         ("shop", arg_matches) => {
-            let item_type_id = arg_matches
-                .value_of("item_type")
-                .unwrap()
-                .parse::<usize>()?;
-            let item_type: ItemType = chat_command_params
-                .game_data
-                .data_decoder
-                .decode_item_type(item_type_id)
-                .ok_or_else(|| {
-                    ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_id))
-                })?;
+            let item_type_str = arg_matches.value_of("item_type").unwrap();
+            let item_type: ItemType = ItemType::try_from_id_str(
+                item_type_str,
+                &chat_command_params.game_data.data_decoder,
+            )
+            .ok_or_else(|| {
+                ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_str))
+            })?;
 
             let mut all_items: Vec<(ItemReference, u8)> = chat_command_params
                 .game_data
@@ -1017,17 +1019,91 @@ fn handle_chat_command(
                 );
             }
         }
+        ("search", arg_matches) => {
+            let item_type_str = arg_matches.value_of("type").unwrap();
+
+            let item_type: ItemType = ItemType::try_from_id_str(
+                item_type_str,
+                &chat_command_params.game_data.data_decoder,
+            )
+            .ok_or_else(|| {
+                ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_str))
+            })?;
+
+            let query = arg_matches.value_of("query");
+
+            if let Some(query) = query {
+                let query = query.to_lowercase();
+                let mut lines = String::new();
+                let mut count = 0;
+
+                for item in chat_command_params.game_data.items.iter_items(item_type) {
+                    let item_data = chat_command_params
+                        .game_data
+                        .items
+                        .get_base_item(item)
+                        .ok_or_else(|| {
+                            ChatCommandError::WithMessage(format!("Invalid item {:?}", item))
+                        })?;
+
+                    let name = item_data.name.to_lowercase();
+
+                    if !name.contains(&query) {
+                        continue;
+                    }
+
+                    lines.push_str(&format!(
+                        "{:?}: {:?} (q={})\n",
+                        item_data.id.item_number, item_data.name, item_data.quality
+                    ));
+                    count += 1;
+                }
+
+                lines.push_str(&format!(
+                    "Done; found {count} items of type {:?} that match '{}'",
+                    item_type, query
+                ));
+
+                send_multiline_whisper(chat_command_user.game_client, &lines);
+            } else {
+                let mut lines = String::new();
+                let mut count = 0;
+
+                for item in chat_command_params.game_data.items.iter_items(item_type) {
+                    let item_data = chat_command_params
+                        .game_data
+                        .items
+                        .get_base_item(item)
+                        .ok_or_else(|| {
+                            ChatCommandError::WithMessage(format!("Invalid item {:?}", item))
+                        })?;
+
+                    lines.push_str(&format!(
+                        "{:?}: {:?} (q={})\n",
+                        item_data.id.item_number, item_data.name, item_data.quality
+                    ));
+                    count += 1;
+                }
+
+                lines.push_str(&format!(
+                    "Done; found {count} items of type {:?}",
+                    item_type
+                ));
+
+                send_multiline_whisper(chat_command_user.game_client, &lines);
+            }
+        }
         ("item", arg_matches) | ("drop", arg_matches) => {
             let is_drop = command_matches.subcommand().unwrap().0 == "drop";
 
-            let item_type_id = arg_matches.value_of("type").unwrap().parse::<usize>()?;
-            let item_type: ItemType = chat_command_params
-                .game_data
-                .data_decoder
-                .decode_item_type(item_type_id)
-                .ok_or_else(|| {
-                    ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_id))
-                })?;
+            let item_type_str = arg_matches.value_of("type").unwrap();
+            let item_type: ItemType = ItemType::try_from_id_str(
+                item_type_str,
+                &chat_command_params.game_data.data_decoder,
+            )
+            .ok_or_else(|| {
+                ChatCommandError::WithMessage(format!("Invalid item type {}", item_type_str))
+            })?;
 
             let item_number = arg_matches.value_of("id").unwrap().parse::<usize>()?;
 
@@ -1184,7 +1260,7 @@ fn handle_chat_command(
         ("rate", arg_matches) => {
             let rate_type = arg_matches.value_of("type").unwrap();
             let value = arg_matches.value_of("value").unwrap().parse::<i32>()?;
-            
+
             match rate_type {
                 "xp" => chat_command_params.world_rates.xp_rate = value,
                 "drop" => chat_command_params.world_rates.drop_rate = value,
