@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 
 use crate::{
-    AbilityType, EffectFileId, EffectId, JobClassId, SkillId, SoundId, StatusEffectId,
+    AbilityType, DataDecoder, EffectFileId, EffectId, JobClassId, SkillId, SoundId, StatusEffectId,
     StringDatabase, VehiclePartIndex,
 };
 
@@ -166,6 +166,37 @@ impl ItemType {
                 | ItemType::SubWeapon
                 | ItemType::Vehicle
         )
+    }
+
+    pub fn try_from_str(s: &str) -> Option<Self> {
+        match s {
+            "face" => Some(Self::Face),
+            "head" => Some(Self::Head),
+            "body" => Some(Self::Body),
+            "hands" => Some(Self::Hands),
+            "feet" => Some(Self::Feet),
+            "back" => Some(Self::Back),
+            "jewelry" => Some(Self::Jewellery),
+            "weapon" => Some(Self::Weapon),
+            "subweapon" => Some(Self::SubWeapon),
+            "consumable" => Some(Self::Consumable),
+            "gem" => Some(Self::Gem),
+            "material" => Some(Self::Material),
+            "quest" => Some(Self::Quest),
+            "vehicle" => Some(Self::Vehicle),
+            _ => None,
+        }
+    }
+
+    pub fn try_from_id_str<'a>(
+        s: &str,
+        gd: &'a impl AsRef<dyn DataDecoder + Send + Sync>,
+    ) -> Option<Self> {
+        if let Ok(item_type_id) = s.parse::<usize>() {
+            gd.as_ref().decode_item_type(item_type_id)
+        } else {
+            Self::try_from_str(s)
+        }
     }
 }
 
