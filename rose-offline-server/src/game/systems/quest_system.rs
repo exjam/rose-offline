@@ -1879,6 +1879,24 @@ fn quest_reward_set_team_number(
     true
 }
 
+fn quest_reward_set_revive_position(
+    quest_parameters: &mut QuestParameters,
+    x: f32,
+    y: f32,
+) -> bool {
+    if let Some(character_info) = quest_parameters.source.character_info.as_mut() {
+        character_info.revive_position = Vec3::new(x, y, 0.0);
+        character_info.revive_zone_id = quest_parameters.source.position.zone_id;
+        true
+    } else {
+        warn!(
+            "SetRevivePosition reward failed: missing character_info for entity {:?}",
+            quest_parameters.source.entity
+        );
+        false
+    }
+}
+
 enum MonsterSpawnState {
     Disabled,
     Enabled,
@@ -2336,6 +2354,9 @@ fn quest_trigger_apply_rewards(
             }
             QsdReward::RemoveClanSkill { id } => {
                 quest_reward_clan_remove_skill(quest_system_parameters, quest_parameters, id)
+            }
+            QsdReward::SetRevivePosition { x, y } => {
+                quest_reward_set_revive_position(quest_parameters, x, y)
             }
             _ => {
                 warn!("Unimplemented quest reward: {:?}", reward);
