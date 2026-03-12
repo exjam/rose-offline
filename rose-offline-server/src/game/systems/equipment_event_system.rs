@@ -273,6 +273,7 @@ enum EquipItemError {
     InvalidItemData,
     FailedRequirements,
     CannotUnequipOffhand,
+    CannotEquipOffhand,
     InventoryFull,
 }
 
@@ -327,7 +328,8 @@ fn equip_from_inventory(
 
     let mut updated_inventory_items = Vec::new();
 
-    // If we are equipping a two handed weapon, we must unequip offhand first
+    // If we are equipping a two-handed weapon, we must unequip offhand first
+    // If we are equipping an off-hand while holding a two-handed weapon, we cannot proceed
     if item_data.class.is_two_handed_weapon() {
         let equipment_slot = entity
             .equipment
@@ -346,6 +348,14 @@ fn equip_from_inventory(
                         *equipment_slot = Some(item);
                         return Err(EquipItemError::CannotUnequipOffhand);
                     }
+                }
+            }
+        }
+    } else if equipment_index == EquipmentIndex::SubWeapon {
+        if let Some(weapon_item) = entity.equipment.get_equipment_item(EquipmentIndex::Weapon) {
+            if let Some(weapon_data) = game_data.items.get_base_item(weapon_item.item) {
+                if weapon_data.class.is_two_handed_weapon() {
+                    return Err(EquipItemError::CannotEquipOffhand);
                 }
             }
         }
