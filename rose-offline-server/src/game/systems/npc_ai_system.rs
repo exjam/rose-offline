@@ -1922,12 +1922,11 @@ pub fn npc_ai_system(
                             if let Some(killer_entity) = killer_entity {
                                 if let Ok(killer) = killer_query.get(killer_entity) {
                                     // If the killer has an owner then the owner gets the reward
-                                    let killer = killer
-                                        .owner
-                                        .and_then(|killer_owner| {
-                                            killer_query.get(killer_owner.entity).ok()
-                                        })
-                                        .unwrap_or(killer);
+                                    let killer_entity = match killer.owner {
+                                        Some(owner) => owner.entity,
+                                        None => killer_entity,
+                                    };
+                                    let killer = killer_query.get(killer_entity).unwrap_or(killer);
 
                                     // Inform client to execute npc dead event
                                     if !npc_data.death_quest_trigger_name.is_empty() {
