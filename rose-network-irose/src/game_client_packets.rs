@@ -1572,3 +1572,59 @@ impl From<&PacketClientClanCommand> for Packet {
         writer.into()
     }
 }
+
+pub struct PacketClientReturnToCharacterSelect;
+
+impl TryFrom<&Packet> for PacketClientReturnToCharacterSelect {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::ReturnToCharacterSelectRequest as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let command = reader.read_u8()?;
+        if command != 0 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        Ok(Self {})
+    }
+}
+
+impl From<&PacketClientReturnToCharacterSelect> for Packet {
+    fn from(_: &PacketClientReturnToCharacterSelect) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::ReturnToCharacterSelectRequest as u16);
+        writer.write_u8(0);
+        writer.into()
+    }
+}
+
+pub struct PacketClientLogoutRequest;
+
+impl TryFrom<&Packet> for PacketClientLogoutRequest {
+    type Error = PacketError;
+
+    fn try_from(packet: &Packet) -> Result<Self, Self::Error> {
+        if packet.command != ClientPackets::LogoutRequest as u16 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        let mut reader = PacketReader::from(packet);
+        let command = reader.read_u8()?;
+        if command != 0 {
+            return Err(PacketError::InvalidPacket);
+        }
+
+        Ok(Self {})
+    }
+}
+
+impl From<&PacketClientLogoutRequest> for Packet {
+    fn from(_: &PacketClientLogoutRequest) -> Self {
+        let mut writer = PacketWriter::new(ClientPackets::LogoutRequest as u16);
+        writer.write_u8(0);
+        writer.into()
+    }
+}
