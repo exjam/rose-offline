@@ -24,6 +24,7 @@ pub fn get_client_strings(
     Ok(Arc::new(ClientStrings {
         invalid_name: get_string(348),
         duration_seconds: get_string(315),
+        timeout: get_string(14),
 
         equip_require_job: get_string(170),
         item_class: get_string(106),
