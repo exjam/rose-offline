@@ -5,6 +5,7 @@ use crate::StringDatabase;
 pub struct ClientStrings {
     pub invalid_name: &'static str,
     pub duration_seconds: &'static str,
+    pub timeout: &'static str,
 
     pub equip_require_job: &'static str,
     pub item_class: &'static str,
