@@ -80,5 +80,13 @@ pub struct ClientStrings {
     pub clan_create_error_slogan: &'static str,
     pub clan_error_permission: &'static str,
 
+    pub _quest_delete_confirm: &'static str,
+
     pub _string_database: Arc<StringDatabase>,
+}
+
+impl ClientStrings {
+    pub fn quest_delete_confirm(&self, quest_name: &str) -> String {
+        self._quest_delete_confirm.replacen("%s", quest_name, 1)
+    }
 }

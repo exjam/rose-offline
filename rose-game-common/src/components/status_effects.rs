@@ -47,7 +47,7 @@ impl StatusEffects {
     pub fn can_apply(&self, status_effect_data: &StatusEffectData, value: i32) -> bool {
         match &self.active[status_effect_data.status_effect_type] {
             Some(status_effect) => {
-                status_effect_data.can_be_reapplied && value > status_effect.value
+                status_effect_data.can_be_reapplied && value >= status_effect.value
             }
             None => true,
         }

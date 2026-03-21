@@ -99,6 +99,8 @@ pub fn get_client_strings(
         clan_create_error_slogan: get_string(78),
         clan_error_permission: get_string(76),
 
+        _quest_delete_confirm: get_string(501),
+
         _string_database: string_database,
     }))
 }

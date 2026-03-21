@@ -2517,11 +2517,12 @@ impl TryFrom<&Packet> for PacketServerLevelUpSkillResult {
         }
 
         let mut reader = PacketReader::from(packet);
+        let result_code = reader.read_u8()?;
         let skill_slot = reader.read_skill_slot_u8()?;
         let skill_id = SkillId::new(reader.read_u16()?);
         let skill_points = SkillPoints::new(reader.read_u16()? as u32);
 
-        Ok(match reader.read_u8()? {
+        Ok(match result_code {
             0 => Self::Success {
                 skill_slot,
                 skill_id: skill_id.ok_or(PacketError::InvalidPacket)?,
