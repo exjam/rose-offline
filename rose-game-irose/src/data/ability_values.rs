@@ -699,7 +699,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             BasicStatType::Sense => basic_stats.sense,
         };
 
-        if current > MAX_BASIC_STAT_VALUE {
+        if current >= MAX_BASIC_STAT_VALUE {
             None
         } else {
             Some((current as f32 * 0.2) as u32)
