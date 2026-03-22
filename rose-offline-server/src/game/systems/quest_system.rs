@@ -15,11 +15,12 @@ use bevy::{
 };
 use chrono::{Datelike, Timelike};
 use log::warn;
+use num_traits::FromPrimitive;
 use rand::Rng;
 
 use rose_data::{EquipmentItem, Item, NpcId, QuestTrigger, SkillId, WorldTicks, ZoneId};
 use rose_file_readers::{
-    QsdAbilityType, QsdClanPoints, QsdCondition, QsdConditionOperator, QsdDistance,
+    QsdAbilityType, QsdClanPoints, QsdCondition, QsdConditionOperator, QsdDistance, QsdEquation,
     QsdEquipmentIndex, QsdEventId, QsdItem, QsdNpcId, QsdNpcMessageType, QsdObjectType, QsdQuestId,
     QsdReward, QsdRewardOperator, QsdServerChannelId, QsdSkillId, QsdSpawnMonsterLocation,
     QsdTeamNumber, QsdTeamNumberSource, QsdVariableId, QsdVariableType, QsdZoneId,
@@ -1049,14 +1050,14 @@ fn quest_reward_calculated_experience_points(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    reward_equation_id: usize,
+    reward_equation: &QsdEquation,
     base_reward_value: i32,
 ) -> bool {
     let reward_value = quest_system_resources
         .game_data
         .ability_value_calculator
         .calculate_reward_value(
-            reward_equation_id,
+            reward_equation,
             base_reward_value,
             0,
             quest_parameters.source.level.level as i32,
@@ -1091,7 +1092,7 @@ fn quest_reward_calculated_item(
     quest_system_parameters: &mut QuestSystemParameters,
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    reward_equation_id: usize,
+    reward_equation: &QsdEquation,
     base_reward_value: i32,
     reward_item: QsdItem,
     reward_gem_id: Option<NonZeroUsize>,
@@ -1119,7 +1120,7 @@ fn quest_reward_calculated_item(
             .game_data
             .ability_value_calculator
             .calculate_reward_value(
-                reward_equation_id,
+                reward_equation,
                 base_reward_value,
                 0,
                 quest_parameters.source.level.level as i32,
@@ -1215,7 +1216,7 @@ fn get_quest_calculated_money_dup_count_var(
 fn quest_reward_calculated_money(
     quest_system_resources: &QuestSystemResources,
     quest_parameters: &mut QuestParameters,
-    reward_equation_id: usize,
+    reward_equation: &QsdEquation,
     base_reward_value: i32,
 ) -> bool {
     let dup_count_var = get_quest_calculated_money_dup_count_var(
@@ -1227,7 +1228,7 @@ fn quest_reward_calculated_money(
         .game_data
         .ability_value_calculator
         .calculate_reward_value(
-            reward_equation_id,
+            reward_equation,
             base_reward_value,
             dup_count_var.as_ref().map_or(0, |x| **x) as i32,
             quest_parameters.source.level.level as i32,
@@ -2198,11 +2199,16 @@ fn quest_trigger_apply_rewards(
                 quest_reward_set_quest_switch(quest_parameters, id, value)
             }
             QsdReward::CalculatedExperiencePoints { equation, value } => {
+                let Some(equation) = QsdEquation::from_usize(equation) else {
+                    warn!("Unknown equation id: {}", equation);
+                    continue;
+                };
+
                 quest_reward_calculated_experience_points(
                     quest_system_parameters,
                     quest_system_resources,
                     quest_parameters,
-                    equation,
+                    &equation,
                     value,
                 )
             }
@@ -2211,21 +2217,35 @@ fn quest_trigger_apply_rewards(
                 value,
                 item,
                 gem,
-            } => quest_reward_calculated_item(
-                quest_system_parameters,
-                quest_system_resources,
-                quest_parameters,
-                equation,
-                value,
-                item,
-                gem,
-            ),
-            QsdReward::CalculatedMoney { equation, value } => quest_reward_calculated_money(
-                quest_system_resources,
-                quest_parameters,
-                equation,
-                value,
-            ),
+            } => {
+                let Some(equation) = QsdEquation::from_usize(equation) else {
+                    warn!("Unknown equation id: {}", equation);
+                    continue;
+                };
+
+                quest_reward_calculated_item(
+                    quest_system_parameters,
+                    quest_system_resources,
+                    quest_parameters,
+                    &equation,
+                    value,
+                    item,
+                    gem,
+                )
+            }
+            QsdReward::CalculatedMoney { equation, value } => {
+                let Some(equation) = QsdEquation::from_usize(equation) else {
+                    warn!("Unknown equation id: {}", equation);
+                    continue;
+                };
+
+                quest_reward_calculated_money(
+                    quest_system_resources,
+                    quest_parameters,
+                    &equation,
+                    value,
+                )
+            }
             QsdReward::CallLuaFunction { .. } => {
                 // CallLuaFunction is for client side only.
                 true

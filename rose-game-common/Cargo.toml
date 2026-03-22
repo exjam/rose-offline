@@ -6,6 +6,7 @@ edition = { workspace = true }
 
 [dependencies]
 rose-data = { path = "../rose-data" }
+rose-file-readers = { path = "../rose-file-readers" }
 bevy = { workspace = true }
 bitvec = { workspace = true }
 enum-map = { workspace = true }

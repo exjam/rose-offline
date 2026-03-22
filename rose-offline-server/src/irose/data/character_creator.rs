@@ -4,7 +4,7 @@ use rose_game_common::components::{CharacterGender, SkillPage};
 use std::sync::Arc;
 
 use rose_data::{
-    EquipmentItem, ItemDatabase, ItemReference, QuestTriggerHash, SkillDatabase, SkillId,
+    EquipmentItem, ItemDatabase, ItemReference, QuestTriggerHash, SkillDatabase, SkillId, SkillIds,
     StackableItem, ZoneDatabase, ZoneId,
 };
 use rose_data_irose::{decode_item_base1000, IroseSkillPageType, SKILL_PAGE_SIZE};
@@ -234,11 +234,24 @@ pub fn get_character_creator(
         load_gender(&data, 0).unwrap(),
         load_gender(&data, 1).unwrap(),
     ]);
+
     let skills = vec![
-        SkillId::new(11).unwrap(), // Sit
-        SkillId::new(12).unwrap(), // Pick Up
-        SkillId::new(16).unwrap(), // Attack
-        SkillId::new(20).unwrap(), // Trade
+        SkillId::new(SkillIds::Sit as u16).unwrap(),
+        SkillId::new(SkillIds::PickUp as u16).unwrap(),
+        SkillId::new(SkillIds::Attack as u16).unwrap(),
+        SkillId::new(SkillIds::Trade as u16).unwrap(),
+        SkillId::new(SkillIds::RideRequest as u16).unwrap(),
+        SkillId::new(SkillIds::Jump as u16).unwrap(),
+        SkillId::new(SkillIds::Hi as u16).unwrap(),
+        SkillId::new(SkillIds::Bow as u16).unwrap(),
+        SkillId::new(SkillIds::Salutation as u16).unwrap(),
+        SkillId::new(SkillIds::RecoveryKiss as u16).unwrap(),
+        SkillId::new(SkillIds::CharmingKiss as u16).unwrap(),
+        SkillId::new(SkillIds::Laugh as u16).unwrap(),
+        SkillId::new(SkillIds::FightCheer as u16).unwrap(),
+        SkillId::new(SkillIds::BreakDown as u16).unwrap(),
+        SkillId::new(SkillIds::Tantrum as u16).unwrap(),
+        SkillId::new(SkillIds::Applause as u16).unwrap(),
     ];
 
     let start_zone = ZoneId::new(20).unwrap();

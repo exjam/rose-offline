@@ -173,7 +173,7 @@ impl<'a> PacketReader<'a> {
         }
     }
 
-    pub fn read_null_terminated_win1252(&mut self) -> Result<Cow<str>, PacketError> {
+    pub fn read_null_terminated_win1252(&mut self) -> Result<Cow<'_, str>, PacketError> {
         let (decoded, _, _) = WINDOWS_1252.decode(self.read_null_terminated_bytes()?);
         Ok(decoded)
     }

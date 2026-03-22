@@ -34,13 +34,12 @@ mod weight;
 mod world_client;
 
 pub use rose_game_common::components::{
-    AbilityValues, ActiveQuest, ActiveStatusEffect, ActiveStatusEffectRegen, BasicStatType,
-    BasicStats, CharacterDeleteTime, CharacterGender, CharacterInfo, CharacterUniqueId,
-    DamageCategory, DamageType, DroppedItem, Equipment, EquipmentItemDatabase,
-    EquipmentItemReference, ExperiencePoints, HealthPoints, Hotbar, HotbarSlot, Inventory,
-    InventoryPage, InventoryPageType, ItemDrop, ItemSlot, Level, ManaPoints, Money, MoveMode,
-    MoveSpeed, Npc, QuestState, SkillList, SkillPage, SkillPoints, SkillSlot, Stamina, StatPoints,
-    StatusEffects, StatusEffectsRegen, Team, UnionMembership, MAX_STAMINA,
+    AbilityValues, ActiveQuest, ActiveStatusEffectRegen, BasicStatType, BasicStats,
+    CharacterDeleteTime, CharacterGender, CharacterInfo, CharacterUniqueId, DroppedItem, Equipment,
+    EquipmentItemDatabase, ExperiencePoints, HealthPoints, Hotbar, Inventory, ItemDrop, ItemSlot,
+    Level, ManaPoints, Money, MoveMode, MoveSpeed, Npc, QuestState, SkillList, SkillPoints,
+    SkillSlot, Stamina, StatPoints, StatusEffects, StatusEffectsRegen, Team, UnionMembership,
+    MAX_STAMINA,
 };
 
 pub use account::Account;
@@ -60,7 +59,7 @@ pub use event_object::EventObject;
 pub use game_client::GameClient;
 pub use login_client::LoginClient;
 pub use monster_spawn_point::MonsterSpawnPoint;
-pub use motion_data::{MotionData, MotionDataCharacter, MotionDataNpc};
+pub use motion_data::MotionData;
 pub use next_command::NextCommand;
 pub use npc_ai::NpcAi;
 pub use npc_standing_direction::NpcStandingDirection;

@@ -6,9 +6,10 @@ use std::{num::NonZeroU32, sync::Arc};
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, Item, ItemClass, ItemDatabase,
-    ItemReference, ItemType, ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillData,
-    SkillDatabase, VehiclePartIndex,
+    ItemReference, ItemType, ItemWeaponType, NpcDatabase, NpcId, SkillAddAbility, SkillDamageType,
+    SkillData, SkillDatabase, VehiclePartIndex,
 };
+use rose_file_readers::QsdEquation;
 use rose_game_common::{
     components::{
         AbilityValues, BasicStatType, BasicStats, CharacterInfo, DamageCategory, DamageType,
@@ -403,7 +404,7 @@ impl AbilityValueCalculator for AbilityValuesData {
     ) -> Damage {
         let mut rng = rand::thread_rng();
         let mut damage = match skill_data.damage_type {
-            1 => {
+            SkillDamageType::WeaponAttack => {
                 let success = ((attacker.get_level() + 20) - defender.get_level()
                     + rng.gen_range(1..=60)) as f32
                     * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.6
@@ -455,7 +456,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                         + 20.0
                 }
             }
-            2 => {
+            SkillDamageType::MagicAttack => {
                 let success = ((attacker.get_level() + 30) - defender.get_level()
                     + rng.gen_range(1..=50)) as f32
                     * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.56
@@ -515,7 +516,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                         + 20.0
                 }
             }
-            3 => {
+            SkillDamageType::NaturalMagic => {
                 let success = ((attacker.get_level() + 10) - defender.get_level()
                     + rng.gen_range(1..=80)) as f32
                     * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.5
@@ -562,7 +563,7 @@ impl AbilityValueCalculator for AbilityValuesData {
                         + 20.0
                 }
             }
-            _ => {
+            SkillDamageType::ContinuousAttack => {
                 let success = ((attacker.get_level() + 8) - defender.get_level()
                     + rng.gen_range(1..=80)) as f32
                     * (attacker.get_hit() as f32 - defender.get_avoid() as f32 * 0.6
@@ -729,7 +730,7 @@ impl AbilityValueCalculator for AbilityValuesData {
 
     fn calculate_reward_value(
         &self,
-        equation_id: usize,
+        equation: &QsdEquation,
         base_reward_value: i32,
         dup_count: i32,
         level: i32,
@@ -737,34 +738,33 @@ impl AbilityValueCalculator for AbilityValuesData {
         fame: i32,
         world_reward_rate: i32,
     ) -> i32 {
-        match equation_id {
-            0 => {
+        match equation {
+            QsdEquation::ExpUnleveled => {
                 ((base_reward_value + 30) * (charm + 10) * world_reward_rate * (fame + 20)
                     / (level + 70))
                     / 30000
                     + base_reward_value
             }
-            1 => {
+            QsdEquation::ExpLeveled => {
                 base_reward_value * (level + 3) * (level + charm / 2 + 40) * world_reward_rate
                     / 10000
             }
-            2 => base_reward_value * dup_count,
-            3 | 5 => {
+            QsdEquation::MoneyStatic => base_reward_value * dup_count,
+            QsdEquation::MoneyScaled | QsdEquation::Item => {
                 ((base_reward_value + 20) * (charm + 10) * world_reward_rate * (fame + 20)
                     / (level + 70))
                     / 30000
                     + base_reward_value
             }
-            4 => {
+            QsdEquation::Unknown => {
                 ((base_reward_value + 2) * (level + charm + 40) * (fame + 40) * world_reward_rate)
                     / 140000
             }
-            6 => {
+            QsdEquation::Unknown2 => {
                 ((base_reward_value + 20) * (level + charm) * (fame + 20) * world_reward_rate)
                     / 3000000
                     + base_reward_value
             }
-            _ => 0,
         }
     }
 

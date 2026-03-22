@@ -13,8 +13,8 @@ use log::warn;
 use rand::Rng;
 
 use rose_data::{
-    AbilityType, SkillCooldown, SkillData, SkillTargetFilter, SkillType, StatusEffectClearedByType,
-    StatusEffectType,
+    AbilityType, SkillCooldown, SkillDamageType, SkillData, SkillTargetFilter, SkillType,
+    StatusEffectClearedByType, StatusEffectType,
 };
 use rose_game_common::{components::Money, data::Damage};
 
@@ -529,7 +529,7 @@ fn apply_skill_damage(
         Err(SkillCastError::InvalidTarget)
     };
 
-    if result.is_ok() && skill_data.damage_type != 3 {
+    if result.is_ok() && !matches!(skill_data.damage_type, SkillDamageType::NaturalMagic) {
         skill_system_parameters
             .item_life_events
             .send(ItemLifeEvent::DecreaseWeaponLife {
