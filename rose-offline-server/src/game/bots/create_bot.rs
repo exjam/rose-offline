@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 
 use rose_data::{
     AbilityType, AmmoIndex, EquipmentIndex, EquipmentItem, ItemClass, ItemReference, ItemType,
-    JobId, SkillId, StackableItem,
+    JobId, SkillId, SkillIds, StackableItem,
 };
 use rose_game_common::components::{
     AbilityValues, BasicStatType, BasicStats, CharacterGender, StatPoints, StatusEffects,
@@ -49,18 +49,18 @@ pub fn bot_build_knight() -> BotBuild {
         weapon_type: ItemClass::OneHandedSword,
         subweapon_type: Some(ItemClass::Shield),
         skills: [
-            SkillId::new(201).unwrap(), // Melee Weapon Mastery
-            SkillId::new(231).unwrap(), // Physical Training
-            SkillId::new(281).unwrap(), // Quick Step
-            SkillId::new(251).unwrap(), // Defense Training
-            SkillId::new(211).unwrap(), // One-Handed Mastery
-            SkillId::new(321).unwrap(), // Double Attack -> Triple Attack
-            SkillId::new(341).unwrap(), // Leap Attack
-            SkillId::new(301).unwrap(), // Heavy Attack
-            SkillId::new(521).unwrap(), // Lightning Crusher
-            SkillId::new(411).unwrap(), // Taunt
-            SkillId::new(291).unwrap(), // Spiritual Training
-            SkillId::new(391).unwrap(), // Divine Force -> Divine Lightning
+            SkillId::new(SkillIds::MeleeWeaponMastery as u16).unwrap(),
+            SkillId::new(SkillIds::PhysicalTraining as u16).unwrap(),
+            SkillId::new(SkillIds::QuickStep as u16).unwrap(),
+            SkillId::new(SkillIds::DefenceTraining as u16).unwrap(),
+            SkillId::new(SkillIds::OneHandedMastery as u16).unwrap(),
+            SkillId::new(SkillIds::DoubleAttack as u16).unwrap(),
+            SkillId::new(SkillIds::LeapAttack as u16).unwrap(),
+            SkillId::new(SkillIds::HeavyAttack as u16).unwrap(),
+            SkillId::new(SkillIds::LightningCrusher as u16).unwrap(),
+            SkillId::new(SkillIds::Taunt as u16).unwrap(),
+            SkillId::new(SkillIds::SpiritualTraining as u16).unwrap(),
+            SkillId::new(SkillIds::DivineForce as u16).unwrap(),
         ]
         .into(),
     }
@@ -78,18 +78,18 @@ pub fn bot_build_champion() -> BotBuild {
         weapon_type: ItemClass::TwoHandedSword,
         subweapon_type: None,
         skills: [
-            SkillId::new(201).unwrap(), // Melee Weapon Mastery
-            SkillId::new(231).unwrap(), // Physical Training
-            SkillId::new(281).unwrap(), // Quick Step
-            SkillId::new(251).unwrap(), // Defense Training
-            SkillId::new(221).unwrap(), // Two-Handed Mastery
-            SkillId::new(321).unwrap(), // Double Attack -> Triple Attack
-            SkillId::new(341).unwrap(), // Leap Attack
-            SkillId::new(301).unwrap(), // Heavy Attack
-            SkillId::new(671).unwrap(), // Champion Hit
-            SkillId::new(661).unwrap(), // Space Attack
-            SkillId::new(291).unwrap(), // Spiritual Training
-            SkillId::new(391).unwrap(), // Divine Force
+            SkillId::new(SkillIds::MeleeWeaponMastery as u16).unwrap(),
+            SkillId::new(SkillIds::PhysicalTraining as u16).unwrap(),
+            SkillId::new(SkillIds::QuickStep as u16).unwrap(),
+            SkillId::new(SkillIds::DefenceTraining as u16).unwrap(),
+            SkillId::new(SkillIds::TwoHandedMastery as u16).unwrap(),
+            SkillId::new(SkillIds::DoubleAttack as u16).unwrap(),
+            SkillId::new(SkillIds::LeapAttack as u16).unwrap(),
+            SkillId::new(SkillIds::HeavyAttack as u16).unwrap(),
+            SkillId::new(SkillIds::ChampionHit as u16).unwrap(),
+            SkillId::new(SkillIds::SpaceAttack as u16).unwrap(),
+            SkillId::new(SkillIds::SpiritualTraining as u16).unwrap(),
+            SkillId::new(SkillIds::DivineForce as u16).unwrap(),
         ]
         .into(),
     }
@@ -107,18 +107,18 @@ pub fn bot_build_mage() -> BotBuild {
         weapon_type: ItemClass::MagicStaff,
         subweapon_type: None,
         skills: [
-            SkillId::new(901).unwrap(),  // Mana Bolt -> Mana Spear
-            SkillId::new(941).unwrap(),  // Staff Stun
-            SkillId::new(911).unwrap(),  // Fire Ring
-            SkillId::new(951).unwrap(),  // Lightning -> Lightning Shock
-            SkillId::new(1031).unwrap(), // Weaken
-            SkillId::new(1071).unwrap(), // Silence
-            SkillId::new(981).unwrap(),  // Ice Bolt -> Freezing Bolt
-            SkillId::new(1061).unwrap(), // Fire Burn -> Magma Burn
-            SkillId::new(1171).unwrap(), // Phantom Sword
-            SkillId::new(1191).unwrap(), // Call Firegon
-            SkillId::new(841).unwrap(),  // Spell Mastery
-            SkillId::new(801).unwrap(),  // Staff Mastery
+            SkillId::new(SkillIds::ManaBolt as u16).unwrap(),
+            SkillId::new(SkillIds::StaffStun as u16).unwrap(),
+            SkillId::new(SkillIds::FireRing as u16).unwrap(),
+            SkillId::new(SkillIds::Lightning as u16).unwrap(),
+            SkillId::new(SkillIds::Weaken as u16).unwrap(),
+            SkillId::new(SkillIds::Silence as u16).unwrap(),
+            SkillId::new(SkillIds::IceBolt as u16).unwrap(),
+            SkillId::new(SkillIds::FireBurn as u16).unwrap(),
+            SkillId::new(SkillIds::PhantomSword as u16).unwrap(),
+            SkillId::new(SkillIds::CallFiregon as u16).unwrap(),
+            SkillId::new(SkillIds::SpellMastery as u16).unwrap(),
+            SkillId::new(SkillIds::StaffMastery as u16).unwrap(),
         ]
         .into(),
     }
@@ -131,16 +131,16 @@ pub fn bot_build_cleric() -> BotBuild {
         weapon_type: ItemClass::MagicWand,
         subweapon_type: Some(ItemClass::SupportTool),
         skills: [
-            SkillId::new(931).unwrap(),  // Cure
-            SkillId::new(911).unwrap(),  // Fire Ring
-            SkillId::new(1161).unwrap(), // Bonfire
-            SkillId::new(1131).unwrap(), // Resurrection
-            SkillId::new(961).unwrap(),  // Lesser Haste
-            SkillId::new(1021).unwrap(), // Power Support
-            SkillId::new(1221).unwrap(), // Hit Support
-            SkillId::new(1231).unwrap(), // Critical Support
-            SkillId::new(821).unwrap(),  // Meditation
-            SkillId::new(841).unwrap(),  // Spell Mastery
+            SkillId::new(SkillIds::Cure as u16).unwrap(),
+            SkillId::new(SkillIds::FireRing as u16).unwrap(),
+            SkillId::new(SkillIds::Bonfire as u16).unwrap(),
+            SkillId::new(SkillIds::Resurrection as u16).unwrap(),
+            SkillId::new(SkillIds::LesserHaste as u16).unwrap(),
+            SkillId::new(SkillIds::PowerSupport as u16).unwrap(),
+            SkillId::new(SkillIds::HitSupport as u16).unwrap(),
+            SkillId::new(SkillIds::CriticalSupport as u16).unwrap(),
+            SkillId::new(SkillIds::Meditation as u16).unwrap(),
+            SkillId::new(SkillIds::SpellMastery as u16).unwrap(),
         ]
         .into(),
     }
@@ -158,16 +158,16 @@ pub fn bot_build_raider() -> BotBuild {
         weapon_type: ItemClass::Katar,
         subweapon_type: None,
         skills: [
-            SkillId::new(1421).unwrap(), // Knuckle Mastery
-            SkillId::new(1461).unwrap(), // Combat Mastery
-            SkillId::new(1541).unwrap(), // Double Slash -> Triple Slash
-            SkillId::new(1591).unwrap(), // Screw Attack
-            SkillId::new(1611).unwrap(), // Prime Hit
-            SkillId::new(1831).unwrap(), // Mana Blood
-            SkillId::new(1841).unwrap(), // Stealth
-            SkillId::new(1851).unwrap(), // Poison Knife
-            SkillId::new(1871).unwrap(), // Magic Knife
-            SkillId::new(1861).unwrap(), // Bloody Dust
+            SkillId::new(SkillIds::KnuckleMastery as u16).unwrap(),
+            SkillId::new(SkillIds::CombatMastery as u16).unwrap(),
+            SkillId::new(SkillIds::DoubleSlash as u16).unwrap(),
+            SkillId::new(SkillIds::ScrewAttack as u16).unwrap(),
+            SkillId::new(SkillIds::PrimeHit as u16).unwrap(),
+            SkillId::new(SkillIds::ManaBlood as u16).unwrap(),
+            SkillId::new(SkillIds::Stealth as u16).unwrap(),
+            SkillId::new(SkillIds::PoisonKnife as u16).unwrap(),
+            SkillId::new(SkillIds::MagicKnife as u16).unwrap(),
+            SkillId::new(SkillIds::BloodyDust as u16).unwrap(),
         ]
         .into(),
     }
@@ -185,18 +185,18 @@ pub fn bot_build_scout() -> BotBuild {
         weapon_type: ItemClass::Bow,
         subweapon_type: None,
         skills: [
-            SkillId::new(1401).unwrap(), // Bow Mastery
-            SkillId::new(1461).unwrap(), // Combat Mastery
-            SkillId::new(1521).unwrap(), // Double Shot -> Triple Shot
-            SkillId::new(1481).unwrap(), // Aim Shot
-            SkillId::new(1701).unwrap(), // Hawk Shot -> Eagle Shot
-            SkillId::new(1641).unwrap(), // Flame Hawk
-            SkillId::new(1581).unwrap(), // Trap Shot
-            SkillId::new(1671).unwrap(), // Detect
-            SkillId::new(1451).unwrap(), // Hawker Spirit
-            SkillId::new(1601).unwrap(), // Heart Hit
-            SkillId::new(1441).unwrap(), // Relax
-            SkillId::new(1621).unwrap(), // Poison Arrow
+            SkillId::new(SkillIds::BowMastery as u16).unwrap(),
+            SkillId::new(SkillIds::CombatMastery as u16).unwrap(),
+            SkillId::new(SkillIds::DoubleShot as u16).unwrap(),
+            SkillId::new(SkillIds::AimShot as u16).unwrap(),
+            SkillId::new(SkillIds::HawkShot as u16).unwrap(),
+            SkillId::new(SkillIds::FlameHawk as u16).unwrap(),
+            SkillId::new(SkillIds::TrapShot as u16).unwrap(),
+            SkillId::new(SkillIds::Detect as u16).unwrap(),
+            SkillId::new(SkillIds::HawkerSpirit as u16).unwrap(),
+            SkillId::new(SkillIds::HeartHit as u16).unwrap(),
+            SkillId::new(SkillIds::Relax as u16).unwrap(),
+            SkillId::new(SkillIds::PoisonArrow as u16).unwrap(),
         ]
         .into(),
     }
@@ -213,16 +213,16 @@ pub fn bot_build_bourgeois() -> BotBuild {
         weapon_type: ItemClass::Launcher,
         subweapon_type: None,
         skills: [
-            SkillId::new(2091).unwrap(), // Stockpile
-            SkillId::new(2021).unwrap(), // Marksmanship
-            SkillId::new(2141).unwrap(), // Arms Mastery
-            SkillId::new(2221).unwrap(), // Twin Bullets -> Triple Bullets
-            SkillId::new(2211).unwrap(), // Sniping Shot
-            SkillId::new(2051).unwrap(), // Discount
-            SkillId::new(2071).unwrap(), // Overcharge
-            SkillId::new(2001).unwrap(), // Market Research
-            SkillId::new(2041).unwrap(), // Bagpack Mastery
-            SkillId::new(2201).unwrap(), // Mighty Shot
+            SkillId::new(SkillIds::Stockpile as u16).unwrap(),
+            SkillId::new(SkillIds::Marksmanship as u16).unwrap(),
+            SkillId::new(SkillIds::ArmsMastery as u16).unwrap(),
+            SkillId::new(SkillIds::TwinBullets as u16).unwrap(),
+            SkillId::new(SkillIds::SnipingShot as u16).unwrap(),
+            SkillId::new(SkillIds::Discount as u16).unwrap(),
+            SkillId::new(SkillIds::Overcharge as u16).unwrap(),
+            SkillId::new(SkillIds::MarketResearch as u16).unwrap(),
+            SkillId::new(SkillIds::BagpackMastery as u16).unwrap(),
+            SkillId::new(SkillIds::MightyShot as u16).unwrap(),
         ]
         .into(),
     }
@@ -238,16 +238,16 @@ pub fn bot_build_artisan() -> BotBuild {
         weapon_type: ItemClass::Gun,
         subweapon_type: None,
         skills: [
-            SkillId::new(2091).unwrap(), // Stockpile
-            SkillId::new(2021).unwrap(), // Marksmanship
-            SkillId::new(2141).unwrap(), // Arms Mastery
-            SkillId::new(2221).unwrap(), // Twin Bullets -> Triple Bullets
-            SkillId::new(2211).unwrap(), // Sniping Shot
-            SkillId::new(2111).unwrap(), // Weapon Research
-            SkillId::new(2131).unwrap(), // Armor Research
-            SkillId::new(2001).unwrap(), // Market Research
-            SkillId::new(2041).unwrap(), // Bagpack Mastery
-            SkillId::new(2201).unwrap(), // Mighty Shot
+            SkillId::new(SkillIds::Stockpile as u16).unwrap(),
+            SkillId::new(SkillIds::Marksmanship as u16).unwrap(),
+            SkillId::new(SkillIds::ArmsMastery as u16).unwrap(),
+            SkillId::new(SkillIds::TwinBullets as u16).unwrap(),
+            SkillId::new(SkillIds::SnipingShot as u16).unwrap(),
+            SkillId::new(SkillIds::WeaponResearch as u16).unwrap(),
+            SkillId::new(SkillIds::ArmorResearch as u16).unwrap(),
+            SkillId::new(SkillIds::MarketResearch as u16).unwrap(),
+            SkillId::new(SkillIds::BagpackMastery as u16).unwrap(),
+            SkillId::new(SkillIds::MightyShot as u16).unwrap(),
         ]
         .into(),
     }

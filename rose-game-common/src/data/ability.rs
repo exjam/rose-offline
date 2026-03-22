@@ -2,14 +2,14 @@ use std::num::NonZeroU32;
 
 use serde::{Deserialize, Serialize};
 
-use rose_data::{
-    EquipmentItem, Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData,
-};
-
 use crate::components::{
     AbilityValues, BasicStatType, BasicStats, CharacterInfo, Equipment, ItemSlot, Level, Money,
     SkillList, StatusEffects,
 };
+use rose_data::{
+    EquipmentItem, Item, ItemDatabase, ItemReference, NpcId, SkillAddAbility, SkillData,
+};
+use rose_file_readers::QsdEquation;
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Damage {
@@ -95,7 +95,7 @@ pub trait AbilityValueCalculator {
     #[allow(clippy::too_many_arguments)]
     fn calculate_reward_value(
         &self,
-        equation_id: usize,
+        equation: &QsdEquation,
         base_reward_value: i32,
         dup_count: i32,
         level: i32,

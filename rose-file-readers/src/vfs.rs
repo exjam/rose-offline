@@ -97,7 +97,7 @@ impl VfsIndex {
 }
 
 impl VirtualFilesystemDevice for VfsIndex {
-    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile, anyhow::Error> {
+    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile<'_>, anyhow::Error> {
         for vfs in &self.storages {
             if let Some(entry) = vfs.files.get(vfs_path.path()) {
                 return Ok(VfsFile::View(

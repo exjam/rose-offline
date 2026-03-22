@@ -1,15 +1,15 @@
+use crate::{
+    game::messages::{control::ControlMessage, server::ServerMessage},
+    protocol::{Client, Connection, Protocol},
+};
 use bevy::ecs::prelude::Entity;
 use lazy_static::__Deref;
 use log::info;
+use rose_network_common::ConnectionError;
 use std::sync::Arc;
 use tokio::{
     net::{TcpListener, TcpStream},
     sync::oneshot,
-};
-
-use crate::{
-    game::messages::{control::ControlMessage, server::ServerMessage},
-    protocol::{Client, Connection, Protocol},
 };
 
 async fn run_connection(
@@ -80,7 +80,16 @@ impl LoginServer {
                                 info!("Login Server new connection from: {:?}", addr);
                             }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                info!("Login Server connection error: {:?}", err);
+                                let connection_lost = err.downcast_ref::<ConnectionError>().is_some_and(|it| match it {
+                                    ConnectionError::ConnectionLost => true,
+                                    _ => false,
+                                });
+
+                                if connection_lost {
+                                    info!("Login Server connection lost");
+                                } else {
+                                    info!("Login Server connection error: {:?}", err);
+                                }
                             }
                         });
                     }
@@ -141,7 +150,16 @@ impl WorldServer {
                                 info!("World Server new connection from: {:?}", addr);
                             }
                             if let Err(err) = run_connection(socket, protocol.deref(), control_message_tx).await {
-                                info!("World Server connection error: {:?}", err);
+                                let connection_lost = err.downcast_ref::<ConnectionError>().is_some_and(|it| match it {
+                                    ConnectionError::ConnectionLost => true,
+                                    _ => false,
+                                });
+
+                                if connection_lost {
+                                    info!("World Server connection lost");
+                                } else {
+                                    info!("World Server connection error: {:?}", err);
+                                }
                             }
                         });
                     }

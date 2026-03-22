@@ -17,7 +17,7 @@ mod create_bot;
 pub use create_bot::{
     bot_build_artisan, bot_build_bourgeois, bot_build_champion, bot_build_cleric, bot_build_knight,
     bot_build_mage, bot_build_raider, bot_build_scout, bot_create_random_build,
-    bot_create_with_build, BotBuild,
+    bot_create_with_build,
 };
 
 use bot_accept_party_invite::{

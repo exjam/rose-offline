@@ -114,8 +114,8 @@ pub use npc_database::{
 pub use quest_database::{QuestData, QuestDatabase, QuestTrigger, QuestTriggerHash};
 pub use skill_database::{
     SkillActionMode, SkillAddAbility, SkillBasicCommand, SkillCastingEffect, SkillCooldown,
-    SkillCooldownGroup, SkillData, SkillDatabase, SkillId, SkillPageType, SkillTargetFilter,
-    SkillType,
+    SkillCooldownGroup, SkillDamageType, SkillData, SkillDatabase, SkillId, SkillIds,
+    SkillPageType, SkillTargetFilter, SkillType,
 };
 pub use skybox_database::{SkyboxData, SkyboxDatabase, SkyboxId, SkyboxState};
 pub use sound_database::{SoundData, SoundDatabase, SoundId};

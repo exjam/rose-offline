@@ -1,5 +1,7 @@
+use crate::{reader::RoseFileReader, RoseFile};
 use anyhow::anyhow;
 use log::warn;
+use num_derive::FromPrimitive;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -8,8 +10,6 @@ use std::{
     ops::RangeInclusive,
     time::Duration,
 };
-
-use crate::{reader::RoseFileReader, RoseFile};
 
 pub type QsdAbilityType = NonZeroUsize;
 pub type QsdClanLevel = i32;
@@ -30,6 +30,20 @@ pub type QsdTeamNumber = usize;
 pub type QsdServerChannelId = usize;
 pub type QsdEquationId = usize;
 pub type QsdStringId = usize;
+
+// Educated guesses based on usage and formula
+#[derive(FromPrimitive)]
+pub enum QsdEquation {
+    ExpUnleveled = 0,
+    ExpLeveled = 1,
+    MoneyStatic = 2,
+    MoneyScaled = 3,
+    // Not used in existing quests
+    Unknown = 4,
+    Item = 5,
+    // Not used in existing quests
+    Unknown2 = 6,
+}
 
 #[derive(Copy, Clone, Debug, JsonSchema, Serialize, Deserialize)]
 pub enum QsdVariableType {
@@ -1920,6 +1934,7 @@ fn read_trigger(
             ));
         }
     }
+
     let conditions = conditions;
     for _ in 0..reward_count {
         let start_position = reader.position();

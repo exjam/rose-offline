@@ -26,7 +26,7 @@ use rose_file_readers::{
 };
 
 use crate::{
-    game::GameConfig,
+    game::{game_world::GameWorld, GameConfig},
     protocol::server::{GameServer, LoginServer, WorldServer},
 };
 
@@ -180,7 +180,7 @@ async fn async_main() {
 
     let (game_control_tx, game_control_rx) = crossbeam_channel::unbounded();
     std::thread::spawn(move || {
-        game::GameWorld::new(game_control_rx).run(game_config, game_data);
+        GameWorld::new(game_control_rx).run(game_config, game_data);
     });
 
     let mut login_server = LoginServer::new(

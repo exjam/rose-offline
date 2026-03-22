@@ -1,13 +1,12 @@
 mod bots;
 mod bundles;
 mod events;
-mod game_world;
 mod resources;
 mod systems;
 
 pub mod components;
+pub mod game_world;
 pub mod messages;
 pub mod storage;
 
-pub use game_world::GameWorld;
 pub use resources::{GameConfig, GameData};

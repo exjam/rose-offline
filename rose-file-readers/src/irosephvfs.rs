@@ -106,6 +106,7 @@ fn xor_transform_n<const N: usize>(src: &[u8; N], xor_key_offset: usize) -> [u8;
     })
 }
 
+#[allow(dead_code)]
 trait IrosePhXorRead {
     fn read_u32_xor(&mut self, xor_key_offset: usize) -> Result<u32, ReadError>;
     fn read_u64_xor(&mut self, xor_key_offset: usize) -> Result<u64, ReadError>;
@@ -186,7 +187,7 @@ impl IrosePhVfsIndex {
 }
 
 impl VirtualFilesystemDevice for IrosePhVfsIndex {
-    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile, anyhow::Error> {
+    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile<'_>, anyhow::Error> {
         let path_str = vfs_path.path().to_str().unwrap();
         let path_hash = FileNameHash::from(path_str).hash;
 

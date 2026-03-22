@@ -253,7 +253,7 @@ const ZSC_IV: [u8; 16] = [
 ];
 
 impl VirtualFilesystemDevice for AruaVfsIndex {
-    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile, anyhow::Error> {
+    fn open_file(&self, vfs_path: &VfsPath) -> Result<VfsFile<'_>, anyhow::Error> {
         let path_str = vfs_path.path().to_str().unwrap();
         let &(offset, size) = self
             .files

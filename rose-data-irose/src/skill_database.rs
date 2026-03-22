@@ -1,17 +1,17 @@
 use arrayvec::ArrayVec;
 use log::debug;
+use num_traits::FromPrimitive;
+use rose_data::{
+    AbilityType, EffectFileId, EffectId, ItemClass, JobClassId, MotionId, NpcId, SkillActionMode,
+    SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillDamageType, SkillData, SkillDatabase,
+    SkillId, SkillPageType, SkillTargetFilter, SoundId, StatusEffectId, StringDatabase, ZoneId,
+};
+use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 use std::{
     num::{NonZeroU32, NonZeroUsize},
     sync::Arc,
     time::Duration,
 };
-
-use rose_data::{
-    AbilityType, EffectFileId, EffectId, ItemClass, JobClassId, MotionId, NpcId, SkillActionMode,
-    SkillAddAbility, SkillCastingEffect, SkillCooldown, SkillData, SkillDatabase, SkillId,
-    SkillPageType, SkillTargetFilter, SoundId, StatusEffectId, StringDatabase, ZoneId,
-};
-use rose_file_readers::{stb_column, StbFile, VirtualFilesystem};
 
 use crate::data_decoder::{
     decode_item_class, IroseAbilityType, IroseSkillActionMode, IroseSkillBasicCommand,
@@ -238,7 +238,8 @@ fn load_skill(data: &StbSkill, string_database: &StringDatabase, id: usize) -> O
         casting_repeat_motion_id: data.get_casting_repeat_motion_id(id),
         casting_effects: data.get_casting_effects(id),
         cooldown: data.get_cooldown(id),
-        damage_type: data.get_damage_type(id).unwrap_or(0),
+        damage_type: SkillDamageType::from_i32(data.get_damage_type(id).unwrap_or(0))
+            .unwrap_or(SkillDamageType::ContinuousAttack),
         harm: data.get_harm(id).unwrap_or(0),
         hit_effect_file_id: data.get_hit_effect_id(id),
         hit_link_dummy_bone_id: data

@@ -11,11 +11,11 @@ mod world_time;
 mod zone_list;
 
 pub use bot_list::{BotList, BotListEntry};
-pub use client_entity_list::{ClientEntityList, ClientEntitySet, ClientEntityZone};
+pub use client_entity_list::{ClientEntityList, ClientEntitySet};
 pub use control_channel::ControlChannel;
 pub use game_config::GameConfig;
 pub use game_data::GameData;
-pub use login_tokens::{LoginToken, LoginTokens};
+pub use login_tokens::LoginTokens;
 pub use server_list::{GameServer, ServerList, WorldServer};
 pub use server_messages::ServerMessages;
 pub use world_rates::WorldRates;

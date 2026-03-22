@@ -64,7 +64,7 @@ impl StringDatabase {
         self.clan.get_text_string(self.language, &key).unwrap_or("")
     }
 
-    pub fn get_item(&self, item_type: ItemType, key: &str) -> Option<StlItemEntry> {
+    pub fn get_item(&self, item_type: ItemType, key: &str) -> Option<StlItemEntry<'_>> {
         let index = self.item[item_type].lookup_key(key)?;
         self.item[item_type].get_item_entry(self.language, index)
     }
@@ -94,22 +94,22 @@ impl StringDatabase {
             .unwrap_or("")
     }
 
-    pub fn get_npc(&self, key: &str) -> Option<StlNormalEntry> {
+    pub fn get_npc(&self, key: &str) -> Option<StlNormalEntry<'_>> {
         let index = self.npc.lookup_key(key)?;
         self.npc.get_normal_entry(self.language, index)
     }
 
-    pub fn get_npc_store_tab(&self, key: &str) -> Option<StlNormalEntry> {
+    pub fn get_npc_store_tab(&self, key: &str) -> Option<StlNormalEntry<'_>> {
         let index = self.npc_store_tabs.lookup_key(key)?;
         self.npc_store_tabs.get_normal_entry(self.language, index)
     }
 
-    pub fn get_quest(&self, key: &str) -> Option<StlQuestEntry> {
+    pub fn get_quest(&self, key: &str) -> Option<StlQuestEntry<'_>> {
         let index = self.quest.lookup_key(key)?;
         self.quest.get_quest_entry(self.language, index)
     }
 
-    pub fn get_skill(&self, key: &str) -> Option<StlItemEntry> {
+    pub fn get_skill(&self, key: &str) -> Option<StlItemEntry<'_>> {
         let index = self.skill.lookup_key(key)?;
         self.skill.get_item_entry(self.language, index)
     }
@@ -140,12 +140,12 @@ impl StringDatabase {
             .unwrap_or("")
     }
 
-    pub fn get_status_effect(&self, key: &str) -> Option<StlQuestEntry> {
+    pub fn get_status_effect(&self, key: &str) -> Option<StlQuestEntry<'_>> {
         let index = self.status_effect.lookup_key(key)?;
         self.status_effect.get_quest_entry(self.language, index)
     }
 
-    pub fn get_zone(&self, key: &str) -> Option<StlItemEntry> {
+    pub fn get_zone(&self, key: &str) -> Option<StlItemEntry<'_>> {
         let index = self.zone.lookup_key(key)?;
         self.zone.get_item_entry(self.language, index)
     }

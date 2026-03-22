@@ -576,7 +576,7 @@ impl ItemDatabase {
         self.item_grades.get(grade as usize)
     }
 
-    pub fn get_item(&self, item: ItemReference) -> Option<ItemData> {
+    pub fn get_item(&self, item: ItemReference) -> Option<ItemData<'_>> {
         match item.item_type {
             ItemType::Face => self
                 .face
