@@ -36,7 +36,7 @@ impl From<&StatusEffects> for AbilityValuesAdjust {
         Self {
             additional_damage_multiplier: status_effects
                 .get_status_effect_value(StatusEffectType::AdditionalDamageRate)
-                .unwrap_or(100) as f32
+                .unwrap_or(0) as f32
                 / 100.0,
             attack_speed: status_effects
                 .get_status_effect_value(StatusEffectType::IncreaseAttackSpeed)
@@ -224,8 +224,8 @@ impl AbilityValues {
         self.npc_store_sell_rate
     }
 
-    pub fn get_additional_damage_multipler(&self) -> f32 {
-        self.adjust.additional_damage_multiplier
+    pub fn get_damage_multiplier(&self) -> f32 {
+        self.adjust.additional_damage_multiplier + 1.0
     }
 
     pub fn get_attack_speed(&self) -> i32 {
