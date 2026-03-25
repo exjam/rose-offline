@@ -619,7 +619,7 @@ impl AbilityValueCalculator for AbilityValuesData {
             }
         };
 
-        damage *= attacker.get_damage_multiplier();
+        damage += damage * attacker.get_additional_damage_multiplier();
         damage = f32::max(damage, 5.0) * hit_count as f32;
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -1137,7 +1137,7 @@ fn calculate_attack_damage_physical(
                             + 5.0)))
         };
 
-        damage *= attacker.get_damage_multiplier();
+        damage += damage * attacker.get_additional_damage_multiplier();
         damage = f32::max(damage * hit_count as f32, 10.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -1176,7 +1176,7 @@ fn calculate_attack_damage_physical(
                             + 5.0)))
         };
 
-        damage *= attacker.get_damage_multiplier();
+        damage += damage * attacker.get_additional_damage_multiplier();
         damage = f32::max(damage * hit_count as f32, 5.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -1232,7 +1232,7 @@ fn calculate_attack_damage_magic(
                             + 5.0)))
         };
 
-        damage *= attacker.get_damage_multiplier();
+        damage += damage * attacker.get_additional_damage_multiplier();
         damage = f32::max(damage * hit_count as f32, 10.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
@@ -1273,7 +1273,7 @@ fn calculate_attack_damage_magic(
                             + 5.0)))
         };
 
-        damage *= attacker.get_damage_multiplier();
+        damage += damage * attacker.get_additional_damage_multiplier();
         damage = f32::max(damage * hit_count as f32, 5.0);
 
         if attacker.get_damage_category() == DamageCategory::Character
