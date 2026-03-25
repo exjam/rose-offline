@@ -224,8 +224,8 @@ impl AbilityValues {
         self.npc_store_sell_rate
     }
 
-    pub fn get_damage_multiplier(&self) -> f32 {
-        self.adjust.additional_damage_multiplier + 1.0
+    pub fn get_additional_damage_multiplier(&self) -> f32 {
+        self.adjust.additional_damage_multiplier
     }
 
     pub fn get_attack_speed(&self) -> i32 {
