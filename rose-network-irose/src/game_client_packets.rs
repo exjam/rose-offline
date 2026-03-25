@@ -1583,21 +1583,13 @@ impl TryFrom<&Packet> for PacketClientReturnToCharacterSelect {
             return Err(PacketError::InvalidPacket);
         }
 
-        let mut reader = PacketReader::from(packet);
-        let command = reader.read_u8()?;
-        if command != 0 {
-            return Err(PacketError::InvalidPacket);
-        }
-
         Ok(Self {})
     }
 }
 
 impl From<&PacketClientReturnToCharacterSelect> for Packet {
     fn from(_: &PacketClientReturnToCharacterSelect) -> Self {
-        let mut writer = PacketWriter::new(ClientPackets::ReturnToCharacterSelectRequest as u16);
-        writer.write_u8(0);
-        writer.into()
+        PacketWriter::new(ClientPackets::ReturnToCharacterSelectRequest as u16).into()
     }
 }
 
@@ -1611,20 +1603,12 @@ impl TryFrom<&Packet> for PacketClientLogoutRequest {
             return Err(PacketError::InvalidPacket);
         }
 
-        let mut reader = PacketReader::from(packet);
-        let command = reader.read_u8()?;
-        if command != 0 {
-            return Err(PacketError::InvalidPacket);
-        }
-
         Ok(Self {})
     }
 }
 
 impl From<&PacketClientLogoutRequest> for Packet {
     fn from(_: &PacketClientLogoutRequest) -> Self {
-        let mut writer = PacketWriter::new(ClientPackets::LogoutRequest as u16);
-        writer.write_u8(0);
-        writer.into()
+        PacketWriter::new(ClientPackets::LogoutRequest as u16).into()
     }
 }
